@@ -1,46 +1,36 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../shared/models/user_model.dart';
 
 class AdminService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  // Dummy Users List (UI Test කිරීම සඳහා)
+  static List<UserModel> dummyUsers = [
+    UserModel(
+      uid: '1',
+      name: 'Kamal Perera',
+      email: 'kamal@gmail.com',
+      role: UserRole.doctor,
+      status: AccountStatus.pending,
+    ),
+    UserModel(
+      uid: '2',
+      name: 'Nimal Silva',
+      email: 'nimal@gmail.com',
+      role: UserRole.driver,
+      status: AccountStatus.pending,
+    ),
+    UserModel(
+      uid: '3',
+      name: 'Sunil Fernando',
+      email: 'sunil@gmail.com',
+      role: UserRole.patient,
+      status: AccountStatus.approved,
+    ),
+  ];
 
-  // Pending ගිණුම් පමණක් Stream එකක් ලෙස ලබා ගැනීම
-  Stream<List<UserModel>> getPendingUsers() {
-    return _db
-        .collection('users')
-        .where('status', isEqualTo: AccountStatus.pending.name)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => UserModel.fromMap(doc.data(), doc.id))
-            .toList());
+  List<UserModel> getPendingUsers() {
+    return dummyUsers.where((u) => u.status == AccountStatus.pending).toList();
   }
 
-  // සියලුම Users ලාව Stream එකක් ලෙස ලබා ගැනීම (Full CRUD)
-  Stream<List<UserModel>> getAllUsers() {
-    return _db.collection('users').snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => UserModel.fromMap(doc.data(), doc.id)).toList());
+  List<UserModel> getAllUsers() {
+    return dummyUsers;
   }
-
-  // User ගේ Status එක (Approved / Rejected) Update කිරීම
-  Future<void> updateUserStatus(String uid, AccountStatus status) async {
-    await _db.collection('users').doc(uid).update({
-      'status': status.name,
-    });
-  }
-
-  // User ව සිස්ටම් එකෙන් Delete කිරීම
-  Future<void> deleteUser(String uid) async {
-    await _db.collection('users').doc(uid).delete();
-  }
-
-  // User ගේ Role එක Update කිරීම
-  Future<void> updateUserRole(String uid, UserRole newRole) async {
-    await _db.collection('users').doc(uid).update({
-      'role': newRole.name,
-    });
-  }
-}
-
-class FirebaseFirestore {
-  static FirebaseFirestore get instance => null;
 }

@@ -1,60 +1,43 @@
 import 'package:flutter/material.dart';
-import '../services/admin_service.dart';
-import '../../shared/models/user_model.dart';
+import 'login_screen.dart';
 
-class PendingAccountsScreen extends StatelessWidget {
-  final AdminService _adminService = AdminService();
-
-  PendingAccountsScreen({Key? key}) : super(key: key);
+class PendingApprovalScreen extends StatelessWidget {
+  const PendingApprovalScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Pending Account Approvals')),
-      body: StreamBuilder<List<UserModel>>(
-        stream: _adminService.getPendingUsers(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final users = snapshot.data ?? [];
-          if (users.isEmpty) {
-            return const Center(child: Text('අනුමත කිරීමට ගිණුම් නොමැත.'));
-          }
-          return ListView.builder(
-            itemCount: users.length,
-            itemBuilder: (context, index) {
-              final user = users[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ListTile(
-                  title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('${user.email}\nRole: ${user.role.name.toUpperCase()}'),
-                  isThreeLine: true,
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.check_circle, color: Colors.green, size: 30),
-                        onPressed: () => _adminService.updateUserStatus(
-                          user.uid,
-                          AccountStatus.approved,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.cancel, color: Colors.red, size: 30),
-                        onPressed: () => _adminService.updateUserStatus(
-                          user.uid,
-                          AccountStatus.rejected,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.hourglass_top_rounded, size: 90, color: Colors.orange),
+            const SizedBox(height: 20),
+            const Text(
+              'Account Pending Approval',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Your account registration has been sent to the Admin. Please wait until your account is verified.',
+              style: TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 30),
+            OutlinedButton(
+              onPressed: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
+                );
+              },
+              child: const Text('Back to Login'),
+            ),
+          ],
+        ),
       ),
     );
   }

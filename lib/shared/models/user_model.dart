@@ -15,29 +15,4 @@ class UserModel {
     required this.role,
     required this.status,
   });
-
-  factory UserModel.fromMap(Map<String, dynamic> map, String id) {
-    return UserModel(
-      uid: id,
-      email: map['email'] ?? '',
-      name: map['name'] ?? '',
-      role: UserRole.values.firstWhere(
-        (e) => e.name == map['role'],
-        orElse: () => UserRole.patient,
-      ),
-      status: AccountStatus.values.firstWhere(
-        (e) => e.name == map['status'],
-        orElse: () => AccountStatus.pending,
-      ),
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'email': email,
-      'name': name,
-      'role': role.name,
-      'status': status.name,
-    };
-  }
 }

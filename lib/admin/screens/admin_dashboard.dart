@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:oneclick/features/auth/screens/pending_approval_screen.dart';
-
+import 'pending_accounts.dart';
 import 'user_management.dart';
 import '../../features/auth/screens/login_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
-  const AdminDashboard({super.key});
+  const AdminDashboard({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Dashboard'),
-        centerTitle: true,
+        title: const Text('Admin Console'),
+        backgroundColor: Colors.indigo,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
             onPressed: () {
               Navigator.pushAndRemoveUntil(
                 context,
@@ -24,77 +23,38 @@ class AdminDashboard extends StatelessWidget {
                 (route) => false,
               );
             },
-          ),
+          )
         ],
       ),
-
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Pending Account Approvals
             Card(
-              elevation: 3,
               child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-
-                leading: const Icon(
-                  Icons.verified_user,
-                  color: Colors.orange,
-                  size: 40,
-                ),
-
-                title: const Text(
-                  'Pending Account Approvals',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
-                ),
-
-                subtitle: const Padding(
-                  padding: EdgeInsets.only(top: 6),
-                  child: Text('ලියාපදිංචි වූ නව ගිණුම් පරීක්ෂා කර අනුමත කරන්න'),
-                ),
-
-                trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-
+                leading: const Icon(Icons.pending_actions, color: Colors.orange, size: 36),
+                title: const Text('Pending Approvals'),
+                subtitle: const Text('Review & approve newly registered accounts'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => PendingAccountsScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const PendingAccountsScreen()),
                   );
                 },
               ),
             ),
-
-            const SizedBox(height: 15),
-
-            // User Management
+            const SizedBox(height: 12),
             Card(
-              elevation: 3,
               child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-
-                leading: const Icon(Icons.people, color: Colors.blue, size: 40),
-
-                title: const Text(
-                  'User Management',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
-                ),
-
-                subtitle: const Padding(
-                  padding: EdgeInsets.only(top: 6),
-                  child: Text('සියලුම Users ලා පාලනය කරන්න (CRUD)'),
-                ),
-
-                trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-
+                leading: const Icon(Icons.manage_accounts, color: Colors.indigo, size: 36),
+                title: const Text('User Management'),
+                subtitle: const Text('View, update, or remove users (CRUD)'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => UserManagementScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const UserManagementScreen()),
                   );
                 },
               ),
@@ -104,8 +64,4 @@ class AdminDashboard extends StatelessWidget {
       ),
     );
   }
-}
-
-class LoginScreen {
-  const new();
 }
