@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+<<<<<<< Updated upstream
 import '../../../shared/models/user_model.dart';
 import 'register_screen.dart';
 
@@ -48,3 +49,13 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 }
+=======
+
+class RoleSelectionScreen extends StatelessWidget {
+  const RoleSelectionScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: Text('Select role')));
+}
+>>>>>>> Stashed changes

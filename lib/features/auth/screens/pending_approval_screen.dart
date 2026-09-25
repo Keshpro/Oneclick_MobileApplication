@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+<<<<<<< Updated upstream
 import 'login_screen.dart';
 
 class PendingApprovalScreen extends StatelessWidget {
@@ -42,3 +43,13 @@ class PendingApprovalScreen extends StatelessWidget {
     );
   }
 }
+=======
+
+class PendingApprovalScreen extends StatelessWidget {
+  const PendingApprovalScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: Text('Pending approval')));
+}
+>>>>>>> Stashed changes
