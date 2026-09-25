@@ -1,0 +1,3 @@
+class RoleRouter {
+  const RoleRouter();
+}
