@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+import 'services_screen.dart';
+import 'explore_screen.dart';
+import '../../doctor/patient/screens/patient_home_screen.dart';
+import '../../doctor/patient/screens/doctor_entry_screen.dart';
+
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -49,8 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return _services.where((service) {
       final title = service['title'].toString().toLowerCase();
-      final description =
-          service['description'].toString().toLowerCase();
+      final description = service['description'].toString().toLowerCase();
 
       return title.contains(query) || description.contains(query);
     }).toList();
@@ -129,9 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       child: const Text(
                         'Login',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
 
@@ -156,9 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       child: const Text(
                         'Register',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                   ],
@@ -265,9 +266,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         _searchQuery = '';
                                       });
                                     },
-                                    icon: const Icon(
-                                      Icons.close_rounded,
-                                    ),
+                                    icon: const Icon(Icons.close_rounded),
                                   )
                                 : null,
                             border: InputBorder.none,
@@ -320,40 +319,40 @@ class _HomeScreenState extends State<HomeScreen> {
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverGrid(
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     crossAxisSpacing: 14,
                     mainAxisSpacing: 14,
                     childAspectRatio: 0.88,
                   ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final service = _filteredServices[index];
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final service = _filteredServices[index];
 
-                      return ServiceCard(
-                        title: service['title'],
-                        description: service['description'],
-                        icon: service['icon'],
-                        color: service['color'],
-                        onTap: () {
-                          _showLoginRequired(
-                            service['title'],
+                    return ServiceCard(
+                      title: service['title'],
+                      description: service['description'],
+                      icon: service['icon'],
+                      color: service['color'],
+                      onTap: () {
+                        if (service['title'] == 'Doctor') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const DoctorEntryScreen(),
+                            ),
                           );
-                        },
-                      );
-                    },
-                    childCount: _filteredServices.length,
-                  ),
+                        } else {
+                          _showLoginRequired(service['title']);
+                        }
+                      },
+                    );
+                  }, childCount: _filteredServices.length),
                 ),
               )
             else
               const SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 40,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 40),
                   child: Column(
                     children: [
                       Icon(
@@ -387,9 +386,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFEFF6FF),
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: const Color(0xFFDBEAFE),
-                    ),
+                    border: Border.all(color: const Color(0xFFDBEAFE)),
                   ),
                   child: Column(
                     children: [
@@ -437,28 +434,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/register',
-                            );
+                            Navigator.pushNamed(context, '/register');
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                const Color(0xFF2563EB),
+                            backgroundColor: const Color(0xFF2563EB),
                             foregroundColor: Colors.white,
                             elevation: 0,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 15,
-                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 15),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
                           ),
                           child: const Text(
                             'Create Account',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
                       ),
@@ -469,9 +458,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onPressed: () {
                           Navigator.pushNamed(context, '/login');
                         },
-                        child: const Text(
-                          'Already have an account? Login',
-                        ),
+                        child: const Text('Already have an account? Login'),
                       ),
                     ],
                   ),
@@ -488,12 +475,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(
-            top: BorderSide(
-              color: Color(0xFFE2E8F0),
-              width: 1,
-            ),
-          ),
+          border: Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
         ),
         child: SafeArea(
           child: NavigationBar(
@@ -548,38 +530,50 @@ class _HomeScreenState extends State<HomeScreen> {
   // =========================
 
   void _onNavigationSelected(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
-    switch (index) {
-      case 0:
-        // Already on Home
-        break;
-
-      case 1:
-        _showTemporaryMessage('Services page coming next');
-        break;
-
-      case 2:
-        _showTemporaryMessage('Explore page coming next');
-        break;
-
-      case 3:
-        _showAccountOptions();
-        break;
+    if (index == 0) {
+      setState(() {
+        _selectedIndex = 0;
+      });
+      return;
     }
-  }
 
-  void _showTemporaryMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 1),
-        ),
-      );
+    if (index == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ServicesScreen()),
+      ).then((_) {
+        if (mounted) {
+          setState(() {
+            _selectedIndex = 0;
+          });
+        }
+      });
+
+      return;
+    }
+
+    if (index == 2) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ExploreScreen()),
+      ).then((_) {
+        if (mounted) {
+          setState(() {
+            _selectedIndex = 0;
+          });
+        }
+      });
+
+      return;
+    }
+
+    if (index == 3) {
+      setState(() {
+        _selectedIndex = 3;
+      });
+
+      _showAccountOptions();
+    }
   }
 
   // =========================
@@ -593,17 +587,10 @@ class _HomeScreenState extends State<HomeScreen> {
       isScrollControlled: true,
       builder: (sheetContext) {
         return Container(
-          padding: const EdgeInsets.fromLTRB(
-            24,
-            14,
-            24,
-            30,
-          ),
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(28),
-            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: SafeArea(
             top: false,
@@ -663,9 +650,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: _primaryButtonStyle(),
                     child: const Text(
                       'Login',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -681,9 +666,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     child: const Text(
                       'Create a new account',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -712,17 +695,10 @@ class _HomeScreenState extends State<HomeScreen> {
       isScrollControlled: true,
       builder: (sheetContext) {
         return Container(
-          padding: const EdgeInsets.fromLTRB(
-            24,
-            14,
-            24,
-            30,
-          ),
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(28),
-            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: SafeArea(
             top: false,
@@ -782,9 +758,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: _primaryButtonStyle(),
                     child: const Text(
                       'Login',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -800,9 +774,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     child: const Text(
                       'Create Account',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -836,12 +808,8 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0xFF2563EB),
       foregroundColor: Colors.white,
       elevation: 0,
-      padding: const EdgeInsets.symmetric(
-        vertical: 15,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 15),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     );
   }
 }
@@ -878,9 +846,7 @@ class ServiceCard extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: const Color(0xFFE2E8F0),
-            ),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -892,11 +858,7 @@ class ServiceCard extends StatelessWidget {
                   color: color.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 27,
-                ),
+                child: Icon(icon, color: color, size: 27),
               ),
 
               const Spacer(),
@@ -938,11 +900,7 @@ class ServiceCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    color: color,
-                    size: 17,
-                  ),
+                  Icon(Icons.arrow_forward_rounded, color: color, size: 17),
                 ],
               ),
             ],

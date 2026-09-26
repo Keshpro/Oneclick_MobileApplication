@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-<<<<<<< Updated upstream
 import '../../../shared/models/user_model.dart';
 import 'pending_approval_screen.dart';
 
 class RegisterScreen extends StatelessWidget {
   final UserRole role;
 
-  const RegisterScreen({Key? key, required this.role}) : super(key: key);
+  const RegisterScreen({super.key, required this.role});
 
   @override
   Widget build(BuildContext context) {
@@ -62,13 +61,4 @@ class RegisterScreen extends StatelessWidget {
     );
   }
 }
-=======
 
-class RegisterScreen extends StatelessWidget {
-  const RegisterScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) =>
-      const Scaffold(body: Center(child: Text('Register')));
-}
->>>>>>> Stashed changes

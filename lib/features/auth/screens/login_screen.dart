@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-<<<<<<< Updated upstream
 import '../../../admin/screens/admin_dashboard.dart';
 import 'role_selection_screen.dart';
 import 'pending_approval_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -117,13 +116,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-=======
 
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) =>
-      const Scaffold(body: Center(child: Text('Login')));
-}
->>>>>>> Stashed changes
+
