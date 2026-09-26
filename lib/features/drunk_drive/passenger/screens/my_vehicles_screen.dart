@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/vehicle_model.dart';
 import '../../services/vehicle_service.dart';
 import '../../theme/drunk_drive_colors.dart';
+import 'add_vehicle_screen.dart';
 
 class MyVehiclesScreen extends StatefulWidget {
   const MyVehiclesScreen({super.key});
@@ -49,16 +50,24 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
     }
   }
 
-  void _onAddVehicle() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Add Vehicle — coming in the next step')),
+  Future<void> _onAddVehicle() async {
+    final added = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => const AddVehicleScreen()),
     );
+
+    if (added == true) {
+      await _loadVehicles();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Vehicle added')));
+    }
   }
 
   void _onEditVehicle(VehicleModel vehicle) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edit Vehicle — coming soon')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Edit Vehicle — coming soon')));
   }
 
   Future<void> _onSetDefault(VehicleModel vehicle) async {
@@ -101,9 +110,8 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
     await _loadVehicles();
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Vehicle removed')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Vehicle removed')));
   }
 
   @override
@@ -152,7 +160,11 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded, color: DrunkDriveColors.danger, size: 40),
+            const Icon(
+              Icons.error_outline_rounded,
+              color: DrunkDriveColors.danger,
+              size: 40,
+            ),
             const SizedBox(height: 12),
             Text(
               _errorMessage!,
@@ -177,7 +189,11 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.directions_car_outlined, color: DrunkDriveColors.textMuted, size: 48),
+            const Icon(
+              Icons.directions_car_outlined,
+              color: DrunkDriveColors.textMuted,
+              size: 48,
+            ),
             const SizedBox(height: 16),
             const Text(
               "You don't have any vehicles yet.",
@@ -191,7 +207,10 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: DrunkDriveColors.accent,
                 foregroundColor: DrunkDriveColors.background,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
               ),
             ),
           ],
@@ -254,7 +273,10 @@ class _VehicleCard extends StatelessWidget {
                   color: DrunkDriveColors.accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.directions_car_rounded, color: DrunkDriveColors.accent),
+                child: const Icon(
+                  Icons.directions_car_rounded,
+                  color: DrunkDriveColors.accent,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -277,9 +299,14 @@ class _VehicleCard extends StatelessWidget {
                         if (vehicle.isDefault) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
-                              color: DrunkDriveColors.success.withValues(alpha: 0.15),
+                              color: DrunkDriveColors.success.withValues(
+                                alpha: 0.15,
+                              ),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: const Text(
@@ -297,19 +324,28 @@ class _VehicleCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       vehicle.registrationNumber,
-                      style: const TextStyle(color: DrunkDriveColors.textMuted, fontSize: 13),
+                      style: const TextStyle(
+                        color: DrunkDriveColors.textMuted,
+                        fontSize: 13,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '${vehicle.colour} • ${vehicle.transmission.label}',
-                      style: const TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+                      style: const TextStyle(
+                        color: DrunkDriveColors.textMuted,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
               ),
               PopupMenuButton<String>(
                 color: DrunkDriveColors.surface,
-                icon: const Icon(Icons.more_vert_rounded, color: DrunkDriveColors.textMuted),
+                icon: const Icon(
+                  Icons.more_vert_rounded,
+                  color: DrunkDriveColors.textMuted,
+                ),
                 onSelected: (value) {
                   if (value == 'default') onSetDefault();
                   if (value == 'delete') onDelete();
@@ -318,11 +354,17 @@ class _VehicleCard extends StatelessWidget {
                   if (!vehicle.isDefault)
                     const PopupMenuItem(
                       value: 'default',
-                      child: Text('Set as default', style: TextStyle(color: DrunkDriveColors.textPrimary)),
+                      child: Text(
+                        'Set as default',
+                        style: TextStyle(color: DrunkDriveColors.textPrimary),
+                      ),
                     ),
                   const PopupMenuItem(
                     value: 'delete',
-                    child: Text('Remove', style: TextStyle(color: DrunkDriveColors.danger)),
+                    child: Text(
+                      'Remove',
+                      style: TextStyle(color: DrunkDriveColors.danger),
+                    ),
                   ),
                 ],
               ),
