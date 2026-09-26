@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-<<<<<<< Updated upstream
 import 'pending_accounts.dart';
 import 'user_management.dart';
 import '../../features/auth/screens/login_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
-  const AdminDashboard({Key? key}) : super(key: key);
+  const AdminDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -66,13 +65,3 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 }
-=======
-
-class AdminDashboard extends StatelessWidget {
-  const AdminDashboard({super.key});
-
-  @override
-  Widget build(BuildContext context) =>
-      const Scaffold(body: Center(child: Text('Admin dashboard')));
-}
->>>>>>> Stashed changes

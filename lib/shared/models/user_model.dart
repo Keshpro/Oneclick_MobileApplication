@@ -1,5 +1,5 @@
-<<<<<<< Updated upstream
-enum UserRole { admin, doctor, patient, driver, passenger }
+
+enum UserRole { admin, doctor, patient, driver, passenger, customer }
 enum AccountStatus { pending, approved, rejected }
 
 class UserModel {
@@ -17,11 +17,5 @@ class UserModel {
     required this.status,
   });
 }
-=======
-class UserModel {
-  const UserModel({required this.id, required this.name});
 
-  final String id;
-  final String name;
-}
->>>>>>> Stashed changes
+
