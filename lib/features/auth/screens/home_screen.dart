@@ -4,7 +4,7 @@ import 'services_screen.dart';
 import 'explore_screen.dart';
 import '../../doctor/patient/screens/patient_home_screen.dart';
 import '../../doctor/patient/screens/doctor_entry_screen.dart';
-
+import '../../drunk_drive/passenger/screens/drunk_drive_home_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -339,6 +339,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => const DoctorEntryScreen(),
+                            ),
+                          );
+                        } else if (service['title'] == 'Drunk & Drive') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const DrunkDriveHomeScreen(),
                             ),
                           );
                         } else {
