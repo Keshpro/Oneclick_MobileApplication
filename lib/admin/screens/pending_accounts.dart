@@ -3,7 +3,7 @@ import '../services/admin_service.dart';
 import '../../shared/models/user_model.dart';
 
 class PendingAccountsScreen extends StatefulWidget {
-  const PendingAccountsScreen({Key? key}) : super(key: key);
+  const PendingAccountsScreen({super.key});
 
   @override
   State<PendingAccountsScreen> createState() => _PendingAccountsScreenState();
