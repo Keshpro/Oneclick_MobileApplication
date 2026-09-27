@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../models/vehicle_model.dart';
 import '../../services/vehicle_service.dart';
 import '../../theme/drunk_drive_colors.dart';
@@ -225,7 +224,7 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
       child: ListView.separated(
         padding: const EdgeInsets.all(20),
         itemCount: _vehicles.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final vehicle = _vehicles[index];
           return _VehicleCard(
