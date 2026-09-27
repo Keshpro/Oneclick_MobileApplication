@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'services_screen.dart';
 import 'explore_screen.dart';
-import '../../doctor/patient/screens/patient_home_screen.dart';
 import '../../doctor/patient/screens/doctor_entry_screen.dart';
 
 // =========================
