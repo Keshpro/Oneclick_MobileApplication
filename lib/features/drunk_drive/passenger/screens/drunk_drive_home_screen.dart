@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/drunk_drive_colors.dart';
 import 'my_vehicles_screen.dart';
+import 'book_driver_screen.dart';
 
 class DrunkDriveHomeScreen extends StatelessWidget {
   const DrunkDriveHomeScreen({super.key});
@@ -68,7 +69,14 @@ class DrunkDriveHomeScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => _comingSoon(context, 'Book a Driver'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const BookDriverScreen(),
+                    ),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: DrunkDriveColors.accent,
                   foregroundColor: DrunkDriveColors.background,
@@ -114,12 +122,6 @@ class DrunkDriveHomeScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  void _comingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature — coming in the next step')),
     );
   }
 }
