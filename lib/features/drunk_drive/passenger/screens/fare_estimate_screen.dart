@@ -7,6 +7,7 @@ import '../../models/vehicle_model.dart';
 import '../../services/fare_service.dart';
 import '../../services/location_service.dart';
 import '../../theme/drunk_drive_colors.dart';
+import 'booking_confirmation_screen.dart';
 
 class FareEstimateScreen extends StatefulWidget {
   final VehicleModel vehicle;
@@ -44,8 +45,13 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
   Future<void> _calculateFare() async {
     await Future.delayed(const Duration(milliseconds: 400));
 
-    final distanceKm = _locationService.distanceKmBetween(widget.pickup, widget.destination);
-    final durationMinutes = _locationService.estimatedDurationMinutes(distanceKm);
+    final distanceKm = _locationService.distanceKmBetween(
+      widget.pickup,
+      widget.destination,
+    );
+    final durationMinutes = _locationService.estimatedDurationMinutes(
+      distanceKm,
+    );
     final estimate = _fareService.estimateFare(
       distanceKm: distanceKm,
       durationMinutes: durationMinutes,
@@ -61,8 +67,21 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
   }
 
   void _onContinue() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Booking confirmation — coming in the next step')),
+    if (_estimate == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BookingConfirmationScreen(
+          vehicle: widget.vehicle,
+          pickup: widget.pickup,
+          destination: widget.destination,
+          reason: widget.reason,
+          fareEstimate: _estimate!,
+          distanceKm: _distanceKm,
+          durationMinutes: _durationMinutes,
+        ),
+      ),
     );
   }
 
@@ -94,7 +113,10 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
           children: [
             CircularProgressIndicator(color: DrunkDriveColors.accent),
             SizedBox(height: 16),
-            Text('Calculating fare...', style: TextStyle(color: DrunkDriveColors.textMuted)),
+            Text(
+              'Calculating fare...',
+              style: TextStyle(color: DrunkDriveColors.textMuted),
+            ),
           ],
         ),
       );
@@ -121,7 +143,10 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
               _fareRow('Service Fee', estimate.serviceFee),
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
-                child: Divider(color: DrunkDriveColors.surfaceBorder, height: 1),
+                child: Divider(
+                  color: DrunkDriveColors.surfaceBorder,
+                  height: 1,
+                ),
               ),
               _fareRow('Estimated Total', estimate.total, isTotal: true),
             ],
@@ -146,13 +171,29 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _summaryRow(Icons.my_location_rounded, DrunkDriveColors.success, widget.pickup.name),
+          _summaryRow(
+            Icons.my_location_rounded,
+            DrunkDriveColors.success,
+            widget.pickup.name,
+          ),
           const SizedBox(height: 10),
-          _summaryRow(Icons.location_on_rounded, DrunkDriveColors.danger, widget.destination.name),
+          _summaryRow(
+            Icons.location_on_rounded,
+            DrunkDriveColors.danger,
+            widget.destination.name,
+          ),
           const SizedBox(height: 10),
-          _summaryRow(Icons.directions_car_rounded, DrunkDriveColors.accent, widget.vehicle.displayName),
+          _summaryRow(
+            Icons.directions_car_rounded,
+            DrunkDriveColors.accent,
+            widget.vehicle.displayName,
+          ),
           const SizedBox(height: 10),
-          _summaryRow(Icons.info_outline_rounded, DrunkDriveColors.textMuted, widget.reason.label),
+          _summaryRow(
+            Icons.info_outline_rounded,
+            DrunkDriveColors.textMuted,
+            widget.reason.label,
+          ),
           const SizedBox(height: 10),
           _summaryRow(
             Icons.route_rounded,
@@ -172,7 +213,11 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
@@ -218,9 +263,14 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
               backgroundColor: DrunkDriveColors.accent,
               foregroundColor: DrunkDriveColors.background,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
-            child: const Text('Continue', style: TextStyle(fontWeight: FontWeight.w800)),
+            child: const Text(
+              'Continue',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
           ),
         ),
       ),

@@ -84,7 +84,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   : ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       itemCount: _results.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           const Divider(color: DrunkDriveColors.surfaceBorder, height: 1),
                       itemBuilder: (context, index) {
                         final location = _results[index];
