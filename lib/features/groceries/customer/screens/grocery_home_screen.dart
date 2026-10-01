@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'my_orders_screen.dart';
 import '../../controllers/grocery_controller.dart';
 import '../../models/grocery_product_model.dart';
 import 'cart_screen.dart';
@@ -40,6 +41,16 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
       appBar: AppBar(
         title: const Text('Groceries'),
         actions: [
+          IconButton(
+            tooltip: 'My Orders',
+            icon: const Icon(Icons.receipt_long_outlined),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const MyOrdersScreen()),
+              );
+            },
+          ),
           Stack(
             children: [
               IconButton(
@@ -48,9 +59,7 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => CartScreen(
-                        controller: _controller,
-                      ),
+                      builder: (_) => CartScreen(controller: _controller),
                     ),
                   );
                 },
@@ -97,15 +106,13 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 scrollDirection: Axis.horizontal,
                 itemCount: _controller.categories.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(width: 8),
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
                   final category = _controller.categories[index];
 
                   return ChoiceChip(
                     label: Text(category),
-                    selected:
-                        _controller.selectedCategory == category,
+                    selected: _controller.selectedCategory == category,
                     onSelected: (_) {
                       _controller.selectCategory(category);
                     },
@@ -119,22 +126,19 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
             // Products
             Expanded(
               child: _controller.products.isEmpty
-                  ? const Center(
-                      child: Text('No products found'),
-                    )
+                  ? const Center(child: Text('No products found'))
                   : GridView.builder(
                       padding: const EdgeInsets.all(16),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 0.72,
-                      ),
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 0.72,
+                          ),
                       itemCount: _controller.products.length,
                       itemBuilder: (context, index) {
-                        final product =
-                            _controller.products[index];
+                        final product = _controller.products[index];
 
                         return _buildProductCard(product);
                       },
@@ -173,10 +177,7 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
-                    Icons.shopping_basket_outlined,
-                    size: 55,
-                  ),
+                  child: const Icon(Icons.shopping_basket_outlined, size: 55),
                 ),
               ),
 
@@ -186,26 +187,19 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                 product.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
 
               Text(
                 product.category,
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
               ),
 
               const SizedBox(height: 5),
 
               Text(
                 'Rs. ${product.finalPrice.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
 
               const SizedBox(height: 5),
@@ -217,22 +211,16 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                       ? () {
                           _controller.addToCart(product);
 
-                          ScaffoldMessenger.of(context)
-                              .showSnackBar(
+                          ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              duration:
-                                  const Duration(seconds: 1),
-                              content: Text(
-                                '${product.name} added to cart',
-                              ),
+                              duration: const Duration(seconds: 1),
+                              content: Text('${product.name} added to cart'),
                             ),
                           );
                         }
                       : null,
                   child: Text(
-                    product.isAvailable
-                        ? 'Add to Cart'
-                        : 'Out of Stock',
+                    product.isAvailable ? 'Add to Cart' : 'Out of Stock',
                   ),
                 ),
               ),
