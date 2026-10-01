@@ -7,6 +7,8 @@ import '../../theme/drunk_drive_colors.dart';
 import 'my_vehicles_screen.dart';
 import 'book_driver_screen.dart';
 import 'my_trips_screen.dart';
+import '../../driver/screens/driver_application_screen.dart';
+import '../../driver/screens/driver_home_screen.dart';
 
 class DrunkDriveHomeScreen extends StatefulWidget {
   const DrunkDriveHomeScreen({super.key});
@@ -230,6 +232,54 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
                 child: const Text(
                   'My Trips',
                   style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DriverHomeScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.swap_horiz_rounded),
+                label: const Text('Switch to Driver Mode', style: TextStyle(fontWeight: FontWeight.w800)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DrunkDriveColors.surface,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: const BorderSide(color: DrunkDriveColors.accent),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DriverApplicationScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.badge_rounded, color: DrunkDriveColors.accent),
+                label: const Text(
+                  'Become a Driver / Driver Status',
+                  style: TextStyle(color: DrunkDriveColors.accent, fontWeight: FontWeight.w700),
                 ),
               ),
             ),
