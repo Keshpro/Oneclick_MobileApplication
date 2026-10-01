@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../models/booking_model.dart';
+import '../../models/booking_status.dart';
 import '../../models/vehicle_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/driver_service.dart';
+import '../../services/vehicle_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 import 'driver_application_screen.dart';
 
@@ -40,11 +42,41 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   void _loadRequests() {
-    // Incoming requests for drivers (e.g. requested bookings)
-    final allBookings = _bookingService.getMyBookings();
     setState(() {
-      _incomingRequests = allBookings;
+      _incomingRequests = _bookingService.getAvailableRequests();
     });
+  }
+
+  // NOTE: in this prototype, the same mock account acts as both the
+  // passenger and the driver (there's only one test user). So a
+  // driver "accepting" a booking here may be accepting their own
+  // trip. This resolves naturally once there are separate real
+  // accounts — the accept/decline logic itself doesn't change.
+  void _onAccept(BookingModel booking) {
+    final updated = _bookingService.acceptBooking(
+      booking.id,
+      VehicleService.currentUserId,
+    );
+    if (updated == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This booking is no longer available.')),
+      );
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Booking Accepted!')));
+    }
+    _loadRequests();
+  }
+
+  void _onDecline(BookingModel booking) {
+    // Mock-stage decline: this driver simply stops seeing it. A real
+    // backend would record which driver declined so it isn't shown
+    // to them again, without affecting other drivers.
+    setState(() {
+      _incomingRequests.removeWhere((b) => b.id == booking.id);
+    });
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Request declined')));
   }
 
   void _toggleOnline(bool value) {
@@ -62,7 +94,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(_isOnline ? 'You are now ONLINE' : 'You are now OFFLINE'),
-        backgroundColor: _isOnline ? DrunkDriveColors.success : DrunkDriveColors.surfaceBorder,
+        backgroundColor: _isOnline
+            ? DrunkDriveColors.success
+            : DrunkDriveColors.surfaceBorder,
       ),
     );
   }
@@ -113,7 +147,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             const Text(
               'Your account has not been approved for Driver Mode yet. You must complete verification and receive backend approval first.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: DrunkDriveColors.textMuted, fontSize: 13, height: 1.4),
+              style: TextStyle(
+                color: DrunkDriveColors.textMuted,
+                fontSize: 13,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -128,10 +166,18 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: DrunkDriveColors.accent,
                 foregroundColor: DrunkDriveColors.background,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
-              child: const Text('View Driver Application Status', style: TextStyle(fontWeight: FontWeight.w800)),
+              child: const Text(
+                'View Driver Application Status',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
             ),
           ],
         ),
@@ -150,7 +196,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             color: DrunkDriveColors.surface,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: _isOnline ? DrunkDriveColors.success : DrunkDriveColors.surfaceBorder,
+              color: _isOnline
+                  ? DrunkDriveColors.success
+                  : DrunkDriveColors.surfaceBorder,
               width: 1.5,
             ),
           ),
@@ -163,7 +211,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     width: 12,
                     height: 12,
                     decoration: BoxDecoration(
-                      color: _isOnline ? DrunkDriveColors.success : DrunkDriveColors.textMuted,
+                      color: _isOnline
+                          ? DrunkDriveColors.success
+                          : DrunkDriveColors.textMuted,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -171,7 +221,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   Text(
                     _isOnline ? 'ONLINE' : 'OFFLINE',
                     style: TextStyle(
-                      color: _isOnline ? DrunkDriveColors.success : DrunkDriveColors.textMuted,
+                      color: _isOnline
+                          ? DrunkDriveColors.success
+                          : DrunkDriveColors.textMuted,
                       fontWeight: FontWeight.w800,
                       fontSize: 16,
                     ),
@@ -192,11 +244,21 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         Row(
           children: [
             Expanded(
-              child: _statCard('Today\'s Trips', '4', Icons.local_taxi_rounded, DrunkDriveColors.accent),
+              child: _statCard(
+                'Today\'s Trips',
+                '4',
+                Icons.local_taxi_rounded,
+                DrunkDriveColors.accent,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _statCard('Today\'s Earnings', _rs(4500), Icons.payments_rounded, DrunkDriveColors.success),
+              child: _statCard(
+                'Today\'s Earnings',
+                _rs(4500),
+                Icons.payments_rounded,
+                DrunkDriveColors.success,
+              ),
             ),
           ],
         ),
@@ -204,11 +266,21 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         Row(
           children: [
             Expanded(
-              child: _statCard('Driver Rating', '4.8 ★', Icons.star_rounded, Colors.amber),
+              child: _statCard(
+                'Driver Rating',
+                '4.8 ★',
+                Icons.star_rounded,
+                Colors.amber,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _statCard('Weekly Total', _rs(18200), Icons.account_balance_wallet_rounded, Colors.cyanAccent),
+              child: _statCard(
+                'Weekly Total',
+                _rs(18200),
+                Icons.account_balance_wallet_rounded,
+                Colors.cyanAccent,
+              ),
             ),
           ],
         ),
@@ -217,14 +289,21 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         // Booking Requests Section
         const Text(
           'Booking Requests',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+          ),
         ),
         const SizedBox(height: 6),
         Text(
           _isOnline
               ? 'Searching for customer trip requests in your area...'
               : 'Switch to ONLINE to start receiving booking requests.',
-          style: const TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+          style: const TextStyle(
+            color: DrunkDriveColors.textMuted,
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 14),
 
@@ -257,10 +336,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             ),
           )
         else
-          ..._incomingRequests.map((booking) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _BookingRequestCard(booking: booking),
-              )),
+          ..._incomingRequests.map(
+            (booking) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _BookingRequestCard(
+                booking: booking,
+                onAccept: () => _onAccept(booking),
+                onDecline: () => _onDecline(booking),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -277,9 +362,22 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         children: [
           Icon(icon, color: color, size: 22),
           const SizedBox(height: 10),
-          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(color: DrunkDriveColors.textMuted, fontSize: 11)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: DrunkDriveColors.textMuted,
+              fontSize: 11,
+            ),
+          ),
         ],
       ),
     );
@@ -288,8 +386,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
 class _BookingRequestCard extends StatelessWidget {
   final BookingModel booking;
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
 
-  const _BookingRequestCard({required this.booking});
+  const _BookingRequestCard({
+    required this.booking,
+    required this.onAccept,
+    required this.onDecline,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -298,7 +402,9 @@ class _BookingRequestCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: DrunkDriveColors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: DrunkDriveColors.accent.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: DrunkDriveColors.accent.withValues(alpha: 0.5),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,30 +414,53 @@ class _BookingRequestCard extends StatelessWidget {
             children: [
               const Text(
                 'New Trip Request',
-                style: TextStyle(color: DrunkDriveColors.accent, fontWeight: FontWeight.w800, fontSize: 14),
+                style: TextStyle(
+                  color: DrunkDriveColors.accent,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
               ),
               Text(
                 'Rs. ${booking.fareEstimate.total.toStringAsFixed(0)}',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Text('Pickup: ${booking.pickup.name}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-          Text('Destination: ${booking.destination.name}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(
+            'Pickup: ${booking.pickup.name}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            'Destination: ${booking.destination.name}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
             'Vehicle: ${booking.vehicle.displayName} (${booking.vehicle.transmission.label})',
-            style: const TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+            style: const TextStyle(
+              color: DrunkDriveColors.textMuted,
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request declined')));
-                  },
+                  onPressed: onDecline,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: DrunkDriveColors.danger,
                     side: const BorderSide(color: DrunkDriveColors.danger),
@@ -342,14 +471,15 @@ class _BookingRequestCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking Accepted!')));
-                  },
+                  onPressed: onAccept,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: DrunkDriveColors.success,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('ACCEPT', style: TextStyle(fontWeight: FontWeight.w800)),
+                  child: const Text(
+                    'ACCEPT',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
                 ),
               ),
             ],
