@@ -4,6 +4,7 @@ import 'services_screen.dart';
 import 'explore_screen.dart';
 import '../../doctor/patient/screens/patient_home_screen.dart';
 import '../../doctor/patient/screens/doctor_entry_screen.dart';
+import '../../groceries/customer/screens/grocery_home_screen.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -33,9 +34,9 @@ class _HomeScreenState extends State<HomeScreen> {
       'color': const Color(0xFF7C3AED),
     },
     {
-      'title': 'Service 03',
-      'description': 'Explore more services available through OneClick.',
-      'icon': Icons.home_repair_service_rounded,
+      'title': 'Groceries',
+      'description': 'Shop groceries online with delivery or pickup.',
+      'icon': Icons.shopping_basket_rounded,
       'color': const Color(0xFF059669),
     },
     {
@@ -339,6 +340,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => const DoctorEntryScreen(),
+                            ),
+                          );
+                        } else if (service['title'] == 'Groceries') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const GroceryHomeScreen(),
                             ),
                           );
                         } else {
