@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 
 import 'services_screen.dart';
 import 'explore_screen.dart';
+import '../../doctor/patient/screens/patient_home_screen.dart';
+import '../../doctor/patient/screens/doctor_entry_screen.dart';
+import '../../groceries/customer/screens/grocery_home_screen.dart';
 
 import '../../doctor/patient/screens/doctor_entry_screen.dart';
 import '../../drunk_drive/passenger/screens/drunk_drive_home_screen.dart';
@@ -41,8 +44,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final TextEditingController _searchController =
-      TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   int _selectedIndex = 0;
   String _searchQuery = '';
@@ -54,43 +56,28 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Map<String, dynamic>> _services = [
     {
       'title': 'Doctor',
-      'description':
-          'Find doctors, book appointments and get medical support.',
+      'description': 'Find doctors, book appointments and get medical support.',
       'icon': Icons.medical_services_rounded,
-      'gradient': const [
-        Color(0xFF11D999),
-        Color(0xFF059669),
-      ],
+      'gradient': const [Color(0xFF11D999), Color(0xFF059669)],
     },
     {
       'title': 'Drunk & Drive',
-      'description':
-          'Find a trusted driver and get home safely.',
+      'description': 'Find a trusted driver and get home safely.',
       'icon': Icons.directions_car_filled_rounded,
-      'gradient': const [
-        Color(0xFFA78BFA),
-        Color(0xFF7C3AED),
-      ],
+      'gradient': const [Color(0xFFA78BFA), Color(0xFF7C3AED)],
     },
     {
       'title': 'Groceries',
-      'description':
-          'Fresh groceries delivered through OneClick partners.',
+      'description': 'Fresh groceries delivered through OneClick partners.',
       'icon': Icons.local_grocery_store_rounded,
-      'gradient': const [
-        Color(0xFFFFC857),
-        Color(0xFFBF8211),
-      ],
+      'gradient': const [Color(0xFFFFC857), Color(0xFFBF8211)],
     },
     {
       'title': 'Personal Vault',
       'description':
           'Keep your personal documents and important information secure.',
       'icon': Icons.shield_rounded,
-      'gradient': const [
-        Color(0xFF38BDF8),
-        Color(0xFF0369A1),
-      ],
+      'gradient': const [Color(0xFF38BDF8), Color(0xFF0369A1)],
     },
   ];
 
@@ -106,14 +93,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final query = _searchQuery.trim().toLowerCase();
 
     return _services.where((service) {
-      final title =
-          service['title'].toString().toLowerCase();
+      final title = service['title'].toString().toLowerCase();
 
-      final description =
-          service['description'].toString().toLowerCase();
+      final description = service['description'].toString().toLowerCase();
 
-      return title.contains(query) ||
-          description.contains(query);
+      return title.contains(query) || description.contains(query);
     }).toList();
   }
 
@@ -148,12 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  14,
-                  20,
-                  0,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
                 child: Row(
                   children: [
                     Container(
@@ -163,17 +142,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            _Palette.primary,
-                            _Palette.primaryDeep,
-                          ],
+                          colors: [_Palette.primary, _Palette.primaryDeep],
                         ),
-                        borderRadius:
-                            BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(15),
                         boxShadow: [
                           BoxShadow(
-                            color: _Palette.primary
-                                .withValues(alpha: 0.35),
+                            color: _Palette.primary.withValues(alpha: 0.35),
                             blurRadius: 16,
                             offset: const Offset(0, 8),
                           ),
@@ -190,8 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'OneClick',
@@ -216,16 +189,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     TextButton(
                       onPressed: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/login',
-                        );
+                        Navigator.pushNamed(context, '/login');
                       },
                       style: TextButton.styleFrom(
                         foregroundColor: _Palette.ink,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
                       ),
                       child: const Text(
                         'Login',
@@ -241,10 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     _GradientButton(
                       label: 'Register',
                       onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/register',
-                        );
+                        Navigator.pushNamed(context, '/register');
                       },
                     ),
                   ],
@@ -255,15 +220,9 @@ class _HomeScreenState extends State<HomeScreen> {
             // ==================================================
             // HERO
             // ==================================================
-
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  22,
-                  20,
-                  0,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
                 child: _HeroCard(
                   searchController: _searchController,
                   searchQuery: _searchQuery,
@@ -286,15 +245,9 @@ class _HomeScreenState extends State<HomeScreen> {
             // ==================================================
             // SERVICES TITLE
             // ==================================================
-
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  22,
-                  30,
-                  22,
-                  14,
-                ),
+                padding: const EdgeInsets.fromLTRB(22, 30, 22, 14),
                 child: Row(
                   children: [
                     const Expanded(
@@ -314,10 +267,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: _Palette.primary
-                            .withValues(alpha: 0.08),
-                        borderRadius:
-                            BorderRadius.circular(20),
+                        color: _Palette.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         '${_filteredServices.length} Categories',
@@ -336,56 +287,35 @@ class _HomeScreenState extends State<HomeScreen> {
             // ==================================================
             // SERVICES GRID
             // ==================================================
-
             if (_filteredServices.isNotEmpty)
               SliverPadding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverGrid(
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     crossAxisSpacing: 14,
                     mainAxisSpacing: 14,
                     childAspectRatio: 0.86,
                   ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final service =
-                          _filteredServices[index];
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final service = _filteredServices[index];
 
-                      return _ServiceCard(
-                        title:
-                            service['title'].toString(),
-                        description:
-                            service['description']
-                                .toString(),
-                        icon:
-                            service['icon'] as IconData,
-                        gradient:
-                            List<Color>.from(
-                          service['gradient'],
-                        ),
-                        onTap: () {
-                          _openService(
-                            service['title'].toString(),
-                          );
-                        },
-                      );
-                    },
-                    childCount:
-                        _filteredServices.length,
-                  ),
+                    return _ServiceCard(
+                      title: service['title'].toString(),
+                      description: service['description'].toString(),
+                      icon: service['icon'] as IconData,
+                      gradient: List<Color>.from(service['gradient']),
+                      onTap: () {
+                        _openService(service['title'].toString());
+                      },
+                    );
+                  }, childCount: _filteredServices.length),
                 ),
               )
             else
               const SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 40,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 40),
                   child: Column(
                     children: [
                       Icon(
@@ -410,15 +340,9 @@ class _HomeScreenState extends State<HomeScreen> {
             // ==================================================
             // CREATE ACCOUNT SECTION
             // ==================================================
-
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  30,
-                  20,
-                  24,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 30, 20, 24),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
@@ -426,17 +350,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        _Palette.primary,
-                        _Palette.primaryDeep,
-                      ],
+                      colors: [_Palette.primary, _Palette.primaryDeep],
                     ),
-                    borderRadius:
-                        BorderRadius.circular(26),
+                    borderRadius: BorderRadius.circular(26),
                     boxShadow: [
                       BoxShadow(
-                        color: _Palette.primary
-                            .withValues(alpha: 0.30),
+                        color: _Palette.primary.withValues(alpha: 0.30),
                         blurRadius: 24,
                         offset: const Offset(0, 14),
                       ),
@@ -448,8 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: 56,
                         height: 56,
                         decoration: BoxDecoration(
-                          color: Colors.white
-                              .withValues(alpha: 0.14),
+                          color: Colors.white.withValues(alpha: 0.14),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -477,8 +395,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         'Create an account to access services and manage everything from one place.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.white
-                              .withValues(alpha: 0.78),
+                          color: Colors.white.withValues(alpha: 0.78),
                           fontSize: 13,
                           height: 1.5,
                         ),
@@ -490,35 +407,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/register',
-                            );
+                            Navigator.pushNamed(context, '/register');
                           },
-                          style:
-                              ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Colors.white,
-                            foregroundColor:
-                                _Palette.primaryDeep,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: _Palette.primaryDeep,
                             elevation: 0,
-                            padding:
-                                const EdgeInsets.symmetric(
-                              vertical: 15,
-                            ),
-                            shape:
-                                RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(
-                                14,
-                              ),
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
                             ),
                           ),
                           child: const Text(
                             'Create Account',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.w800),
                           ),
                         ),
                       ),
@@ -527,14 +429,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
                       TextButton(
                         onPressed: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/login',
-                          );
+                          Navigator.pushNamed(context, '/login');
                         },
                         style: TextButton.styleFrom(
-                          foregroundColor:
-                              Colors.white,
+                          foregroundColor: Colors.white,
                         ),
                         child: const Text(
                           'Already have an account? Login',
@@ -550,9 +448,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 90),
-            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 90)),
           ],
         ),
       ),
@@ -560,7 +456,6 @@ class _HomeScreenState extends State<HomeScreen> {
       // ========================================================
       // BOTTOM NAV
       // ========================================================
-
       bottomNavigationBar: _FloatingNavBar(
         selectedIndex: _selectedIndex,
         onSelected: _onNavigationSelected,
@@ -581,10 +476,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'Doctor':
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) =>
-                const DoctorEntryScreen(),
-          ),
+          MaterialPageRoute(builder: (_) => const DoctorEntryScreen()),
         );
         break;
 
@@ -595,10 +487,17 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'Drunk & Drive':
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) =>
-                const DrunkDriveHomeScreen(),
-          ),
+          MaterialPageRoute(builder: (_) => const DrunkDriveHomeScreen()),
+        );
+        break;
+      // ------------------------------------------------------------
+      // GROCERIES
+      // ------------------------------------------------------------
+
+      case 'Groceries':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const GroceryHomeScreen()),
         );
         break;
 
@@ -612,9 +511,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) =>
-                const personal_vault
-                    .PersonalDashboardScreen(),
+            builder: (_) => const personal_vault.PersonalDashboardScreen(),
           ),
         );
         break;
@@ -624,15 +521,11 @@ class _HomeScreenState extends State<HomeScreen> {
       // --------------------------------------------------------
 
       case 'Groceries':
-        _showLoginRequired(
-          'Groceries',
-        );
+        _showLoginRequired('Groceries');
         break;
 
       default:
-        _showLoginRequired(
-          serviceTitle,
-        );
+        _showLoginRequired(serviceTitle);
     }
   }
 
@@ -655,10 +548,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) =>
-              const ServicesScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const ServicesScreen()),
       ).then((_) {
         if (!mounted) return;
 
@@ -677,10 +567,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) =>
-              const ExploreScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const ExploreScreen()),
       ).then((_) {
         if (!mounted) return;
 
@@ -705,9 +592,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // LOGIN REQUIRED SHEET
   // ============================================================
 
-  void _showLoginRequired(
-    String serviceName,
-  ) {
+  void _showLoginRequired(String serviceName) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -726,10 +611,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 64,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      _Palette.primary,
-                      _Palette.primaryDeep,
-                    ],
+                    colors: [_Palette.primary, _Palette.primaryDeep],
                   ),
                   shape: BoxShape.circle,
                 ),
@@ -770,21 +652,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(
-                      sheetContext,
-                    );
+                    Navigator.pop(sheetContext);
 
-                    Navigator.pushNamed(
-                      context,
-                      '/login',
-                    );
+                    Navigator.pushNamed(context, '/login');
                   },
                   style: _primaryButtonStyle(),
                   child: const Text(
                     'Login',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
               ),
@@ -795,14 +670,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 child: TextButton(
                   onPressed: () {
-                    Navigator.pop(
-                      sheetContext,
-                    );
+                    Navigator.pop(sheetContext);
 
-                    Navigator.pushNamed(
-                      context,
-                      '/register',
-                    );
+                    Navigator.pushNamed(context, '/register');
                   },
                   child: const Text(
                     'Create a new account',
@@ -851,10 +721,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 64,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      _Palette.primary,
-                      _Palette.primaryDeep,
-                    ],
+                    colors: [_Palette.primary, _Palette.primaryDeep],
                   ),
                   shape: BoxShape.circle,
                 ),
@@ -894,21 +761,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(
-                      sheetContext,
-                    );
+                    Navigator.pop(sheetContext);
 
-                    Navigator.pushNamed(
-                      context,
-                      '/login',
-                    );
+                    Navigator.pushNamed(context, '/login');
                   },
                   style: _primaryButtonStyle(),
                   child: const Text(
                     'Login',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
               ),
@@ -919,14 +779,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 child: TextButton(
                   onPressed: () {
-                    Navigator.pop(
-                      sheetContext,
-                    );
+                    Navigator.pop(sheetContext);
 
-                    Navigator.pushNamed(
-                      context,
-                      '/register',
-                    );
+                    Navigator.pushNamed(context, '/register');
                   },
                   child: const Text(
                     'Create Account',
@@ -970,12 +825,8 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: _Palette.primary,
       foregroundColor: Colors.white,
       elevation: 0,
-      padding: const EdgeInsets.symmetric(
-        vertical: 15,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 15),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     );
   }
 }
@@ -988,10 +839,7 @@ class _GradientButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _GradientButton({
-    required this.label,
-    required this.onTap,
-  });
+  const _GradientButton({required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1001,22 +849,15 @@ class _GradientButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(13),
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 11,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [
-                _Palette.primary,
-                _Palette.primaryDeep,
-              ],
+              colors: [_Palette.primary, _Palette.primaryDeep],
             ),
             borderRadius: BorderRadius.circular(13),
             boxShadow: [
               BoxShadow(
-                color: _Palette.primary
-                    .withValues(alpha: 0.35),
+                color: _Palette.primary.withValues(alpha: 0.35),
                 blurRadius: 14,
                 offset: const Offset(0, 6),
               ),
@@ -1061,16 +902,12 @@ class _HeroCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            _Palette.primaryDeep,
-            _Palette.primary,
-          ],
+          colors: [_Palette.primaryDeep, _Palette.primary],
         ),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: _Palette.primary
-                .withValues(alpha: 0.30),
+            color: _Palette.primary.withValues(alpha: 0.30),
             blurRadius: 26,
             offset: const Offset(0, 16),
           ),
@@ -1088,8 +925,7 @@ class _HeroCard extends StatelessWidget {
                 height: 140,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _Palette.accent2
-                      .withValues(alpha: 0.25),
+                  color: _Palette.accent2.withValues(alpha: 0.25),
                 ),
               ),
             ),
@@ -1102,22 +938,15 @@ class _HeroCard extends StatelessWidget {
                 height: 160,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _Palette.accent
-                      .withValues(alpha: 0.20),
+                  color: _Palette.accent.withValues(alpha: 0.20),
                 ),
               ),
             ),
 
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                24,
-                26,
-                24,
-                26,
-              ),
+              padding: const EdgeInsets.fromLTRB(24, 26, 24, 26),
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -1125,10 +954,8 @@ class _HeroCard extends StatelessWidget {
                       vertical: 7,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white
-                          .withValues(alpha: 0.14),
-                      borderRadius:
-                          BorderRadius.circular(30),
+                      color: Colors.white.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(30),
                     ),
                     child: const Text(
                       'ONE APP • MULTIPLE SERVICES',
@@ -1159,8 +986,7 @@ class _HeroCard extends StatelessWidget {
                   Text(
                     'Discover services, find the right people and get things done with OneClick.',
                     style: TextStyle(
-                      color: Colors.white
-                          .withValues(alpha: 0.80),
+                      color: Colors.white.withValues(alpha: 0.80),
                       fontSize: 14,
                       height: 1.5,
                     ),
@@ -1171,12 +997,10 @@ class _HeroCard extends StatelessWidget {
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius:
-                          BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(18),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black
-                              .withValues(alpha: 0.12),
+                          color: Colors.black.withValues(alpha: 0.12),
                           blurRadius: 18,
                           offset: const Offset(0, 8),
                         ),
@@ -1185,32 +1009,25 @@ class _HeroCard extends StatelessWidget {
                     child: TextField(
                       controller: searchController,
                       onChanged: onSearchChanged,
-                      textInputAction:
-                          TextInputAction.search,
+                      textInputAction: TextInputAction.search,
                       decoration: InputDecoration(
                         hintText: 'Search services...',
-                        hintStyle: const TextStyle(
-                          color: _Palette.inkSoft,
-                        ),
+                        hintStyle: const TextStyle(color: _Palette.inkSoft),
                         prefixIcon: const Icon(
                           Icons.search_rounded,
                           color: _Palette.primary,
                         ),
-                        suffixIcon:
-                            searchQuery.isNotEmpty
-                                ? IconButton(
-                                    onPressed:
-                                        onSearchClear,
-                                    icon: const Icon(
-                                      Icons.close_rounded,
-                                      color:
-                                          _Palette.inkSoft,
-                                    ),
-                                  )
-                                : null,
+                        suffixIcon: searchQuery.isNotEmpty
+                            ? IconButton(
+                                onPressed: onSearchClear,
+                                icon: const Icon(
+                                  Icons.close_rounded,
+                                  color: _Palette.inkSoft,
+                                ),
+                              )
+                            : null,
                         border: InputBorder.none,
-                        contentPadding:
-                            const EdgeInsets.symmetric(
+                        contentPadding: const EdgeInsets.symmetric(
                           vertical: 16,
                         ),
                       ),
@@ -1257,21 +1074,17 @@ class _ServiceCard extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: _Palette.line,
-            ),
+            border: Border.all(color: _Palette.line),
             boxShadow: [
               BoxShadow(
-                color: gradient.last
-                    .withValues(alpha: 0.10),
+                color: gradient.last.withValues(alpha: 0.10),
                 blurRadius: 18,
                 offset: const Offset(0, 10),
               ),
             ],
           ),
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 50,
@@ -1282,22 +1095,16 @@ class _ServiceCard extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: gradient,
                   ),
-                  borderRadius:
-                      BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: gradient.last
-                          .withValues(alpha: 0.35),
+                      color: gradient.last.withValues(alpha: 0.35),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),
                   ],
                 ),
-                child: Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 25,
-                ),
+                child: Icon(icon, color: Colors.white, size: 25),
               ),
 
               const Spacer(),
@@ -1362,45 +1169,22 @@ class _ServiceCard extends StatelessWidget {
 class _GlassSheet extends StatelessWidget {
   final Widget child;
 
-  const _GlassSheet({
-    required this.child,
-  });
+  const _GlassSheet({required this.child});
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(30),
-      ),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: 18,
-          sigmaY: 18,
-        ),
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(
-            24,
-            14,
-            24,
-            30,
-          ),
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
           decoration: BoxDecoration(
-            color: Colors.white
-                .withValues(alpha: 0.96),
-            borderRadius:
-                const BorderRadius.vertical(
-              top: Radius.circular(30),
-            ),
-            border: const Border(
-              top: BorderSide(
-                color: _Palette.line,
-              ),
-            ),
+            color: Colors.white.withValues(alpha: 0.96),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+            border: const Border(top: BorderSide(color: _Palette.line)),
           ),
-          child: SafeArea(
-            top: false,
-            child: child,
-          ),
+          child: SafeArea(top: false, child: child),
         ),
       ),
     );
@@ -1421,26 +1205,10 @@ class _FloatingNavBar extends StatelessWidget {
   });
 
   static const _items = [
-    (
-      Icons.home_outlined,
-      Icons.home_rounded,
-      'Home',
-    ),
-    (
-      Icons.grid_view_outlined,
-      Icons.grid_view_rounded,
-      'Services',
-    ),
-    (
-      Icons.explore_outlined,
-      Icons.explore_rounded,
-      'Explore',
-    ),
-    (
-      Icons.person_outline_rounded,
-      Icons.person_rounded,
-      'Account',
-    ),
+    (Icons.home_outlined, Icons.home_rounded, 'Home'),
+    (Icons.grid_view_outlined, Icons.grid_view_rounded, 'Services'),
+    (Icons.explore_outlined, Icons.explore_rounded, 'Explore'),
+    (Icons.person_outline_rounded, Icons.person_rounded, 'Account'),
   ];
 
   @override
@@ -1448,128 +1216,88 @@ class _FloatingNavBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          20,
-          0,
-          20,
-          14,
-        ),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(26),
           child: BackdropFilter(
-            filter: ImageFilter.blur(
-              sigmaX: 20,
-              sigmaY: 20,
-            ),
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: Container(
               height: 66,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
-                color: Colors.white
-                    .withValues(alpha: 0.92),
-                borderRadius:
-                    BorderRadius.circular(26),
-                border: Border.all(
-                  color: _Palette.line,
-                ),
+                color: Colors.white.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(26),
+                border: Border.all(color: _Palette.line),
                 boxShadow: [
                   BoxShadow(
-                    color: _Palette.ink
-                        .withValues(alpha: 0.08),
+                    color: _Palette.ink.withValues(alpha: 0.08),
                     blurRadius: 24,
                     offset: const Offset(0, 10),
                   ),
                 ],
               ),
               child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceAround,
-                children: List.generate(
-                  _items.length,
-                  (index) {
-                    final selected =
-                        index == selectedIndex;
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(_items.length, (index) {
+                  final selected = index == selectedIndex;
 
-                    final item = _items[index];
+                  final item = _items[index];
 
-                    return Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          onSelected(index);
-                        },
-                        borderRadius:
-                            BorderRadius.circular(20),
-                        child: AnimatedContainer(
-                          duration: const Duration(
-                            milliseconds: 220,
-                          ),
-                          curve: Curves.easeOut,
-                          margin:
-                              const EdgeInsets.symmetric(
-                            vertical: 9,
-                            horizontal: 4,
-                          ),
-                          padding:
-                              EdgeInsets.symmetric(
-                            horizontal:
-                                selected ? 14 : 0,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: selected
-                                ? const LinearGradient(
-                                    colors: [
-                                      _Palette.primary,
-                                      _Palette
-                                          .primaryDeep,
-                                    ],
-                                  )
-                                : null,
-                            borderRadius:
-                                BorderRadius.circular(
-                              18,
+                  return Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        onSelected(index);
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOut,
+                        margin: const EdgeInsets.symmetric(
+                          vertical: 9,
+                          horizontal: 4,
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: selected ? 14 : 0,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: selected
+                              ? const LinearGradient(
+                                  colors: [
+                                    _Palette.primary,
+                                    _Palette.primaryDeep,
+                                  ],
+                                )
+                              : null,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              selected ? item.$2 : item.$1,
+                              color: selected ? Colors.white : _Palette.inkSoft,
+                              size: 22,
                             ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                selected
-                                    ? item.$2
-                                    : item.$1,
-                                color: selected
-                                    ? Colors.white
-                                    : _Palette.inkSoft,
-                                size: 22,
-                              ),
-                              if (selected) ...[
-                                const SizedBox(width: 7),
-                                Flexible(
-                                  child: Text(
-                                    item.$3,
-                                    overflow:
-                                        TextOverflow
-                                            .ellipsis,
-                                    style:
-                                        const TextStyle(
-                                      color:
-                                          Colors.white,
-                                      fontWeight:
-                                          FontWeight.w700,
-                                      fontSize: 12.5,
-                                    ),
+                            if (selected) ...[
+                              const SizedBox(width: 7),
+                              Flexible(
+                                child: Text(
+                                  item.$3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12.5,
                                   ),
                                 ),
-                              ],
+                              ),
                             ],
-                          ),
+                          ],
                         ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                }),
               ),
             ),
           ),
