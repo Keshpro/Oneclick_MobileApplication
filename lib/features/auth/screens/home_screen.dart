@@ -219,6 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
             if (_filteredServices.isNotEmpty)
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
+
                 sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
