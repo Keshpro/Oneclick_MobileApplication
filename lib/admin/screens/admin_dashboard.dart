@@ -344,7 +344,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
-        color: selected ? Colors.blue.withOpacity(0.10) : null,
+        color: selected ? Colors.blue.withValues(alpha: 0.10) : null,
         borderRadius: BorderRadius.circular(10),
       ),
       child: ListTile(
@@ -378,7 +378,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.15),
+            color: Colors.blue.withValues(alpha: 0.15),
             blurRadius: 15,
             offset: const Offset(0, 6),
           ),
@@ -485,7 +485,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             Container(
               padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.10),
+                color: iconColor.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: iconColor, size: 22),
@@ -710,7 +710,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.10),
+                  color: Colors.blue.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: Colors.blue, size: 25),
@@ -891,7 +891,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               Container(
                 padding: const EdgeInsets.all(9),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.10),
+                  color: iconColor.withValues(alpha: 0.10),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: iconColor, size: 20),
@@ -995,7 +995,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.10),
+                  color: iconColor.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: iconColor, size: 20),
