@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "215627660972",
+    "project_id": "oneclick-026",
+    "storage_bucket": "oneclick-026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:215627660972:android:ca364eb89b9de73ca86909",
+        "android_client_info": {
+          "package_name": "com.example.oneclick"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDUK5Fci5ifcd3PYoQkT5VMAJmS_Ym8Soo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
