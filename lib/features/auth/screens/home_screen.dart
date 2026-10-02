@@ -10,21 +10,13 @@ import '../../Personal Vault/screens/dashboard.dart' as personal_vault;
 
 class _Palette {
   static const bg = Color(0xFFF3F1FF);
-
   static const surface = Color(0xFFFFFFFF);
-
   static const ink = Color(0xFF120F2E);
-
   static const inkSoft = Color(0xFF6B6584);
-
   static const primary = Color(0xFF5B4DFF);
-
   static const primaryDeep = Color(0xFF2E1FA6);
-
   static const accent = Color(0xFFFF6FA1);
-
   static const accent2 = Color(0xFF00D6C4);
-
   static const line = Color(0xFFE7E3FB);
 }
 
@@ -221,6 +213,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
+            // ==================================================
+            // SERVICES GRID
+            // ==================================================
             if (_filteredServices.isNotEmpty)
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
