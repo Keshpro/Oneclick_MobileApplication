@@ -64,8 +64,8 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     SaveBiteOffer(
       foodName: 'Chicken Rice & Curry',
       restaurantName: 'Spice Garden Restaurant',
-      restaurantLogo: 'assets/food/restaurants/spice_garden_logo.webp',
-      foodImage: 'assets/food/dishes/chicken_rice.webp',
+      restaurantLogo: 'assets/images/food/restaurants/spice_garden_logo.webp',
+      foodImage: 'assets/images/food/dishes/chicken_rice.webp',
       originalPrice: 650,
       saverPrice: 390,
       quantity: 5,
@@ -80,8 +80,8 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     SaveBiteOffer(
       foodName: 'Bakery Surprise Pack',
       restaurantName: 'Cocos Bakery',
-      restaurantLogo: 'assets/food/restaurants/cocos_bakery_logo.webp',
-      foodImage: 'assets/food/dishes/bakery_pack.webp',
+      restaurantLogo: 'assets/images/food/restaurants/cocos_bakery_logo.webp',
+      foodImage: 'assets/images/food/dishes/bakery_pack.webp',
       originalPrice: 800,
       saverPrice: 450,
       quantity: 3,
@@ -96,8 +96,8 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     SaveBiteOffer(
       foodName: 'Pizza Slices',
       restaurantName: 'Urban Pizza',
-      restaurantLogo: 'assets/food/restaurants/urban_pizza_logo.webp',
-      foodImage: 'assets/food/dishes/pizza_slices.webp',
+      restaurantLogo: 'assets/images/food/restaurants/urban_pizza_logo.webp',
+      foodImage: 'assets/images/food/dishes/pizza_slices.webp',
       originalPrice: 900,
       saverPrice: 500,
       quantity: 4,
@@ -112,8 +112,8 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     SaveBiteOffer(
       foodName: 'Chocolate Brownies',
       restaurantName: 'Cocos Bakery',
-      restaurantLogo: 'assets/food/restaurants/cocos_bakery_logo.webp',
-      foodImage: 'assets/food/dishes/chocolate_brownies.webp',
+      restaurantLogo: 'assets/images/food/restaurants/cocos_bakery_logo.webp',
+      foodImage: 'assets/images/food/dishes/chocolate_brownies.webp',
       originalPrice: 600,
       saverPrice: 350,
       quantity: 6,

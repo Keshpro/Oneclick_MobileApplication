@@ -66,8 +66,8 @@ flutter:
 
   assets:
     - assets/animations/doctor_entry.mp4
-    - assets/food/restaurants/
-    - assets/food/dishes/
+    - assets/images/food/restaurants/
+    - assets/images/food/dishes/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
