@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+
 import 'add_subscription_screen.dart';
+import 'subscription_details_screen.dart';
+import 'ai_subscription_checkup_screen.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
@@ -609,7 +612,13 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               text: 'Run Checkup',
               color: purple,
               onTap: () {
-                _message('AI subscription checkup started.');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                    const AISubscriptionCheckupScreen(),
+                  ),
+                );
               },
             ),
           ),
@@ -921,7 +930,21 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   }
 
   Widget _subscriptionCard(SubscriptionItem item) {
-    return _card(
+  return InkWell(
+    borderRadius: BorderRadius.circular(30),
+    onTap: () {
+      if (item.name == 'Adobe Creative Cloud') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const SubscriptionDetailsScreen(),
+          ),
+        );
+      } else {
+        _message('${item.name} details will be added soon.');
+      }
+    },
+    child: _card(
       padding: const EdgeInsets.all(19),
       child: Column(
         children: [
@@ -1066,8 +1089,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ============================================================
   // ADD SUBSCRIPTION

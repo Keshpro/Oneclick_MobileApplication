@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'vault_screen.dart';
 import 'subscriptions_screen.dart';
+import 'sharing_center_screen.dart';
+import 'ask_ai_vault_screen.dart';
 
 class PersonalDashboardScreen extends StatelessWidget {
   const PersonalDashboardScreen({super.key});
@@ -210,6 +212,15 @@ class PersonalDashboardScreen extends StatelessWidget {
                             Icons.auto_awesome,
                             'Ask Vault AI',
                             'Ask about your documents',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                  const AskAIVaultScreen(),
+                                ),
+                              );
+                            },
                           ),
 
                           _action(
@@ -541,10 +552,13 @@ class PersonalDashboardScreen extends StatelessWidget {
 
           // SHARING
           if (index == 3) {
-            _showNextStep(
+            Navigator.push(
               context,
-              'Sharing',
+              MaterialPageRoute(
+                builder: (context) => const SharingCenterScreen(),
+              ),
             );
+            return;
           }
         },
 
@@ -697,20 +711,22 @@ class PersonalDashboardScreen extends StatelessWidget {
     double width,
     IconData icon,
     String title,
-    String subtitle,
-  ) {
+    String subtitle, {
+    VoidCallback? onTap,
+    }) {
     return SizedBox(
       width: width,
       child: Semantics(
         button: true,
         label: title,
         child: GestureDetector(
-          onTap: () {
-            _showNextStep(
-              context,
-              title,
-            );
-          },
+          onTap: onTap ??
+    () {
+      _showNextStep(
+        context,
+        title,
+      );
+    },
           child: _surface(
             padding: const EdgeInsets.all(16),
             child: Column(
