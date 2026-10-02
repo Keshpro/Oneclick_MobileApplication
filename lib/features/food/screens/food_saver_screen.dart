@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../services/food_cart_service.dart';
+import 'food_cart_screen.dart';
+
 class SaveBiteOffer {
   final String foodName;
   final String restaurantName;
@@ -175,11 +178,55 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
         ),
 
         actions: [
-          IconButton(
-            icon: const Icon(Icons.shopping_bag_outlined, color: Colors.black),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cart coming next!')),
+          Builder(
+            builder: (context) {
+              final cart = FoodCartService.instance;
+
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.shopping_bag_outlined,
+                      color: Colors.black,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FoodCartScreen(),
+                        ),
+                      ).then((_) {
+                        setState(() {});
+                      });
+                    },
+                  ),
+
+                  if (cart.totalItems > 0)
+                    Positioned(
+                      right: 6,
+                      top: 5,
+                      child: Container(
+                        height: 18,
+                        width: 18,
+
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+
+                        child: Center(
+                          child: Text(
+                            '${cart.totalItems}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               );
             },
           ),
@@ -1261,14 +1308,26 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
 
             child: ElevatedButton(
               onPressed: () {
-                final total = offer.saverPrice * quantity;
+                FoodCartService.instance.addToCart(offer, quantity);
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      '$quantity × ${offer.foodName} added to cart • Rs. ${total.toStringAsFixed(0)}',
+                      '$quantity × ${offer.foodName} added to cart',
                     ),
                     behavior: SnackBarBehavior.floating,
+
+                    action: SnackBarAction(
+                      label: 'VIEW CART',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const FoodCartScreen(),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 );
               },
