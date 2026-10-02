@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+
 import 'add_record_screen.dart';
+import 'record_details_screen.dart';
+import 'subscriptions_screen.dart';
 
 class VaultScreen extends StatefulWidget {
   const VaultScreen({super.key});
@@ -381,12 +384,18 @@ class _VaultScreenState extends State<VaultScreen> {
         selectedIndex: 1,
         onDestinationSelected: (index) {
           if (index == 0) {
-            Navigator.maybePop(context);
+          } else if (index == 1) {
+
           } else if (index == 2) {
-            _comingSoon('Subscriptions');
-          } else if (index == 3) {
-            _comingSoon('Sharing');
-          }
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SubscriptionsScreen(),
+              ),
+            );
+            } else if (index == 3) {
+              _comingSoon('Sharing');
+            }
         },
         destinations: const [
           NavigationDestination(
@@ -461,8 +470,22 @@ class _VaultScreenState extends State<VaultScreen> {
               ),
               IconButton(
                 tooltip: 'View details',
-                onPressed: () => _showDetails(item),
-                icon: const Icon(Icons.chevron_right, color: purple),
+                onPressed: () {
+                  if (item.title == 'Apartment Lease Agreement') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const RecordDetailsScreen(),
+                      ),
+                    );
+                  } else {
+                     _showDetails(item);
+                  }
+                },
+                icon: const Icon(
+                  Icons.chevron_right,
+                  color: purple,
+                ),
               ),
             ],
           ),
@@ -475,7 +498,18 @@ class _VaultScreenState extends State<VaultScreen> {
     return SizedBox(
       width: 165,
       child: GestureDetector(
-        onTap: () => _showDetails(item),
+        onTap: () {
+          if (item.title == 'Apartment Lease Agreement') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const RecordDetailsScreen(),
+              ),
+            );
+            } else {
+              _showDetails(item);
+              }
+            },
         child: _surface(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

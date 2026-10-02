@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
+
 import 'vault_screen.dart';
+import 'subscriptions_screen.dart';
+import 'sharing_center_screen.dart';
+import 'ask_ai_vault_screen.dart';
 
 class PersonalDashboardScreen extends StatelessWidget {
   const PersonalDashboardScreen({super.key});
 
-  static const background = Color(0xFFE9EBF2);
-  static const purple = Color(0xFF6961FF);
-  static const ink = Color(0xFF303344);
-  static const muted = Color(0xFF686C7C);
+  static const Color background = Color(0xFFE9EBF2);
+  static const Color purple = Color(0xFF6961FF);
+  static const Color ink = Color(0xFF303344);
+  static const Color muted = Color(0xFF686C7C);
+
+  // ============================================================
+  // PLACEHOLDER MESSAGE
+  // ============================================================
 
   void _showNextStep(BuildContext context, String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -18,20 +26,35 @@ class PersonalDashboardScreen extends StatelessWidget {
     );
   }
 
+  // ============================================================
+  // MAIN BUILD
+  // ============================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: background,
+
+      // ========================================================
+      // APP BAR
+      // ========================================================
+
       appBar: AppBar(
         backgroundColor: background,
         foregroundColor: ink,
         surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: false,
         titleSpacing: 20,
+
         title: Row(
           children: [
-            const Icon(Icons.verified_user_outlined, color: purple),
+            const Icon(
+              Icons.verified_user_outlined,
+              color: purple,
+            ),
+
             const SizedBox(width: 12),
+
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,63 +68,123 @@ class PersonalDashboardScreen extends StatelessWidget {
                   ),
                   Text(
                     '● PERSONAL',
-                    style: TextStyle(fontSize: 11, color: purple),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: purple,
+                    ),
                   ),
                 ],
               ),
             ),
+
             IconButton(
               tooltip: 'Notifications',
-              onPressed: () => _showNextStep(context, 'Notifications'),
-              icon: const Icon(Icons.notifications_none_rounded),
+              onPressed: () {
+                _showNextStep(context, 'Notifications');
+              },
+              icon: const Icon(
+                Icons.notifications_none_rounded,
+              ),
             ),
+
             IconButton(
               tooltip: 'Profile',
-              onPressed: () => _showNextStep(context, 'Profile'),
+              onPressed: () {
+                _showNextStep(context, 'Profile');
+              },
               icon: const CircleAvatar(
                 backgroundColor: purple,
-                child: Icon(Icons.person_outline, color: Colors.white),
+                child: Icon(
+                  Icons.person_outline,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],
         ),
       ),
+
+      // ========================================================
+      // BODY
+      // ========================================================
+
       body: SafeArea(
         top: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          padding: const EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            28,
+          ),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
+              constraints: const BoxConstraints(
+                maxWidth: 600,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // =================================================
+                  // SEARCH
+                  // =================================================
+
                   _surface(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                    ),
                     child: TextField(
                       readOnly: true,
-                      onTap: () => _showNextStep(context, 'Search'),
+                      onTap: () {
+                        _showNextStep(context, 'Search');
+                      },
                       decoration: InputDecoration(
                         border: InputBorder.none,
-                        icon: const Icon(Icons.search, color: muted),
+
+                        icon: const Icon(
+                          Icons.search,
+                          color: muted,
+                        ),
+
                         hintText: 'Search your personal space',
+
                         hintStyle: const TextStyle(
                           color: muted,
                           fontSize: 13,
                         ),
+
                         suffixIcon: IconButton(
                           tooltip: 'Filter records',
-                          onPressed: () => _showNextStep(context, 'Filters'),
-                          icon: const Icon(Icons.tune, color: purple),
+                          onPressed: () {
+                            _showNextStep(
+                              context,
+                              'Filters',
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.tune,
+                            color: purple,
+                          ),
                         ),
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 26),
+
+                  // =================================================
+                  // INSTANT ACTIONS
+                  // =================================================
+
                   _heading('INSTANT ACTIONS'),
+
                   LayoutBuilder(
-                    builder: (context, constraints) {
-                      final width = (constraints.maxWidth - 16) / 2;
+                    builder: (
+                      context,
+                      constraints,
+                    ) {
+                      final double width =
+                          (constraints.maxWidth - 16) / 2;
 
                       return Wrap(
                         spacing: 16,
@@ -114,6 +197,7 @@ class PersonalDashboardScreen extends StatelessWidget {
                             'Scan & Upload',
                             'Auto-tagging OCR',
                           ),
+
                           _action(
                             context,
                             width,
@@ -121,13 +205,24 @@ class PersonalDashboardScreen extends StatelessWidget {
                             'Add Account',
                             'Store account details',
                           ),
+
                           _action(
                             context,
                             width,
                             Icons.auto_awesome,
                             'Ask Vault AI',
                             'Ask about your documents',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                  const AskAIVaultScreen(),
+                                ),
+                              );
+                            },
                           ),
+
                           _action(
                             context,
                             width,
@@ -139,8 +234,18 @@ class PersonalDashboardScreen extends StatelessWidget {
                       );
                     },
                   ),
+
                   const SizedBox(height: 26),
-                  _heading('EXPIRING SOON', trailing: '2 items'),
+
+                  // =================================================
+                  // EXPIRING SOON
+                  // =================================================
+
+                  _heading(
+                    'EXPIRING SOON',
+                    trailing: '2 items',
+                  ),
+
                   _surface(
                     child: Column(
                       children: [
@@ -149,9 +254,13 @@ class PersonalDashboardScreen extends StatelessWidget {
                           icon: Icons.laptop_mac,
                           title: 'MacBook Pro M2 Warranty',
                           subtitle: 'Expires in 14 days',
-                          subtitleColor: Colors.red.shade700,
+                          subtitleColor: Colors.red,
                         ),
-                        const Divider(height: 24),
+
+                        const Divider(
+                          height: 24,
+                        ),
+
                         _record(
                           context,
                           icon: Icons.badge_outlined,
@@ -161,21 +270,44 @@ class PersonalDashboardScreen extends StatelessWidget {
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 26),
+
+                  // =================================================
+                  // UPCOMING RENEWALS
+                  // =================================================
+
                   _heading(
                     'UPCOMING RENEWALS',
                     trailing: 'View all',
-                    onTap: () => _showNextStep(context, 'Subscriptions'),
+
+                    // Opens Subscription Screen
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const SubscriptionsScreen(),
+                        ),
+                      );
+                    },
                   ),
+
                   _surface(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
                       children: [
                         const Text(
                           'Due in the next 7 days',
-                          style: TextStyle(color: muted, fontSize: 13),
+                          style: TextStyle(
+                            color: muted,
+                            fontSize: 13,
+                          ),
                         ),
+
                         const SizedBox(height: 4),
+
                         const Text(
                           'USD 27.99',
                           style: TextStyle(
@@ -184,12 +316,19 @@ class PersonalDashboardScreen extends StatelessWidget {
                             color: ink,
                           ),
                         ),
+
                         const SizedBox(height: 4),
+
                         const Text(
                           '2 renewals · Sample amounts',
-                          style: TextStyle(color: muted, fontSize: 12),
+                          style: TextStyle(
+                            color: muted,
+                            fontSize: 12,
+                          ),
                         ),
+
                         const SizedBox(height: 18),
+
                         _record(
                           context,
                           icon: Icons.movie_outlined,
@@ -198,7 +337,9 @@ class PersonalDashboardScreen extends StatelessWidget {
                           endText: '\$15.99',
                           iconColor: Colors.red,
                         ),
+
                         const SizedBox(height: 18),
+
                         _record(
                           context,
                           icon: Icons.design_services_outlined,
@@ -209,36 +350,76 @@ class PersonalDashboardScreen extends StatelessWidget {
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 26),
+
+                  // =================================================
+                  // FAVORITES
+                  // =================================================
+
                   _heading(
                     'FAVORITES',
                     trailing: 'Manage',
-                    onTap: () => _showNextStep(context, 'Favorites'),
+                    onTap: () {
+                      _showNextStep(
+                        context,
+                        'Favorites',
+                      );
+                    },
                   ),
+
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        _favorite(context, Icons.badge_outlined, 'Passport'),
+                        _favorite(
+                          context,
+                          Icons.badge_outlined,
+                          'Passport',
+                        ),
+
                         const SizedBox(width: 12),
-                        _favorite(context, Icons.wifi, 'Wi-Fi Account'),
+
+                        _favorite(
+                          context,
+                          Icons.wifi,
+                          'Wi-Fi Account',
+                        ),
+
                         const SizedBox(width: 12),
-                        _favorite(context, Icons.directions_car, 'Car Records'),
+
+                        _favorite(
+                          context,
+                          Icons.directions_car,
+                          'Car Records',
+                        ),
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 26),
+
+                  // =================================================
+                  // BACKUPS
+                  // =================================================
+
                   _surface(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
                       children: [
-                        _heading('BACKUPS', trailing: 'Not connected'),
+                        _heading(
+                          'BACKUPS',
+                          trailing: 'Not connected',
+                        ),
+
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
                             color: purple.withAlpha(15),
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius:
+                                BorderRadius.circular(18),
                           ),
                           child: const Column(
                             children: [
@@ -247,18 +428,24 @@ class PersonalDashboardScreen extends StatelessWidget {
                                 size: 44,
                                 color: purple,
                               ),
+
                               SizedBox(height: 10),
+
                               Text(
                                 'Backup setup coming later',
                                 style: TextStyle(
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight:
+                                      FontWeight.w600,
                                   color: ink,
                                 ),
                               ),
+
                               SizedBox(height: 6),
+
                               Text(
                                 'No files have been backed up yet.',
-                                textAlign: TextAlign.center,
+                                textAlign:
+                                    TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: muted,
@@ -270,12 +457,24 @@ class PersonalDashboardScreen extends StatelessWidget {
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 26),
+
+                  // =================================================
+                  // RECENTLY OPENED
+                  // =================================================
+
                   _heading(
                     'RECENTLY OPENED',
                     trailing: 'History',
-                    onTap: () => _showNextStep(context, 'History'),
+                    onTap: () {
+                      _showNextStep(
+                        context,
+                        'History',
+                      );
+                    },
                   ),
+
                   _recent(
                     context,
                     Icons.picture_as_pdf_outlined,
@@ -283,7 +482,9 @@ class PersonalDashboardScreen extends StatelessWidget {
                     'PDF · 2.4 MB · 2 hours ago',
                     Colors.red,
                   ),
+
                   const SizedBox(height: 14),
+
                   _recent(
                     context,
                     Icons.image_outlined,
@@ -291,7 +492,9 @@ class PersonalDashboardScreen extends StatelessWidget {
                     'Image · Yesterday',
                     purple,
                   ),
+
                   const SizedBox(height: 14),
+
                   _recent(
                     context,
                     Icons.password,
@@ -305,39 +508,102 @@ class PersonalDashboardScreen extends StatelessWidget {
           ),
         ),
       ),
-        bottomNavigationBar: NavigationBar(
+
+      // ========================================================
+      // BOTTOM NAVIGATION
+      // ========================================================
+
+      bottomNavigationBar: NavigationBar(
         backgroundColor: background,
+        indicatorColor: purple.withAlpha(20),
         selectedIndex: 0,
+
         onDestinationSelected: (index) {
+          // HOME
+          if (index == 0) {
+            return;
+          }
+
+          // VAULT
           if (index == 1) {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const VaultScreen(),
+                builder: (context) =>
+                    const VaultScreen(),
               ),
             );
-          } else if (index == 2) {
-            _showNextStep(context, 'Subscriptions');
-          } else if (index == 3) {
-            _showNextStep(context, 'Sharing');
+
+            return;
+          }
+
+          // SUBSCRIPTIONS
+          if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    const SubscriptionsScreen(),
+              ),
+            );
+
+            return;
+          }
+
+          // SHARING
+          if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SharingCenterScreen(),
+              ),
+            );
+            return;
           }
         },
+
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home, color: purple),
+            icon: Icon(
+              Icons.home_outlined,
+            ),
+            selectedIcon: Icon(
+              Icons.home,
+              color: purple,
+            ),
             label: 'Home',
           ),
+
           NavigationDestination(
-            icon: Icon(Icons.folder_special_outlined),
+            icon: Icon(
+              Icons.folder_special_outlined,
+            ),
+            selectedIcon: Icon(
+              Icons.folder_special,
+              color: purple,
+            ),
             label: 'Vault',
           ),
+
           NavigationDestination(
-            icon: Icon(Icons.credit_card),
+            icon: Icon(
+              Icons.credit_card_outlined,
+            ),
+            selectedIcon: Icon(
+              Icons.credit_card,
+              color: purple,
+            ),
             label: 'Subs',
           ),
+
           NavigationDestination(
-            icon: Icon(Icons.share_outlined),
+            icon: Icon(
+              Icons.share_outlined,
+            ),
+            selectedIcon: Icon(
+              Icons.share,
+              color: purple,
+            ),
             label: 'Sharing',
           ),
         ],
@@ -345,9 +611,14 @@ class PersonalDashboardScreen extends StatelessWidget {
     );
   }
 
+  // ============================================================
+  // SURFACE
+  // ============================================================
+
   Widget _surface({
     required Widget child,
-    EdgeInsetsGeometry padding = const EdgeInsets.all(18),
+    EdgeInsetsGeometry padding =
+        const EdgeInsets.all(18),
   }) {
     return Container(
       padding: padding,
@@ -360,8 +631,11 @@ class PersonalDashboardScreen extends StatelessWidget {
             offset: const Offset(-5, -5),
             blurRadius: 12,
           ),
+
           BoxShadow(
-            color: const Color(0xFFB9BEC9).withAlpha(110),
+            color: const Color(
+              0xFFB9BEC9,
+            ).withAlpha(110),
             offset: const Offset(5, 5),
             blurRadius: 12,
           ),
@@ -371,13 +645,19 @@ class PersonalDashboardScreen extends StatelessWidget {
     );
   }
 
+  // ============================================================
+  // HEADING
+  // ============================================================
+
   Widget _heading(
     String title, {
     String? trailing,
     VoidCallback? onTap,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(
+        bottom: 14,
+      ),
       child: Row(
         children: [
           Expanded(
@@ -391,60 +671,93 @@ class PersonalDashboardScreen extends StatelessWidget {
               ),
             ),
           ),
+
           if (trailing != null)
             if (onTap != null)
               TextButton(
                 onPressed: onTap,
                 style: TextButton.styleFrom(
                   foregroundColor: purple,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  minimumSize: const Size(48, 40),
+                  padding:
+                      const EdgeInsets.symmetric(
+                    horizontal: 8,
+                  ),
+                  minimumSize:
+                      const Size(48, 40),
                 ),
-                child: Text(trailing),
+                child: Text(
+                  trailing,
+                ),
               )
             else
               Text(
                 trailing,
-                style: const TextStyle(color: muted, fontSize: 12),
+                style: const TextStyle(
+                  color: muted,
+                  fontSize: 12,
+                ),
               ),
         ],
       ),
     );
   }
 
+  // ============================================================
+  // ACTION CARD
+  // ============================================================
+
   Widget _action(
     BuildContext context,
     double width,
     IconData icon,
     String title,
-    String subtitle,
-  ) {
+    String subtitle, {
+    VoidCallback? onTap,
+    }) {
     return SizedBox(
       width: width,
       child: Semantics(
         button: true,
         label: title,
         child: GestureDetector(
-          onTap: () => _showNextStep(context, title),
+          onTap: onTap ??
+    () {
+      _showNextStep(
+        context,
+        title,
+      );
+    },
           child: _surface(
             padding: const EdgeInsets.all(16),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
-                _iconBadge(icon, purple),
+                _iconBadge(
+                  icon,
+                  purple,
+                ),
+
                 const SizedBox(height: 14),
+
                 Text(
                   title,
                   style: const TextStyle(
                     color: ink,
                     fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontWeight:
+                        FontWeight.w600,
                   ),
                 ),
+
                 const SizedBox(height: 5),
+
                 Text(
                   subtitle,
-                  style: const TextStyle(color: muted, fontSize: 12),
+                  style: const TextStyle(
+                    color: muted,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -454,12 +767,27 @@ class PersonalDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _iconBadge(IconData icon, Color color) {
+  // ============================================================
+  // ICON BADGE
+  // ============================================================
+
+  Widget _iconBadge(
+    IconData icon,
+    Color color,
+  ) {
     return _surface(
       padding: const EdgeInsets.all(10),
-      child: Icon(icon, size: 23, color: color),
+      child: Icon(
+        icon,
+        size: 23,
+        color: color,
+      ),
     );
   }
+
+  // ============================================================
+  // RECORD
+  // ============================================================
 
   Widget _record(
     BuildContext context, {
@@ -471,27 +799,45 @@ class PersonalDashboardScreen extends StatelessWidget {
     String? endText,
   }) {
     return InkWell(
-      onTap: () => _showNextStep(context, title),
-      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        _showNextStep(
+          context,
+          title,
+        );
+      },
+      borderRadius:
+          BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding:
+            const EdgeInsets.symmetric(
+          vertical: 4,
+        ),
         child: Row(
           children: [
-            _iconBadge(icon, iconColor),
+            _iconBadge(
+              icon,
+              iconColor,
+            ),
+
             const SizedBox(width: 12),
+
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
                     style: const TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                      fontWeight:
+                          FontWeight.w600,
                       color: ink,
                     ),
                   ),
+
                   const SizedBox(height: 4),
+
                   Text(
                     subtitle,
                     style: TextStyle(
@@ -502,13 +848,16 @@ class PersonalDashboardScreen extends StatelessWidget {
                 ],
               ),
             ),
+
             if (endText != null) ...[
               const SizedBox(width: 8),
+
               Text(
                 endText,
                 style: const TextStyle(
                   color: ink,
-                  fontWeight: FontWeight.w700,
+                  fontWeight:
+                      FontWeight.w700,
                 ),
               ),
             ],
@@ -518,20 +867,41 @@ class PersonalDashboardScreen extends StatelessWidget {
     );
   }
 
+  // ============================================================
+  // FAVORITE
+  // ============================================================
+
   Widget _favorite(
     BuildContext context,
     IconData icon,
     String label,
   ) {
     return ActionChip(
-      onPressed: () => _showNextStep(context, label),
-      avatar: Icon(icon, size: 19, color: purple),
+      onPressed: () {
+        _showNextStep(
+          context,
+          label,
+        );
+      },
+      avatar: Icon(
+        icon,
+        size: 19,
+        color: purple,
+      ),
       label: Text(label),
       backgroundColor: background,
       side: BorderSide.none,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding:
+          const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 8,
+      ),
     );
   }
+
+  // ============================================================
+  // RECENT
+  // ============================================================
 
   Widget _recent(
     BuildContext context,
@@ -552,10 +922,19 @@ class PersonalDashboardScreen extends StatelessWidget {
               iconColor: color,
             ),
           ),
+
           IconButton(
             tooltip: 'Record options',
-            onPressed: () => _showNextStep(context, 'Record options'),
-            icon: const Icon(Icons.more_vert, color: muted),
+            onPressed: () {
+              _showNextStep(
+                context,
+                'Record options',
+              );
+            },
+            icon: const Icon(
+              Icons.more_vert,
+              color: muted,
+            ),
           ),
         ],
       ),
