@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../services/food_cart_service.dart';
+import '../services/food_order_service.dart';
+import 'food_checkout_screen.dart';
 
 class FoodCartScreen extends StatefulWidget {
   const FoodCartScreen({super.key});
@@ -203,8 +205,18 @@ class _FoodCartScreenState extends State<FoodCartScreen> {
 
               child: ElevatedButton(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Checkout coming next!')),
+                  if (FoodCartService.instance.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Your cart is empty.')),
+                    );
+                    return;
+                  }
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FoodCheckoutScreen(),
+                    ),
                   );
                 },
 
