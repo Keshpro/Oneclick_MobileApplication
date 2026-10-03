@@ -1,38 +1,25 @@
 import 'dart:ui';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
 import 'services_screen.dart';
 import 'explore_screen.dart';
-
 import '../../doctor/patient/screens/doctor_entry_screen.dart';
 import '../../drunk_drive/passenger/screens/drunk_drive_home_screen.dart';
 import '../../Personal Vault/screens/dashboard.dart' as personal_vault;
 import '../../food/screens/food_home_screen.dart';
 
-// ============================================================
-// PALETTE
-// ============================================================
-
 class _Palette {
   static const bg = Color(0xFFF3F1FF);
   static const surface = Color(0xFFFFFFFF);
-
   static const ink = Color(0xFF120F2E);
   static const inkSoft = Color(0xFF6B6584);
-
   static const primary = Color(0xFF5B4DFF);
   static const primaryDeep = Color(0xFF2E1FA6);
-
   static const accent = Color(0xFFFF6FA1);
   static const accent2 = Color(0xFF00D6C4);
-
   static const line = Color(0xFFE7E3FB);
 }
-
-// ============================================================
-// HOME SCREEN
-// ============================================================
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -46,10 +33,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int _selectedIndex = 0;
   String _searchQuery = '';
+  String _userName = '';
+  String _userEmail = '';
+  bool _isLoadingUser = true;
 
-  // ============================================================
-  // SERVICES
-  // ============================================================
+  bool get _isLoggedIn => _auth.currentUser != null;
 
   final List<Map<String, dynamic>> _services = [
     {
@@ -58,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'icon': Icons.medical_services_rounded,
       'gradient': const [Color(0xFF11D999), Color(0xFF059669)],
     },
+
     {
       'title': 'Drunk & Drive',
       'description': 'Find a trusted driver and get home safely.',
@@ -71,12 +60,14 @@ class _HomeScreenState extends State<HomeScreen> {
       'icon': Icons.restaurant_rounded,
       'gradient': const [Color(0xFFFF8A65), Color(0xFFE85D04)],
     },
+
     {
       'title': 'Groceries',
       'description': 'Fresh groceries delivered through OneClick partners.',
       'icon': Icons.local_grocery_store_rounded,
       'gradient': const [Color(0xFFFFC857), Color(0xFFBF8211)],
     },
+
     {
       'title': 'Personal Vault',
       'description':
@@ -86,9 +77,9 @@ class _HomeScreenState extends State<HomeScreen> {
     },
   ];
 
-  // ============================================================
-  // FILTER
-  // ============================================================
+  @override
+  void initState() {
+    super.initState();
 
   List<Map<String, dynamic>> get _filteredServices {
     if (_searchQuery.trim().isEmpty) {
@@ -106,34 +97,74 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
-  // ============================================================
-  // DISPOSE
-  // ============================================================
+  Future<void> _loadCurrentUser() async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      if (mounted) setState(() => _isLoadingUser = false);
+
+      return;
+    }
+
+    try {
+      final doc = await _firestore.collection('users').doc(user.uid).get();
+
+      final data = doc.data();
+
+      if (!mounted) return;
+
+      setState(() {
+        _userName = data?['name']?.toString() ?? 'User';
+        _userEmail = data?['email']?.toString() ?? user.email ?? '';
+
+        _isLoadingUser = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _userName = 'User';
+
+        _userEmail = user.email ?? '';
+
+        _isLoadingUser = false;
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> get _filteredServices {
+    final q = _searchQuery.trim().toLowerCase();
+
+    if (q.isEmpty) return _services;
+
+    return _services.where((s) {
+      return s['title'].toString().toLowerCase().contains(q) ||
+          s['description'].toString().toLowerCase().contains(q);
+    }).toList();
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+
     super.dispose();
   }
-
-  // ============================================================
-  // BUILD
-  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _Palette.bg,
+
       extendBody: true,
 
       body: SafeArea(
         bottom: false,
+
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
+
           slivers: [
-            // ==================================================
-            // HEADER
-            // ==================================================
+            SliverToBoxAdapter(child: _buildHeader()),
 
             SliverToBoxAdapter(
               child: Padding(
@@ -230,18 +261,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
                 child: _HeroCard(
                   searchController: _searchController,
+
                   searchQuery: _searchQuery,
-                  onSearchChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                    });
-                  },
+
+                  userName: _isLoggedIn ? _userName : null,
+
+                  onSearchChanged: (value) =>
+                      setState(() => _searchQuery = value),
+
                   onSearchClear: () {
                     _searchController.clear();
 
-                    setState(() {
-                      _searchQuery = '';
-                    });
+                    setState(() => _searchQuery = '');
                   },
                 ),
               ),
@@ -262,19 +293,21 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: _Palette.ink,
                           fontSize: 21,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: -0.4,
                         ),
                       ),
                     ),
+
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
                         vertical: 5,
                       ),
+
                       decoration: BoxDecoration(
                         color: _Palette.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(20),
                       ),
+
                       child: Text(
                         '${_filteredServices.length} Categories',
                         style: const TextStyle(
@@ -328,7 +361,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         size: 46,
                         color: _Palette.inkSoft,
                       ),
+
                       SizedBox(height: 12),
+
                       Text(
                         'No services found',
                         style: TextStyle(
@@ -468,26 +503,241 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ============================================================
-  // SERVICE NAVIGATION
-  // ============================================================
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+
+            height: 44,
+
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [_Palette.primary, _Palette.primaryDeep],
+              ),
+
+              borderRadius: BorderRadius.circular(15),
+
+              boxShadow: [
+                BoxShadow(
+                  color: _Palette.primary.withValues(alpha: .35),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+
+            child: const Icon(
+              Icons.grid_view_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+
+              children: [
+                Text(
+                  'OneClick',
+                  style: TextStyle(
+                    color: _Palette.ink,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+
+                Text(
+                  'Everything in one place',
+                  style: TextStyle(
+                    color: _Palette.inkSoft,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          if (_isLoggedIn) ...[
+            IconButton(
+              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('No new notifications')),
+              ),
+
+              icon: const Icon(
+                Icons.notifications_none_rounded,
+                color: _Palette.ink,
+              ),
+            ),
+
+            GestureDetector(
+              onTap: _showAccountOptions,
+
+              child: Container(
+                width: 42,
+
+                height: 42,
+
+                alignment: Alignment.center,
+
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [_Palette.primary, _Palette.primaryDeep],
+                  ),
+
+                  shape: BoxShape.circle,
+                ),
+
+                child: _isLoadingUser
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 17,
+                        ),
+                      ),
+              ),
+            ),
+          ] else ...[
+            TextButton(
+              onPressed: () => Navigator.pushNamed(context, '/login'),
+              child: const Text(
+                'Login',
+                style: TextStyle(
+                  color: _Palette.ink,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+
+            _GradientButton(
+              label: 'Register',
+              onTap: () => Navigator.pushNamed(context, '/register'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGuestCard() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 30, 20, 24),
+
+      child: Container(
+        width: double.infinity,
+
+        padding: const EdgeInsets.all(24),
+
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_Palette.primary, _Palette.primaryDeep],
+          ),
+
+          borderRadius: BorderRadius.circular(26),
+
+          boxShadow: [
+            BoxShadow(
+              color: _Palette.primary.withValues(alpha: .30),
+              blurRadius: 24,
+              offset: const Offset(0, 14),
+            ),
+          ],
+        ),
+
+        child: Column(
+          children: [
+            const Icon(
+              Icons.person_add_alt_1_rounded,
+              color: Colors.white,
+              size: 42,
+            ),
+
+            const SizedBox(height: 14),
+
+            const Text(
+              'Ready to get started?',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+
+            const SizedBox(height: 7),
+
+            Text(
+              'Create an account to access services and manage everything from one place.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: .78),
+                fontSize: 13,
+                height: 1.5,
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            SizedBox(
+              width: double.infinity,
+
+              child: ElevatedButton(
+                onPressed: () => Navigator.pushNamed(context, '/register'),
+
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: _Palette.primaryDeep,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                ),
+
+                child: const Text(
+                  'Create Account',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+
+            TextButton(
+              onPressed: () => Navigator.pushNamed(context, '/login'),
+              child: const Text(
+                'Already have an account? Login',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _openService(String serviceTitle) {
     switch (serviceTitle) {
-      // --------------------------------------------------------
-      // DOCTOR
-      // --------------------------------------------------------
-
       case 'Doctor':
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const DoctorEntryScreen()),
         );
         break;
-
-      // --------------------------------------------------------
-      // DRUNK & DRIVE
-      // --------------------------------------------------------
 
       case 'Drunk & Drive':
         Navigator.push(
@@ -507,13 +757,11 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         break;
 
-      // --------------------------------------------------------
-      // PERSONAL VAULT
-      // FIXED:
-      // PersonalDashboardScreen is the actual Widget.
-      // --------------------------------------------------------
-
       case 'Personal Vault':
+        if (!_isLoggedIn) {
+          _showLoginRequired('Personal Vault');
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -521,10 +769,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
         break;
-
-      // --------------------------------------------------------
-      // GROCERIES
-      // --------------------------------------------------------
 
       case 'Groceries':
         _showLoginRequired('Groceries');
@@ -535,60 +779,29 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // ============================================================
-  // BOTTOM NAVIGATION
-  // ============================================================
-
   void _onNavigationSelected(int index) {
     if (index == 0) {
-      setState(() {
-        _selectedIndex = 0;
-      });
-      return;
-    }
-
-    if (index == 1) {
-      setState(() {
-        _selectedIndex = 1;
-      });
+      setState(() => _selectedIndex = 0);
+    } else if (index == 1) {
+      setState(() => _selectedIndex = 1);
 
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const ServicesScreen()),
       ).then((_) {
-        if (!mounted) return;
-
-        setState(() {
-          _selectedIndex = 0;
-        });
+        if (mounted) setState(() => _selectedIndex = 0);
       });
-
-      return;
-    }
-
-    if (index == 2) {
-      setState(() {
-        _selectedIndex = 2;
-      });
+    } else if (index == 2) {
+      setState(() => _selectedIndex = 2);
 
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const ExploreScreen()),
       ).then((_) {
-        if (!mounted) return;
-
-        setState(() {
-          _selectedIndex = 0;
-        });
+        if (mounted) setState(() => _selectedIndex = 0);
       });
-
-      return;
-    }
-
-    if (index == 3) {
-      setState(() {
-        _selectedIndex = 3;
-      });
+    } else {
+      setState(() => _selectedIndex = 3);
 
       _showAccountOptions();
     }
@@ -601,16 +814,14 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showLoginRequired(String serviceName) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return _GlassSheet(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _bottomSheetHandle(),
 
-              const SizedBox(height: 25),
+      backgroundColor: Colors.transparent,
+
+      builder: (sheetContext) => _GlassSheet(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _bottomSheetHandle(),
 
               Container(
                 width: 64,
@@ -867,35 +1078,257 @@ class _GradientButton extends StatelessWidget {
                 blurRadius: 14,
                 offset: const Offset(0, 6),
               ),
-            ],
-          ),
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 13.5,
             ),
-          ),
+
+            const SizedBox(height: 8),
+
+            const Text(
+              'Login or create an account to continue using this service.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _Palette.inkSoft,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            SizedBox(
+              width: double.infinity,
+
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(sheetContext);
+
+                  Navigator.pushNamed(context, '/login');
+                },
+
+                style: _primaryButtonStyle(),
+
+                child: const Text(
+                  'Login',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+
+            TextButton(
+              onPressed: () {
+                Navigator.pop(sheetContext);
+
+                Navigator.pushNamed(context, '/register');
+              },
+
+              child: const Text(
+                'Create a new account',
+                style: TextStyle(
+                  color: _Palette.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  void _showAccountOptions() {
+    if (!_isLoggedIn) {
+      Navigator.pushNamed(context, '/login');
+
+      if (mounted) setState(() => _selectedIndex = 0);
+
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+
+      backgroundColor: Colors.transparent,
+
+      builder: (sheetContext) => _GlassSheet(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _bottomSheetHandle(),
+
+            const SizedBox(height: 22),
+
+            CircleAvatar(
+              radius: 34,
+
+              backgroundColor: _Palette.primary,
+
+              child: Text(
+                _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            Text(
+              _userName.isEmpty ? 'OneClick User' : _userName,
+              style: const TextStyle(
+                color: _Palette.ink,
+                fontSize: 21,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+
+            const SizedBox(height: 4),
+
+            Text(
+              _userEmail,
+              style: const TextStyle(color: _Palette.inkSoft, fontSize: 13),
+            ),
+
+            const SizedBox(height: 18),
+
+            ListTile(
+              leading: const Icon(
+                Icons.person_outline_rounded,
+                color: _Palette.primary,
+              ),
+              title: const Text('My Profile'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => Navigator.pop(sheetContext),
+            ),
+
+            ListTile(
+              leading: const Icon(
+                Icons.history_rounded,
+                color: _Palette.primary,
+              ),
+              title: const Text('My Activity'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => Navigator.pop(sheetContext),
+            ),
+
+            const Divider(),
+
+            ListTile(
+              leading: const Icon(Icons.logout_rounded, color: Colors.red),
+
+              title: const Text(
+                'Logout',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+
+              onTap: () async {
+                Navigator.pop(sheetContext);
+
+                await _auth.signOut();
+
+                if (!mounted) return;
+
+                setState(() {
+                  _userName = '';
+
+                  _userEmail = '';
+
+                  _selectedIndex = 0;
+                });
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Logged out successfully')),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    ).whenComplete(() {
+      if (mounted) setState(() => _selectedIndex = 0);
+    });
+  }
+
+  Widget _bottomSheetHandle() => Container(
+    width: 45,
+    height: 5,
+    decoration: BoxDecoration(
+      color: _Palette.line,
+      borderRadius: BorderRadius.circular(20),
+    ),
+  );
+
+  ButtonStyle _primaryButtonStyle() => ElevatedButton.styleFrom(
+    backgroundColor: _Palette.primary,
+
+    foregroundColor: Colors.white,
+
+    elevation: 0,
+
+    padding: const EdgeInsets.symmetric(vertical: 15),
+
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+  );
 }
 
-// ============================================================
-// HERO CARD
-// ============================================================
+class _GradientButton extends StatelessWidget {
+  final String label;
+
+  final VoidCallback onTap;
+
+  const _GradientButton({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+
+    child: InkWell(
+      onTap: onTap,
+
+      borderRadius: BorderRadius.circular(13),
+
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_Palette.primary, _Palette.primaryDeep],
+          ),
+
+          borderRadius: BorderRadius.circular(13),
+        ),
+
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 13.5,
+          ),
+        ),
+      ),
+    ),
+  );
+}
 
 class _HeroCard extends StatelessWidget {
   final TextEditingController searchController;
+
   final String searchQuery;
+
+  final String? userName;
+
   final ValueChanged<String> onSearchChanged;
+
   final VoidCallback onSearchClear;
 
   const _HeroCard({
     required this.searchController,
     required this.searchQuery,
+    required this.userName,
     required this.onSearchChanged,
     required this.onSearchClear,
   });
@@ -1049,15 +1482,15 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-// ============================================================
-// SERVICE CARD
-// ============================================================
-
 class _ServiceCard extends StatelessWidget {
   final String title;
+
   final String description;
+
   final IconData icon;
+
   final List<Color> gradient;
+
   final VoidCallback onTap;
 
   const _ServiceCard({
@@ -1069,9 +1502,14 @@ class _ServiceCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: _Palette.surface,
+  Widget build(BuildContext context) => Material(
+    color: _Palette.surface,
+
+    borderRadius: BorderRadius.circular(24),
+
+    child: InkWell(
+      onTap: onTap,
+
       borderRadius: BorderRadius.circular(24),
       child: InkWell(
         onTap: onTap,
@@ -1112,65 +1550,34 @@ class _ServiceCard extends StatelessWidget {
                 ),
                 child: Icon(icon, color: Colors.white, size: 25),
               ),
+            ),
 
-              const Spacer(),
+            const SizedBox(height: 10),
 
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: _Palette.ink,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.2,
-                ),
-              ),
-
-              const SizedBox(height: 6),
-
-              Text(
-                description,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: _Palette.inkSoft,
-                  fontSize: 12,
-                  height: 1.4,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              Row(
-                children: [
-                  Text(
-                    'Explore',
-                    style: TextStyle(
-                      color: gradient.last,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.arrow_forward_rounded,
+            Row(
+              children: [
+                Text(
+                  'Explore',
+                  style: TextStyle(
                     color: gradient.last,
-                    size: 17,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  color: gradient.last,
+                  size: 17,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }
-
-// ============================================================
-// GLASS SHEET
-// ============================================================
 
 class _GlassSheet extends StatelessWidget {
   final Widget child;
@@ -1197,12 +1604,26 @@ class _GlassSheet extends StatelessWidget {
   }
 }
 
-// ============================================================
-// FLOATING NAVIGATION BAR
-// ============================================================
+    child: BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
+
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .96),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+
+        child: SafeArea(top: false, child: child),
+      ),
+    ),
+  );
+}
 
 class _FloatingNavBar extends StatelessWidget {
   final int selectedIndex;
+
   final ValueChanged<int> onSelected;
 
   const _FloatingNavBar({
@@ -1225,7 +1646,6 @@ class _FloatingNavBar extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(26),
-          child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: Container(
               height: 66,
@@ -1305,10 +1725,4 @@ class _FloatingNavBar extends StatelessWidget {
                   );
                 }),
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

@@ -1,10 +1,45 @@
 import 'package:flutter/material.dart';
 
+import '../../models/booking_model.dart';
+import '../../models/booking_status.dart';
+import '../../services/booking_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 import 'my_vehicles_screen.dart';
+import 'book_driver_screen.dart';
+import 'my_trips_screen.dart';
+import '../../driver/screens/driver_application_screen.dart';
+import '../../driver/screens/driver_home_screen.dart';
 
-class DrunkDriveHomeScreen extends StatelessWidget {
+class DrunkDriveHomeScreen extends StatefulWidget {
   const DrunkDriveHomeScreen({super.key});
+
+  @override
+  State<DrunkDriveHomeScreen> createState() => _DrunkDriveHomeScreenState();
+}
+
+class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
+  final BookingService _bookingService = BookingService();
+  BookingModel? _activeBooking;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadActiveBooking();
+  }
+
+  void _loadActiveBooking() {
+    final bookings = _bookingService.getMyBookings();
+    if (bookings.isNotEmpty) {
+      final latest = bookings.first;
+      if (latest.status != BookingStatus.completed &&
+          latest.status != BookingStatus.cancelledByUser &&
+          latest.status != BookingStatus.cancelledByDriver) {
+        setState(() {
+          _activeBooking = latest;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,37 +73,98 @@ class DrunkDriveHomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: DrunkDriveColors.surface,
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Row(
-                children: [
-                  Icon(
-                    Icons.info_outline_rounded,
-                    color: DrunkDriveColors.textMuted,
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    'No active trips',
-                    style: TextStyle(
+            if (_activeBooking == null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: DrunkDriveColors.surface,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
                       color: DrunkDriveColors.textMuted,
-                      fontSize: 14,
                     ),
-                  ),
-                ],
+                    SizedBox(width: 12),
+                    Text(
+                      'No active trips',
+                      style: TextStyle(
+                        color: DrunkDriveColors.textMuted,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: DrunkDriveColors.surface,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: DrunkDriveColors.accent, width: 1),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Current Trip',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: DrunkDriveColors.accent.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            _activeBooking!.status.label,
+                            style: const TextStyle(
+                              color: DrunkDriveColors.accent,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '${_activeBooking!.pickup.name} → ${_activeBooking!.destination.name}',
+                      style: const TextStyle(color: DrunkDriveColors.textMuted, fontSize: 13),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Vehicle: ${_activeBooking!.vehicle.displayName}',
+                      style: const TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+                    ),
+                  ],
+                ),
               ),
-            ),
 
             const SizedBox(height: 28),
 
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => _comingSoon(context, 'Book a Driver'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const BookDriverScreen(),
+                    ),
+                  ).then((_) => _loadActiveBooking());
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: DrunkDriveColors.accent,
                   foregroundColor: DrunkDriveColors.background,
@@ -111,15 +207,86 @@ class DrunkDriveHomeScreen extends StatelessWidget {
                 ),
               ),
             ),
+
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MyTripsScreen(),
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: DrunkDriveColors.surfaceBorder),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text(
+                  'My Trips',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DriverHomeScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.swap_horiz_rounded),
+                label: const Text('Switch to Driver Mode', style: TextStyle(fontWeight: FontWeight.w800)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DrunkDriveColors.surface,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: const BorderSide(color: DrunkDriveColors.accent),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DriverApplicationScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.badge_rounded, color: DrunkDriveColors.accent),
+                label: const Text(
+                  'Become a Driver / Driver Status',
+                  style: TextStyle(color: DrunkDriveColors.accent, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
-
-  void _comingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature — coming in the next step')),
-    );
-  }
 }
+
