@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'smart_upload_review_screen.dart';
 
 class AddRecordScreen extends StatefulWidget {
   const AddRecordScreen({super.key});
@@ -271,7 +272,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                                 return;
                               }
 
-                              _placeholder('Smart Review');
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SmartUploadReviewScreen(),
+                                ),
+                              );
                             },
                             child: const Padding(
                               padding: EdgeInsets.symmetric(

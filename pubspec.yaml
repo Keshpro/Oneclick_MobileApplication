@@ -40,6 +40,9 @@ dependencies:
   cloud_firestore: ^6.10.0
 
   video_player: ^2.10.0
+  firebase_ai: ^4.0.0
+  firebase_app_check: ^0.4.8
+  file_picker: ^13.1.0
 
 dev_dependencies:
   flutter_test:
@@ -65,6 +68,8 @@ flutter:
 
   assets:
     - assets/animations/doctor_entry.mp4
+    - assets/images/food/restaurants/
+    - assets/images/food/dishes/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
