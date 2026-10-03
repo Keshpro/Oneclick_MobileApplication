@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'share_record_screen.dart';
 import 'shared_with_me_details_screen.dart';
 
