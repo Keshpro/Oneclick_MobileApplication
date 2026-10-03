@@ -843,13 +843,9 @@ class _GradientButton extends StatelessWidget {
 
 class _HeroCard extends StatelessWidget {
   final TextEditingController searchController;
-
   final String searchQuery;
-
   final String? userName;
-
   final ValueChanged<String> onSearchChanged;
-
   final VoidCallback onSearchClear;
 
   const _HeroCard({
@@ -1139,11 +1135,8 @@ class _FloatingNavBar extends StatelessWidget {
 
   static const _items = [
     (Icons.home_outlined, Icons.home_rounded, 'Home'),
-
     (Icons.grid_view_outlined, Icons.grid_view_rounded, 'Services'),
-
     (Icons.explore_outlined, Icons.explore_rounded, 'Explore'),
-
     (Icons.person_outline_rounded, Icons.person_rounded, 'Account'),
   ];
 
