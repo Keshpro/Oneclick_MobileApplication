@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:oneclick/features/groceries/customer/screens/grocery_home_screen.dart';
 import 'services_screen.dart';
 import 'explore_screen.dart';
 import '../../doctor/patient/screens/doctor_entry_screen.dart';
@@ -223,11 +224,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-
                     crossAxisSpacing: 14,
-
                     mainAxisSpacing: 14,
-
                     childAspectRatio: .86,
                   ),
 
@@ -534,21 +532,17 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
 
       case 'Personal Vault':
-        if (!_isLoggedIn) {
-          _showLoginRequired('Personal Vault');
-          return;
-        }
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => const personal_vault.PersonalDashboardScreen(),
-          ),
+            builder: (_) => const personal_vault.PersonalDashboardScreen()),
         );
         break;
 
       case 'Groceries':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Groceries module is coming soon.')),
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const GroceryHomeScreen()),
         );
         break;
     }
