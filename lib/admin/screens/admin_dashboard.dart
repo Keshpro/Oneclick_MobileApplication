@@ -84,6 +84,8 @@ class _AdminDashboardState extends State<AdminDashboard>
 
         actions: [
           IconButton(
+            icon: const Icon(Icons.notifications_none_rounded, color: Colors.black87),
+            tooltip: 'Notifications',
             onPressed: () {
               // TODO: Open notifications
             },
