@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'add_record_screen.dart';
 import 'record_details_screen.dart';
 import 'subscriptions_screen.dart';
+import 'vault_settings_screen.dart';
 
 class VaultScreen extends StatefulWidget {
   const VaultScreen({super.key});
@@ -189,18 +190,32 @@ class _VaultScreenState extends State<VaultScreen> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            onPressed: () => _comingSoon('Notifications'),
-            icon: const Icon(Icons.notifications_none),
-          ),
-          IconButton(
-            tooltip: 'Profile',
-            onPressed: () => _comingSoon('Profile'),
-            icon: const Icon(Icons.account_circle, color: purple),
-          ),
-        ],
+actions: [
+  Padding(
+    padding: const EdgeInsets.only(right: 12),
+    child: Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFDCD9FF),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: IconButton(
+        tooltip: 'Vault Settings',
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const VaultSettingsScreen(),
+            ),
+          );
+        },
+        icon: const Icon(
+          Icons.settings_outlined,
+          color: purple,
+        ),
+      ),
+    ),
+  ),
+],
       ),
       body: SafeArea(
         child: SingleChildScrollView(

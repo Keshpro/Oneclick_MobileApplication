@@ -4,6 +4,7 @@ import 'vault_screen.dart';
 import 'subscriptions_screen.dart';
 import 'sharing_center_screen.dart';
 import 'ask_ai_vault_screen.dart';
+import 'document_pack_requirements_screen.dart';
 
 class PersonalDashboardScreen extends StatelessWidget {
   const PersonalDashboardScreen({super.key});
@@ -74,30 +75,6 @@ class PersonalDashboardScreen extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),
-            ),
-
-            IconButton(
-              tooltip: 'Notifications',
-              onPressed: () {
-                _showNextStep(context, 'Notifications');
-              },
-              icon: const Icon(
-                Icons.notifications_none_rounded,
-              ),
-            ),
-
-            IconButton(
-              tooltip: 'Profile',
-              onPressed: () {
-                _showNextStep(context, 'Profile');
-              },
-              icon: const CircleAvatar(
-                backgroundColor: purple,
-                child: Icon(
-                  Icons.person_outline,
-                  color: Colors.white,
-                ),
               ),
             ),
           ],
@@ -226,10 +203,19 @@ class PersonalDashboardScreen extends StatelessWidget {
                           _action(
                             context,
                             width,
-                            Icons.folder_zip_outlined,
-                            'Bundle Pack',
-                            'Prepare document packs',
-                          ),
+                            Icons.folder_copy_outlined,
+                            'Build Document Pack',
+                            'Match Vault files to a checklist',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                  const DocumentPackRequirementsScreen(),
+                                ),
+                              );
+                            },
+                         ),
                         ],
                       );
                     },
@@ -458,14 +444,14 @@ class PersonalDashboardScreen extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 26),
+const SizedBox(height: 26),
 
-                  // =================================================
-                  // RECENTLY OPENED
-                  // =================================================
+// =================================================
+// RECENTLY OPENED
+// =================================================
 
-                  _heading(
-                    'RECENTLY OPENED',
+                   _heading(
+                   'RECENTLY OPENED',
                     trailing: 'History',
                     onTap: () {
                       _showNextStep(
