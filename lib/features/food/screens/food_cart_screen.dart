@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../services/food_cart_service.dart';
 import '../services/food_order_service.dart';
 import 'food_checkout_screen.dart';

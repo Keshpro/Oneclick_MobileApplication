@@ -1071,7 +1071,7 @@ class _AddSubscriptionScreenState
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: bg,
+        color: card,
         borderRadius:
             BorderRadius.circular(28),
         boxShadow: _softShadow(),
