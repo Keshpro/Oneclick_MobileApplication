@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'pending_accounts.dart';
+import 'user_management.dart';
+import '../../features/auth/screens/login_screen.dart';
+import '../../features/food/screens/food_admin_seller_applications_screen.dart';
+
 class PendingAccounts extends StatelessWidget {
   const PendingAccounts({super.key});
 
@@ -83,10 +88,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             onPressed: () {
               // TODO: Open notifications
             },
-            icon: const Icon(Icons.notifications_none, color: Colors.black87),
           ),
-
-          const SizedBox(width: 12),
         ],
       ),
 
@@ -432,81 +434,70 @@ class _AdminDashboardState extends State<AdminDashboard>
           mainAxisSpacing: 15,
           childAspectRatio: 1.35,
           children: [
-            _statCard(
-              title: 'Total Users',
-              value: '1,248',
-              icon: Icons.people,
-              iconColor: Colors.blue,
-            ),
-
-            _statCard(
-              title: 'Active Users',
-              value: '982',
-              icon: Icons.person,
-              iconColor: Colors.green,
-            ),
-
-            _statCard(
-              title: 'New Users',
-              value: '86',
-              icon: Icons.person_add,
-              iconColor: Colors.purple,
-              subtitle: 'This month',
-            ),
-
-            _statCard(
-              title: 'Pending Accounts',
-              value: '24',
-              icon: Icons.pending_actions,
-              iconColor: Colors.orange,
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _statCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color iconColor,
-    String? subtitle,
-  }) {
-    return Card(
-      elevation: 2,
-      shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(9),
-              decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: iconColor, size: 22),
-            ),
-
-            const Spacer(),
-
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 25,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+            Card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.pending_actions,
+                  color: Colors.orange,
+                  size: 36,
+                ),
+                title: const Text('Pending Approvals'),
+                subtitle: const Text(
+                  'Review & approve newly registered accounts',
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PendingAccountsScreen(),
+                    ),
+                  );
+                },
               ),
             ),
-
-            const SizedBox(height: 3),
-
-            Text(
-              title,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.storefront_rounded,
+                  color: Colors.green,
+                  size: 36,
+                ),
+                title: const Text('Food Seller Applications'),
+                subtitle: const Text(
+                  'Review and approve food seller applications',
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FoodAdminSellerApplicationsScreen(),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.manage_accounts,
+                  color: Colors.indigo,
+                  size: 36,
+                ),
+                title: const Text('User Management'),
+                subtitle: const Text('View, update, or remove users (CRUD)'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const UserManagementScreen(),
+                    ),
+                  );
+                },
+              ),
             ),
 
             if (subtitle != null) ...[
