@@ -44,14 +44,8 @@ kotlin {
 flutter {
     source = "../.."
 }
-plugins {
-    id("com.android.application")
-    id("dev.flutter.flutter-gradle-plugin")
-    id("com.google.gms.google-services")
-}
 
 
   // TODO: Add the dependencies for Firebase products you want to use
   // When using the BoM, don't specify versions in Firebase dependencies
   // https://firebase.google.com/docs/android/setup#available-libraries
-}
