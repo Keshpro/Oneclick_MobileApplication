@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'pending_accounts.dart';
+import 'user_management.dart';
+import '../../features/auth/screens/login_screen.dart';
+import '../../features/food/screens/food_admin_seller_applications_screen.dart';
+
 class PendingAccounts extends StatelessWidget {
   const PendingAccounts({super.key});
 
@@ -83,10 +88,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             onPressed: () {
               // TODO: Open notifications
             },
-            icon: const Icon(Icons.notifications_none, color: Colors.black87),
           ),
-
-          const SizedBox(width: 12),
         ],
       ),
 
@@ -488,25 +490,49 @@ class _AdminDashboardState extends State<AdminDashboard>
                 color: iconColor.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: iconColor, size: 22),
             ),
-
-            const Spacer(),
-
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 25,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.storefront_rounded,
+                  color: Colors.green,
+                  size: 36,
+                ),
+                title: const Text('Food Seller Applications'),
+                subtitle: const Text(
+                  'Review and approve food seller applications',
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FoodAdminSellerApplicationsScreen(),
+                    ),
+                  );
+                },
               ),
             ),
-
-            const SizedBox(height: 3),
-
-            Text(
-              title,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            Card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.manage_accounts,
+                  color: Colors.indigo,
+                  size: 36,
+                ),
+                title: const Text('User Management'),
+                subtitle: const Text('View, update, or remove users (CRUD)'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const UserManagementScreen(),
+                    ),
+                  );
+                },
+              ),
             ),
 
             if (subtitle != null) ...[
