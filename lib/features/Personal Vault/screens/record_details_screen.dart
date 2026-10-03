@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'explain_document_screen.dart';
+
 class RecordDetailsScreen extends StatefulWidget {
   const RecordDetailsScreen({super.key});
 
@@ -262,7 +264,12 @@ class _RecordDetailsScreenState extends State<RecordDetailsScreen> {
             text: 'Explain Document',
             highlighted: true,
             onTap: () {
-              _showMessage('AI document explanation will be connected next.');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ExplainDocumentScreen(),
+                ),
+              );
             },
           ),
 
