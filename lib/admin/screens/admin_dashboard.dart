@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'pending_accounts.dart';
 import 'user_management.dart';
-import '../../features/auth/screens/login_screen.dart';
 import '../../features/food/screens/food_admin_seller_applications_screen.dart';
 
 class PendingAccounts extends StatelessWidget {
@@ -87,7 +85,12 @@ class _AdminDashboardState extends State<AdminDashboard>
             icon: const Icon(Icons.notifications_none_rounded, color: Colors.black87),
             tooltip: 'Notifications',
             onPressed: () {
-              // TODO: Open notifications
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Notifications opened'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             },
           ),
         ],
