@@ -1,12 +1,14 @@
-import '../screens/food_saver_screen.dart';
+import '../models/food_product.dart';
 
 class FoodCartItem {
-  final SaveBiteOffer offer;
+  final FoodProduct product;
   int quantity;
 
-  FoodCartItem({required this.offer, this.quantity = 1});
+  FoodCartItem({required this.product, this.quantity = 1});
 
-  double get total => offer.saverPrice * quantity;
+  double get total {
+    return product.price * quantity;
+  }
 }
 
 class FoodCartService {
@@ -16,17 +18,16 @@ class FoodCartService {
 
   final List<FoodCartItem> items = [];
 
-  void addToCart(SaveBiteOffer offer, int quantity) {
+  // Add any type of FoodProduct to the cart.
+  void addProduct(FoodProduct product, int quantity) {
     final existingIndex = items.indexWhere(
-      (item) =>
-          item.offer.foodName == offer.foodName &&
-          item.offer.restaurantName == offer.restaurantName,
+      (item) => item.product.id == product.id,
     );
 
     if (existingIndex != -1) {
       items[existingIndex].quantity += quantity;
     } else {
-      items.add(FoodCartItem(offer: offer, quantity: quantity));
+      items.add(FoodCartItem(product: product, quantity: quantity));
     }
   }
 
@@ -37,7 +38,7 @@ class FoodCartService {
   void increaseQuantity(int index) {
     final item = items[index];
 
-    if (item.quantity < item.offer.quantity) {
+    if (item.quantity < item.product.availableQuantity) {
       item.quantity++;
     }
   }
@@ -64,5 +65,7 @@ class FoodCartService {
     return items.fold(0, (sum, item) => sum + item.total);
   }
 
-  bool get isEmpty => items.isEmpty;
+  bool get isEmpty {
+    return items.isEmpty;
+  }
 }

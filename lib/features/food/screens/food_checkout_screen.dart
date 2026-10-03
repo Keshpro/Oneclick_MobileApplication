@@ -251,7 +251,7 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              '${item.offer.foodName} × ${item.quantity}',
+                              '${item.product.name} × ${item.quantity}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w500,
                               ),

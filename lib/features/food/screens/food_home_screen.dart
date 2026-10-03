@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'food_seller_application_screen.dart';
 import 'food_saver_screen.dart';
+import 'mystery_bites_screen.dart';
+import 'sweet_craft_screen.dart';
 
 class FoodHomeScreen extends StatelessWidget {
   const FoodHomeScreen({super.key});
@@ -88,6 +90,7 @@ class FoodHomeScreen extends StatelessWidget {
               mainAxisSpacing: 14,
               childAspectRatio: 1.15,
               children: [
+                // Save Bites
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
@@ -105,13 +108,25 @@ class FoodHomeScreen extends StatelessWidget {
                   ),
                 ),
 
-                _FoodServiceCard(
-                  icon: Icons.card_giftcard_rounded,
-                  title: 'Mystery Bites',
-                  subtitle: 'Discover mystery food',
-                  color: const Color(0xFFFF8A65),
+                // Mystery Bites
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const MysteryBitesScreen(),
+                      ),
+                    );
+                  },
+                  child: _FoodServiceCard(
+                    icon: Icons.card_giftcard_rounded,
+                    title: 'Mystery Bites',
+                    subtitle: 'Discover mystery food',
+                    color: const Color(0xFFFF8A65),
+                  ),
                 ),
 
+                // Home Chef
                 _FoodServiceCard(
                   icon: Icons.restaurant_rounded,
                   title: 'Home Chef',
@@ -119,11 +134,22 @@ class FoodHomeScreen extends StatelessWidget {
                   color: const Color(0xFFFFB300),
                 ),
 
-                _FoodServiceCard(
-                  icon: Icons.cake_rounded,
-                  title: 'Sweet craft',
-                  subtitle: 'Post what you want, get it made',
-                  color: const Color(0xFFE91E63),
+                // SweetCraft
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SweetCraftScreen(),
+                      ),
+                    );
+                  },
+                  child: _FoodServiceCard(
+                    icon: Icons.cake_rounded,
+                    title: 'Sweet craft',
+                    subtitle: 'Post what you want, get it made',
+                    color: const Color(0xFFE91E63),
+                  ),
                 ),
               ],
             ),
@@ -180,7 +206,9 @@ class FoodHomeScreen extends StatelessWidget {
                         color: Color(0xFF2E7D32),
                         size: 26,
                       ),
+
                       SizedBox(width: 10),
+
                       Text(
                         'Own a food business?',
                         style: TextStyle(
@@ -238,7 +266,9 @@ class FoodHomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(Icons.eco_rounded, color: Colors.white, size: 30),
+
                   SizedBox(height: 10),
+
                   Text(
                     'Every meal saved makes a difference 🌱',
                     style: TextStyle(
@@ -247,7 +277,9 @@ class FoodHomeScreen extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+
                   SizedBox(height: 6),
+
                   Text(
                     'Help reduce food waste while enjoying great food.',
                     style: TextStyle(color: Colors.white70, fontSize: 14),

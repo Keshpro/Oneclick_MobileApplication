@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../models/food_product.dart';
 import '../services/food_cart_service.dart';
 import 'food_cart_screen.dart';
 
-class SaveBiteOffer {
+class SaveBiteOffer extends FoodProduct {
   final String foodName;
   final String restaurantName;
   final String restaurantLogo;
   final String foodImage;
+
   final double originalPrice;
   final double saverPrice;
+
   final int quantity;
+
   final String endingTime;
   final double rating;
   final String description;
@@ -19,6 +23,7 @@ class SaveBiteOffer {
   final String allergens;
 
   const SaveBiteOffer({
+    required String id,
     required this.foodName,
     required this.restaurantName,
     required this.restaurantLogo,
@@ -32,7 +37,20 @@ class SaveBiteOffer {
     required this.category,
     required this.collectionTime,
     required this.allergens,
-  });
+  }) : super(
+         id: id,
+         name: foodName,
+         sellerName: restaurantName,
+         foodImage: foodImage,
+         sellerLogo: restaurantLogo,
+         price: saverPrice,
+         originalPrice: originalPrice,
+         rating: rating,
+         reviewCount: 0,
+         availableQuantity: quantity,
+         availableUntil: endingTime,
+         type: FoodProductType.saveBite,
+       );
 
   int get discountPercentage {
     return ((originalPrice - saverPrice) / originalPrice * 100).round();
@@ -65,6 +83,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
 
   final List<SaveBiteOffer> offers = const [
     SaveBiteOffer(
+      id: 'SB001',
       foodName: 'Chicken Rice & Curry',
       restaurantName: 'Spice Garden Restaurant',
       restaurantLogo: 'assets/images/food/restaurants/spice_garden_logo.webp',
@@ -81,6 +100,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     ),
 
     SaveBiteOffer(
+      id: 'SB002',
       foodName: 'Bakery Surprise Pack',
       restaurantName: 'Cocos Bakery',
       restaurantLogo: 'assets/images/food/restaurants/cocos_bakery_logo.webp',
@@ -97,6 +117,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     ),
 
     SaveBiteOffer(
+      id: 'SB003',
       foodName: 'Pizza Slices',
       restaurantName: 'Urban Pizza',
       restaurantLogo: 'assets/images/food/restaurants/urban_pizza_logo.webp',
@@ -113,6 +134,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     ),
 
     SaveBiteOffer(
+      id: 'SB004',
       foodName: 'Chocolate Brownies',
       restaurantName: 'Cocos Bakery',
       restaurantLogo: 'assets/images/food/restaurants/cocos_bakery_logo.webp',
@@ -1308,7 +1330,7 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
 
             child: ElevatedButton(
               onPressed: () {
-                FoodCartService.instance.addToCart(offer, quantity);
+                FoodCartService.instance.addProduct(offer, quantity);
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

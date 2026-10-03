@@ -106,11 +106,11 @@ class FoodOrderService {
 
     final orderItems = cart.items.map((item) {
       return FoodOrderItem(
-        foodName: item.offer.foodName,
-        restaurantName: item.offer.restaurantName,
-        foodImage: item.offer.foodImage,
-        restaurantLogo: item.offer.restaurantLogo,
-        price: item.offer.saverPrice,
+        foodName: item.product.name,
+        restaurantName: item.product.sellerName,
+        foodImage: item.product.foodImage,
+        restaurantLogo: item.product.sellerLogo,
+        price: item.product.price,
         quantity: item.quantity,
       );
     }).toList();

@@ -261,7 +261,7 @@ class _CartItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final offer = item.offer;
+    final offer = item.product;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -287,7 +287,7 @@ class _CartItemCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(15),
 
             child: Image.asset(
-              offer.foodImage,
+              item.product.foodImage,
               height: 90,
               width: 90,
               fit: BoxFit.cover,
@@ -320,7 +320,7 @@ class _CartItemCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        offer.foodName,
+                        item.product.name,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -345,7 +345,7 @@ class _CartItemCard extends StatelessWidget {
                 const SizedBox(height: 3),
 
                 Text(
-                  offer.restaurantName,
+                  item.product.sellerName,
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                 ),
 
@@ -356,7 +356,7 @@ class _CartItemCard extends StatelessWidget {
 
                   children: [
                     Text(
-                      'Rs. ${offer.saverPrice.toStringAsFixed(0)}',
+                      'Rs. ${item.product.price.toStringAsFixed(0)}',
                       style: const TextStyle(
                         color: Color(0xFF2E7D32),
                         fontSize: 16,
@@ -372,7 +372,7 @@ class _CartItemCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 12),
 
                           child: Text(
-                            '${item.quantity}',
+                            '${item.product.availableQuantity}',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
