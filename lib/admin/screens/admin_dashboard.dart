@@ -346,7 +346,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
-        color: selected ? Colors.blue.withOpacity(0.10) : null,
+        color: selected ? Colors.blue.withValues(alpha: 0.10) : null,
         borderRadius: BorderRadius.circular(10),
       ),
       child: ListTile(
@@ -380,7 +380,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.15),
+            color: Colors.blue.withValues(alpha: 0.15),
             blurRadius: 15,
             offset: const Offset(0, 6),
           ),
@@ -434,26 +434,61 @@ class _AdminDashboardState extends State<AdminDashboard>
           mainAxisSpacing: 15,
           childAspectRatio: 1.35,
           children: [
-            Card(
-              child: ListTile(
-                leading: const Icon(
-                  Icons.pending_actions,
-                  color: Colors.orange,
-                  size: 36,
-                ),
-                title: const Text('Pending Approvals'),
-                subtitle: const Text(
-                  'Review & approve newly registered accounts',
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const PendingAccountsScreen(),
-                    ),
-                  );
-                },
+            _statCard(
+              title: 'Total Users',
+              value: '1,248',
+              icon: Icons.people,
+              iconColor: Colors.blue,
+            ),
+
+            _statCard(
+              title: 'Active Users',
+              value: '982',
+              icon: Icons.person,
+              iconColor: Colors.green,
+            ),
+
+            _statCard(
+              title: 'New Users',
+              value: '86',
+              icon: Icons.person_add,
+              iconColor: Colors.purple,
+              subtitle: 'This month',
+            ),
+
+            _statCard(
+              title: 'Pending Accounts',
+              value: '24',
+              icon: Icons.pending_actions,
+              iconColor: Colors.orange,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _statCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+    String? subtitle,
+  }) {
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
             const SizedBox(height: 12),
@@ -701,7 +736,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.10),
+                  color: Colors.blue.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: Colors.blue, size: 25),
@@ -882,7 +917,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               Container(
                 padding: const EdgeInsets.all(9),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.10),
+                  color: iconColor.withValues(alpha: 0.10),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: iconColor, size: 20),
@@ -986,7 +1021,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.10),
+                  color: iconColor.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: iconColor, size: 20),
