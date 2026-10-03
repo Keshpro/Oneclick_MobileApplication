@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 
+import 'book_appointment_screen.dart';
 import 'ai_assistant_screen.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
 
   @override
-  State<PatientHomeScreen> createState() =>
-      _PatientHomeScreenState();
+  State<PatientHomeScreen> createState() => _PatientHomeScreenState();
 }
 
 class _PatientHomeScreenState extends State<PatientHomeScreen> {
-  final TextEditingController _searchController =
-      TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   String _searchQuery = '';
   String _selectedSpecialty = 'All';
@@ -22,30 +21,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   // ============================================================
 
   final List<Map<String, dynamic>> _specialties = [
-    {
-      'name': 'All',
-      'icon': Icons.apps_rounded,
-    },
-    {
-      'name': 'General',
-      'icon': Icons.medical_services_rounded,
-    },
-    {
-      'name': 'Cardiology',
-      'icon': Icons.favorite_rounded,
-    },
-    {
-      'name': 'Dental',
-      'icon': Icons.health_and_safety_rounded,
-    },
-    {
-      'name': 'Children',
-      'icon': Icons.child_care_rounded,
-    },
-    {
-      'name': 'Skin',
-      'icon': Icons.face_retouching_natural_rounded,
-    },
+    {'name': 'All', 'icon': Icons.apps_rounded},
+    {'name': 'General', 'icon': Icons.medical_services_rounded},
+    {'name': 'Cardiology', 'icon': Icons.favorite_rounded},
+    {'name': 'Dental', 'icon': Icons.health_and_safety_rounded},
+    {'name': 'Children', 'icon': Icons.child_care_rounded},
+    {'name': 'Skin', 'icon': Icons.face_retouching_natural_rounded},
   ];
 
   // ============================================================
@@ -114,18 +95,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
       final matchesSearch =
           query.isEmpty ||
-          doctor['name']
-              .toString()
-              .toLowerCase()
-              .contains(query) ||
-          doctor['specialtyLabel']
-              .toString()
-              .toLowerCase()
-              .contains(query) ||
-          doctor['hospital']
-              .toString()
-              .toLowerCase()
-              .contains(query);
+          doctor['name'].toString().toLowerCase().contains(query) ||
+          doctor['specialtyLabel'].toString().toLowerCase().contains(query) ||
+          doctor['hospital'].toString().toLowerCase().contains(query);
 
       final matchesSpecialty =
           _selectedSpecialty == 'All' ||
@@ -148,9 +120,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   void _openAiAssistant() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const AiAssistantScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const AiAssistantScreen()),
     );
   }
 
@@ -168,17 +138,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       isScrollControlled: true,
       builder: (sheetContext) {
         return Container(
-          padding: const EdgeInsets.fromLTRB(
-            24,
-            14,
-            24,
-            30,
-          ),
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(30),
-            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
           ),
           child: SafeArea(
             top: false,
@@ -242,29 +205,20 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     onPressed: () {
                       Navigator.pop(sheetContext);
 
-                      Navigator.pushNamed(
-                        context,
-                        '/login',
-                      );
+                      Navigator.pushNamed(context, '/login');
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          const Color(0xFF059669),
+                      backgroundColor: const Color(0xFF059669),
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 15,
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: const Text(
                       'Login to Continue',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -277,10 +231,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     onPressed: () {
                       Navigator.pop(sheetContext);
 
-                      Navigator.pushNamed(
-                        context,
-                        '/register',
-                      );
+                      Navigator.pushNamed(context, '/register');
                     },
                     child: const Text(
                       'Create New Account',
@@ -298,9 +249,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   },
                   child: const Text(
                     'Continue Exploring',
-                    style: TextStyle(
-                      color: Color(0xFF64748B),
-                    ),
+                    style: TextStyle(color: Color(0xFF64748B)),
                   ),
                 ),
               ],
@@ -317,9 +266,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   // Booking remains protected.
   // ============================================================
 
-  void _showDoctorProfile(
-    Map<String, dynamic> doctor,
-  ) {
+  void _showDoctorProfile(Map<String, dynamic> doctor) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -333,28 +280,19 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             return Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(30),
-                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
               ),
               child: ListView(
                 controller: scrollController,
-                padding: const EdgeInsets.fromLTRB(
-                  24,
-                  14,
-                  24,
-                  30,
-                ),
+                padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
                 children: [
                   Center(
                     child: Container(
                       width: 44,
                       height: 5,
                       decoration: BoxDecoration(
-                        color:
-                            const Color(0xFFE2E8F0),
-                        borderRadius:
-                            BorderRadius.circular(20),
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                     ),
                   ),
@@ -365,8 +303,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     child: Container(
                       width: 90,
                       height: 90,
-                      decoration:
-                          const BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Color(0xFFECFDF5),
                         shape: BoxShape.circle,
                       ),
@@ -429,10 +366,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
                       Expanded(
                         child: _profileStatistic(
-                          icon:
-                              Icons.workspace_premium_rounded,
-                          value:
-                              '${doctor['experience']}+',
+                          icon: Icons.workspace_premium_rounded,
+                          value: '${doctor['experience']}+',
                           label: 'Years',
                         ),
                       ),
@@ -481,12 +416,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8FAFC),
-                      borderRadius:
-                          BorderRadius.circular(18),
-                      border: Border.all(
-                        color:
-                            const Color(0xFFE2E8F0),
-                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: Row(
                       children: [
@@ -495,26 +426,15 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           height: 45,
                           decoration: BoxDecoration(
                             color: doctor['available']
-                                ? const Color(
-                                    0xFFECFDF5,
-                                  )
-                                : const Color(
-                                    0xFFFFF7ED,
-                                  ),
-                            borderRadius:
-                                BorderRadius.circular(
-                              13,
-                            ),
+                                ? const Color(0xFFECFDF5)
+                                : const Color(0xFFFFF7ED),
+                            borderRadius: BorderRadius.circular(13),
                           ),
                           child: Icon(
                             Icons.calendar_month_rounded,
                             color: doctor['available']
-                                ? const Color(
-                                    0xFF059669,
-                                  )
-                                : const Color(
-                                    0xFFEA580C,
-                                  ),
+                                ? const Color(0xFF059669)
+                                : const Color(0xFFEA580C),
                           ),
                         ),
 
@@ -522,14 +442,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
                                 'Next available',
                                 style: TextStyle(
-                                  color:
-                                      Color(0xFF64748B),
+                                  color: Color(0xFF64748B),
                                   fontSize: 11,
                                 ),
                               ),
@@ -539,11 +457,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                               Text(
                                 doctor['nextSlot'],
                                 style: const TextStyle(
-                                  color:
-                                      Color(0xFF0F172A),
+                                  color: Color(0xFF0F172A),
                                   fontSize: 14,
-                                  fontWeight:
-                                      FontWeight.w700,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -567,32 +483,18 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                               'Create an account or login to book an appointment with ${doctor['name']}.',
                         );
                       },
-                      icon: const Icon(
-                        Icons.calendar_month_rounded,
-                      ),
+                      icon: const Icon(Icons.calendar_month_rounded),
                       label: const Text(
                         'Book Appointment',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w700),
                       ),
-                      style:
-                          ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color(0xFF059669),
-                        foregroundColor:
-                            Colors.white,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF059669),
+                        foregroundColor: Colors.white,
                         elevation: 0,
-                        padding:
-                            const EdgeInsets.symmetric(
-                          vertical: 15,
-                        ),
-                        shape:
-                            RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(
-                            14,
-                          ),
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
                         ),
                       ),
                     ),
@@ -612,21 +514,14 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     required String label,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        vertical: 14,
-        horizontal: 8,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
-          Icon(
-            icon,
-            color: const Color(0xFF059669),
-            size: 20,
-          ),
+          Icon(icon, color: const Color(0xFF059669), size: 20),
 
           const SizedBox(height: 6),
 
@@ -643,10 +538,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
           Text(
             label,
-            style: const TextStyle(
-              color: Color(0xFF64748B),
-              fontSize: 10,
-            ),
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
           ),
         ],
       ),
@@ -671,31 +563,21 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  16,
-                  20,
-                  0,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                 child: Row(
                   children: [
                     InkWell(
                       onTap: () {
                         Navigator.pop(context);
                       },
-                      borderRadius:
-                          BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(14),
                       child: Container(
                         width: 45,
                         height: 45,
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius:
-                              BorderRadius.circular(14),
-                          border: Border.all(
-                            color:
-                                const Color(0xFFE2E8F0),
-                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
                         child: const Icon(
                           Icons.arrow_back_rounded,
@@ -710,10 +592,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       width: 45,
                       height: 45,
                       decoration: BoxDecoration(
-                        color:
-                            const Color(0xFF059669),
-                        borderRadius:
-                            BorderRadius.circular(14),
+                        color: const Color(0xFF059669),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Icon(
                         Icons.medical_services_rounded,
@@ -726,24 +606,20 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
                     const Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'OneClick Health',
                             style: TextStyle(
-                              color:
-                                  Color(0xFF0F172A),
+                              color: Color(0xFF0F172A),
                               fontSize: 18,
-                              fontWeight:
-                                  FontWeight.w800,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                           Text(
                             'Healthcare made easier',
                             style: TextStyle(
-                              color:
-                                  Color(0xFF64748B),
+                              color: Color(0xFF64748B),
                               fontSize: 11,
                             ),
                           ),
@@ -753,19 +629,20 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
                     IconButton(
                       tooltip: 'My Appointments',
+                      icon: const Icon(
+                        Icons.calendar_today_rounded,
+                        color: Color(0xFF0F172A),
+                      ),
                       onPressed: () {
-                        _showLoginRequired(
-                          title:
-                              'Your Appointments',
-                          description:
-                              'Login to view and manage your upcoming and previous appointments.',
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => BookAppointmentScreen(
+                              doctor: _doctors.first,
+                            ),
+                          ),
                         );
                       },
-                      icon: const Icon(
-                        Icons
-                            .calendar_month_outlined,
-                        color: Color(0xFF475569),
-                      ),
                     ),
                   ],
                 ),
@@ -775,72 +652,50 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             // ==================================================
             // HERO
             // ==================================================
-
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  24,
-                  20,
-                  0,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                 child: Container(
                   padding: const EdgeInsets.all(23),
                   decoration: BoxDecoration(
                     color: const Color(0xFF064E3B),
-                    borderRadius:
-                        BorderRadius.circular(28),
+                    borderRadius: BorderRadius.circular(28),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black
-                            .withValues(alpha: 0.08),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 22,
-                        offset:
-                            const Offset(0, 10),
+                        offset: const Offset(0, 10),
                       ),
                     ],
                   ),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        padding:
-                            const EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 11,
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white
-                              .withValues(
-                            alpha: 0.10,
-                          ),
-                          borderRadius:
-                              BorderRadius.circular(
-                            30,
-                          ),
+                          color: Colors.white.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(30),
                         ),
                         child: const Row(
-                          mainAxisSize:
-                              MainAxisSize.min,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons
-                                  .health_and_safety_rounded,
-                              color:
-                                  Color(0xFF6EE7B7),
+                              Icons.health_and_safety_rounded,
+                              color: Color(0xFF6EE7B7),
                               size: 15,
                             ),
                             SizedBox(width: 6),
                             Text(
                               'ONECLICK HEALTH',
                               style: TextStyle(
-                                color:
-                                    Color(0xFF6EE7B7),
+                                color: Color(0xFF6EE7B7),
                                 fontSize: 10,
                                 letterSpacing: 0.7,
-                                fontWeight:
-                                    FontWeight.w800,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ],
@@ -855,8 +710,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           color: Colors.white,
                           fontSize: 29,
                           height: 1.12,
-                          fontWeight:
-                              FontWeight.w800,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
 
@@ -865,8 +719,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       const Text(
                         'Explore trusted doctors, check availability and find the care you need.',
                         style: TextStyle(
-                          color:
-                              Color(0xFFA7F3D0),
+                          color: Color(0xFFA7F3D0),
                           fontSize: 13,
                           height: 1.5,
                         ),
@@ -877,63 +730,39 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius:
-                              BorderRadius.circular(
-                            16,
-                          ),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                         child: TextField(
-                          controller:
-                              _searchController,
+                          controller: _searchController,
                           onChanged: (value) {
                             setState(() {
                               _searchQuery = value;
                             });
                           },
-                          decoration:
-                              InputDecoration(
-                            hintText:
-                                'Doctor, specialty or hospital...',
-                            hintStyle:
-                                const TextStyle(
-                              color:
-                                  Color(0xFF94A3B8),
+                          decoration: InputDecoration(
+                            hintText: 'Doctor, specialty or hospital...',
+                            hintStyle: const TextStyle(
+                              color: Color(0xFF94A3B8),
                               fontSize: 13,
                             ),
-                            prefixIcon:
-                                const Icon(
+                            prefixIcon: const Icon(
                               Icons.search_rounded,
-                              color:
-                                  Color(0xFF059669),
+                              color: Color(0xFF059669),
                             ),
-                            suffixIcon:
-                                _searchQuery
-                                        .isNotEmpty
-                                    ? IconButton(
-                                        onPressed:
-                                            () {
-                                          _searchController
-                                              .clear();
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    onPressed: () {
+                                      _searchController.clear();
 
-                                          setState(
-                                            () {
-                                              _searchQuery =
-                                                  '';
-                                            },
-                                          );
-                                        },
-                                        icon:
-                                            const Icon(
-                                          Icons
-                                              .close_rounded,
-                                        ),
-                                      )
-                                    : null,
-                            border:
-                                InputBorder.none,
-                            contentPadding:
-                                const EdgeInsets
-                                    .symmetric(
+                                      setState(() {
+                                        _searchQuery = '';
+                                      });
+                                    },
+                                    icon: const Icon(Icons.close_rounded),
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
                               vertical: 16,
                             ),
                           ),
@@ -948,15 +777,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             // ==================================================
             // QUICK ACTIONS
             // ==================================================
-
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  25,
-                  20,
-                  0,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 25, 20, 0),
                 child: Row(
                   children: [
                     Expanded(
@@ -964,15 +787,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         icon: Icons.search_rounded,
                         title: 'Find Doctor',
                         subtitle: 'Browse doctors',
-                        color:
-                            const Color(0xFF059669),
+                        color: const Color(0xFF059669),
                         onTap: () {
                           _searchController.clear();
 
                           setState(() {
                             _searchQuery = '';
-                            _selectedSpecialty =
-                                'All';
+                            _selectedSpecialty = 'All';
                           });
                         },
                       ),
@@ -983,15 +804,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     // ==========================================
                     // AI ASSISTANT - DIRECT ACCESS
                     // ==========================================
-
                     Expanded(
                       child: _quickAction(
-                        icon:
-                            Icons.smart_toy_outlined,
+                        icon: Icons.smart_toy_outlined,
                         title: 'AI Assistant',
                         subtitle: 'Ask Health AI',
-                        color:
-                            const Color(0xFF7C3AED),
+                        color: const Color(0xFF7C3AED),
                         locked: false,
                         onTap: _openAiAssistant,
                       ),
@@ -1004,15 +822,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             // ==================================================
             // SPECIALTIES
             // ==================================================
-
             const SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  28,
-                  20,
-                  12,
-                ),
+                padding: EdgeInsets.fromLTRB(20, 28, 20, 12),
                 child: Text(
                   'Browse by Specialty',
                   style: TextStyle(
@@ -1028,93 +840,60 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               child: SizedBox(
                 height: 92,
                 child: ListView.separated(
-                  padding:
-                      const EdgeInsets.symmetric(
-                    horizontal: 20,
-                  ),
-                  scrollDirection:
-                      Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  scrollDirection: Axis.horizontal,
                   itemCount: _specialties.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(width: 10),
+                  separatorBuilder: (_, _) => const SizedBox(width: 10),
                   itemBuilder: (context, index) {
-                    final specialty =
-                        _specialties[index];
+                    final specialty = _specialties[index];
 
-                    final selected =
-                        _selectedSpecialty ==
-                            specialty['name'];
+                    final selected = _selectedSpecialty == specialty['name'];
 
                     return InkWell(
                       onTap: () {
                         setState(() {
-                          _selectedSpecialty =
-                              specialty['name'];
+                          _selectedSpecialty = specialty['name'];
                         });
                       },
-                      borderRadius:
-                          BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(18),
                       child: AnimatedContainer(
-                        duration: const Duration(
-                          milliseconds: 200,
-                        ),
+                        duration: const Duration(milliseconds: 200),
                         width: 85,
-                        padding:
-                            const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: selected
-                              ? const Color(
-                                  0xFF059669,
-                                )
+                              ? const Color(0xFF059669)
                               : Colors.white,
-                          borderRadius:
-                              BorderRadius.circular(
-                            18,
-                          ),
+                          borderRadius: BorderRadius.circular(18),
                           border: Border.all(
                             color: selected
-                                ? const Color(
-                                    0xFF059669,
-                                  )
-                                : const Color(
-                                    0xFFE2E8F0,
-                                  ),
+                                ? const Color(0xFF059669)
+                                : const Color(0xFFE2E8F0),
                           ),
                         ),
                         child: Column(
-                          mainAxisAlignment:
-                              MainAxisAlignment
-                                  .center,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               specialty['icon'],
                               color: selected
                                   ? Colors.white
-                                  : const Color(
-                                      0xFF059669,
-                                    ),
+                                  : const Color(0xFF059669),
                               size: 24,
                             ),
 
-                            const SizedBox(
-                              height: 7,
-                            ),
+                            const SizedBox(height: 7),
 
                             Text(
                               specialty['name'],
                               maxLines: 1,
-                              overflow:
-                                  TextOverflow
-                                      .ellipsis,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: selected
                                     ? Colors.white
-                                    : const Color(
-                                        0xFF475569,
-                                      ),
+                                    : const Color(0xFF475569),
                                 fontSize: 10,
-                                fontWeight:
-                                    FontWeight.w700,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],
@@ -1129,30 +908,21 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             // ==================================================
             // DOCTORS TITLE
             // ==================================================
-
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  28,
-                  20,
-                  13,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 13),
                 child: Row(
                   children: [
                     const Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Doctors',
                             style: TextStyle(
-                              color:
-                                  Color(0xFF0F172A),
+                              color: Color(0xFF0F172A),
                               fontSize: 20,
-                              fontWeight:
-                                  FontWeight.w800,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
 
@@ -1161,8 +931,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           Text(
                             'Explore doctors available on OneClick',
                             style: TextStyle(
-                              color:
-                                  Color(0xFF64748B),
+                              color: Color(0xFF64748B),
                               fontSize: 11,
                             ),
                           ),
@@ -1173,11 +942,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     Text(
                       '${_filteredDoctors.length} found',
                       style: const TextStyle(
-                        color:
-                            Color(0xFF059669),
+                        color: Color(0xFF059669),
                         fontSize: 11,
-                        fontWeight:
-                            FontWeight.w700,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
@@ -1188,21 +955,15 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             // ==================================================
             // DOCTOR LIST
             // ==================================================
-
             if (_filteredDoctors.isEmpty)
               const SliverToBoxAdapter(
                 child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(
-                    vertical: 45,
-                  ),
+                  padding: EdgeInsets.symmetric(vertical: 45),
                   child: Column(
                     children: [
                       Icon(
-                        Icons
-                            .person_search_rounded,
-                        color:
-                            Color(0xFF94A3B8),
+                        Icons.person_search_rounded,
+                        color: Color(0xFF94A3B8),
                         size: 50,
                       ),
 
@@ -1211,10 +972,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       Text(
                         'No doctors found',
                         style: TextStyle(
-                          color:
-                              Color(0xFF475569),
-                          fontWeight:
-                              FontWeight.w700,
+                          color: Color(0xFF475569),
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -1223,22 +982,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               )
             else
               SliverList.builder(
-                itemCount:
-                    _filteredDoctors.length,
+                itemCount: _filteredDoctors.length,
                 itemBuilder: (context, index) {
-                  final doctor =
-                      _filteredDoctors[index];
+                  final doctor = _filteredDoctors[index];
 
                   return Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      20,
-                      index == 0 ? 0 : 6,
-                      20,
-                      8,
-                    ),
-                    child: _doctorCard(
-                      doctor,
-                    ),
+                    padding: EdgeInsets.fromLTRB(20, index == 0 ? 0 : 6, 20, 8),
+                    child: _doctorCard(doctor),
                   );
                 },
               ),
@@ -1247,50 +997,30 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             // AI SECTION
             // DIRECT ACCESS - NO LOGIN REQUIRED
             // ==================================================
-
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  22,
-                  20,
-                  15,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 15),
                 child: InkWell(
                   onTap: _openAiAssistant,
-                  borderRadius:
-                      BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(24),
                   child: Container(
-                    padding:
-                        const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color:
-                          const Color(0xFFF5F3FF),
-                      borderRadius:
-                          BorderRadius.circular(24),
-                      border: Border.all(
-                        color:
-                            const Color(0xFFEDE9FE),
-                      ),
+                      color: const Color(0xFFF5F3FF),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: const Color(0xFFEDE9FE)),
                     ),
                     child: Row(
                       children: [
                         Container(
                           width: 60,
                           height: 60,
-                          decoration:
-                              BoxDecoration(
-                            color: const Color(
-                              0xFF7C3AED,
-                            ),
-                            borderRadius:
-                                BorderRadius.circular(
-                              18,
-                            ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF7C3AED),
+                            borderRadius: BorderRadius.circular(18),
                           ),
                           child: const Icon(
-                            Icons
-                                .smart_toy_rounded,
+                            Icons.smart_toy_rounded,
                             color: Colors.white,
                             size: 30,
                           ),
@@ -1300,24 +1030,17 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
                         const Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
                                   Flexible(
                                     child: Text(
                                       'AI Health Assistant',
-                                      style:
-                                          TextStyle(
-                                        color: Color(
-                                          0xFF0F172A,
-                                        ),
+                                      style: TextStyle(
+                                        color: Color(0xFF0F172A),
                                         fontSize: 15,
-                                        fontWeight:
-                                            FontWeight
-                                                .w800,
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
                                   ),
@@ -1325,38 +1048,23 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                                   SizedBox(width: 7),
 
                                   DecoratedBox(
-                                    decoration:
-                                        BoxDecoration(
-                                      color: Color(
-                                        0xFFEDE9FE,
-                                      ),
-                                      borderRadius:
-                                          BorderRadius
-                                              .all(
-                                        Radius
-                                            .circular(
-                                          20,
-                                        ),
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFFEDE9FE),
+                                      borderRadius: BorderRadius.all(
+                                        Radius.circular(20),
                                       ),
                                     ),
                                     child: Padding(
-                                      padding:
-                                          EdgeInsets
-                                              .symmetric(
+                                      padding: EdgeInsets.symmetric(
                                         horizontal: 7,
                                         vertical: 3,
                                       ),
                                       child: Text(
                                         'AI',
-                                        style:
-                                            TextStyle(
-                                          color: Color(
-                                            0xFF7C3AED,
-                                          ),
+                                        style: TextStyle(
+                                          color: Color(0xFF7C3AED),
                                           fontSize: 9,
-                                          fontWeight:
-                                              FontWeight
-                                                  .w800,
+                                          fontWeight: FontWeight.w800,
                                         ),
                                       ),
                                     ),
@@ -1369,9 +1077,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                               Text(
                                 'Ask health questions and find the right care faster.',
                                 style: TextStyle(
-                                  color: Color(
-                                    0xFF64748B,
-                                  ),
+                                  color: Color(0xFF64748B),
                                   fontSize: 12,
                                   height: 1.4,
                                 ),
@@ -1381,11 +1087,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         ),
 
                         const Icon(
-                          Icons
-                              .arrow_forward_ios_rounded,
+                          Icons.arrow_forward_ios_rounded,
                           size: 16,
-                          color:
-                              Color(0xFF7C3AED),
+                          color: Color(0xFF7C3AED),
                         ),
                       ],
                     ),
@@ -1397,33 +1101,21 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             // ==================================================
             // GUEST MESSAGE
             // ==================================================
-
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  10,
-                  20,
-                  35,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 35),
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius:
-                        BorderRadius.circular(22),
-                    border: Border.all(
-                      color:
-                          const Color(0xFFE2E8F0),
-                    ),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
                   child: Column(
                     children: [
                       const Icon(
-                        Icons
-                            .account_circle_outlined,
-                        color:
-                            Color(0xFF059669),
+                        Icons.account_circle_outlined,
+                        color: Color(0xFF059669),
                         size: 34,
                       ),
 
@@ -1432,11 +1124,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       const Text(
                         'Like what you see?',
                         style: TextStyle(
-                          color:
-                              Color(0xFF0F172A),
+                          color: Color(0xFF0F172A),
                           fontSize: 17,
-                          fontWeight:
-                              FontWeight.w800,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
 
@@ -1446,8 +1136,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         'You can explore doctors and try the AI Health Assistant without an account. Create an account when you are ready to book appointments or use personalized features.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color:
-                              Color(0xFF64748B),
+                          color: Color(0xFF64748B),
                           fontSize: 12,
                           height: 1.5,
                         ),
@@ -1459,40 +1148,20 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/register',
-                            );
+                            Navigator.pushNamed(context, '/register');
                           },
-                          style: ElevatedButton
-                              .styleFrom(
-                            backgroundColor:
-                                const Color(
-                              0xFF059669,
-                            ),
-                            foregroundColor:
-                                Colors.white,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF059669),
+                            foregroundColor: Colors.white,
                             elevation: 0,
-                            padding:
-                                const EdgeInsets
-                                    .symmetric(
-                              vertical: 14,
-                            ),
-                            shape:
-                                RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius
-                                      .circular(
-                                14,
-                              ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
                             ),
                           ),
                           child: const Text(
                             'Create Free Account',
-                            style: TextStyle(
-                              fontWeight:
-                                  FontWeight.w700,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
                       ),
@@ -1528,11 +1197,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         child: Container(
           padding: const EdgeInsets.all(15),
           decoration: BoxDecoration(
-            borderRadius:
-                BorderRadius.circular(20),
-            border: Border.all(
-              color: const Color(0xFFE2E8F0),
-            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
           child: Row(
             children: [
@@ -1540,25 +1206,17 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 width: 43,
                 height: 43,
                 decoration: BoxDecoration(
-                  color: color.withValues(
-                    alpha: 0.10,
-                  ),
-                  borderRadius:
-                      BorderRadius.circular(13),
+                  color: color.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(13),
                 ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 22,
-                ),
+                child: Icon(icon, color: color, size: 22),
               ),
 
               const SizedBox(width: 10),
 
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
@@ -1566,28 +1224,18 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           child: Text(
                             title,
                             maxLines: 1,
-                            overflow:
-                                TextOverflow
-                                    .ellipsis,
-                            style:
-                                const TextStyle(
-                              color: Color(
-                                0xFF0F172A,
-                              ),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF0F172A),
                               fontSize: 12,
-                              fontWeight:
-                                  FontWeight.w800,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                         ),
 
                         if (locked) ...[
                           const SizedBox(width: 4),
-                          Icon(
-                            Icons.lock_rounded,
-                            color: color,
-                            size: 12,
-                          ),
+                          Icon(Icons.lock_rounded, color: color, size: 12),
                         ],
                       ],
                     ),
@@ -1597,11 +1245,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     Text(
                       subtitle,
                       maxLines: 1,
-                      overflow:
-                          TextOverflow.ellipsis,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color:
-                            Color(0xFF64748B),
+                        color: Color(0xFF64748B),
                         fontSize: 9,
                       ),
                     ),
@@ -1619,11 +1265,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   // DOCTOR CARD
   // ============================================================
 
-  Widget _doctorCard(
-    Map<String, dynamic> doctor,
-  ) {
-    final bool available =
-        doctor['available'];
+  Widget _doctorCard(Map<String, dynamic> doctor) {
+    final bool available = doctor['available'];
 
     return Material(
       color: Colors.white,
@@ -1636,24 +1279,18 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius:
-                BorderRadius.circular(22),
-            border: Border.all(
-              color: const Color(0xFFE2E8F0),
-            ),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
           child: Row(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 70,
                 height: 78,
                 decoration: BoxDecoration(
-                  color:
-                      const Color(0xFFECFDF5),
-                  borderRadius:
-                      BorderRadius.circular(17),
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(17),
                 ),
                 child: const Icon(
                   Icons.person_rounded,
@@ -1666,20 +1303,16 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       doctor['name'],
                       maxLines: 1,
-                      overflow:
-                          TextOverflow.ellipsis,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color:
-                            Color(0xFF0F172A),
+                        color: Color(0xFF0F172A),
                         fontSize: 15,
-                        fontWeight:
-                            FontWeight.w800,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
 
@@ -1688,11 +1321,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     Text(
                       doctor['specialtyLabel'],
                       style: const TextStyle(
-                        color:
-                            Color(0xFF059669),
+                        color: Color(0xFF059669),
                         fontSize: 11,
-                        fontWeight:
-                            FontWeight.w700,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
 
@@ -1701,10 +1332,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     Row(
                       children: [
                         const Icon(
-                          Icons
-                              .location_on_outlined,
-                          color:
-                              Color(0xFF94A3B8),
+                          Icons.location_on_outlined,
+                          color: Color(0xFF94A3B8),
                           size: 13,
                         ),
 
@@ -1714,14 +1343,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           child: Text(
                             doctor['hospital'],
                             maxLines: 1,
-                            overflow:
-                                TextOverflow
-                                    .ellipsis,
-                            style:
-                                const TextStyle(
-                              color: Color(
-                                0xFF64748B,
-                              ),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF64748B),
                               fontSize: 10,
                             ),
                           ),
@@ -1735,8 +1359,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       children: [
                         const Icon(
                           Icons.star_rounded,
-                          color:
-                              Color(0xFFF59E0B),
+                          color: Color(0xFFF59E0B),
                           size: 15,
                         ),
 
@@ -1745,11 +1368,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         Text(
                           '${doctor['rating']}',
                           style: const TextStyle(
-                            color:
-                                Color(0xFF0F172A),
+                            color: Color(0xFF0F172A),
                             fontSize: 11,
-                            fontWeight:
-                                FontWeight.w700,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
 
@@ -1758,8 +1379,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         Text(
                           '(${doctor['reviews']})',
                           style: const TextStyle(
-                            color:
-                                Color(0xFF94A3B8),
+                            color: Color(0xFF94A3B8),
                             fontSize: 10,
                           ),
                         ),
@@ -1767,42 +1387,24 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         const Spacer(),
 
                         Container(
-                          padding:
-                              const EdgeInsets
-                                  .symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 4,
                           ),
-                          decoration:
-                              BoxDecoration(
+                          decoration: BoxDecoration(
                             color: available
-                                ? const Color(
-                                    0xFFECFDF5,
-                                  )
-                                : const Color(
-                                    0xFFFFF7ED,
-                                  ),
-                            borderRadius:
-                                BorderRadius
-                                    .circular(
-                              20,
-                            ),
+                                ? const Color(0xFFECFDF5)
+                                : const Color(0xFFFFF7ED),
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            available
-                                ? 'Available'
-                                : 'Next day',
+                            available ? 'Available' : 'Next day',
                             style: TextStyle(
                               color: available
-                                  ? const Color(
-                                      0xFF059669,
-                                    )
-                                  : const Color(
-                                      0xFFEA580C,
-                                    ),
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFFEA580C),
                               fontSize: 9,
-                              fontWeight:
-                                  FontWeight.w700,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
@@ -1816,23 +1418,17 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         Expanded(
                           child: Text(
                             doctor['nextSlot'],
-                            style:
-                                const TextStyle(
-                              color: Color(
-                                0xFF475569,
-                              ),
+                            style: const TextStyle(
+                              color: Color(0xFF475569),
                               fontSize: 10,
-                              fontWeight:
-                                  FontWeight.w600,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
 
                         const Icon(
-                          Icons
-                              .arrow_forward_rounded,
-                          color:
-                              Color(0xFF059669),
+                          Icons.arrow_forward_rounded,
+                          color: Color(0xFF059669),
                           size: 17,
                         ),
                       ],
