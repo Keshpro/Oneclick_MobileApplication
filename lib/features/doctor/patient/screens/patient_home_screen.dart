@@ -907,7 +907,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   ),
                   scrollDirection: Axis.horizontal,
                   itemCount: _specialties.length,
-                  separatorBuilder: (_, __) =>
+                  separatorBuilder: (_, _) =>
                       const SizedBox(width: 10),
                   itemBuilder: (context, index) {
                     final specialty = _specialties[index];
