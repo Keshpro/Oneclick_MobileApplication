@@ -90,7 +90,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ),
               );
             },
-            icon: const Icon(Icons.notifications_none, color: Colors.black87),
           ),
         ],
       ),
