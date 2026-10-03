@@ -13,9 +13,7 @@ class PendingAccounts extends StatelessWidget {
         elevation: 0,
         title: const Text('Pending Accounts'),
       ),
-      body: const Center(
-        child: Text('Pending Accounts'),
-      ),
+      body: const Center(child: Text('Pending Accounts')),
     );
   }
 }
@@ -92,6 +90,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ),
               );
             },
+            icon: const Icon(Icons.notifications_none, color: Colors.black87),
           ),
         ],
       ),
