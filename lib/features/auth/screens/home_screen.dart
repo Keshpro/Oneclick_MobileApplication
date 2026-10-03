@@ -1315,13 +1315,9 @@ class _GradientButton extends StatelessWidget {
 
 class _HeroCard extends StatelessWidget {
   final TextEditingController searchController;
-
   final String searchQuery;
-
   final String? userName;
-
   final ValueChanged<String> onSearchChanged;
-
   final VoidCallback onSearchClear;
 
   const _HeroCard({
