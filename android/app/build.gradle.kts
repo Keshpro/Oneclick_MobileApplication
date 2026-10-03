@@ -48,17 +48,10 @@ flutter {
     source = "../.."
 }
 plugins {
-  id("com.android.application")
-
-  // Add the Google services Gradle plugin
-  id("com.google.gms.google-services")
-
-  ...
-  }
-
-dependencies {
-  // Import the Firebase BoM
-  implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+    id("com.android.application")
+    id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
+}
 
 
   // TODO: Add the dependencies for Firebase products you want to use
