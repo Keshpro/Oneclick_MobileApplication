@@ -29,16 +29,21 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
 
   void _loadActiveBooking() {
     final bookings = _bookingService.getMyBookings();
-    if (bookings.isNotEmpty) {
-      final latest = bookings.first;
-      if (latest.status != BookingStatus.completed &&
-          latest.status != BookingStatus.cancelledByUser &&
-          latest.status != BookingStatus.cancelledByDriver) {
-        setState(() {
-          _activeBooking = latest;
-        });
-      }
+
+    if (bookings.isEmpty) {
+      setState(() => _activeBooking = null);
+      return;
     }
+
+    final latest = bookings.first;
+    final isFinished =
+        latest.status == BookingStatus.completed ||
+        latest.status == BookingStatus.cancelledByUser ||
+        latest.status == BookingStatus.cancelledByDriver;
+
+    setState(() {
+      _activeBooking = isFinished ? null : latest;
+    });
   }
 
   @override
@@ -122,9 +127,14 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                            color: DrunkDriveColors.accent.withValues(alpha: 0.15),
+                            color: DrunkDriveColors.accent.withValues(
+                              alpha: 0.15,
+                            ),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -141,13 +151,62 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
                     const SizedBox(height: 10),
                     Text(
                       '${_activeBooking!.pickup.name} → ${_activeBooking!.destination.name}',
-                      style: const TextStyle(color: DrunkDriveColors.textMuted, fontSize: 13),
+                      style: const TextStyle(
+                        color: DrunkDriveColors.textMuted,
+                        fontSize: 13,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Vehicle: ${_activeBooking!.vehicle.displayName}',
-                      style: const TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+                      style: const TextStyle(
+                        color: DrunkDriveColors.textMuted,
+                        fontSize: 12,
+                      ),
                     ),
+                    if (_activeBooking!.tripPin != null &&
+                        _activeBooking!.status !=
+                            BookingStatus.tripStarted) ...[
+                      const SizedBox(height: 14),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: DrunkDriveColors.background,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Trip PIN',
+                              style: TextStyle(
+                                color: DrunkDriveColors.textMuted,
+                                fontSize: 11,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _activeBooking!.tripPin!,
+                              style: const TextStyle(
+                                color: DrunkDriveColors.accent,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 22,
+                                letterSpacing: 6,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Give this PIN to your driver when you are ready to start.',
+                              style: TextStyle(
+                                color: DrunkDriveColors.textMuted,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -247,10 +306,13 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
                     MaterialPageRoute(
                       builder: (context) => const DriverHomeScreen(),
                     ),
-                  );
+                  ).then((_) => _loadActiveBooking());
                 },
                 icon: const Icon(Icons.swap_horiz_rounded),
-                label: const Text('Switch to Driver Mode', style: TextStyle(fontWeight: FontWeight.w800)),
+                label: const Text(
+                  'Switch to Driver Mode',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: DrunkDriveColors.surface,
                   foregroundColor: Colors.white,
@@ -276,10 +338,16 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
                     ),
                   );
                 },
-                icon: const Icon(Icons.badge_rounded, color: DrunkDriveColors.accent),
+                icon: const Icon(
+                  Icons.badge_rounded,
+                  color: DrunkDriveColors.accent,
+                ),
                 label: const Text(
                   'Become a Driver / Driver Status',
-                  style: TextStyle(color: DrunkDriveColors.accent, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: DrunkDriveColors.accent,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -289,4 +357,3 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
     );
   }
 }
-

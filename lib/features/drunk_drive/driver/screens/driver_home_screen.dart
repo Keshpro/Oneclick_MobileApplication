@@ -23,11 +23,20 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   bool _isOnline = false;
   bool _isApproved = false;
   List<BookingModel> _incomingRequests = [];
+  BookingModel? _activeTrip;
+  final TextEditingController _pinController = TextEditingController();
+  bool _isStartingTrip = false;
 
   @override
   void initState() {
     super.initState();
     _checkAuthorization();
+  }
+
+  @override
+  void dispose() {
+    _pinController.dispose();
+    super.dispose();
   }
 
   void _checkAuthorization() {
@@ -38,6 +47,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
     if (isApproved) {
       _loadRequests();
+      _loadActiveTrip();
     }
   }
 
@@ -45,6 +55,47 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     setState(() {
       _incomingRequests = _bookingService.getAvailableRequests();
     });
+  }
+
+  void _loadActiveTrip() {
+    setState(() {
+      _activeTrip = _bookingService.getMyActiveDriverBooking(
+        VehicleService.currentUserId,
+      );
+    });
+  }
+
+  Future<void> _onStartTrip() async {
+    if (_activeTrip == null) return;
+
+    setState(() => _isStartingTrip = true);
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final updated = _bookingService.startTrip(
+      bookingId: _activeTrip!.id,
+      driverId: VehicleService.currentUserId,
+      enteredPin: _pinController.text,
+    );
+
+    if (!mounted) return;
+    setState(() => _isStartingTrip = false);
+
+    if (updated == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Incorrect PIN. Please try again.')),
+      );
+      return;
+    }
+
+       _pinController.clear();
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => DriverActiveTripScreen(booking: updated)),
+    );
+
+    _loadActiveTrip();
+    _loadRequests();
   }
 
   // NOTE: in this prototype, the same mock account acts as both the
@@ -66,6 +117,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           .showSnackBar(const SnackBar(content: Text('Booking Accepted!')));
     }
     _loadRequests();
+    _loadActiveTrip();
   }
 
   void _onDecline(BookingModel booking) {
@@ -286,28 +338,62 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         ),
         const SizedBox(height: 24),
 
-        // Booking Requests Section
-        const Text(
-          'Booking Requests',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: 16,
+        if (_activeTrip != null) ...[
+          const Text(
+            'Your Current Trip',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          _isOnline
-              ? 'Searching for customer trip requests in your area...'
-              : 'Switch to ONLINE to start receiving booking requests.',
-          style: const TextStyle(
-            color: DrunkDriveColors.textMuted,
-            fontSize: 12,
+          const SizedBox(height: 12),
+                    _ActiveTripCard(
+            booking: _activeTrip!,
+            pinController: _pinController,
+            isStarting: _isStartingTrip,
+            onStartTrip: _onStartTrip,
+            onViewActiveTrip: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DriverActiveTripScreen(booking: _activeTrip!),
+                ),
+              );
+              _loadActiveTrip();
+              _loadRequests();
+            },
           ),
-        ),
-        const SizedBox(height: 14),
+          const SizedBox(height: 24),
+        ],
 
-        if (!_isOnline)
+        // Booking Requests Section — hidden while the driver already
+        // has an active trip (spec section 33).
+        if (_activeTrip == null) ...[
+          const Text(
+            'Booking Requests',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _isOnline
+                ? 'Searching for customer trip requests in your area...'
+                : 'Switch to ONLINE to start receiving booking requests.',
+            style: const TextStyle(
+              color: DrunkDriveColors.textMuted,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+
+        if (_activeTrip != null)
+          const SizedBox.shrink()
+        else if (!_isOnline)
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -489,3 +575,156 @@ class _BookingRequestCard extends StatelessWidget {
     );
   }
 }
+
+class _ActiveTripCard extends StatelessWidget {
+  final BookingModel booking;
+  final TextEditingController pinController;
+  final bool isStarting;
+  final VoidCallback onStartTrip;
+  final VoidCallback onViewActiveTrip;
+
+  const _ActiveTripCard({
+    required this.booking,
+    required this.pinController,
+    required this.isStarting,
+    required this.onStartTrip,
+    required this.onViewActiveTrip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final awaitingStart = booking.status != BookingStatus.tripStarted;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: DrunkDriveColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: DrunkDriveColors.success.withValues(alpha: 0.6),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                booking.status.label,
+                style: const TextStyle(
+                  color: DrunkDriveColors.success,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                'Rs. ${booking.fareEstimate.total.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Pickup: ${booking.pickup.name}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            'Destination: ${booking.destination.name}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Vehicle: ${booking.vehicle.displayName} (${booking.vehicle.registrationNumber})',
+            style: const TextStyle(
+              color: DrunkDriveColors.textMuted,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (awaitingStart) ...[
+            const Text(
+              'Ask the customer for their Trip PIN to start the trip.',
+              style: TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: pinController,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                letterSpacing: 4,
+              ),
+              decoration: InputDecoration(
+                counterText: '',
+                hintText: '••••',
+                hintStyle: const TextStyle(color: DrunkDriveColors.textMuted),
+                filled: true,
+                fillColor: DrunkDriveColors.background,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: isStarting ? null : onStartTrip,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DrunkDriveColors.accent,
+                  foregroundColor: DrunkDriveColors.background,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: isStarting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: DrunkDriveColors.background,
+                        ),
+                      )
+                    : const Text(
+                        'Start Trip',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+              ),
+            ),
+                    ] else
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onViewActiveTrip,
+                icon: const Icon(Icons.navigation_rounded),
+                label: const Text('View Active Trip', style: TextStyle(fontWeight: FontWeight.w800)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DrunkDriveColors.accent,
+                  foregroundColor: DrunkDriveColors.background,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
