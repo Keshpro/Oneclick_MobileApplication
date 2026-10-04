@@ -1143,18 +1143,9 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
 
             TextButton(
               onPressed: () {
-                Navigator.pop(dialogContext);
-                Navigator.pop(context);
-
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Record shared successfully.',
-                    ),
-                  ),
-                );
-              },
+  Navigator.pop(dialogContext);
+  Navigator.pop(context, true);
+},
               child: const Text(
                 'Share',
                 style: TextStyle(
