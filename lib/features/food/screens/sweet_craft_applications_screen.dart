@@ -315,18 +315,7 @@ class _SweetCraftApplicationsScreenState
     SweetCraftApplication application,
   ) {
     setState(() {
-      service.updateApplicationStatus(
-        application.id,
-        SweetCraftApplicationStatus.accepted,
-      );
-
-      request.status = SweetCraftRequestStatus.sellerSelected;
-
-      for (final other in service.getApplicationsForRequest(request.id)) {
-        if (other.id != application.id) {
-          other.status = SweetCraftApplicationStatus.rejected;
-        }
-      }
+      service.selectSeller(request.id, application.id);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
