@@ -11,6 +11,7 @@ import '../../doctor/patient/screens/doctor_entry_screen.dart';
 import '../../drunk_drive/passenger/screens/drunk_drive_home_screen.dart';
 import '../../Personal Vault/screens/dashboard.dart' as personal_vault;
 import '../../food/screens/food_home_screen.dart';
+import '../../quickfix/user/screens/home_services_screen.dart';
 
 class _Palette {
   static const bg = Color(0xFFF3F1FF);
@@ -68,6 +69,12 @@ class _HomeScreenState extends State<HomeScreen> {
       'description': 'Fresh groceries delivered through OneClick partners.',
       'icon': Icons.local_grocery_store_rounded,
       'gradient': const [Color(0xFFFFC857), Color(0xFFBF8211)],
+    },
+    {
+      'title': 'Quick Fix',
+      'description': 'Find local professionals for all your home and repair needs.',
+      'icon': Icons.build_rounded,
+      'gradient': const [Color.fromARGB(255, 236, 30, 8), Color.fromARGB(255, 251, 52, 2)],
     },
     {
       'title': 'Personal Vault',
@@ -402,6 +409,9 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
       case 'Groceries':
         screen = const GroceryHomeScreen();
+        break;
+      case 'Quick Fix':
+        screen = const HomeServicesScreen();
         break;
       case 'Personal Vault':
         screen = const personal_vault.PersonalDashboardScreen();

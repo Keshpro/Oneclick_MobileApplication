@@ -91,58 +91,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
   ];
 
   // ================================================================
-  // LOGOUT DIALOG
-  // ================================================================
-
-  Future<void> _confirmLogout() async {
-    // Alternatively, you can use Navigator.push to go to logout.dart
-    // Navigator.push(context, MaterialPageRoute(builder: (_) => const LogoutScreen()));
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        icon: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: _C.danger.withValues(alpha: 0.10),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.logout_rounded, color: _C.danger, size: 28),
-        ),
-        title: const Text('Logout'),
-        content: const Text(
-          'Are you sure you want to log out of the admin panel?',
-          textAlign: TextAlign.center,
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: _C.danger),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-    try {
-      await FirebaseAuth.instance.signOut();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Logout failed: $e')));
-      return;
-    }
-    if (!mounted) return;
-    Navigator.of(context).popUntil((route) => route.isFirst);
-  }
-
-  // ================================================================
   // BUILD
   // ================================================================
 
@@ -176,7 +124,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             icon: const Icon(Icons.logout_rounded, color: _C.danger),
             tooltip: 'Logout',
             onPressed: () {
-               _confirmLogout();
+               // Kelinma Logout screen ekata yanawa
+               Navigator.push(context, MaterialPageRoute(builder: (_) => const LogoutScreen()));
             },
           ),
           const SizedBox(width: 4),
@@ -300,8 +249,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
+                      // Updated to call your updated UserManagementScreen
                       MaterialPageRoute(
-                        builder: (_) => const UserManagementScreen(title: 'User Management'),
+                        builder: (_) => const UserManagementScreen(
+                          title: 'User Management',
+                        ),
                       ),
                     );
                   },
@@ -355,6 +307,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 tint: _C.danger.withValues(alpha: 0.08),
                 onTap: () {
                   Navigator.pop(context);
+                  // Kelinma Logout screen ekata yanawa
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const LogoutScreen()));
                 },
               ),
@@ -475,6 +428,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             Navigator.push(
               context,
               MaterialPageRoute(
+                // Updated to call your updated UserManagementScreen
                 builder: (_) => const UserManagementScreen(title: 'User Management'),
               ),
             );
