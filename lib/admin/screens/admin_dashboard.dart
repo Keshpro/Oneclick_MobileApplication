@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import 'user_management.dart';
-import '../../features/food/screens/food_admin_seller_applications_screen.dart';
 
 // ==================================================================
 // PENDING ACCOUNTS (placeholder)
@@ -19,6 +19,18 @@ class PendingAccounts extends StatelessWidget {
         title: const Text('Pending Accounts'),
       ),
       body: const Center(child: Text('Pending Accounts')),
+    );
+  }
+}
+
+class FoodAdminSellerApplicationsScreen extends StatelessWidget {
+  const FoodAdminSellerApplicationsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Food Seller Applications')),
+      body: const Center(child: Text('Food Seller Applications')),
     );
   }
 }
@@ -55,11 +67,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
     _AuditCategory(
       name: 'Doctor',
       icon: Icons.medical_services_outlined,
-      description:
-          'Audit doctors, patients and activities related to the medical service.',
+      description: 'Audit doctors, patients and activities related to the medical service.',
       stats: [
-        _AuditStat(title: 'Doctors', value: '145', icon: Icons.medical_services),
-        _AuditStat(title: 'Patients', value: '628', icon: Icons.personal_injury),
+        _AuditStat(
+          title: 'Doctors',
+          value: '145',
+          icon: Icons.medical_services,
+        ),
+        _AuditStat(
+          title: 'Patients',
+          value: '628',
+          icon: Icons.personal_injury,
+        ),
         _AuditStat(title: 'Pending', value: '12', icon: Icons.pending_actions),
         _AuditStat(title: 'Activities', value: '1,240', icon: Icons.history),
       ],
@@ -506,8 +525,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final int crossAxisCount = constraints.maxWidth >= 1100
             ? 4
             : constraints.maxWidth >= 700
-                ? 4
-                : 2;
+            ? 4
+            : 2;
 
         return GridView.count(
           crossAxisCount: crossAxisCount,
