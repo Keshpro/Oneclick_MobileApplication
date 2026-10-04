@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:oneclick/shared/models/user_model.dart';
 
 import 'firebase_options.dart';
 
 import 'features/auth/screens/splash_screen.dart';
 import 'features/auth/screens/home_screen.dart';
 import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/register_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,19 +17,6 @@ void main() async {
   );
 
   runApp(const MyApp());
-}
-
-class RoleSelectionScreen extends StatelessWidget {
-  const RoleSelectionScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Role Selection'),
-      ),
-    );
-  }
 }
 
 class MyApp extends StatelessWidget {
@@ -46,28 +35,34 @@ class MyApp extends StatelessWidget {
         ),
       ),
 
-      // App starts here
       initialRoute: '/',
 
       routes: {
-        // Splash
+        // Splash Screen
         '/': (context) => const SplashScreen(),
 
-        // Guest Dashboard
+        // Guest Home Screen
         '/home': (context) => const HomeScreen(),
 
-        // Common Login
+        // Login Screen
         '/login': (context) => const LoginScreen(),
-
-        // Registration starts from role selection
-        '/register': (context) => const RoleSelectionScreen(),
       },
 
-      // Catch unknown routes while developing
+      onGenerateRoute: (settings) {
+        // Normal User Registration
+        if (settings.name == '/register') {
+          return MaterialPageRoute(
+            builder: (context) => RegisterScreen(
+              role: UserRole.user,
+            ),
+          );
+        }
+
+        return null;
+      },
+
       onUnknownRoute: (settings) {
-        debugPrint(
-          'UNKNOWN ROUTE: ${settings.name}',
-        );
+        debugPrint('UNKNOWN ROUTE: ${settings.name}');
 
         return MaterialPageRoute(
           builder: (context) => const HomeScreen(),
