@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'share_record_screen.dart';
 import 'shared_with_me_details_screen.dart';
+import 'dashboard.dart';
+import 'vault_screen.dart';
+import 'subscriptions_screen.dart';
 
 class SharingCenterScreen extends StatefulWidget {
   const SharingCenterScreen({super.key});
@@ -89,106 +92,220 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
   // TOP BAR
   // ============================================================
 
-  Widget _buildTopBar() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(26, 22, 26, 22),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0F1F8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.025),
-            blurRadius: 12,
-            offset: const Offset(0, 7),
-          ),
-        ],
-      ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: Row(
-            children: [
-              _smallLogo(),
+Widget _buildTopBar() {
+  void _showSharingSearch() {
+  final controller = TextEditingController();
 
-              const SizedBox(width: 10),
+  final searchItems = [
+    'Apartment Lease Agreement',
+    'Home Purchase Tax Bundle',
+    'Wi-Fi & Router Admin',
+    'Family Health Insurance Group',
+    'Rental Car Protection Receipt',
+  ];
 
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'OneClick',
-                      style: TextStyle(
-                        color: ink,
-                        fontSize: 27,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -.6,
-                      ),
-                    ),
-                    SizedBox(height: 3),
-                    Text(
-                      'SHARING',
-                      style: TextStyle(
-                        color: purple,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1.4,
-                      ),
-                    ),
-                  ],
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setModalState) {
+          final query = controller.text.toLowerCase();
+
+          final results = searchItems.where((item) {
+            return item.toLowerCase().contains(query);
+          }).toList();
+
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * .70,
+              ),
+              padding: const EdgeInsets.all(22),
+              decoration: const BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(30),
                 ),
               ),
-
-              _topCircle(
-                Icons.search_rounded,
-                onTap: () => _message('Search sharing records'),
-              ),
-
-              const SizedBox(width: 10),
-
-              Stack(
-                clipBehavior: Clip.none,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _topCircle(
-                    Icons.notifications_none_rounded,
-                    onTap: () => _message('Notifications'),
+                  const Text(
+                    'Search Sharing',
+                    style: TextStyle(
+                      color: ink,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: const BoxDecoration(
+
+                  const SizedBox(height: 16),
+
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    onChanged: (_) {
+                      setModalState(() {});
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Search shared records...',
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
                         color: purple,
-                        shape: BoxShape.circle,
                       ),
+                      filled: true,
+                      fillColor: surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(22),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  Text(
+                    query.isEmpty
+                        ? 'SUGGESTED'
+                        : 'SEARCH RESULTS',
+                    style: const TextStyle(
+                      color: muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: .5,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Flexible(
+                    child: results.isEmpty
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Text(
+                                'No matching sharing records found.',
+                                style: TextStyle(
+                                  color: muted,
+                                ),
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: results.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final item = results[index];
+
+                              return ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: const Icon(
+                                  Icons.description_outlined,
+                                  color: purple,
+                                ),
+                                title: Text(
+                                  item,
+                                  style: const TextStyle(
+                                    color: ink,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                trailing: const Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  color: muted,
+                                  size: 15,
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context);
+
+                                  ScaffoldMessenger.of(this.context)
+                                      .showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Found: $item',
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+  return Container(
+    padding: const EdgeInsets.fromLTRB(26, 22, 26, 22),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF0F1F8),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(.025),
+          blurRadius: 12,
+          offset: const Offset(0, 7),
+        ),
+      ],
+    ),
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: Row(
+          children: [
+            _smallLogo(),
+
+            const SizedBox(width: 10),
+
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'OneClick',
+                    style: TextStyle(
+                      color: ink,
+                      fontSize: 27,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -.6,
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    'SHARING',
+                    style: TextStyle(
+                      color: purple,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.4,
                     ),
                   ),
                 ],
               ),
+            ),
 
-              const SizedBox(width: 10),
-
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: purple,
-                  shape: BoxShape.circle,
-                  boxShadow: _shadow(),
-                ),
-                child: const Icon(
-                  Icons.person_outline_rounded,
-                  color: Colors.white,
-                  size: 26,
-                ),
-              ),
-            ],
-          ),
+            _topCircle(
+              Icons.search_rounded,
+              onTap: _showSharingSearch,
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _smallLogo() {
     return Container(
@@ -1129,29 +1246,53 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _navItem(
-                  icon: Icons.home_outlined,
-                  label: 'Home',
-                  onTap: () => Navigator.pop(context),
-                ),
+  icon: Icons.home_outlined,
+  label: 'Home',
+  onTap: () {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const PersonalDashboardScreen(),
+      ),
+    );
+  },
+),
 
-                _navItem(
-                  icon: Icons.lock_outline,
-                  label: 'Vault',
-                  onTap: () => Navigator.pop(context),
-                ),
+_navItem(
+  icon: Icons.lock_outline,
+  label: 'Vault',
+  onTap: () {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const VaultScreen(),
+      ),
+    );
+  },
+),
 
-                _navItem(
-                  icon: Icons.subscriptions_outlined,
-                  label: 'Subs',
-                  onTap: () => _message('Subscriptions'),
-                ),
+_navItem(
+  icon: Icons.subscriptions_outlined,
+  label: 'Subs',
+  onTap: () {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const SubscriptionsScreen(),
+      ),
+    );
+  },
+),
 
-                _navItem(
-                  icon: Icons.share_outlined,
-                  label: 'Sharing',
-                  selected: true,
-                  onTap: () {},
-                ),
+_navItem(
+  icon: Icons.share_outlined,
+  label: 'Sharing',
+  selected: true,
+  onTap: () {},
+),
               ],
             ),
           ),
