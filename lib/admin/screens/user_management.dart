@@ -3,7 +3,7 @@ import '../services/admin_service.dart';
 import '../../shared/models/user_model.dart';
 
 class UserManagementScreen extends StatefulWidget {
-  const UserManagementScreen({Key? key}) : super(key: key);
+  const UserManagementScreen({super.key});
 
   @override
   State<UserManagementScreen> createState() => _UserManagementScreenState();
