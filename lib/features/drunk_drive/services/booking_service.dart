@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import '../models/booking_model.dart';
 import '../models/booking_status.dart';
 import '../models/fare_estimate.dart';
@@ -18,7 +19,7 @@ class BookingService {
     return mine;
   }
 
-    BookingModel? getBookingById(String id) {
+  BookingModel? getBookingById(String id) {
     for (final booking in _bookings) {
       if (booking.id == id) return booking;
     }
@@ -35,7 +36,7 @@ class BookingService {
     return available;
   }
 
-    /// Statuses that mean "this driver is currently committed to a trip"
+  /// Statuses that mean "this driver is currently committed to a trip"
   /// (spec section 33: a driver with an active trip can't accept another).
   static const Set<BookingStatus> _activeDriverStatuses = {
     BookingStatus.driverAssigned,
@@ -50,7 +51,8 @@ class BookingService {
   /// The driver's current in-progress booking, if any.
   BookingModel? getMyActiveDriverBooking(String driverId) {
     for (final booking in _bookings) {
-      if (booking.driverId == driverId && _activeDriverStatuses.contains(booking.status)) {
+      if (booking.driverId == driverId &&
+          _activeDriverStatuses.contains(booking.status)) {
         return booking;
       }
     }
@@ -106,19 +108,33 @@ class BookingService {
     required String enteredPin,
   }) {
     final index = _bookings.indexWhere((b) => b.id == bookingId);
-    if (index == -1) return null;
+
+    if (index == -1) {
+      return null;
+    }
 
     final current = _bookings[index];
-    if (current.driverId != driverId) return null;
-    if (!_preTripStartStatuses.contains(current.status)) return null;
-    if (current.tripPin == null || enteredPin.trim() != current.tripPin) return null;
 
-    final updated = current.copyWith(status: BookingStatus.tripStarted);
+    if (current.driverId != driverId) {
+      return null;
+    }
+
+    if (!_preTripStartStatuses.contains(current.status)) {
+      return null;
+    }
+
+    if (current.tripPin == null || enteredPin.trim() != current.tripPin) {
+      return null;
+    }
+    final updated = current.copyWith(
+      status: BookingStatus.tripStarted,
+      startedAt: DateTime.now(),
+    );
     _bookings[index] = updated;
     return updated;
   }
 
-    String _generatePin() {
+  String _generatePin() {
     final random = Random();
     return List.generate(4, (_) => random.nextInt(10)).join();
   }
@@ -148,7 +164,39 @@ class BookingService {
     _bookings[index] = updated;
     return updated;
   }
-  
+
+  BookingModel? moveToPayment(String bookingId) {
+    final index = _bookings.indexWhere((b) => b.id == bookingId);
+    if (index == -1) return null;
+
+    final current = _bookings[index];
+
+    if (current.status != BookingStatus.tripCompleted) {
+      return null;
+    }
+
+    final updated = current.copyWith(status: BookingStatus.payment);
+
+    _bookings[index] = updated;
+    return updated;
+  }
+
+  BookingModel? completePayment(String bookingId) {
+    final index = _bookings.indexWhere((b) => b.id == bookingId);
+    if (index == -1) return null;
+
+    final current = _bookings[index];
+
+    if (current.status != BookingStatus.payment) {
+      return null;
+    }
+
+    final updated = current.copyWith(status: BookingStatus.completed);
+
+    _bookings[index] = updated;
+    return updated;
+  }
+
   BookingModel createBooking({
     required VehicleModel vehicle,
     required LocationModel pickup,

@@ -18,6 +18,7 @@ class BookingModel {
   final DateTime createdAt;
   final String? driverId;
   final String? tripPin;
+  final DateTime? startedAt;
   final DateTime? completedAt;
 
   const BookingModel({
@@ -32,8 +33,9 @@ class BookingModel {
     required this.durationMinutes,
     required this.status,
     required this.createdAt,
-        this.driverId,
+            this.driverId,
     this.tripPin,
+    this.startedAt,
     this.completedAt,
   });
 
@@ -41,6 +43,7 @@ class BookingModel {
     BookingStatus? status,
     String? driverId,
     String? tripPin,
+    DateTime? startedAt,
     DateTime? completedAt,
   }) {
     return BookingModel(
@@ -57,6 +60,7 @@ class BookingModel {
       createdAt: createdAt,
       driverId: driverId ?? this.driverId,
       tripPin: tripPin ?? this.tripPin,
+      startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
     );
   }

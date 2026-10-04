@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/booking_model.dart';
+import '../../models/booking_status.dart';
 import '../../services/booking_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../theme/drunk_drive_colors.dart';
@@ -59,7 +60,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Done', style: TextStyle(color: DrunkDriveColors.accent)),
+            child: const Text(
+              'Done',
+              style: TextStyle(color: DrunkDriveColors.accent),
+            ),
           ),
         ],
       ),
@@ -103,11 +107,17 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.directions_car_filled_rounded, color: DrunkDriveColors.success),
+                  const Icon(
+                    Icons.directions_car_filled_rounded,
+                    color: DrunkDriveColors.success,
+                  ),
                   const SizedBox(width: 10),
                   Text(
                     booking.status.label,
-                    style: const TextStyle(color: DrunkDriveColors.success, fontWeight: FontWeight.w800),
+                    style: const TextStyle(
+                      color: DrunkDriveColors.success,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               ),
@@ -122,9 +132,19 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _row(Icons.my_location_rounded, DrunkDriveColors.success, 'Pickup', booking.pickup.name),
+                  _row(
+                    Icons.my_location_rounded,
+                    DrunkDriveColors.success,
+                    'Pickup',
+                    booking.pickup.name,
+                  ),
                   const SizedBox(height: 12),
-                  _row(Icons.location_on_rounded, DrunkDriveColors.danger, 'Destination', booking.destination.name),
+                  _row(
+                    Icons.location_on_rounded,
+                    DrunkDriveColors.danger,
+                    'Destination',
+                    booking.destination.name,
+                  ),
                   const SizedBox(height: 12),
                   _row(
                     Icons.directions_car_rounded,
@@ -152,8 +172,14 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
             const SizedBox(height: 16),
             TextButton.icon(
               onPressed: _onReportIncident,
-              icon: const Icon(Icons.report_outlined, color: DrunkDriveColors.danger),
-              label: const Text('Report Incident', style: TextStyle(color: DrunkDriveColors.danger)),
+              icon: const Icon(
+                Icons.report_outlined,
+                color: DrunkDriveColors.danger,
+              ),
+              label: const Text(
+                'Report Incident',
+                style: TextStyle(color: DrunkDriveColors.danger),
+              ),
             ),
           ],
         ),
@@ -169,15 +195,23 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
                 backgroundColor: DrunkDriveColors.danger,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               child: _isEnding
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
-                  : const Text('End Trip', style: TextStyle(fontWeight: FontWeight.w800)),
+                  : const Text(
+                      'End Trip',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
             ),
           ),
         ),
@@ -195,9 +229,22 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(color: DrunkDriveColors.textMuted, fontSize: 11)),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: DrunkDriveColors.textMuted,
+                  fontSize: 11,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
             ],
           ),
         ),

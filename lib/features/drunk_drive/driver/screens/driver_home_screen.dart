@@ -8,6 +8,7 @@ import '../../services/driver_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 import 'driver_application_screen.dart';
+import 'driver_active_trip_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -87,11 +88,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       return;
     }
 
-       _pinController.clear();
+    _pinController.clear();
 
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => DriverActiveTripScreen(booking: updated)),
+      MaterialPageRoute(
+        builder: (context) => DriverActiveTripScreen(booking: updated),
+      ),
     );
 
     _loadActiveTrip();
@@ -348,7 +351,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             ),
           ),
           const SizedBox(height: 12),
-                    _ActiveTripCard(
+          _ActiveTripCard(
             booking: _activeTrip!,
             pinController: _pinController,
             isStarting: _isStartingTrip,
@@ -357,7 +360,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => DriverActiveTripScreen(booking: _activeTrip!),
+                  builder: (context) =>
+                      DriverActiveTripScreen(booking: _activeTrip!),
                 ),
               );
               _loadActiveTrip();
@@ -709,18 +713,23 @@ class _ActiveTripCard extends StatelessWidget {
                       ),
               ),
             ),
-                    ] else
+          ] else
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: onViewActiveTrip,
                 icon: const Icon(Icons.navigation_rounded),
-                label: const Text('View Active Trip', style: TextStyle(fontWeight: FontWeight.w800)),
+                label: const Text(
+                  'View Active Trip',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: DrunkDriveColors.accent,
                   foregroundColor: DrunkDriveColors.background,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -728,3 +737,4 @@ class _ActiveTripCard extends StatelessWidget {
       ),
     );
   }
+}

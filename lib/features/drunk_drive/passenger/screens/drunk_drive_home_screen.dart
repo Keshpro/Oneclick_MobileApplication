@@ -7,6 +7,7 @@ import '../../theme/drunk_drive_colors.dart';
 import 'my_vehicles_screen.dart';
 import 'book_driver_screen.dart';
 import 'my_trips_screen.dart';
+import 'active_trip_screen.dart';
 import '../../driver/screens/driver_application_screen.dart';
 import '../../driver/screens/driver_home_screen.dart';
 
@@ -207,6 +208,39 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
                         ),
                       ),
                     ],
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  ActiveTripScreen(booking: _activeBooking!),
+                            ),
+                          );
+
+                          if (!mounted) return;
+
+                          _loadActiveBooking();
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: DrunkDriveColors.accent,
+                          side: const BorderSide(
+                            color: DrunkDriveColors.accent,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'View Trip',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
