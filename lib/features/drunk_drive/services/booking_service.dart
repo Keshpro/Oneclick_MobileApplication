@@ -30,6 +30,12 @@ class BookingService {
   /// not yet claimed by a driver.
   List<BookingModel> getAvailableRequests() {
     final available = _bookings
+        .where(
+          (b) =>
+              (b.status == BookingStatus.requested ||
+                  b.status == BookingStatus.searchingDriver) &&
+              b.driverId == null,
+        )
         .where((b) => b.status == BookingStatus.requested && b.driverId == null)
         .toList();
     available.sort((a, b) => a.createdAt.compareTo(b.createdAt));
@@ -121,10 +127,13 @@ class BookingService {
     if (index == -1) return null;
 
     final current = _bookings[index];
-    if (current.status != BookingStatus.requested || current.driverId != null) {
-      return null; // someone else already took it
-    }
+    final canAccept =
+        current.status == BookingStatus.requested ||
+        current.status == BookingStatus.searchingDriver;
 
+    if (!canAccept || current.driverId != null) {
+      return null;
+    }
     final updated = current.copyWith(
       status: BookingStatus.driverAssigned,
       driverId: driverId,
@@ -322,7 +331,7 @@ class BookingService {
       fareEstimate: fareEstimate,
       distanceKm: distanceKm,
       durationMinutes: durationMinutes,
-      status: BookingStatus.requested,
+      status: BookingStatus.searchingDriver,
       createdAt: DateTime.now(),
     );
     _bookings.add(booking);
