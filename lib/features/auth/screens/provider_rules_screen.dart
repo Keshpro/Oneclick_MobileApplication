@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'provider_role_selection_screen.dart';
 
 class ProviderRulesScreen extends StatefulWidget {

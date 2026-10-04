@@ -68,7 +68,7 @@ class _CartScreenState extends State<CartScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: cartItems.length,
-                    separatorBuilder: (_, __) =>
+                    separatorBuilder: (_, _) =>
                         const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final item = cartItems[index];

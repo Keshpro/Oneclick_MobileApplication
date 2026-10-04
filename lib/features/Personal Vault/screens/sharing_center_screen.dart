@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'share_record_screen.dart';
 import 'shared_with_me_details_screen.dart';
 import 'dashboard.dart';
@@ -984,7 +983,7 @@ Widget _buildTopBar() {
               Text(
                 '2 Received',
                 style: TextStyle(
-                  color: purple.withOpacity(.9),
+                  color: purple.withValues(alpha: .9),
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),

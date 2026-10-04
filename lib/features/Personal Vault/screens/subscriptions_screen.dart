@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'add_subscription_screen.dart';
 import 'subscription_details_screen.dart';
 import 'ai_subscription_checkup_screen.dart';
@@ -442,7 +441,7 @@ Widget _buildHeader() {
               Text(
                 'vs last month',
                 style: TextStyle(
-                  color: muted.withOpacity(.9),
+                  color: muted.withValues(alpha: .9),
                   fontSize: 11,
                 ),
               ),
@@ -1162,7 +1161,7 @@ Widget _buildAddSubscriptionButton() {
         color: bg,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(.04),
+            color: Colors.black.withValues(alpha: .04),
             blurRadius: 12,
             offset: const Offset(0, -3),
           ),
@@ -1372,12 +1371,12 @@ Widget _buildAddSubscriptionButton() {
   List<BoxShadow> _shadow() {
     return [
       BoxShadow(
-        color: Colors.white.withOpacity(.9),
+        color: Colors.white.withValues(alpha: .9),
         offset: const Offset(-4, -4),
         blurRadius: 10,
       ),
       BoxShadow(
-        color: Colors.black.withOpacity(.07),
+        color: Colors.black.withValues(alpha: .07),
         offset: const Offset(5, 7),
         blurRadius: 15,
       ),
