@@ -5,7 +5,11 @@ import '../../services/vehicle_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 
 class AddVehicleScreen extends StatefulWidget {
-  const AddVehicleScreen({super.key});
+  final VehicleModel? vehicle;
+
+  const AddVehicleScreen({super.key, this.vehicle});
+
+  bool get isEditing => vehicle != null;
 
   @override
   State<AddVehicleScreen> createState() => _AddVehicleScreenState();
@@ -24,6 +28,21 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   TransmissionType _transmission = TransmissionType.automatic;
 
   bool _isSaving = false;
+  @override
+  void initState() {
+    super.initState();
+
+    final vehicle = widget.vehicle;
+
+    if (vehicle != null) {
+      _registrationController.text = vehicle.registrationNumber;
+      _brandController.text = vehicle.brand;
+      _modelController.text = vehicle.model;
+      _colourController.text = vehicle.colour;
+      _vehicleType = vehicle.vehicleType;
+      _transmission = vehicle.transmission;
+    }
+  }
 
   @override
   void dispose() {
@@ -41,14 +60,29 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
     await Future.delayed(const Duration(milliseconds: 300));
 
-    _vehicleService.addVehicle(
-      registrationNumber: _registrationController.text,
-      brand: _brandController.text,
-      model: _modelController.text,
-      colour: _colourController.text,
-      vehicleType: _vehicleType,
-      transmission: _transmission,
-    );
+    if (widget.isEditing) {
+      final current = widget.vehicle!;
+
+      final updated = current.copyWith(
+        registrationNumber: _registrationController.text.trim().toUpperCase(),
+        brand: _brandController.text.trim(),
+        model: _modelController.text.trim(),
+        colour: _colourController.text.trim(),
+        vehicleType: _vehicleType,
+        transmission: _transmission,
+      );
+
+      _vehicleService.updateVehicle(updated);
+    } else {
+      _vehicleService.addVehicle(
+        registrationNumber: _registrationController.text,
+        brand: _brandController.text,
+        model: _modelController.text,
+        colour: _colourController.text,
+        vehicleType: _vehicleType,
+        transmission: _transmission,
+      );
+    }
 
     if (!mounted) return;
     setState(() => _isSaving = false);
@@ -91,9 +125,12 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         backgroundColor: DrunkDriveColors.background,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Add Vehicle',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+        title: Text(
+          widget.isEditing ? 'Edit Vehicle' : 'Add Vehicle',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
       body: SafeArea(

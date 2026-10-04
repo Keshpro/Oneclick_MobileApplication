@@ -9,6 +9,7 @@ import '../../services/vehicle_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 import 'driver_application_screen.dart';
 import 'driver_active_trip_screen.dart';
+import 'driver_trip_history_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -142,6 +143,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
     _loadActiveTrip();
     _loadRequests();
+    _loadDriverStats();
   }
 
   Future<void> _onCancelBooking() async {
@@ -441,6 +443,37 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 16),
+
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DriverTripHistoryScreen(),
+                ),
+              );
+
+              _loadDriverStats();
+            },
+            icon: const Icon(Icons.history_rounded),
+            label: const Text(
+              'View Trip History',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: DrunkDriveColors.accent,
+              side: const BorderSide(color: DrunkDriveColors.accent),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ),
+
         const SizedBox(height: 24),
 
         if (_activeTrip != null) ...[
