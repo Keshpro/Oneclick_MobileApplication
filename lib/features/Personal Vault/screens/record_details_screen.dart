@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'explain_document_screen.dart';
+import 'share_record_screen.dart';
 
 class RecordDetailsScreen extends StatefulWidget {
   const RecordDetailsScreen({super.key});
@@ -276,12 +277,28 @@ class _RecordDetailsScreenState extends State<RecordDetailsScreen> {
           const SizedBox(width: 14),
 
           _actionButton(
-            icon: Icons.share_outlined,
-            text: 'Share',
-            onTap: () {
-              _showMessage('Document sharing will be connected next.');
-            },
-          ),
+  icon: Icons.share_outlined,
+  text: 'Share',
+  onTap: () {
+    final record = ShareRecordItem(
+      title: 'Apartment Lease Agreement.pdf',
+      subtitle: 'Legal & Property • 2.4 MB',
+      icon: Icons.picture_as_pdf_outlined,
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.25),
+      builder: (context) {
+        return ShareRecordSheet(
+          selectedRecord: record,
+        );
+      },
+    );
+  },
+),
 
           const SizedBox(width: 14),
 
@@ -289,7 +306,7 @@ class _RecordDetailsScreenState extends State<RecordDetailsScreen> {
             icon: Icons.download_outlined,
             text: 'Download',
             onTap: () {
-              _showMessage('Document download will be connected next.');
+              _showMessage('Download will be available when this record has an uploaded file.');
             },
           ),
         ],

@@ -107,19 +107,6 @@ class _ExplainDocumentScreenState extends State<ExplainDocumentScreen> {
             _showMessage('More explanation options will be connected later.');
           },
         ),
-        const SizedBox(width: 10),
-        Container(
-          width: 46,
-          height: 46,
-          decoration: const BoxDecoration(
-            color: purple,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.person_outline_rounded,
-            color: Colors.white,
-          ),
-        ),
       ],
     );
   }
