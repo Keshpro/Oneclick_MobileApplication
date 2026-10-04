@@ -59,6 +59,52 @@ class BookingService {
     return null;
   }
 
+  List<BookingModel> getDriverTripHistory(String driverId) {
+    final history = _bookings.where((booking) {
+      if (booking.driverId != driverId) {
+        return false;
+      }
+
+      return booking.status == BookingStatus.completed ||
+          booking.status == BookingStatus.cancelledByDriver ||
+          booking.status == BookingStatus.cancelledByUser;
+    }).toList();
+
+    history.sort((a, b) {
+      final aDate = a.completedAt ?? a.createdAt;
+      final bDate = b.completedAt ?? b.createdAt;
+
+      return bDate.compareTo(aDate);
+    });
+
+    return history;
+  }
+
+  List<BookingModel> getCompletedDriverTrips(String driverId) {
+    final completedTrips = _bookings.where((booking) {
+      return booking.driverId == driverId &&
+          booking.status == BookingStatus.completed;
+    }).toList();
+
+    completedTrips.sort((a, b) {
+      final aDate = a.completedAt ?? a.createdAt;
+      final bDate = b.completedAt ?? b.createdAt;
+
+      return bDate.compareTo(aDate);
+    });
+
+    return completedTrips;
+  }
+
+  double getDriverTotalEarnings(String driverId) {
+    final completedTrips = getCompletedDriverTrips(driverId);
+
+    return completedTrips.fold<double>(
+      0,
+      (total, booking) => total + booking.fareEstimate.total,
+    );
+  }
+
   /// Attempts to accept a booking for the given driver. Returns the
   /// updated booking on success, or null if it's no longer available
   /// (already accepted by someone else, no longer REQUESTED, or this
@@ -221,6 +267,37 @@ class BookingService {
     }
 
     final updated = current.copyWith(status: BookingStatus.cancelledByUser);
+
+    _bookings[index] = updated;
+    return updated;
+  }
+
+  BookingModel? cancelBookingByDriver(String bookingId, String driverId) {
+    final index = _bookings.indexWhere((b) => b.id == bookingId);
+
+    if (index == -1) {
+      return null;
+    }
+
+    final current = _bookings[index];
+
+    if (current.driverId != driverId) {
+      return null;
+    }
+
+    const cancellableStatuses = {
+      BookingStatus.driverAssigned,
+      BookingStatus.driverAccepted,
+      BookingStatus.driverArriving,
+      BookingStatus.driverArrived,
+      BookingStatus.verification,
+    };
+
+    if (!cancellableStatuses.contains(current.status)) {
+      return null;
+    }
+
+    final updated = current.copyWith(status: BookingStatus.cancelledByDriver);
 
     _bookings[index] = updated;
     return updated;

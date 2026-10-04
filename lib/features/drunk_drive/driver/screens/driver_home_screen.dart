@@ -27,6 +27,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   BookingModel? _activeTrip;
   final TextEditingController _pinController = TextEditingController();
   bool _isStartingTrip = false;
+  int _todayTrips = 0;
+  double _todayEarnings = 0;
+  double _weeklyEarnings = 0;
 
   @override
   void initState() {
@@ -49,6 +52,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     if (isApproved) {
       _loadRequests();
       _loadActiveTrip();
+      _loadDriverStats();
     }
   }
 
@@ -63,6 +67,45 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       _activeTrip = _bookingService.getMyActiveDriverBooking(
         VehicleService.currentUserId,
       );
+    });
+  }
+
+  void _loadDriverStats() {
+    final completedTrips = _bookingService.getCompletedDriverTrips(
+      VehicleService.currentUserId,
+    );
+
+    final now = DateTime.now();
+
+    final startOfToday = DateTime(now.year, now.month, now.day);
+
+    final startOfWeek = startOfToday.subtract(Duration(days: now.weekday - 1));
+
+    int todayTrips = 0;
+    double todayEarnings = 0;
+    double weeklyEarnings = 0;
+
+    for (final booking in completedTrips) {
+      final completedAt = booking.completedAt;
+
+      if (completedAt == null) {
+        continue;
+      }
+
+      if (!completedAt.isBefore(startOfToday)) {
+        todayTrips++;
+        todayEarnings += booking.fareEstimate.total;
+      }
+
+      if (!completedAt.isBefore(startOfWeek)) {
+        weeklyEarnings += booking.fareEstimate.total;
+      }
+    }
+
+    setState(() {
+      _todayTrips = todayTrips;
+      _todayEarnings = todayEarnings;
+      _weeklyEarnings = weeklyEarnings;
     });
   }
 
@@ -99,6 +142,65 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
     _loadActiveTrip();
     _loadRequests();
+  }
+
+  Future<void> _onCancelBooking() async {
+    if (_activeTrip == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: DrunkDriveColors.surface,
+          title: const Text(
+            'Cancel Booking?',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            'Are you sure you want to cancel this booking?',
+            style: TextStyle(color: DrunkDriveColors.textMuted),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Keep Booking'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text(
+                'Cancel Booking',
+                style: TextStyle(color: DrunkDriveColors.danger),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final cancelled = _bookingService.cancelBookingByDriver(
+      _activeTrip!.id,
+      VehicleService.currentUserId,
+    );
+
+    if (cancelled == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This booking can no longer be cancelled.'),
+        ),
+      );
+      return;
+    }
+
+    _pinController.clear();
+    _loadActiveTrip();
+    _loadRequests();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Booking cancelled.')));
   }
 
   // NOTE: in this prototype, the same mock account acts as both the
@@ -301,7 +403,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             Expanded(
               child: _statCard(
                 'Today\'s Trips',
-                '4',
+                _todayTrips.toString(),
                 Icons.local_taxi_rounded,
                 DrunkDriveColors.accent,
               ),
@@ -310,7 +412,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             Expanded(
               child: _statCard(
                 'Today\'s Earnings',
-                _rs(4500),
+                _rs(_todayEarnings),
                 Icons.payments_rounded,
                 DrunkDriveColors.success,
               ),
@@ -332,7 +434,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             Expanded(
               child: _statCard(
                 'Weekly Total',
-                _rs(18200),
+                _rs(_weeklyEarnings),
                 Icons.account_balance_wallet_rounded,
                 Colors.cyanAccent,
               ),
@@ -356,6 +458,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             pinController: _pinController,
             isStarting: _isStartingTrip,
             onStartTrip: _onStartTrip,
+            onCancelBooking: _onCancelBooking,
             onViewActiveTrip: () async {
               await Navigator.push(
                 context,
@@ -366,6 +469,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               );
               _loadActiveTrip();
               _loadRequests();
+              _loadDriverStats();
             },
           ),
           const SizedBox(height: 24),
@@ -585,6 +689,7 @@ class _ActiveTripCard extends StatelessWidget {
   final TextEditingController pinController;
   final bool isStarting;
   final VoidCallback onStartTrip;
+  final VoidCallback onCancelBooking;
   final VoidCallback onViewActiveTrip;
 
   const _ActiveTripCard({
@@ -592,6 +697,7 @@ class _ActiveTripCard extends StatelessWidget {
     required this.pinController,
     required this.isStarting,
     required this.onStartTrip,
+    required this.onCancelBooking,
     required this.onViewActiveTrip,
   });
 
@@ -711,6 +817,28 @@ class _ActiveTripCard extends StatelessWidget {
                         'Start Trip',
                         style: TextStyle(fontWeight: FontWeight.w800),
                       ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: isStarting ? null : onCancelBooking,
+                icon: const Icon(Icons.cancel_outlined),
+                label: const Text(
+                  'Cancel Booking',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: DrunkDriveColors.danger,
+                  side: const BorderSide(color: DrunkDriveColors.danger),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
             ),
           ] else
