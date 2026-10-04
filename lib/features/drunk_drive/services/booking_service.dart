@@ -197,6 +197,35 @@ class BookingService {
     return updated;
   }
 
+  BookingModel? cancelBookingByPassenger(String bookingId) {
+    final index = _bookings.indexWhere((b) => b.id == bookingId);
+
+    if (index == -1) {
+      return null;
+    }
+
+    final current = _bookings[index];
+
+    const cancellableStatuses = {
+      BookingStatus.requested,
+      BookingStatus.searchingDriver,
+      BookingStatus.driverAssigned,
+      BookingStatus.driverAccepted,
+      BookingStatus.driverArriving,
+      BookingStatus.driverArrived,
+      BookingStatus.verification,
+    };
+
+    if (!cancellableStatuses.contains(current.status)) {
+      return null;
+    }
+
+    final updated = current.copyWith(status: BookingStatus.cancelledByUser);
+
+    _bookings[index] = updated;
+    return updated;
+  }
+
   BookingModel createBooking({
     required VehicleModel vehicle,
     required LocationModel pickup,

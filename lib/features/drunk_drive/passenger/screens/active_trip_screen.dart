@@ -124,6 +124,49 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
     return DrunkDriveColors.accent;
   }
 
+  Future<void> _cancelBooking() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Cancel Booking?'),
+          content: const Text('Are you sure you want to cancel this booking?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Keep Booking'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Cancel Booking'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final cancelled = _bookingService.cancelBookingByPassenger(_booking.id);
+
+    if (cancelled == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This booking can no longer be cancelled.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _booking = cancelled;
+    });
+
+    if (!mounted) return;
+
+    Navigator.pop(context, true);
+  }
+
   Future<void> _openPayment() async {
     final result = await Navigator.push<bool>(
       context,
@@ -189,7 +232,34 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
 
               _buildTripSummaryCard(),
               const SizedBox(height: 20),
-
+              if (_booking.status == BookingStatus.requested ||
+                  _booking.status == BookingStatus.searchingDriver ||
+                  _booking.status == BookingStatus.driverAssigned ||
+                  _booking.status == BookingStatus.driverAccepted ||
+                  _booking.status == BookingStatus.driverArriving ||
+                  _booking.status == BookingStatus.driverArrived ||
+                  _booking.status == BookingStatus.verification) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _cancelBooking,
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: const Text(
+                      'Cancel Booking',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: DrunkDriveColors.danger,
+                      side: const BorderSide(color: DrunkDriveColors.danger),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               if (_booking.status == BookingStatus.tripCompleted ||
                   _booking.status == BookingStatus.payment) ...[
                 SizedBox(
