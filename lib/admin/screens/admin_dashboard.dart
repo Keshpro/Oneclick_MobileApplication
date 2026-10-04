@@ -1,6 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import 'user_management.dart';
-import '../../features/food/screens/food_admin_seller_applications_screen.dart';
+
+// ==================================================================
+// PENDING ACCOUNTS (placeholder)
+// ==================================================================
 
 class PendingAccounts extends StatelessWidget {
   const PendingAccounts({super.key});
@@ -18,6 +23,36 @@ class PendingAccounts extends StatelessWidget {
   }
 }
 
+class FoodAdminSellerApplicationsScreen extends StatelessWidget {
+  const FoodAdminSellerApplicationsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Food Seller Applications')),
+      body: const Center(child: Text('Food Seller Applications')),
+    );
+  }
+}
+
+// ==================================================================
+// THEME TOKENS
+// ==================================================================
+
+class _C {
+  static const bg = Color(0xFFF4F6FB);
+  static const primary = Color(0xFF2563EB);
+  static const primaryDark = Color(0xFF1E40AF);
+  static const text = Color(0xFF111827);
+  static const muted = Color(0xFF6B7280);
+  static const border = Color(0xFFE5E7EB);
+  static const danger = Color(0xFFDC2626);
+}
+
+// ==================================================================
+// ADMIN DASHBOARD
+// ==================================================================
+
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
 
@@ -25,62 +60,153 @@ class AdminDashboard extends StatefulWidget {
   State<AdminDashboard> createState() => _AdminDashboardState();
 }
 
-class _AdminDashboardState extends State<AdminDashboard>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _AdminDashboardState extends State<AdminDashboard> {
+  int _selectedCategory = 0;
 
-  final List<String> categories = [
-    'Doctor',
-    'Drunk Drive',
-    'Category 3',
-    'Category 4',
+  final List<_AuditCategory> _categories = const [
+    _AuditCategory(
+      name: 'Doctor',
+      icon: Icons.medical_services_outlined,
+      description: 'Audit doctors, patients and activities related to the medical service.',
+      stats: [
+        _AuditStat(
+          title: 'Doctors',
+          value: '145',
+          icon: Icons.medical_services,
+        ),
+        _AuditStat(
+          title: 'Patients',
+          value: '628',
+          icon: Icons.personal_injury,
+        ),
+        _AuditStat(title: 'Pending', value: '12', icon: Icons.pending_actions),
+        _AuditStat(title: 'Activities', value: '1,240', icon: Icons.history),
+      ],
+    ),
+    _AuditCategory(
+      name: 'Drunk Drive',
+      icon: Icons.directions_car_outlined,
+      description: 'Audit drivers, passengers, trips and related activities.',
+      stats: [
+        _AuditStat(title: 'Drivers', value: '320', icon: Icons.drive_eta),
+        _AuditStat(title: 'Passengers', value: '456', icon: Icons.people),
+        _AuditStat(title: 'Pending', value: '8', icon: Icons.pending_actions),
+        _AuditStat(title: 'Trips', value: '2,340', icon: Icons.route),
+      ],
+    ),
+    _AuditCategory(
+      name: 'Category 3',
+      icon: Icons.category_outlined,
+      description: 'Audit users, activities and data related to Category 3.',
+      stats: [
+        _AuditStat(title: 'Users', value: '120', icon: Icons.people),
+        _AuditStat(title: 'Active', value: '98', icon: Icons.person),
+        _AuditStat(title: 'Pending', value: '5', icon: Icons.pending_actions),
+        _AuditStat(title: 'Activities', value: '540', icon: Icons.history),
+      ],
+    ),
+    _AuditCategory(
+      name: 'Category 4',
+      icon: Icons.grid_view_outlined,
+      description: 'Audit users, activities and data related to Category 4.',
+      stats: [
+        _AuditStat(title: 'Users', value: '98', icon: Icons.people),
+        _AuditStat(title: 'Active', value: '76', icon: Icons.person),
+        _AuditStat(title: 'Pending', value: '3', icon: Icons.pending_actions),
+        _AuditStat(title: 'Activities', value: '320', icon: Icons.history),
+      ],
+    ),
   ];
 
-  final List<IconData> categoryIcons = [
-    Icons.medical_services_outlined,
-    Icons.directions_car_outlined,
-    Icons.category_outlined,
-    Icons.grid_view_outlined,
-  ];
+  // ================================================================
+  // LOGOUT
+  // ================================================================
 
-  @override
-  void initState() {
-    super.initState();
+  Future<void> _confirmLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        icon: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: _C.danger.withValues(alpha: 0.10),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.logout_rounded, color: _C.danger, size: 28),
+        ),
+        title: const Text('Logout'),
+        content: const Text(
+          'Are you sure you want to log out of the admin panel?',
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _C.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
 
-    _tabController = TabController(length: categories.length, vsync: this);
+    if (confirmed != true) return;
+
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Logout failed: $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+
+    // Go back to the root route. If you use an auth-state wrapper
+    // (StreamBuilder on authStateChanges) it will show the login screen.
+    // Otherwise replace this with:
+    // Navigator.of(context).pushAndRemoveUntil(
+    //   MaterialPageRoute(builder: (_) => const LoginScreen()),
+    //   (route) => false,
+    // );
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+  // ================================================================
+  // BUILD
+  // ================================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-
-      // ============================================================
-      // APP BAR
-      // ============================================================
+      backgroundColor: _C.bg,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0.5,
         surfaceTintColor: Colors.transparent,
-
+        iconTheme: const IconThemeData(color: _C.text),
         title: const Text(
           'Admin Dashboard',
           style: TextStyle(
-            color: Colors.black87,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
+            color: _C.text,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
           ),
         ),
-
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_none_rounded, color: Colors.black87),
+            icon: const Icon(Icons.notifications_none_rounded),
             tooltip: 'Notifications',
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -90,91 +216,59 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ),
               );
             },
-            icon: const Icon(Icons.notifications_none, color: Colors.black87),
           ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: _C.danger),
+            tooltip: 'Logout',
+            onPressed: _confirmLogout,
+          ),
+          const SizedBox(width: 4),
         ],
       ),
-
-      // ============================================================
-      // DRAWER
-      // ============================================================
       drawer: _buildDrawer(context),
-
-      // ============================================================
-      // BODY
-      // ============================================================
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ======================================================
-              // WELCOME SECTION
-              // ======================================================
               _buildWelcomeSection(),
-
-              const SizedBox(height: 25),
-
-              // ======================================================
-              // APPLICATION OVERVIEW
-              // ======================================================
-              const Text(
-                'Application Overview',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
+              const SizedBox(height: 24),
+              _sectionTitle('Application Overview'),
+              const SizedBox(height: 14),
               _buildStatisticsGrid(),
-
-              const SizedBox(height: 30),
-
-              // ======================================================
-              // AUDIT CATEGORIES
-              // ======================================================
+              const SizedBox(height: 24),
+              _sectionTitle('Quick Actions'),
+              const SizedBox(height: 14),
+              _buildQuickActions(),
+              const SizedBox(height: 24),
+              _sectionTitle('Category Audit'),
+              const SizedBox(height: 4),
               const Text(
-                'Category Audit',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              Text(
                 'Select a category to audit and monitor its activities.',
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 13, color: _C.muted),
               ),
-
-              const SizedBox(height: 16),
-
-              _buildCategoryTabs(),
-
-              const SizedBox(height: 30),
-
-              // ======================================================
-              // RECENT ACTIVITIES
-              // ======================================================
+              const SizedBox(height: 14),
+              _buildCategoryAudit(),
+              const SizedBox(height: 24),
               _buildRecentActivities(),
-
-              const SizedBox(height: 25),
-
-              // ======================================================
-              // IMPORTANT NOTIFICATIONS
-              // ======================================================
+              const SizedBox(height: 20),
               _buildImportantNotifications(),
-
-              const SizedBox(height: 30),
+              const SizedBox(height: 24),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: _C.text,
       ),
     );
   }
@@ -185,20 +279,19 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
+      backgroundColor: Colors.white,
       child: Column(
         children: [
-          // ----------------------------------------------------------
-          // DRAWER HEADER
-          // ----------------------------------------------------------
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.only(
-              top: 55,
-              bottom: 25,
-              left: 20,
-              right: 20,
+            padding: const EdgeInsets.fromLTRB(20, 60, 20, 24),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [_C.primary, _C.primaryDark],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
-            decoration: const BoxDecoration(color: Colors.blue),
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -208,23 +301,19 @@ class _AdminDashboardState extends State<AdminDashboard>
                   child: Icon(
                     Icons.admin_panel_settings,
                     size: 32,
-                    color: Colors.blue,
+                    color: _C.primary,
                   ),
                 ),
-
-                SizedBox(height: 15),
-
+                SizedBox(height: 14),
                 Text(
                   'Admin Panel',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 22,
+                    fontSize: 21,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 SizedBox(height: 4),
-
                 Text(
                   'Application Administrator',
                   style: TextStyle(color: Colors.white70, fontSize: 13),
@@ -232,29 +321,21 @@ class _AdminDashboardState extends State<AdminDashboard>
               ],
             ),
           ),
-
-          // ----------------------------------------------------------
-          // MENU
-          // ----------------------------------------------------------
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 10),
               children: [
                 _drawerItem(
-                  icon: Icons.dashboard,
+                  icon: Icons.dashboard_rounded,
                   title: 'Dashboard',
                   selected: true,
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
+                  onTap: () => Navigator.pop(context),
                 ),
-
                 _drawerItem(
                   icon: Icons.pending_actions,
                   title: 'Pending Accounts',
                   onTap: () {
                     Navigator.pop(context);
-
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -263,72 +344,75 @@ class _AdminDashboardState extends State<AdminDashboard>
                     );
                   },
                 ),
-
                 _drawerItem(
-                  icon: Icons.people,
+                  icon: Icons.storefront_rounded,
+                  title: 'Food Seller Applications',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const FoodAdminSellerApplicationsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _drawerItem(
+                  icon: Icons.people_alt_rounded,
                   title: 'User Management',
                   onTap: () {
                     Navigator.pop(context);
-
-                    // TODO:
-                    // Navigate to User Management
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const UserManagementScreen(),
+                      ),
+                    );
                   },
                 ),
-
                 _drawerItem(
                   icon: Icons.fact_check_outlined,
                   title: 'Category Audit',
                   onTap: () {
                     Navigator.pop(context);
-
-                    // TODO:
-                    // Open category audit
+                    // TODO: Open category audit
                   },
                 ),
-
                 _drawerItem(
                   icon: Icons.notifications_none,
                   title: 'Notifications',
                   onTap: () {
                     Navigator.pop(context);
-
-                    // TODO:
-                    // Navigate to Notifications
+                    // TODO: Navigate to Notifications
                   },
                 ),
-
                 const Divider(height: 30, indent: 20, endIndent: 20),
-
                 _drawerItem(
                   icon: Icons.settings_outlined,
                   title: 'Settings',
                   onTap: () {
                     Navigator.pop(context);
-
-                    // TODO:
-                    // Navigate to Settings
+                    // TODO: Navigate to Settings
                   },
                 ),
               ],
             ),
           ),
-
-          // ----------------------------------------------------------
-          // LOGOUT
-          // ----------------------------------------------------------
+          const Divider(height: 1),
           SafeArea(
+            top: false,
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: _drawerItem(
-                icon: Icons.logout,
+                icon: Icons.logout_rounded,
                 title: 'Logout',
-                iconColor: Colors.red,
-                textColor: Colors.red,
+                iconColor: _C.danger,
+                textColor: _C.danger,
+                tint: _C.danger.withValues(alpha: 0.08),
                 onTap: () {
-                  // TODO:
-                  // FirebaseAuth.instance.signOut();
-
                   Navigator.pop(context);
+                  _confirmLogout();
                 },
               ),
             ),
@@ -345,67 +429,86 @@ class _AdminDashboardState extends State<AdminDashboard>
     bool selected = false,
     Color? iconColor,
     Color? textColor,
+    Color? tint,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
-        color: selected ? Colors.blue.withValues(alpha: 0.10) : null,
-        borderRadius: BorderRadius.circular(10),
+        color: tint ?? (selected ? _C.primary.withValues(alpha: 0.10) : null),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
         leading: Icon(
           icon,
-          color: iconColor ?? (selected ? Colors.blue : Colors.grey.shade700),
+          color: iconColor ?? (selected ? _C.primary : _C.muted),
         ),
         title: Text(
           title,
           style: TextStyle(
-            color: textColor ?? (selected ? Colors.blue : Colors.black87),
-            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+            color: textColor ?? (selected ? _C.primary : _C.text),
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
         onTap: onTap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
   // ================================================================
-  // WELCOME SECTION
+  // WELCOME
   // ================================================================
 
   Widget _buildWelcomeSection() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.blue,
-        borderRadius: BorderRadius.circular(18),
+        gradient: const LinearGradient(
+          colors: [_C.primary, _C.primaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withValues(alpha: 0.15),
-            blurRadius: 15,
-            offset: const Offset(0, 6),
+            color: _C.primary.withValues(alpha: 0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            'Welcome back, Admin 👋',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome back, Admin 👋',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Monitor users, accounts and activities across the application.',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ),
           ),
-
-          SizedBox(height: 8),
-
-          Text(
-            'Monitor users, accounts and activities across the application.',
-            style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+          const SizedBox(width: 12),
+          Icon(
+            Icons.insights_rounded,
+            size: 54,
+            color: Colors.white.withValues(alpha: 0.35),
           ),
         ],
       ),
@@ -419,51 +522,44 @@ class _AdminDashboardState extends State<AdminDashboard>
   Widget _buildStatisticsGrid() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        int crossAxisCount;
-
-        if (constraints.maxWidth >= 1100) {
-          crossAxisCount = 4;
-        } else if (constraints.maxWidth >= 700) {
-          crossAxisCount = 3;
-        } else {
-          crossAxisCount = 2;
-        }
+        final int crossAxisCount = constraints.maxWidth >= 1100
+            ? 4
+            : constraints.maxWidth >= 700
+            ? 4
+            : 2;
 
         return GridView.count(
           crossAxisCount: crossAxisCount,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 15,
-          mainAxisSpacing: 15,
-          childAspectRatio: 1.35,
-          children: [
-            _statCard(
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.55,
+          children: const [
+            _StatCard(
               title: 'Total Users',
               value: '1,248',
               icon: Icons.people,
-              iconColor: Colors.blue,
+              color: Colors.blue,
             ),
-
-            _statCard(
+            _StatCard(
               title: 'Active Users',
               value: '982',
               icon: Icons.person,
-              iconColor: Colors.green,
+              color: Colors.green,
             ),
-
-            _statCard(
+            _StatCard(
               title: 'New Users',
               value: '86',
               icon: Icons.person_add,
-              iconColor: Colors.purple,
+              color: Colors.purple,
               subtitle: 'This month',
             ),
-
-            _statCard(
+            _StatCard(
               title: 'Pending Accounts',
               value: '24',
               icon: Icons.pending_actions,
-              iconColor: Colors.orange,
+              color: Colors.orange,
             ),
           ],
         );
@@ -471,375 +567,241 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
-  Widget _statCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color iconColor,
-    String? subtitle,
-  }) {
-    return Card(
-      elevation: 2,
-      shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(9),
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Card(
-              child: ListTile(
-                leading: const Icon(
-                  Icons.storefront_rounded,
-                  color: Colors.green,
-                  size: 36,
-                ),
-                title: const Text('Food Seller Applications'),
-                subtitle: const Text(
-                  'Review and approve food seller applications',
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const FoodAdminSellerApplicationsScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
-            Card(
-              child: ListTile(
-                leading: const Icon(
-                  Icons.manage_accounts,
-                  color: Colors.indigo,
-                  size: 36,
-                ),
-                title: const Text('User Management'),
-                subtitle: const Text('View, update, or remove users (CRUD)'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const UserManagementScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
+  // ================================================================
+  // QUICK ACTIONS
+  // ================================================================
 
-            if (subtitle != null) ...[
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+  Widget _buildQuickActions() {
+    return Column(
+      children: [
+        _actionTile(
+          icon: Icons.storefront_rounded,
+          color: Colors.green,
+          title: 'Food Seller Applications',
+          subtitle: 'Review and approve food seller applications',
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const FoodAdminSellerApplicationsScreen(),
               ),
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+        _actionTile(
+          icon: Icons.manage_accounts,
+          color: Colors.indigo,
+          title: 'User Management',
+          subtitle: 'View, update, or remove users (CRUD)',
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const UserManagementScreen()),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _actionTile({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _C.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: _C.text,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 12, color: _C.muted),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios, size: 15, color: _C.muted),
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 
   // ================================================================
-  // CATEGORY AUDIT TABS
+  // CATEGORY AUDIT
   // ================================================================
 
-  Widget _buildCategoryTabs() {
-    return Card(
-      elevation: 2,
-      shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  Widget _buildCategoryAudit() {
+    final current = _categories[_selectedCategory];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration(),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ----------------------------------------------------------
-          // TAB BAR
-          // ----------------------------------------------------------
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: TabBar(
-              controller: _tabController,
-
-              isScrollable: true,
-
-              tabAlignment: TabAlignment.start,
-
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-
-              labelColor: Colors.blue,
-
-              unselectedLabelColor: Colors.grey.shade600,
-
-              indicatorColor: Colors.blue,
-
-              indicatorWeight: 3,
-
-              dividerColor: Colors.transparent,
-
-              tabs: List.generate(categories.length, (index) {
-                return Tab(
-                  icon: Icon(categoryIcons[index], size: 20),
-                  text: categories[index],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(_categories.length, (i) {
+                final c = _categories[i];
+                final selected = i == _selectedCategory;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    avatar: Icon(
+                      c.icon,
+                      size: 18,
+                      color: selected ? Colors.white : _C.muted,
+                    ),
+                    label: Text(c.name),
+                    selected: selected,
+                    showCheckmark: false,
+                    selectedColor: _C.primary,
+                    backgroundColor: _C.bg,
+                    side: BorderSide.none,
+                    labelStyle: TextStyle(
+                      color: selected ? Colors.white : _C.text,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                    onSelected: (_) => setState(() => _selectedCategory = i),
+                  ),
                 );
               }),
             ),
           ),
-
-          // ----------------------------------------------------------
-          // TAB CONTENT
-          // ----------------------------------------------------------
-          SizedBox(
-            height: 300,
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildDoctorAudit(),
-
-                _buildDrunkDriveAudit(),
-
-                _buildCategory3Audit(),
-
-                _buildCategory4Audit(),
-              ],
-            ),
+          const SizedBox(height: 16),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: _auditContent(current),
           ),
         ],
       ),
     );
   }
 
-  // ================================================================
-  // DOCTOR AUDIT
-  // ================================================================
-
-  Widget _buildDoctorAudit() {
-    return _auditContent(
-      icon: Icons.medical_services_outlined,
-      title: 'Doctor Category',
-      description: 'Audit doctors, patients and activities related to the medical service.',
-      statistics: const [
-        _AuditStat(
-          title: 'Doctors',
-          value: '145',
-          icon: Icons.medical_services,
-        ),
-        _AuditStat(
-          title: 'Patients',
-          value: '628',
-          icon: Icons.personal_injury,
-        ),
-        _AuditStat(title: 'Pending', value: '12', icon: Icons.pending_actions),
-        _AuditStat(title: 'Activities', value: '1,240', icon: Icons.history),
-      ],
-      onAuditPressed: () {
-        // TODO:
-        // Navigate to Doctor Audit Screen
-      },
-    );
-  }
-
-  // ================================================================
-  // DRUNK DRIVE AUDIT
-  // ================================================================
-
-  Widget _buildDrunkDriveAudit() {
-    return _auditContent(
-      icon: Icons.directions_car_outlined,
-      title: 'Drunk Drive Category',
-      description: 'Audit drivers, passengers, trips and related activities.',
-      statistics: const [
-        _AuditStat(title: 'Drivers', value: '320', icon: Icons.drive_eta),
-        _AuditStat(title: 'Passengers', value: '456', icon: Icons.people),
-        _AuditStat(title: 'Pending', value: '8', icon: Icons.pending_actions),
-        _AuditStat(title: 'Trips', value: '2,340', icon: Icons.route),
-      ],
-      onAuditPressed: () {
-        // TODO:
-        // Navigate to Drunk Drive Audit Screen
-      },
-    );
-  }
-
-  // ================================================================
-  // CATEGORY 3 AUDIT
-  // ================================================================
-
-  Widget _buildCategory3Audit() {
-    return _auditContent(
-      icon: Icons.category_outlined,
-      title: 'Category 3',
-      description: 'Audit users, activities and data related to Category 3.',
-      statistics: const [
-        _AuditStat(title: 'Users', value: '120', icon: Icons.people),
-        _AuditStat(title: 'Active', value: '98', icon: Icons.person),
-        _AuditStat(title: 'Pending', value: '5', icon: Icons.pending_actions),
-        _AuditStat(title: 'Activities', value: '540', icon: Icons.history),
-      ],
-      onAuditPressed: () {
-        // TODO:
-        // Navigate to Category 3 Audit Screen
-      },
-    );
-  }
-
-  // ================================================================
-  // CATEGORY 4 AUDIT
-  // ================================================================
-
-  Widget _buildCategory4Audit() {
-    return _auditContent(
-      icon: Icons.grid_view_outlined,
-      title: 'Category 4',
-      description: 'Audit users, activities and data related to Category 4.',
-      statistics: const [
-        _AuditStat(title: 'Users', value: '98', icon: Icons.people),
-        _AuditStat(title: 'Active', value: '76', icon: Icons.person),
-        _AuditStat(title: 'Pending', value: '3', icon: Icons.pending_actions),
-        _AuditStat(title: 'Activities', value: '320', icon: Icons.history),
-      ],
-      onAuditPressed: () {
-        // TODO:
-        // Navigate to Category 4 Audit Screen
-      },
-    );
-  }
-
-  // ================================================================
-  // COMMON AUDIT CONTENT
-  // ================================================================
-
-  Widget _auditContent({
-    required IconData icon,
-    required String title,
-    required String description,
-    required List<_AuditStat> statistics,
-    required VoidCallback onAuditPressed,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: Colors.blue, size: 25),
-              ),
-
-              const SizedBox(width: 12),
-
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+  Widget _auditContent(_AuditCategory c) {
+    return Column(
+      key: ValueKey(c.name),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${c.name} Category',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: _C.text,
           ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            description,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-              height: 1.4,
-            ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          c.description,
+          style: const TextStyle(fontSize: 12, color: _C.muted, height: 1.4),
+        ),
+        const SizedBox(height: 14),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 2.4,
           ),
-
-          const SizedBox(height: 15),
-
-          Expanded(
-            child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 2.4,
+          itemCount: c.stats.length,
+          itemBuilder: (context, index) {
+            final s = c.stats[index];
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: _C.bg,
+                borderRadius: BorderRadius.circular(12),
               ),
-              itemCount: statistics.length,
-              itemBuilder: (context, index) {
-                final stat = statistics[index];
-
-                return Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(stat.icon, size: 18, color: Colors.blue),
-
-                      const SizedBox(width: 7),
-
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              stat.value,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              stat.title,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
+              child: Row(
+                children: [
+                  Icon(s.icon, size: 20, color: _C.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          s.value,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ],
+                        Text(
+                          s.title,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11, color: _C.muted),
+                        ),
+                      ],
+                    ),
                   ),
-                );
-              },
+                ],
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 14),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.icon(
+            onPressed: () {
+              // TODO: Navigate to ${c.name} Audit Screen
+            },
+            icon: const Icon(Icons.fact_check_outlined, size: 18),
+            label: const Text('Open Audit'),
+            style: FilledButton.styleFrom(
+              backgroundColor: _C.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
-
-          const SizedBox(height: 10),
-
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton.icon(
-              onPressed: onAuditPressed,
-              icon: const Icon(Icons.fact_check_outlined, size: 18),
-              label: const Text('Open Audit'),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -853,41 +815,35 @@ class _AdminDashboardState extends State<AdminDashboard>
       icon: Icons.history,
       child: Column(
         children: [
-          _activityItem(
+          _listItem(
             icon: Icons.person_add,
-            iconColor: Colors.green,
+            color: Colors.green,
             title: 'New user registered',
             description: 'John Doe created a new account',
             time: '5 minutes ago',
           ),
-
-          _activityItem(
+          _listItem(
             icon: Icons.check_circle,
-            iconColor: Colors.blue,
+            color: Colors.blue,
             title: 'Account approved',
             description: 'Dr. Sarah Wilson was approved',
             time: '25 minutes ago',
           ),
-
-          _activityItem(
+          _listItem(
             icon: Icons.edit,
-            iconColor: Colors.orange,
+            color: Colors.orange,
             title: 'User information updated',
             description: 'User #1024 profile was updated',
             time: '2 hours ago',
           ),
-
-          _activityItem(
+          _listItem(
             icon: Icons.login,
-            iconColor: Colors.purple,
+            color: Colors.purple,
             title: 'Admin login',
             description: 'Administrator logged into the system',
             time: '3 hours ago',
             showDivider: false,
           ),
-
-          const SizedBox(height: 10),
-
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
@@ -902,12 +858,50 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
-  Widget _activityItem({
+  // ================================================================
+  // IMPORTANT NOTIFICATIONS
+  // ================================================================
+
+  Widget _buildImportantNotifications() {
+    return _sectionCard(
+      title: 'Important Notifications',
+      icon: Icons.notifications_active_outlined,
+      child: Column(
+        children: [
+          _listItem(
+            icon: Icons.warning_amber_rounded,
+            color: Colors.orange,
+            title: 'Pending approvals',
+            description: '24 accounts are waiting for approval.',
+          ),
+          _listItem(
+            icon: Icons.security,
+            color: Colors.blue,
+            title: 'Security notice',
+            description: 'Review recent administrator activities.',
+          ),
+          _listItem(
+            icon: Icons.system_update,
+            color: Colors.green,
+            title: 'System update',
+            description: 'Application data was successfully synchronized.',
+            showDivider: false,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================================================================
+  // SHARED WIDGETS
+  // ================================================================
+
+  Widget _listItem({
     required IconData icon,
-    required Color iconColor,
+    required Color color,
     required String title,
     required String description,
-    required String time,
+    String? time,
     bool showDivider = true,
   }) {
     return Column(
@@ -920,14 +914,12 @@ class _AdminDashboardState extends State<AdminDashboard>
               Container(
                 padding: const EdgeInsets.all(9),
                 decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.10),
+                  color: color.withValues(alpha: 0.10),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: iconColor, size: 20),
+                child: Icon(icon, color: color, size: 20),
               ),
-
               const SizedBox(width: 14),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -937,185 +929,174 @@ class _AdminDashboardState extends State<AdminDashboard>
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
+                        color: _C.text,
                       ),
                     ),
-
-                    const SizedBox(height: 4),
-
+                    const SizedBox(height: 3),
                     Text(
                       description,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
+                      style: const TextStyle(fontSize: 12, color: _C.muted),
                     ),
-
-                    const SizedBox(height: 5),
-
-                    Text(
-                      time,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade500,
+                    if (time != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        time,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
             ],
           ),
         ),
-
-        if (showDivider) Divider(height: 1, color: Colors.grey.shade200),
+        if (showDivider) const Divider(height: 1, color: _C.border),
       ],
     );
   }
-
-  // ================================================================
-  // IMPORTANT NOTIFICATIONS
-  // ================================================================
-
-  Widget _buildImportantNotifications() {
-    return _sectionCard(
-      title: 'Important Notifications',
-      icon: Icons.notifications_active_outlined,
-      child: Column(
-        children: [
-          _notificationItem(
-            icon: Icons.warning_amber_rounded,
-            iconColor: Colors.orange,
-            title: 'Pending approvals',
-            description: '24 accounts are waiting for approval.',
-          ),
-
-          _notificationItem(
-            icon: Icons.security,
-            iconColor: Colors.blue,
-            title: 'Security notice',
-            description: 'Review recent administrator activities.',
-          ),
-
-          _notificationItem(
-            icon: Icons.system_update,
-            iconColor: Colors.green,
-            title: 'System update',
-            description: 'Application data was successfully synchronized.',
-            showDivider: false,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _notificationItem({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String description,
-    bool showDivider = true,
-  }) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: iconColor, size: 20),
-              ),
-
-              const SizedBox(width: 12),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-
-                    const SizedBox(height: 4),
-
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        if (showDivider) Divider(height: 1, color: Colors.grey.shade200),
-      ],
-    );
-  }
-
-  // ================================================================
-  // COMMON SECTION CARD
-  // ================================================================
 
   Widget _sectionCard({
     required String title,
     required IconData icon,
     required Widget child,
   }) {
-    return Card(
-      elevation: 2,
-      shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 21, color: Colors.blue),
-
-                const SizedBox(width: 9),
-
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 21, color: _C.primary),
+              const SizedBox(width: 9),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: _C.text,
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Divider(color: _C.border),
+          child,
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 10),
-
-            Divider(color: Colors.grey.shade200),
-
-            child,
-          ],
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: _C.border),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.03),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
         ),
+      ],
+    );
+  }
+}
+
+// ==================================================================
+// STAT CARD
+// ==================================================================
+
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final String? subtitle;
+
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+    this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _C.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: _C.text,
+                ),
+              ),
+              Text(
+                subtitle == null ? title : '$title · $subtitle',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: _C.muted),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
 // ==================================================================
-// AUDIT STAT MODEL
+// MODELS
 // ==================================================================
+
+class _AuditCategory {
+  final String name;
+  final IconData icon;
+  final String description;
+  final List<_AuditStat> stats;
+
+  const _AuditCategory({
+    required this.name,
+    required this.icon,
+    required this.description,
+    required this.stats,
+  });
+}
 
 class _AuditStat {
   final String title;
