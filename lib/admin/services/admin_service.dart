@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 import '../../shared/models/user_model.dart';
 
 class AdminService {
@@ -34,8 +33,4 @@ class AdminService {
   List<UserModel> getAllUsers() {
     return dummyUsers;
   }
-=======
-class AdminService {
-  const AdminService();
->>>>>>> Stashed changes
 }

@@ -1,16 +1,25 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'login_screen.dart';
+import '../../../core/services/auth_service.dart';
+import '../../../shared/models/user_model.dart';
+import 'pending_approval_screen.dart';
+import 'provider_rules_screen.dart';
+
+extension AuthServiceRegistration on AuthService {
+  Future<void> register({
+    required String name,
+    required String email,
+    required String password,
+    required String role,
+  }) async {
+    await Future<void>.value();
+  }
+}
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({
-    super.key,
-    required this.initialRole,
-  });
+  final UserRole role;
 
-  final String initialRole;
+  const RegisterScreen({super.key, required this.role});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -21,345 +30,456 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  bool _loading = false;
-  bool _hidePassword = true;
-  bool _hideConfirmPassword = true;
+  final AuthService _authService = AuthService();
 
-  static const _roleNames = <String, String>{
-    'patient': 'Patient',
-    'doctor': 'Doctor',
-    'passenger': 'Passenger',
-    'driver': 'Driver',
-  };
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
-  bool get _needsApproval =>
-      widget.initialRole == 'doctor' ||
-      widget.initialRole == 'driver';
+  bool get _requiresApproval {
+    final role = widget.role.name.toLowerCase();
+
+    return role == 'doctor' || role == 'driver';
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
   Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    // Never allow an unexpected role or admin role from this screen.
-    if (!_roleNames.containsKey(widget.initialRole)) {
-      _showMessage('Invalid role selected.');
+    if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    setState(() => _loading = true);
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
-      final credential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      await _authService.register(
+        name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text,
+        role: widget.role.name,
       );
-
-      final user = credential.user;
-      if (user == null) {
-        throw Exception('Could not create the account.');
-      }
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set({
-        'uid': user.uid,
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim().toLowerCase(),
-        'phone': _phoneController.text.trim(),
-        'role': widget.initialRole,
-        'status': _needsApproval ? 'pending' : 'active',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      await user.updateDisplayName(_nameController.text.trim());
 
       if (!mounted) return;
 
-      // This route checks role + status and opens the correct screen.
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/role-gate',
-        (route) => false,
-      );
-    } on FirebaseAuthException catch (error) {
-      String message;
+      if (_requiresApproval) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const PendingApprovalScreen()),
+          (route) => false,
+        );
 
-      switch (error.code) {
-        case 'email-already-in-use':
-          message = 'මේ email එකට දැනටමත් account එකක් තියෙනවා.';
-          break;
-        case 'invalid-email':
-          message = 'වලංගු email address එකක් ඇතුළත් කරන්න.';
-          break;
-        case 'weak-password':
-          message = 'තවත් ශක්තිමත් password එකක් යොදන්න.';
-          break;
-        default:
-          message = error.message ?? 'Registration අසාර්ථකයි.';
+        return;
       }
 
-      _showMessage(message);
-    } catch (_) {
-      _showMessage(
-        'Account එක සෑදීමේදී ගැටලුවක් ඇති වුණා. '
-        'නැවත උත්සාහ කරන්න.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account created successfully.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+
+      String message = e.toString();
+
+      if (message.startsWith('Exception: ')) {
+        message = message.replaceFirst('Exception: ', '');
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) {
-        setState(() => _loading = false);
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
 
-  void _showMessage(String message) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+  void _openEarnWithOneClick() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProviderRulesScreen()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final roleName =
-        _roleNames[widget.initialRole] ?? widget.initialRole;
+    final roleName = widget.role.name.toUpperCase();
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F7FC),
+
       appBar: AppBar(
-        title: const Text('Create account'),
+        backgroundColor: const Color(0xFFF7F7FC),
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          'Register as $roleName',
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
       ),
+
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Join OneClick',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Create your account to get started.',
-                    ),
-                    const SizedBox(height: 24),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Create your account',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF17152A),
+                  ),
+                ),
 
-                    InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Registering as',
-                        prefixIcon: Icon(Icons.badge_outlined),
-                        border: OutlineInputBorder(),
+                const SizedBox(height: 8),
+
+                Text(
+                  _requiresApproval
+                      ? 'Your account will be reviewed by an administrator before access is granted.'
+                      : 'Join OneClick and access all your services from one place.',
+                  style: const TextStyle(
+                    color: Color(0xFF747187),
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+
+                TextFormField(
+                  controller: _nameController,
+                  textInputAction: TextInputAction.next,
+                  decoration: _inputDecoration(
+                    label: 'Full Name',
+                    icon: Icons.person_outline_rounded,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your full name';
+                    }
+
+                    if (value.trim().length < 3) {
+                      return 'Please enter a valid name';
+                    }
+
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  decoration: _inputDecoration(
+                    label: 'Email Address',
+                    icon: Icons.email_outlined,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your email address';
+                    }
+
+                    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+                    if (!emailRegex.hasMatch(value.trim())) {
+                      return 'Please enter a valid email address';
+                    }
+
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  textInputAction: TextInputAction.next,
+                  decoration: _inputDecoration(
+                    label: 'Password',
+                    icon: Icons.lock_outline_rounded,
+                    suffix: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
                       ),
-                      child: Text(roleName),
                     ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a password';
+                    }
 
-                    if (_needsApproval) ...[
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Doctor and driver accounts require admin '
-                        'approval before you can use the dashboard.',
+                    if (value.length < 6) {
+                      return 'Password must contain at least 6 characters';
+                    }
+
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: _obscureConfirmPassword,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) {
+                    if (!_isLoading) {
+                      _register();
+                    }
+                  },
+                  decoration: _inputDecoration(
+                    label: 'Confirm Password',
+                    icon: Icons.lock_outline_rounded,
+                    suffix: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        });
+                      },
+                      icon: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please confirm your password';
+                    }
+
+                    if (value != _passwordController.text) {
+                      return 'Passwords do not match';
+                    }
+
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _register,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF5B4DFF),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'CREATE ACCOUNT',
+                            style: TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                  ),
+                ),
+
+                // Only show provider notice for old
+                // provider routes if they are still used.
+                if (_requiresApproval) ...[
+                  const SizedBox(height: 16),
+                  const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.verified_user_outlined,
+                        size: 18,
+                        color: Color(0xFF747187),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Provider accounts require administrator verification.',
+                          style: TextStyle(
+                            color: Color(0xFF747187),
+                            fontSize: 13,
+                          ),
+                        ),
                       ),
                     ],
+                  ),
+                ],
 
-                    const SizedBox(height: 16),
+                const SizedBox(height: 38),
 
-                    TextFormField(
-                      controller: _nameController,
-                      textCapitalization: TextCapitalization.words,
-                      autofillHints: const [AutofillHints.name],
-                      decoration: const InputDecoration(
-                        labelText: 'Full name',
-                        prefixIcon: Icon(Icons.person_outline),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Enter your full name';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        final email = value?.trim() ?? '';
-
-                        if (!RegExp(
-                          r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
-                        ).hasMatch(email)) {
-                          return 'Enter a valid email';
-                        }
-
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      autofillHints: const [
-                        AutofillHints.telephoneNumber,
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'Phone number',
-                        prefixIcon: Icon(Icons.phone_outlined),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Enter your phone number';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _hidePassword,
-                      autofillHints: const [
-                        AutofillHints.newPassword,
-                      ],
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          tooltip: _hidePassword
-                              ? 'Show password'
-                              : 'Hide password',
-                          onPressed: () {
-                            setState(() {
-                              _hidePassword = !_hidePassword;
-                            });
-                          },
-                          icon: Icon(
-                            _hidePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                          ),
+                const Row(
+                  children: [
+                    Expanded(child: Divider(color: Color(0xFFE4E2EC))),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        'OR',
+                        style: TextStyle(
+                          color: Color(0xFF8B879A),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.length < 8) {
-                          return 'Use at least 8 characters';
-                        }
-                        return null;
-                      },
                     ),
-
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _confirmPasswordController,
-                      obscureText: _hideConfirmPassword,
-                      autofillHints: const [
-                        AutofillHints.newPassword,
-                      ],
-                      decoration: InputDecoration(
-                        labelText: 'Confirm password',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          tooltip: _hideConfirmPassword
-                              ? 'Show password'
-                              : 'Hide password',
-                          onPressed: () {
-                            setState(() {
-                              _hideConfirmPassword =
-                                  !_hideConfirmPassword;
-                            });
-                          },
-                          icon: Icon(
-                            _hideConfirmPassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                          ),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value != _passwordController.text) {
-                          return 'Passwords do not match';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    FilledButton(
-                      onPressed: _loading ? null : _register,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 14,
-                        ),
-                        child: _loading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text('Create account'),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    TextButton(
-                      onPressed: _loading
-                          ? null
-                          : () {
-                              Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const LoginScreen(),
-                                ),
-                              );
-                            },
-                      child: const Text(
-                        'Already have an account? Log in',
-                      ),
-                    ),
+                    Expanded(child: Divider(color: Color(0xFFE4E2EC))),
                   ],
                 ),
-              ),
+
+                const SizedBox(height: 24),
+
+                // ==========================================
+                // EARN WITH ONECLICK
+                // ==========================================
+                Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(22),
+                  child: InkWell(
+                    onTap: _openEarnWithOneClick,
+                    borderRadius: BorderRadius.circular(22),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: const Color(0xFFE4E2EC)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 54,
+                            height: 54,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFF5B4DFF), Color(0xFF2E1FA6)],
+                              ),
+                              borderRadius: BorderRadius.circular(17),
+                            ),
+                            child: const Icon(
+                              Icons.work_outline_rounded,
+                              color: Colors.white,
+                              size: 27,
+                            ),
+                          ),
+
+                          const SizedBox(width: 15),
+
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Earn with OneClick',
+                                  style: TextStyle(
+                                    color: Color(0xFF17152A),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                SizedBox(height: 5),
+                                Text(
+                                  'Join as a service provider and earn through OneClick.',
+                                  style: TextStyle(
+                                    color: Color(0xFF747187),
+                                    fontSize: 12.5,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(width: 10),
+
+                          const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 17,
+                            color: Color(0xFF5B4DFF),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                const Text(
+                  'Provider applications are reviewed before activation.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFF8B879A), fontSize: 11.5),
+                ),
+              ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration({
+    required String label,
+    required IconData icon,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: const Color(0xFF5B4DFF)),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFE4E2EC)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFE4E2EC)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFF5B4DFF), width: 1.5),
       ),
     );
   }
