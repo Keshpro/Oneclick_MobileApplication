@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class Category3Audit extends StatefulWidget {
-  const Category3Audit({super.key});
+class FoodDeliveryAudit extends StatefulWidget {
+  const FoodDeliveryAudit({super.key});
 
   @override
-  State<Category3Audit> createState() => _Category3AuditState();
+  State<FoodDeliveryAudit> createState() => _FoodDeliveryAuditState();
 }
 
-class _Category3AuditState extends State<Category3Audit> {
+class _FoodDeliveryAuditState extends State<FoodDeliveryAudit> {
   final List<Map<String, dynamic>> orders = [
     {
       'id': 'FD001',
@@ -39,7 +39,7 @@ class _Category3AuditState extends State<Category3Audit> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Category 3 - Food Delivery Audit'),
+        title: const Text('Food Delivery Audit'),
         backgroundColor: const Color(0xff032744),
         foregroundColor: Colors.white,
       ),
@@ -63,9 +63,7 @@ class _Category3AuditState extends State<Category3Audit> {
                         Icons.fastfood,
                         color: Colors.green,
                       ),
-
                       const SizedBox(width: 10),
-
                       Expanded(
                         child: Text(
                           'Order ${order['id']}',
@@ -75,20 +73,15 @@ class _Category3AuditState extends State<Category3Audit> {
                           ),
                         ),
                       ),
-
                       _status(order['status']),
                     ],
                   ),
-
                   const Divider(),
-
                   Text('Customer: ${order['customer']}'),
                   Text('Restaurant: ${order['restaurant']}'),
                   Text('Food: ${order['item']}'),
                   Text('Amount: ${order['amount']}'),
-
                   const SizedBox(height: 15),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -101,9 +94,7 @@ class _Category3AuditState extends State<Category3Audit> {
                           style: TextStyle(color: Colors.red),
                         ),
                       ),
-
                       const SizedBox(width: 10),
-
                       ElevatedButton(
                         onPressed: () {
                           _approve(index);
