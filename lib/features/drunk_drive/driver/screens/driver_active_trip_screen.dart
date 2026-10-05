@@ -5,6 +5,7 @@ import '../../models/booking_status.dart';
 import '../../services/booking_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../theme/drunk_drive_colors.dart';
+import 'report_incident_screen.dart';
 
 class DriverActiveTripScreen extends StatefulWidget {
   final BookingModel booking;
@@ -73,10 +74,23 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
     Navigator.pop(context);
   }
 
-  void _onReportIncident() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Incident reporting — coming soon')),
+  Future<void> _onReportIncident() async {
+    final reported = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReportIncidentScreen(booking: widget.booking),
+      ),
     );
+
+    if (!mounted) return;
+
+    if (reported == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Incident report submitted successfully.'),
+        ),
+      );
+    }
   }
 
   @override

@@ -143,15 +143,6 @@ class BookingService {
     return updated;
   }
 
-  /// Statuses a trip may validly be in right before TRIP_STARTED.
-  static const Set<BookingStatus> _preTripStartStatuses = {
-    BookingStatus.driverAssigned,
-    BookingStatus.driverAccepted,
-    BookingStatus.driverArriving,
-    BookingStatus.driverArrived,
-    BookingStatus.verification,
-  };
-
   /// Attempts to start a trip. Returns the updated booking on success,
   /// or null if: this isn't the assigned driver, the booking isn't in
   /// a valid pre-start state, or the PIN is wrong. The trip NEVER
@@ -233,8 +224,7 @@ class BookingService {
     if (current.driverId != driverId) {
       return null;
     }
-
-    if (!_preTripStartStatuses.contains(current.status)) {
+    if (current.status != BookingStatus.verification) {
       return null;
     }
 
