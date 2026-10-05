@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
+
 import 'add_record_screen.dart';
+import 'record_details_screen.dart';
+import 'subscriptions_screen.dart';
+import 'vault_settings_screen.dart';
+import 'dashboard.dart';
+import 'sharing_center_screen.dart';
+import 'share_record_screen.dart';
 
 class VaultScreen extends StatefulWidget {
   const VaultScreen({super.key});
@@ -117,6 +124,25 @@ class _VaultScreenState extends State<VaultScreen> {
       SnackBar(content: Text('$feature will be connected next.')),
     );
   }
+  void _shareRecord(_VaultItem item) {
+  final shareItem = ShareRecordItem(
+    title: item.title,
+    subtitle: '${item.type} • ${item.details}',
+    icon: item.icon,
+  );
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withOpacity(0.25),
+    builder: (context) {
+      return ShareRecordSheet(
+        selectedRecord: shareItem,
+      );
+    },
+  );
+}
 
   void _showDetails(_VaultItem item) {
     showModalBottomSheet<void>(
@@ -186,18 +212,32 @@ class _VaultScreenState extends State<VaultScreen> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            onPressed: () => _comingSoon('Notifications'),
-            icon: const Icon(Icons.notifications_none),
-          ),
-          IconButton(
-            tooltip: 'Profile',
-            onPressed: () => _comingSoon('Profile'),
-            icon: const Icon(Icons.account_circle, color: purple),
-          ),
-        ],
+actions: [
+  Padding(
+    padding: const EdgeInsets.only(right: 12),
+    child: Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFDCD9FF),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: IconButton(
+        tooltip: 'Vault Settings',
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const VaultSettingsScreen(),
+            ),
+          );
+        },
+        icon: const Icon(
+          Icons.settings_outlined,
+          color: purple,
+        ),
+      ),
+    ),
+  ),
+],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -380,14 +420,40 @@ class _VaultScreenState extends State<VaultScreen> {
         indicatorColor: const Color(0xFFDCD9FF),
         selectedIndex: 1,
         onDestinationSelected: (index) {
-          if (index == 0) {
-            Navigator.maybePop(context);
-          } else if (index == 2) {
-            _comingSoon('Subscriptions');
-          } else if (index == 3) {
-            _comingSoon('Sharing');
-          }
-        },
+  if (index == 1) {
+    return;
+  }
+
+  if (index == 0) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const PersonalDashboardScreen(),
+      ),
+    );
+  }
+
+  if (index == 2) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const SubscriptionsScreen(),
+      ),
+    );
+  }
+
+  if (index == 3) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const SharingCenterScreen(),
+      ),
+    );
+  }
+},
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
@@ -456,13 +522,32 @@ class _VaultScreenState extends State<VaultScreen> {
               ),
               IconButton(
                 tooltip: 'Share',
-                onPressed: () => _comingSoon('Share record'),
-                icon: const Icon(Icons.ios_share, color: muted),
+                onPressed: () {
+                  _shareRecord(item);
+                },
+                icon: const Icon(
+                  Icons.ios_share,
+                  color: muted,
+                ),
               ),
               IconButton(
                 tooltip: 'View details',
-                onPressed: () => _showDetails(item),
-                icon: const Icon(Icons.chevron_right, color: purple),
+                onPressed: () {
+                  if (item.title == 'Apartment Lease Agreement') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const RecordDetailsScreen(),
+                      ),
+                    );
+                  } else {
+                     _showDetails(item);
+                  }
+                },
+                icon: const Icon(
+                  Icons.chevron_right,
+                  color: purple,
+                ),
               ),
             ],
           ),
@@ -475,7 +560,18 @@ class _VaultScreenState extends State<VaultScreen> {
     return SizedBox(
       width: 165,
       child: GestureDetector(
-        onTap: () => _showDetails(item),
+        onTap: () {
+          if (item.title == 'Apartment Lease Agreement') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const RecordDetailsScreen(),
+              ),
+            );
+            } else {
+              _showDetails(item);
+              }
+            },
         child: _surface(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

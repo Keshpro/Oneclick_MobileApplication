@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+
+import 'smart_upload_review_screen.dart';
 
 class AddRecordScreen extends StatefulWidget {
   const AddRecordScreen({super.key});
@@ -29,6 +32,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   DateTime _renewalDate = DateTime(2025, 12, 31);
   bool _expiryNotification = true;
   bool _showSampleFile = true;
+  String? _selectedFileName;
 
   final List<String> _tags = ['insurance', '2025', 'urgent'];
 
@@ -112,7 +116,26 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
         '${months[_renewalDate.month - 1]} '
         '${_renewalDate.year}';
   }
+Future<void> _chooseFile() async {
+  final result = await FilePicker.pickFiles(
+    type: FileType.custom,
+    allowedExtensions: [
+      'pdf',
+      'jpg',
+      'jpeg',
+      'png',
+    ],
+  );
 
+  if (result.isEmpty) return;
+
+  final file = result.first;
+
+  setState(() {
+    _selectedFileName = file.name;
+    _showSampleFile = true;
+  });
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -271,7 +294,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                                 return;
                               }
 
-                              _placeholder('Smart Review');
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SmartUploadReviewScreen(),
+                                ),
+                              );
                             },
                             child: const Padding(
                               padding: EdgeInsets.symmetric(
@@ -334,44 +362,32 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     );
   }
 
-  Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 16, 22, 14),
-      child: Row(
-        children: [
-          _roundButton(
-            icon: Icons.arrow_back_ios_new,
-            onTap: () => Navigator.maybePop(context),
-          ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Text(
-              'Document Detail',
-              style: TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.w600,
-                color: ink,
-              ),
+Widget _header() {
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(22, 16, 22, 14),
+    child: Row(
+      children: [
+        _roundButton(
+          icon: Icons.arrow_back_ios_new,
+          onTap: () => Navigator.maybePop(context),
+        ),
+
+        const SizedBox(width: 16),
+
+        const Expanded(
+          child: Text(
+            'My Vault',
+            style: TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.w600,
+              color: ink,
             ),
           ),
-          _roundButton(
-            icon: Icons.more_vert,
-            onTap: () => _placeholder('Record options'),
-          ),
-          const SizedBox(width: 12),
-          IconButton(
-            tooltip: 'Profile',
-            onPressed: () => _placeholder('Profile'),
-            style: IconButton.styleFrom(
-              backgroundColor: purple,
-              foregroundColor: Colors.white,
-            ),
-            icon: const Icon(Icons.person_outline),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _intro() {
     return LayoutBuilder(
@@ -537,7 +553,15 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                   label: 'Scan Now',
                   icon: Icons.camera_alt_outlined,
                   color: purple,
-                  onTap: () => _placeholder('Camera scanning'),
+                  onTap: () {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text(
+        'Camera scanning is available when running OneClick on a supported mobile device.',
+      ),
+    ),
+  );
+},
                 ),
               ),
               const SizedBox(width: 12),
@@ -546,7 +570,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                   label: 'Files',
                   icon: Icons.upload_file_outlined,
                   color: muted,
-                  onTap: () => _placeholder('File upload'),
+                  onTap: _chooseFile,
                 ),
               ),
             ],
@@ -565,12 +589,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                       size: 38,
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'policy_schedule_v4.pdf',
+                            _selectedFileName ?? 'policy_schedule_v4.pdf',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
