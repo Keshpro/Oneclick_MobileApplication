@@ -4,6 +4,9 @@ import 'add_record_screen.dart';
 import 'record_details_screen.dart';
 import 'subscriptions_screen.dart';
 import 'vault_settings_screen.dart';
+import 'dashboard.dart';
+import 'sharing_center_screen.dart';
+import 'share_record_screen.dart';
 
 class VaultScreen extends StatefulWidget {
   const VaultScreen({super.key});
@@ -121,6 +124,25 @@ class _VaultScreenState extends State<VaultScreen> {
       SnackBar(content: Text('$feature will be connected next.')),
     );
   }
+  void _shareRecord(_VaultItem item) {
+  final shareItem = ShareRecordItem(
+    title: item.title,
+    subtitle: '${item.type} • ${item.details}',
+    icon: item.icon,
+  );
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withOpacity(0.25),
+    builder: (context) {
+      return ShareRecordSheet(
+        selectedRecord: shareItem,
+      );
+    },
+  );
+}
 
   void _showDetails(_VaultItem item) {
     showModalBottomSheet<void>(
@@ -398,20 +420,40 @@ actions: [
         indicatorColor: const Color(0xFFDCD9FF),
         selectedIndex: 1,
         onDestinationSelected: (index) {
-          if (index == 0) {
-          } else if (index == 1) {
+  if (index == 1) {
+    return;
+  }
 
-          } else if (index == 2) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SubscriptionsScreen(),
-              ),
-            );
-            } else if (index == 3) {
-              _comingSoon('Sharing');
-            }
-        },
+  if (index == 0) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const PersonalDashboardScreen(),
+      ),
+    );
+  }
+
+  if (index == 2) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const SubscriptionsScreen(),
+      ),
+    );
+  }
+
+  if (index == 3) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const SharingCenterScreen(),
+      ),
+    );
+  }
+},
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
@@ -480,8 +522,13 @@ actions: [
               ),
               IconButton(
                 tooltip: 'Share',
-                onPressed: () => _comingSoon('Share record'),
-                icon: const Icon(Icons.ios_share, color: muted),
+                onPressed: () {
+                  _shareRecord(item);
+                },
+                icon: const Icon(
+                  Icons.ios_share,
+                  color: muted,
+                ),
               ),
               IconButton(
                 tooltip: 'View details',

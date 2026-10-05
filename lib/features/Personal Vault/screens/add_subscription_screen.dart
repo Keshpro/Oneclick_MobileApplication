@@ -107,65 +107,45 @@ class _AddSubscriptionScreenState
   // HEADER
   // ============================================================
 
-  Widget _header() {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 12,
-      ),
-      decoration: BoxDecoration(
-        color: bg,
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.10),
-          ),
+Widget _header() {
+  return Container(
+    padding: const EdgeInsets.symmetric(
+      horizontal: 16,
+      vertical: 12,
+    ),
+    decoration: BoxDecoration(
+      color: bg,
+      border: Border(
+        bottom: BorderSide(
+          color: Colors.grey.withValues(alpha: 0.10),
         ),
       ),
-      child: Row(
-        children: [
-          _circleButton(
-            icon: Icons.arrow_back_ios_new,
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
+    ),
+    child: Row(
+      children: [
+        _circleButton(
+          icon: Icons.arrow_back_ios_new,
+          onTap: () {
+            Navigator.pop(context);
+          },
+        ),
 
-          const SizedBox(width: 12),
+        const SizedBox(width: 12),
 
-          const Expanded(
-            child: Text(
-              'Add / Edit Subscription',
-              style: TextStyle(
-                color: ink,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
+        const Expanded(
+          child: Text(
+            'Add / Edit Subscription',
+            style: TextStyle(
+              color: ink,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
             ),
           ),
-
-          _circleButton(
-            icon: Icons.share_outlined,
-            onTap: () {
-              _message(
-                'Sharing will be connected later.',
-              );
-            },
-          ),
-
-          const SizedBox(width: 10),
-
-          _circleButton(
-            icon: Icons.more_vert,
-            onTap: () {
-              _message(
-                'More options will be connected later.',
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   // ============================================================
   // TITLE
@@ -1071,7 +1051,7 @@ class _AddSubscriptionScreenState
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: bg,
+        color: card,
         borderRadius:
             BorderRadius.circular(28),
         boxShadow: _softShadow(),

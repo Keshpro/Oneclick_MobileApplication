@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'subscriptions_screen.dart';
 
 class AISubscriptionCheckupScreen extends StatefulWidget {
   const AISubscriptionCheckupScreen({super.key});
@@ -87,47 +88,31 @@ class _AISubscriptionCheckupScreenState
   // HEADER
   // ============================================================
 
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        _circleButton(
-          icon: Icons.arrow_back_ios_new_rounded,
-          onTap: () {
-            Navigator.pop(context);
-          },
-        ),
+Widget _buildHeader() {
+  return Row(
+    children: [
+      _circleButton(
+        icon: Icons.arrow_back_ios_new_rounded,
+        onTap: () {
+          Navigator.pop(context);
+        },
+      ),
 
-        const SizedBox(width: 14),
+      const SizedBox(width: 14),
 
-        const Expanded(
-          child: Text(
-            'AI Subscription Checkup',
-            style: TextStyle(
-              color: ink,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-            ),
+      const Expanded(
+        child: Text(
+          'AI Subscription Checkup',
+          style: TextStyle(
+            color: ink,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
           ),
         ),
-
-        _circleButton(
-          icon: Icons.share_outlined,
-          onTap: () {
-            _message('Share AI checkup report');
-          },
-        ),
-
-        const SizedBox(width: 10),
-
-        _circleButton(
-          icon: Icons.more_vert,
-          onTap: () {
-            _message('More options');
-          },
-        ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
   // ============================================================
   // AUDIT SUMMARY
@@ -1074,12 +1059,16 @@ class _AISubscriptionCheckupScreenState
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(dialogContext);
+  Navigator.pop(dialogContext);
 
-                _message(
-                  '$selectedCount selected actions are ready to process.',
-                );
-              },
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const SubscriptionsScreen(),
+    ),
+    (route) => route.isFirst,
+  );
+},
               child: const Text(
                 'Apply',
                 style: TextStyle(
