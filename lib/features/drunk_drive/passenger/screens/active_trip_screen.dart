@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../models/booking_model.dart';
 import '../../models/booking_status.dart';
 import '../../services/booking_service.dart';
+import '../../services/driver_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 import 'payment_screen.dart';
 
@@ -350,10 +351,334 @@ Booking ID: ${_booking.id}
     );
   }
 
-  void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('$feature — coming soon')));
+  void _contactDriver() {
+    final driverId = _booking.driverId;
+
+    if (driverId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No driver has been assigned yet.')),
+      );
+      return;
+    }
+
+    final driver = DriverService().getDriverApplicationByUserId(driverId);
+
+    if (driver == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Driver contact details are unavailable.'),
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: DrunkDriveColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Contact Driver',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const CircleAvatar(
+                    backgroundColor: DrunkDriveColors.accent,
+                    child: Icon(
+                      Icons.person_rounded,
+                      color: DrunkDriveColors.background,
+                    ),
+                  ),
+                  title: Text(
+                    driver.fullName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Assigned Driver',
+                    style: TextStyle(color: DrunkDriveColors.textMuted),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: DrunkDriveColors.background,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.phone_rounded,
+                        color: DrunkDriveColors.accent,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          driver.phone,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: driver.phone),
+                      );
+
+                      if (!sheetContext.mounted) return;
+
+                      Navigator.pop(sheetContext);
+
+                      if (!mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Driver phone number copied.'),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.copy_rounded),
+                    label: const Text(
+                      'Copy Phone Number',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: DrunkDriveColors.accent,
+                      foregroundColor: DrunkDriveColors.background,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
+Future<void> _showEmergencyOptions() async {
+  final emergencyDetails = '''
+Drunk & Drive - Emergency Trip Details
+
+Booking ID: ${_booking.id}
+Pickup: ${_booking.pickup.name}
+Destination: ${_booking.destination.name}
+Vehicle: ${_booking.vehicle.displayName}
+Registration: ${_booking.vehicle.registrationNumber}
+Status: ${_booking.status.label}
+''';
+
+  await showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: DrunkDriveColors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(22),
+      ),
+    ),
+    builder: (sheetContext) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(
+                    Icons.sos_rounded,
+                    color: DrunkDriveColors.danger,
+                    size: 30,
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Emergency / SOS',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: DrunkDriveColors.danger.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: DrunkDriveColors.danger.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: const Text(
+                  'This app does not automatically contact emergency services. '
+                  'If you are in immediate danger, contact the appropriate local '
+                  'emergency service directly.',
+                  style: TextStyle(
+                    color: Colors.white,
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              const Text(
+                'You can copy your trip details so they are ready to provide '
+                'to someone assisting you.',
+                style: TextStyle(
+                  color: DrunkDriveColors.textMuted,
+                  height: 1.4,
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    await Clipboard.setData(
+                      ClipboardData(
+                        text: emergencyDetails.trim(),
+                      ),
+                    );
+
+                    if (!sheetContext.mounted) return;
+
+                    Navigator.pop(sheetContext);
+
+                    if (!mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Emergency trip details copied.',
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.copy_rounded),
+                  label: const Text(
+                    'Copy Emergency Trip Details',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: DrunkDriveColors.danger,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 15,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+
+              if (_booking.driverId != null) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+
+                      if (!mounted) return;
+
+                      _contactDriver();
+                    },
+                    icon: const Icon(Icons.phone_rounded),
+                    label: const Text(
+                      'Contact Driver',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: DrunkDriveColors.accent,
+                      side: const BorderSide(
+                        color: DrunkDriveColors.accent,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 15,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 10),
+
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(sheetContext),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(
+                      color: DrunkDriveColors.textMuted,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+  
 
   @override
   Widget build(BuildContext context) {
@@ -760,7 +1085,7 @@ Booking ID: ${_booking.id}
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () => _showComingSoon('Contact Driver'),
+              onPressed: _contactDriver,
               icon: const Icon(Icons.phone_rounded),
               label: const Text(
                 'Contact Driver',
@@ -783,7 +1108,7 @@ Booking ID: ${_booking.id}
         SizedBox(
           width: double.infinity,
           child: TextButton.icon(
-            onPressed: () => _showComingSoon('Emergency / SOS'),
+            onPressed: _showEmergencyOptions,
             icon: const Icon(Icons.sos_rounded, color: DrunkDriveColors.danger),
             label: const Text(
               'Emergency / SOS',
