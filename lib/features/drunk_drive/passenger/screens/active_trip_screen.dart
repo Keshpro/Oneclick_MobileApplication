@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../models/booking_model.dart';
 import '../../models/booking_status.dart';
@@ -244,6 +245,109 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
     if (result == true) {
       Navigator.pop(context, true);
     }
+  }
+
+  Future<void> _shareTrip() async {
+    final shareText =
+        '''
+Drunk & Drive Trip
+
+Pickup: ${_booking.pickup.name}
+Destination: ${_booking.destination.name}
+Vehicle: ${_booking.vehicle.displayName}
+Registration: ${_booking.vehicle.registrationNumber}
+Distance: ${_booking.distanceKm.toStringAsFixed(1)} km
+Status: ${_booking.status.label}
+
+Booking ID: ${_booking.id}
+''';
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: DrunkDriveColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Share Trip',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Copy these trip details and share them with someone you trust.',
+                  style: TextStyle(
+                    color: DrunkDriveColors.textMuted,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: DrunkDriveColors.background,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: DrunkDriveColors.surfaceBorder),
+                  ),
+                  child: Text(
+                    shareText.trim(),
+                    style: const TextStyle(color: Colors.white, height: 1.5),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: shareText.trim()),
+                      );
+
+                      if (!sheetContext.mounted) return;
+
+                      Navigator.pop(sheetContext);
+
+                      if (!mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Trip details copied to clipboard.'),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.copy_rounded),
+                    label: const Text(
+                      'Copy Trip Details',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: DrunkDriveColors.accent,
+                      foregroundColor: DrunkDriveColors.background,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _showComingSoon(String feature) {
@@ -634,7 +738,7 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: () => _showComingSoon('Share Trip'),
+            onPressed: _shareTrip,
             icon: const Icon(Icons.share_rounded),
             label: const Text(
               'Share Trip',

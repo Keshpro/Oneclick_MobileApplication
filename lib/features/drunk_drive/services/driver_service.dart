@@ -14,6 +14,17 @@ class DriverService {
     return null;
   }
 
+  DriverApplicationModel? getDriverApplicationByUserId(String userId) {
+    for (final app in _applications) {
+      if (app.userId == userId &&
+          app.status == DriverApplicationStatus.approved) {
+        return app;
+      }
+    }
+
+    return null;
+  }
+
   /// True if current user has an approved application.
   bool isCurrentDriverApproved() {
     final myApp = getMyApplication();
@@ -39,7 +50,9 @@ class DriverService {
     final existing = getMyApplication();
     if (existing != null) {
       // Overwrite / re-submit if previously submitted
-      _applications.removeWhere((app) => app.userId == VehicleService.currentUserId);
+      _applications.removeWhere(
+        (app) => app.userId == VehicleService.currentUserId,
+      );
     }
 
     final application = DriverApplicationModel(
@@ -67,10 +80,17 @@ class DriverService {
   }
 
   /// Helper for Admin team / testing to approve or reject an application.
-  void debugUpdateStatus(String applicationId, DriverApplicationStatus status, {String? notes}) {
+  void debugUpdateStatus(
+    String applicationId,
+    DriverApplicationStatus status, {
+    String? notes,
+  }) {
     final index = _applications.indexWhere((app) => app.id == applicationId);
     if (index != -1) {
-      _applications[index] = _applications[index].copyWith(status: status, adminNotes: notes);
+      _applications[index] = _applications[index].copyWith(
+        status: status,
+        adminNotes: notes,
+      );
     }
   }
 
