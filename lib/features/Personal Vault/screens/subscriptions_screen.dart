@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'add_subscription_screen.dart';
 import 'subscription_details_screen.dart';
 import 'ai_subscription_checkup_screen.dart';
+import 'dashboard.dart';
+import 'vault_screen.dart';
+import 'sharing_center_screen.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
@@ -22,6 +25,21 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
 
   String selectedFilter = 'All';
   String selectedCurrency = 'USD';
+  String searchQuery = '';
+
+  List<SubscriptionItem> get filteredSubscriptions {
+  return subscriptions.where((item) {
+    final matchesSearch =
+        item.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
+        item.subtitle.toLowerCase().contains(searchQuery.toLowerCase());
+
+    final matchesFilter =
+        selectedFilter == 'All' ||
+        item.status == selectedFilter;
+
+    return matchesSearch && matchesFilter;
+  }).toList();
+}
 
   final List<SubscriptionItem> subscriptions = const [
     SubscriptionItem(
@@ -80,7 +98,64 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       category: 'Storage & Utilities',
     ),
   ];
-
+void _showSearch() {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(22),
+          decoration: const BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(30),
+            ),
+          ),
+          child: TextField(
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'Search subscriptions...',
+              prefixIcon: const Icon(
+                Icons.search,
+                color: purple,
+              ),
+              suffixIcon: searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        setState(() {
+                          searchQuery = '';
+                        });
+                        Navigator.pop(context);
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(24),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: surface,
+            ),
+            onChanged: (value) {
+              setState(() {
+                searchQuery = value;
+              });
+            },
+            onSubmitted: (_) {
+              Navigator.pop(context);
+            },
+          ),
+        ),
+      );
+    },
+  );
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -121,7 +196,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                           title: 'PRODUCTIVITY & AI',
                           total: '\$94.99/mo',
                           icon: Icons.terminal_outlined,
-                          items: subscriptions
+                          items: filteredSubscriptions
                               .where(
                                 (item) =>
                                     item.category ==
@@ -136,7 +211,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                           title: 'ENTERTAINMENT & MEDIA',
                           total: '\$35.98/mo',
                           icon: Icons.play_circle_outline,
-                          items: subscriptions
+                          items: filteredSubscriptions
                               .where(
                                 (item) =>
                                     item.category ==
@@ -151,7 +226,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                           title: 'STORAGE & UTILITIES',
                           total: '\$9.99/mo',
                           icon: Icons.cloud_outlined,
-                          items: subscriptions
+                          items: filteredSubscriptions
                               .where(
                                 (item) =>
                                     item.category ==
@@ -183,97 +258,58 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   // HEADER
   // ============================================================
 
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        _circleIcon(
-          Icons.shield_outlined,
-          color: purple,
-        ),
+Widget _buildHeader() {
+  return Row(
+    children: [
+      _circleIcon(
+        Icons.shield_outlined,
+        color: purple,
+      ),
 
-        const SizedBox(width: 14),
+      const SizedBox(width: 14),
 
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'My Subscriptions',
-                style: TextStyle(
-                  color: ink,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              SizedBox(height: 3),
-              Row(
-                children: [
-                  Icon(
-                    Icons.circle,
-                    color: purple,
-                    size: 7,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'VAULT',
-                    style: TextStyle(
-                      color: muted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        _headerButton(
-          Icons.search,
-          () => _message('Search subscriptions'),
-        ),
-
-        const SizedBox(width: 9),
-
-        Stack(
-          clipBehavior: Clip.none,
+      const Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _headerButton(
-              Icons.notifications_none_rounded,
-              () => _message('Notifications'),
-            ),
-            Positioned(
-              right: 7,
-              top: 5,
-              child: Container(
-                width: 9,
-                height: 9,
-                decoration: const BoxDecoration(
-                  color: purple,
-                  shape: BoxShape.circle,
-                ),
+            Text(
+              'My Subscriptions',
+              style: TextStyle(
+                color: ink,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
               ),
+            ),
+            SizedBox(height: 3),
+            Row(
+              children: [
+                Icon(
+                  Icons.circle,
+                  color: purple,
+                  size: 7,
+                ),
+                SizedBox(width: 6),
+                Text(
+                  'VAULT',
+                  style: TextStyle(
+                    color: muted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
+      ),
 
-        const SizedBox(width: 9),
-
-        Container(
-          width: 47,
-          height: 47,
-          decoration: const BoxDecoration(
-            color: purple,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.person_outline_rounded,
-            color: Colors.white,
-          ),
-        ),
-      ],
-    );
-  }
+      _headerButton(
+        Icons.search,
+        _showSearch,
+      ),
+    ],
+  );
+}
 
   // ============================================================
   // FORECAST
@@ -1170,10 +1206,34 @@ Widget _buildAddSubscriptionButton() {
     return InkWell(
       borderRadius: BorderRadius.circular(25),
       onTap: () {
-        if (!selected) {
-          _message('$label navigation will be connected.');
-        }
-      },
+  if (selected) return;
+
+  if (label == 'Home') {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const PersonalDashboardScreen(),
+      ),
+    );
+  } else if (label == 'Vault') {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const VaultScreen(),
+      ),
+    );
+  } else if (label == 'Sharing') {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const SharingCenterScreen(),
+      ),
+    );
+  }
+},
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -1407,6 +1467,7 @@ class SubscriptionItem {
   final IconData icon;
   final String category;
   final bool priceHiked;
+  final String status;
 
   const SubscriptionItem({
     required this.name,
@@ -1417,6 +1478,7 @@ class SubscriptionItem {
     required this.icon,
     required this.category,
     this.priceHiked = false,
+    this.status = 'Active',
   });
 }
 

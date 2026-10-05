@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'vault_screen.dart';
 
 class SmartUploadReviewScreen extends StatefulWidget {
   const SmartUploadReviewScreen({super.key});
@@ -132,53 +133,33 @@ class _SmartUploadReviewScreenState
   // TOP BAR
   // ---------------------------------------------------------
 
-  Widget _buildTopBar(BuildContext context) {
-    return Container(
-      height: 88,
-      padding: const EdgeInsets.symmetric(horizontal: 22),
-      child: Row(
-        children: [
-          _circleButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            onTap: () => Navigator.pop(context),
-          ),
+Widget _buildTopBar(BuildContext context) {
+  return Container(
+    height: 88,
+    padding: const EdgeInsets.symmetric(horizontal: 22),
+    child: Row(
+      children: [
+        _circleButton(
+          icon: Icons.arrow_back_ios_new_rounded,
+          onTap: () => Navigator.pop(context),
+        ),
 
-          const SizedBox(width: 16),
+        const SizedBox(width: 16),
 
-          const Expanded(
-            child: Text(
-              'Document Detail',
-              style: TextStyle(
-                fontSize: 23,
-                fontWeight: FontWeight.w600,
-                color: textColor,
-              ),
+        const Expanded(
+          child: Text(
+            'My Vault',
+            style: TextStyle(
+              fontSize: 23,
+              fontWeight: FontWeight.w600,
+              color: textColor,
             ),
           ),
-
-          _circleButton(
-            icon: Icons.more_vert,
-            onTap: () {},
-          ),
-
-          const SizedBox(width: 10),
-
-          Container(
-            width: 46,
-            height: 46,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: primaryColor,
-            ),
-            child: const Icon(
-              Icons.person_outline_rounded,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _circleButton({
     required IconData icon,
@@ -1017,12 +998,20 @@ class _SmartUploadReviewScreenState
       height: 67,
       child: ElevatedButton.icon(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Document saved to Vault'),
-            ),
-          );
-        },
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Document saved to Vault'),
+    ),
+  );
+
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const VaultScreen(),
+    ),
+    (route) => route.isFirst,
+  );
+},
         icon: const Icon(
           Icons.shield_outlined,
           color: primaryColor,

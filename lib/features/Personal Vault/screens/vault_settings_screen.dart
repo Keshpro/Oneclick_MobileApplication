@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 
 class VaultSettingsScreen extends StatefulWidget {
-  const VaultSettingsScreen({super.key});
+  final bool openBackupSection;
+
+  const VaultSettingsScreen({
+    super.key,
+    this.openBackupSection = false,
+  });
 
   @override
-  State<VaultSettingsScreen> createState() => _VaultSettingsScreenState();
+  State<VaultSettingsScreen> createState() =>
+      _VaultSettingsScreenState();
 }
-
 class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
+  final GlobalKey _backupSectionKey = GlobalKey();
+
   static const background = Color(0xFFE9EBF2);
   static const purple = Color(0xFF6961FF);
   static const ink = Color(0xFF303344);
@@ -34,11 +41,37 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
   bool _aiDocumentReasoning = true;
   bool _credentialMasking = true;
 
-  void _message(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(text)),
-    );
+ bool _backupCreated = false;
+String _lastBackup = 'Not created';
+
+// Scroll to DATA & BACKUP when opened from Dashboard
+@override
+void initState() {
+  super.initState();
+
+  if (widget.openBackupSection) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final backupContext = _backupSectionKey.currentContext;
+
+      if (backupContext != null) {
+        Scrollable.ensureVisible(
+          backupContext,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+          alignment: 0.08,
+        );
+      }
+    });
   }
+}
+
+void _message(String text) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(text),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -59,10 +92,17 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
 
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(22, 12, 22, 50),
+          padding: const EdgeInsets.fromLTRB(
+            22,
+            12,
+            22,
+            50,
+          ),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
+              constraints: const BoxConstraints(
+                maxWidth: 600,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -82,7 +122,8 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
 
                         const Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
@@ -92,7 +133,8 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                                       style: TextStyle(
                                         color: ink,
                                         fontSize: 17,
-                                        fontWeight: FontWeight.w700,
+                                        fontWeight:
+                                            FontWeight.w700,
                                       ),
                                     ),
                                   ),
@@ -140,7 +182,8 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
 
                   _surface(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
                       children: [
                         const Text(
                           'Automatic Lock Timeout',
@@ -174,7 +217,8 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                           ].map((time) {
                             return _choiceButton(
                               text: time,
-                              selected: _lockTimeout == time,
+                              selected:
+                                  _lockTimeout == time,
                               onTap: () {
                                 setState(() {
                                   _lockTimeout = time;
@@ -204,7 +248,8 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                         _innerAction(
                           icon: Icons.key_outlined,
                           title: 'Master Passphrase',
-                          subtitle: 'Last updated 42 days ago',
+                          subtitle:
+                              'Last updated 42 days ago',
                           trailing: 'Change',
                           onTap: () {
                             _message(
@@ -216,14 +261,17 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                         const SizedBox(height: 16),
 
                         _settingSwitch(
-                          title: 'Failed Attempt Protection',
+                          title:
+                              'Failed Attempt Protection',
                           subtitle:
                               'Protect Vault access after repeated failed attempts',
                           icon: Icons.security_outlined,
-                          value: _failedAttemptProtection,
+                          value:
+                              _failedAttemptProtection,
                           onChanged: (value) {
                             setState(() {
-                              _failedAttemptProtection = value;
+                              _failedAttemptProtection =
+                                  value;
                             });
                           },
                         ),
@@ -246,7 +294,8 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
 
                   _surface(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
                       children: [
                         const Text(
                           'Notification Channels',
@@ -272,9 +321,12 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                         Row(
                           children: [
                             _channelButton(
-                              icon: Icons.phonelink_ring_outlined,
-                              selected: _pushNotifications,
-                              tooltip: 'Device notifications',
+                              icon: Icons
+                                  .phonelink_ring_outlined,
+                              selected:
+                                  _pushNotifications,
+                              tooltip:
+                                  'Device notifications',
                               onTap: () {
                                 setState(() {
                                   _pushNotifications =
@@ -287,8 +339,10 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
 
                             _channelButton(
                               icon: Icons.mail_outline,
-                              selected: _emailNotifications,
-                              tooltip: 'Email reminders',
+                              selected:
+                                  _emailNotifications,
+                              tooltip:
+                                  'Email reminders',
                               onTap: () {
                                 setState(() {
                                   _emailNotifications =
@@ -334,15 +388,17 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                           ].map((warning) {
                             return _choiceButton(
                               text: warning,
-                              selected:
-                                  _expiryWarnings.contains(warning),
+                              selected: _expiryWarnings
+                                  .contains(warning),
                               onTap: () {
                                 setState(() {
                                   if (_expiryWarnings
                                       .contains(warning)) {
-                                    _expiryWarnings.remove(warning);
+                                    _expiryWarnings
+                                        .remove(warning);
                                   } else {
-                                    _expiryWarnings.add(warning);
+                                    _expiryWarnings
+                                        .add(warning);
                                   }
                                 });
                               },
@@ -353,11 +409,15 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                         const SizedBox(height: 22),
 
                         _innerAction(
-                          icon: Icons.event_repeat_outlined,
-                          title: 'Subscription Renewal Alerts',
-                          subtitle: 'Early billing warning trigger',
+                          icon:
+                              Icons.event_repeat_outlined,
+                          title:
+                              'Subscription Renewal Alerts',
+                          subtitle:
+                              'Early billing warning trigger',
                           trailing: _renewalWarning,
-                          onTap: _selectRenewalWarning,
+                          onTap:
+                              _selectRenewalWarning,
                         ),
                       ],
                     ),
@@ -380,14 +440,18 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                     child: Column(
                       children: [
                         _settingSwitch(
-                          title: 'Local Document Processing',
+                          title:
+                              'Local Document Processing',
                           subtitle:
                               'Process supported document text on the device when available',
-                          icon: Icons.document_scanner_outlined,
-                          value: _localDocumentProcessing,
+                          icon: Icons
+                              .document_scanner_outlined,
+                          value:
+                              _localDocumentProcessing,
                           onChanged: (value) {
                             setState(() {
-                              _localDocumentProcessing = value;
+                              _localDocumentProcessing =
+                                  value;
                             });
                           },
                         ),
@@ -395,14 +459,17 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                         const SizedBox(height: 12),
 
                         _settingSwitch(
-                          title: 'AI Document Reasoning',
+                          title:
+                              'AI Document Reasoning',
                           subtitle:
                               'Enable AI features such as summaries and Ask Vault AI',
                           icon: Icons.auto_awesome,
-                          value: _aiDocumentReasoning,
+                          value:
+                              _aiDocumentReasoning,
                           onChanged: (value) {
                             setState(() {
-                              _aiDocumentReasoning = value;
+                              _aiDocumentReasoning =
+                                  value;
                             });
                           },
                         ),
@@ -411,13 +478,16 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
 
                         _innerStatus(
                           icon: Icons.shield_outlined,
-                          title: 'Sensitive Credential Masking',
+                          title:
+                              'Sensitive Credential Masking',
                           subtitle:
                               'Passwords and backup codes are excluded from AI context',
-                          status: _credentialMasking
-                              ? 'ENABLED'
-                              : 'OFF',
-                          trailingIcon: Icons.lock_outline,
+                          status:
+                              _credentialMasking
+                                  ? 'ENABLED'
+                                  : 'OFF',
+                          trailingIcon:
+                              Icons.lock_outline,
                           onTap: () {
                             setState(() {
                               _credentialMasking =
@@ -429,8 +499,10 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                         const SizedBox(height: 18),
 
                         _dangerButton(
-                          icon: Icons.delete_sweep_outlined,
-                          text: 'Clear AI Query History',
+                          icon:
+                              Icons.delete_sweep_outlined,
+                          text:
+                              'Clear AI Query History',
                           onTap: () {
                             _showClearHistoryDialog();
                           },
@@ -454,7 +526,8 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
 
                   _surface(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
                       children: [
                         const Text(
                           'Secure Vault Export',
@@ -479,7 +552,8 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
 
                         _largeActionButton(
                           icon: Icons.download_outlined,
-                          text: 'Export Encrypted Vault (.oneclick)',
+                          text:
+                              'Export Encrypted Vault (.oneclick)',
                           onTap: () {
                             _message(
                               'Secure Vault export will be connected later.',
@@ -490,8 +564,10 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                         const SizedBox(height: 16),
 
                         _innerAction(
-                          icon: Icons.medical_services_outlined,
-                          title: 'Emergency Recovery Kit',
+                          icon: Icons
+                              .medical_services_outlined,
+                          title:
+                              'Emergency Recovery Kit',
                           subtitle:
                               'Create recovery information for your Vault',
                           trailing: 'Create PDF',
@@ -505,17 +581,19 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                         const SizedBox(height: 16),
 
                         _innerStatus(
-                          icon: Icons.storage_outlined,
-                          title: 'Backup Status',
-                          subtitle:
-                              'Backup service has not been connected yet',
-                          status: 'SETUP',
+                          icon:
+                              Icons.cloud_done_outlined,
+                          title: 'Vault Backup',
+                          subtitle: _backupCreated
+                              ? 'Last backup: $_lastBackup'
+                              : 'No Vault backup has been created yet',
+                          status: _backupCreated
+                              ? 'BACKED UP'
+                              : 'NOT BACKED UP',
                           trailingIcon:
-                              Icons.cloud_outlined,
+                              Icons.chevron_right,
                           onTap: () {
-                            _message(
-                              'Cloud backup will be connected later.',
-                            );
+                            _showBackupOptions();
                           },
                         ),
                       ],
@@ -535,7 +613,9 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+
                         SizedBox(height: 7),
+
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -567,8 +647,7 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
       ),
     );
   }
-
-  // ===============================================================
+    // ===============================================================
   // DIALOGS
   // ===============================================================
 
@@ -594,8 +673,7 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
             padding: const EdgeInsets.all(22),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   'Subscription Renewal Alert',
@@ -612,13 +690,12 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                   (option) => ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(option),
-                    trailing:
-                        _renewalWarning == option
-                            ? const Icon(
-                                Icons.check_circle,
-                                color: purple,
-                              )
-                            : null,
+                    trailing: _renewalWarning == option
+                        ? const Icon(
+                            Icons.check_circle,
+                            color: purple,
+                          )
+                        : null,
                     onTap: () {
                       setState(() {
                         _renewalWarning = option;
@@ -642,7 +719,9 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: background,
-          title: const Text('Clear AI Query History?'),
+          title: const Text(
+            'Clear AI Query History?',
+          ),
           content: const Text(
             'This demo action clears the AI query history associated with the Vault.',
           ),
@@ -656,16 +735,302 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                _message('AI query history cleared.');
+
+                _message(
+                  'AI query history cleared.',
+                );
               },
               child: const Text(
                 'Clear',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(
+                  color: Colors.red,
+                ),
               ),
             ),
           ],
         );
       },
+    );
+  }
+
+  void _showBackupOptions() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: background,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(28),
+        ),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              22,
+              18,
+              22,
+              28,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: muted.withValues(
+                        alpha: 0.25,
+                      ),
+                      borderRadius:
+                          BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                Row(
+                  children: [
+                    _roundIcon(
+                      Icons.cloud_sync_outlined,
+                      size: 48,
+                    ),
+
+                    const SizedBox(width: 14),
+
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Backup & Restore',
+                            style: TextStyle(
+                              color: ink,
+                              fontSize: 20,
+                              fontWeight:
+                                  FontWeight.w700,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Protect your Personal Vault data',
+                            style: TextStyle(
+                              color: muted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 26),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F1F7),
+                    borderRadius:
+                        BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Backup includes',
+                        style: TextStyle(
+                          color: ink,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      _backupItem(
+                        Icons.description_outlined,
+                        'Vault documents',
+                      ),
+
+                      _backupItem(
+                        Icons.manage_accounts_outlined,
+                        'Account access records',
+                      ),
+
+                      _backupItem(
+                        Icons.credit_card_outlined,
+                        'Subscriptions',
+                      ),
+
+                      _backupItem(
+                        Icons.folder_copy_outlined,
+                        'Document packs',
+                      ),
+
+                      _backupItem(
+                        Icons.settings_outlined,
+                        'Vault preferences',
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+
+                      setState(() {
+                        _backupCreated = true;
+                        _lastBackup = 'Just now';
+                      });
+
+                      _message(
+                        'Vault backup created successfully.',
+                      );
+                    },
+                    icon: const Icon(
+                      Icons.cloud_upload_outlined,
+                    ),
+                    label: Text(
+                      _backupCreated
+                          ? 'Create New Backup'
+                          : 'Create Backup',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: purple,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding:
+                          const EdgeInsets.symmetric(
+                        vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(18),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+
+                      _message(
+                        'Backup file selection will be connected later.',
+                      );
+                    },
+                    icon: const Icon(
+                      Icons.settings_backup_restore,
+                    ),
+                    label: const Text(
+                      'Restore from Backup',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: purple,
+                      side: const BorderSide(
+                        color: softPurple,
+                      ),
+                      padding:
+                          const EdgeInsets.symmetric(
+                        vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(18),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 15),
+
+                const Row(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: muted,
+                      size: 18,
+                    ),
+                    SizedBox(width: 9),
+                    Expanded(
+                      child: Text(
+                        'Backup and restore are currently demonstrated '
+                        'as prototype actions. Secure storage integration '
+                        'can be connected later.',
+                        style: TextStyle(
+                          color: muted,
+                          fontSize: 11.5,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ===============================================================
+  // BACKUP ITEM
+  // ===============================================================
+
+  Widget _backupItem(
+    IconData icon,
+    String text,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(
+        bottom: 11,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: purple,
+            size: 19,
+          ),
+
+          const SizedBox(width: 11),
+
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: ink,
+                fontSize: 13,
+              ),
+            ),
+          ),
+
+          const Icon(
+            Icons.check_circle_outline,
+            color: purple,
+            size: 18,
+          ),
+        ],
+      ),
     );
   }
 
@@ -832,8 +1197,7 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
       ),
     );
   }
-
-  Widget _settingSwitch({
+    Widget _settingSwitch({
     required String title,
     required String subtitle,
     required IconData icon,
@@ -844,8 +1208,7 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
       children: [
         Expanded(
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
@@ -855,7 +1218,9 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+
               const SizedBox(height: 4),
+
               Text(
                 subtitle,
                 style: const TextStyle(
@@ -960,8 +1325,7 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
 
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
@@ -971,7 +1335,9 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+
                   const SizedBox(height: 3),
+
                   Text(
                     subtitle,
                     style: const TextStyle(
@@ -1036,8 +1402,7 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
           ],
         ),
         child: Row(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
               icon,
@@ -1048,8 +1413,7 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
 
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
@@ -1059,8 +1423,7 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                           style: const TextStyle(
                             color: ink,
                             fontSize: 15,
-                            fontWeight:
-                                FontWeight.w600,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -1068,24 +1431,20 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
                       const SizedBox(width: 8),
 
                       Container(
-                        padding:
-                            const EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 8,
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color:
-                              const Color(0xFFDCD9FF),
-                          borderRadius:
-                              BorderRadius.circular(12),
+                          color: const Color(0xFFDCD9FF),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           status,
                           style: const TextStyle(
                             color: purple,
                             fontSize: 10,
-                            fontWeight:
-                                FontWeight.w600,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -1150,15 +1509,16 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
           ],
         ),
         child: Row(
-          mainAxisAlignment:
-              MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
               color: purple,
               size: 20,
             ),
+
             const SizedBox(width: 9),
+
             Flexible(
               child: Text(
                 text,
@@ -1207,15 +1567,16 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
           ],
         ),
         child: Row(
-          mainAxisAlignment:
-              MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
               color: Colors.red,
               size: 20,
             ),
+
             const SizedBox(width: 8),
+
             Text(
               text,
               style: const TextStyle(
