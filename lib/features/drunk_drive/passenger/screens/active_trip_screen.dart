@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../models/booking_model.dart';
@@ -19,21 +21,64 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
   final BookingService _bookingService = BookingService();
 
   late BookingModel _booking;
+  Timer? _driverSearchTimer;
 
   @override
   void initState() {
     super.initState();
     _booking = widget.booking;
-    _refreshBooking();
+    _startDriverSearchTimerIfNeeded();
   }
 
-  void _refreshBooking() {
-    final updated = _bookingService.getBookingById(widget.booking.id);
+  @override
+  void dispose() {
+    _driverSearchTimer?.cancel();
+    super.dispose();
+  }
 
-    if (updated != null) {
+  void _startDriverSearchTimerIfNeeded() {
+    _driverSearchTimer?.cancel();
+
+    if (_booking.status != BookingStatus.searchingDriver) {
+      return;
+    }
+
+    _driverSearchTimer = Timer(const Duration(seconds: 30), () {
+      if (!mounted) return;
+
+      final latest = _bookingService.getBookingById(_booking.id);
+
+      if (latest == null ||
+          latest.status != BookingStatus.searchingDriver ||
+          latest.driverId != null) {
+        return;
+      }
+
+      final updated = _bookingService.markDriverNotFound(_booking.id);
+
+      if (updated == null || !mounted) {
+        return;
+      }
+
       setState(() {
         _booking = updated;
       });
+    });
+  }
+
+  void _refreshBooking() {
+    final updated = _bookingService.getBookingById(_booking.id);
+
+    if (updated == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _booking = updated;
+    });
+
+    if (_booking.status != BookingStatus.searchingDriver) {
+      _driverSearchTimer?.cancel();
     }
   }
 
@@ -167,6 +212,25 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
     Navigator.pop(context, true);
   }
 
+  void _retryDriverSearch() {
+    final updated = _bookingService.retryDriverSearch(_booking.id);
+
+    if (updated == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to restart the driver search.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _booking = updated;
+    });
+    _startDriverSearchTimerIfNeeded();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Searching for a driver again...')),
+    );
+  }
+
   Future<void> _openPayment() async {
     final result = await Navigator.push<bool>(
       context,
@@ -251,6 +315,28 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: DrunkDriveColors.danger,
                       side: const BorderSide(color: DrunkDriveColors.danger),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              if (_booking.status == BookingStatus.driverNotFound) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _retryDriverSearch,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text(
+                      'Retry Driver Search',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: DrunkDriveColors.accent,
+                      foregroundColor: DrunkDriveColors.background,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -564,29 +650,32 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: _booking.driverId == null
-                ? null
-                : () => _showComingSoon('Contact Driver'),
-            icon: const Icon(Icons.phone_rounded),
-            label: const Text(
-              'Contact Driver',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: DrunkDriveColors.accent,
-              side: const BorderSide(color: DrunkDriveColors.accent),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+
+        if (_booking.driverId != null) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _showComingSoon('Contact Driver'),
+              icon: const Icon(Icons.phone_rounded),
+              label: const Text(
+                'Contact Driver',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: DrunkDriveColors.accent,
+                side: const BorderSide(color: DrunkDriveColors.accent),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
           ),
-        ),
+        ],
+
         const SizedBox(height: 10),
+
         SizedBox(
           width: double.infinity,
           child: TextButton.icon(

@@ -36,8 +36,8 @@ class BookingService {
                   b.status == BookingStatus.searchingDriver) &&
               b.driverId == null,
         )
-        .where((b) => b.status == BookingStatus.requested && b.driverId == null)
         .toList();
+
     available.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     return available;
   }
@@ -157,6 +157,66 @@ class BookingService {
   /// a valid pre-start state, or the PIN is wrong. The trip NEVER
   /// starts on a wrong PIN (spec section 17) — this is the one place
   /// that check happens, so no screen can bypass it.
+  BookingModel? startHeadingToCustomer(String bookingId, String driverId) {
+    final index = _bookings.indexWhere((b) => b.id == bookingId);
+
+    if (index == -1) {
+      return null;
+    }
+
+    final current = _bookings[index];
+
+    if (current.driverId != driverId ||
+        current.status != BookingStatus.driverAssigned) {
+      return null;
+    }
+
+    final updated = current.copyWith(status: BookingStatus.driverArriving);
+
+    _bookings[index] = updated;
+    return updated;
+  }
+
+  BookingModel? markDriverArrived(String bookingId, String driverId) {
+    final index = _bookings.indexWhere((b) => b.id == bookingId);
+
+    if (index == -1) {
+      return null;
+    }
+
+    final current = _bookings[index];
+
+    if (current.driverId != driverId ||
+        current.status != BookingStatus.driverArriving) {
+      return null;
+    }
+
+    final updated = current.copyWith(status: BookingStatus.driverArrived);
+
+    _bookings[index] = updated;
+    return updated;
+  }
+
+  BookingModel? beginVerification(String bookingId, String driverId) {
+    final index = _bookings.indexWhere((b) => b.id == bookingId);
+
+    if (index == -1) {
+      return null;
+    }
+
+    final current = _bookings[index];
+
+    if (current.driverId != driverId ||
+        current.status != BookingStatus.driverArrived) {
+      return null;
+    }
+
+    final updated = current.copyWith(status: BookingStatus.verification);
+
+    _bookings[index] = updated;
+    return updated;
+  }
+
   BookingModel? startTrip({
     required String bookingId,
     required String driverId,
@@ -307,6 +367,45 @@ class BookingService {
     }
 
     final updated = current.copyWith(status: BookingStatus.cancelledByDriver);
+
+    _bookings[index] = updated;
+    return updated;
+  }
+
+  BookingModel? markDriverNotFound(String bookingId) {
+    final index = _bookings.indexWhere((b) => b.id == bookingId);
+
+    if (index == -1) {
+      return null;
+    }
+
+    final current = _bookings[index];
+
+    if (current.status != BookingStatus.searchingDriver ||
+        current.driverId != null) {
+      return null;
+    }
+
+    final updated = current.copyWith(status: BookingStatus.driverNotFound);
+
+    _bookings[index] = updated;
+    return updated;
+  }
+
+  BookingModel? retryDriverSearch(String bookingId) {
+    final index = _bookings.indexWhere((b) => b.id == bookingId);
+
+    if (index == -1) {
+      return null;
+    }
+
+    final current = _bookings[index];
+
+    if (current.status != BookingStatus.driverNotFound) {
+      return null;
+    }
+
+    final updated = current.copyWith(status: BookingStatus.searchingDriver);
 
     _bookings[index] = updated;
     return updated;

@@ -110,6 +110,66 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     });
   }
 
+  void _onStartHeading() {
+    if (_activeTrip == null) return;
+
+    final updated = _bookingService.startHeadingToCustomer(
+      _activeTrip!.id,
+      VehicleService.currentUserId,
+    );
+
+    if (updated == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to update trip status.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _activeTrip = updated;
+    });
+  }
+
+  void _onDriverArrived() {
+    if (_activeTrip == null) return;
+
+    final updated = _bookingService.markDriverArrived(
+      _activeTrip!.id,
+      VehicleService.currentUserId,
+    );
+
+    if (updated == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to update trip status.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _activeTrip = updated;
+    });
+  }
+
+  void _onBeginVerification() {
+    if (_activeTrip == null) return;
+
+    final updated = _bookingService.beginVerification(
+      _activeTrip!.id,
+      VehicleService.currentUserId,
+    );
+
+    if (updated == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to start verification.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _activeTrip = updated;
+    });
+  }
+
   Future<void> _onStartTrip() async {
     if (_activeTrip == null) return;
 
@@ -249,7 +309,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     setState(() {
       _isOnline = value;
     });
-
+    if (_isOnline) {
+      _loadRequests();
+      _loadActiveTrip();
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(_isOnline ? 'You are now ONLINE' : 'You are now OFFLINE'),
@@ -490,6 +553,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             booking: _activeTrip!,
             pinController: _pinController,
             isStarting: _isStartingTrip,
+            onStartHeading: _onStartHeading,
+            onDriverArrived: _onDriverArrived,
+            onBeginVerification: _onBeginVerification,
             onStartTrip: _onStartTrip,
             onCancelBooking: _onCancelBooking,
             onViewActiveTrip: () async {
@@ -721,6 +787,9 @@ class _ActiveTripCard extends StatelessWidget {
   final BookingModel booking;
   final TextEditingController pinController;
   final bool isStarting;
+  final VoidCallback onStartHeading;
+  final VoidCallback onDriverArrived;
+  final VoidCallback onBeginVerification;
   final VoidCallback onStartTrip;
   final VoidCallback onCancelBooking;
   final VoidCallback onViewActiveTrip;
@@ -729,6 +798,9 @@ class _ActiveTripCard extends StatelessWidget {
     required this.booking,
     required this.pinController,
     required this.isStarting,
+    required this.onStartHeading,
+    required this.onDriverArrived,
+    required this.onBeginVerification,
     required this.onStartTrip,
     required this.onCancelBooking,
     required this.onViewActiveTrip,
@@ -736,8 +808,6 @@ class _ActiveTripCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final awaitingStart = booking.status != BookingStatus.tripStarted;
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -797,7 +867,77 @@ class _ActiveTripCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          if (awaitingStart) ...[
+          if (booking.status == BookingStatus.driverAssigned) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onStartHeading,
+                icon: const Icon(Icons.directions_car_rounded),
+                label: const Text(
+                  'Start Heading to Customer',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DrunkDriveColors.accent,
+                  foregroundColor: DrunkDriveColors.background,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ] else if (booking.status == BookingStatus.driverArriving) ...[
+            const Text(
+              'You are heading to the customer pickup location.',
+              style: TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onDriverArrived,
+                icon: const Icon(Icons.location_on_rounded),
+                label: const Text(
+                  "I've Arrived",
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DrunkDriveColors.accent,
+                  foregroundColor: DrunkDriveColors.background,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ] else if (booking.status == BookingStatus.driverArrived) ...[
+            const Text(
+              'You have arrived at the pickup location.',
+              style: TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onBeginVerification,
+                icon: const Icon(Icons.verified_user_rounded),
+                label: const Text(
+                  'Verify Customer',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DrunkDriveColors.accent,
+                  foregroundColor: DrunkDriveColors.background,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ] else if (booking.status == BookingStatus.verification) ...[
             const Text(
               'Ask the customer for their Trip PIN to start the trip.',
               style: TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
@@ -852,29 +992,8 @@ class _ActiveTripCard extends StatelessWidget {
                       ),
               ),
             ),
-
-            const SizedBox(height: 10),
-
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: isStarting ? null : onCancelBooking,
-                icon: const Icon(Icons.cancel_outlined),
-                label: const Text(
-                  'Cancel Booking',
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: DrunkDriveColors.danger,
-                  side: const BorderSide(color: DrunkDriveColors.danger),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-          ] else
+          ] else if (booking.status == BookingStatus.tripStarted ||
+              booking.status == BookingStatus.tripInProgress) ...[
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -894,6 +1013,33 @@ class _ActiveTripCard extends StatelessWidget {
                 ),
               ),
             ),
+          ],
+
+          if (booking.status == BookingStatus.driverAssigned ||
+              booking.status == BookingStatus.driverArriving ||
+              booking.status == BookingStatus.driverArrived ||
+              booking.status == BookingStatus.verification) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: isStarting ? null : onCancelBooking,
+                icon: const Icon(Icons.cancel_outlined),
+                label: const Text(
+                  'Cancel Booking',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: DrunkDriveColors.danger,
+                  side: const BorderSide(color: DrunkDriveColors.danger),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
