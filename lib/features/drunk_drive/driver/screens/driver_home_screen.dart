@@ -6,6 +6,7 @@ import '../../models/vehicle_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/driver_service.dart';
 import '../../services/vehicle_service.dart';
+import '../../services/driver_rating_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 import 'driver_application_screen.dart';
 import 'driver_active_trip_screen.dart';
@@ -21,6 +22,7 @@ class DriverHomeScreen extends StatefulWidget {
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
   final DriverService _driverService = DriverService();
   final BookingService _bookingService = BookingService();
+  final DriverRatingService _driverRatingService = DriverRatingService();
 
   bool _isOnline = false;
   bool _isApproved = false;
@@ -69,6 +71,22 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         VehicleService.currentUserId,
       );
     });
+  }
+
+  String get _driverRatingText {
+    final average = _driverRatingService.getAverageRating(
+      VehicleService.currentUserId,
+    );
+
+    final count = _driverRatingService.getRatingCount(
+      VehicleService.currentUserId,
+    );
+
+    if (average == null || count == 0) {
+      return 'No ratings';
+    }
+
+    return '${average.toStringAsFixed(1)} ★ ($count)';
   }
 
   void _loadDriverStats() {
@@ -490,7 +508,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             Expanded(
               child: _statCard(
                 'Driver Rating',
-                '4.8 ★',
+                _driverRatingText,
                 Icons.star_rounded,
                 Colors.amber,
               ),

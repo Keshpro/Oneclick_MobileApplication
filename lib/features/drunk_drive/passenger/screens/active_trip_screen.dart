@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../models/booking_model.dart';
 import '../../models/booking_status.dart';
 import '../../services/booking_service.dart';
+import '../../services/driver_rating_service.dart';
 import '../../services/driver_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 import 'payment_screen.dart';
@@ -21,6 +22,7 @@ class ActiveTripScreen extends StatefulWidget {
 
 class _ActiveTripScreenState extends State<ActiveTripScreen> {
   final BookingService _bookingService = BookingService();
+  final DriverRatingService _driverRatingService = DriverRatingService();
 
   late BookingModel _booking;
   Timer? _driverSearchTimer;
@@ -233,6 +235,128 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
     );
   }
 
+  Future<void> _showDriverRatingDialog() async {
+    final driverId = _booking.driverId;
+
+    if (driverId == null ||
+        _driverRatingService.hasRatedBooking(_booking.id) ||
+        !mounted) {
+      return;
+    }
+
+    int selectedRating = 0;
+    final reviewController = TextEditingController();
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: DrunkDriveColors.surface,
+              title: const Text(
+                'Rate Your Driver',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'How was your experience with your driver?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: DrunkDriveColors.textMuted),
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (index) {
+                        final star = index + 1;
+
+                        return IconButton(
+                          onPressed: () {
+                            setDialogState(() {
+                              selectedRating = star;
+                            });
+                          },
+                          icon: Icon(
+                            star <= selectedRating
+                                ? Icons.star_rounded
+                                : Icons.star_border_rounded,
+                            color: DrunkDriveColors.accent,
+                            size: 34,
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: reviewController,
+                      maxLines: 3,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Write a review (optional)',
+                        hintStyle: const TextStyle(
+                          color: DrunkDriveColors.textMuted,
+                        ),
+                        filled: true,
+                        fillColor: DrunkDriveColors.background,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                  },
+                  child: const Text(
+                    'Skip',
+                    style: TextStyle(color: DrunkDriveColors.textMuted),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: selectedRating == 0
+                      ? null
+                      : () {
+                          final submitted = _driverRatingService.submitRating(
+                            bookingId: _booking.id,
+                            driverId: driverId,
+                            rating: selectedRating,
+                            review: reviewController.text,
+                          );
+
+                          if (submitted != null) {
+                            Navigator.pop(dialogContext);
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: DrunkDriveColors.accent,
+                    foregroundColor: DrunkDriveColors.background,
+                  ),
+                  child: const Text(
+                    'Submit Rating',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    reviewController.dispose();
+  }
+
   Future<void> _openPayment() async {
     final result = await Navigator.push<bool>(
       context,
@@ -244,6 +368,10 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
     _refreshBooking();
 
     if (result == true) {
+      await _showDriverRatingDialog();
+
+      if (!mounted) return;
+
       Navigator.pop(context, true);
     }
   }
@@ -492,8 +620,10 @@ Booking ID: ${_booking.id}
       },
     );
   }
-Future<void> _showEmergencyOptions() async {
-  final emergencyDetails = '''
+
+  Future<void> _showEmergencyOptions() async {
+    final emergencyDetails =
+        '''
 Drunk & Drive - Emergency Trip Details
 
 Booking ID: ${_booking.id}
@@ -504,181 +634,164 @@ Registration: ${_booking.vehicle.registrationNumber}
 Status: ${_booking.status.label}
 ''';
 
-  await showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: DrunkDriveColors.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(22),
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: DrunkDriveColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
-    ),
-    builder: (sheetContext) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(
-                    Icons.sos_rounded,
-                    color: DrunkDriveColors.danger,
-                    size: 30,
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Emergency / SOS',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.sos_rounded,
+                      color: DrunkDriveColors.danger,
+                      size: 30,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: DrunkDriveColors.danger.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: DrunkDriveColors.danger.withValues(alpha: 0.5),
-                  ),
-                ),
-                child: const Text(
-                  'This app does not automatically contact emergency services. '
-                  'If you are in immediate danger, contact the appropriate local '
-                  'emergency service directly.',
-                  style: TextStyle(
-                    color: Colors.white,
-                    height: 1.4,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              const Text(
-                'You can copy your trip details so they are ready to provide '
-                'to someone assisting you.',
-                style: TextStyle(
-                  color: DrunkDriveColors.textMuted,
-                  height: 1.4,
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    await Clipboard.setData(
-                      ClipboardData(
-                        text: emergencyDetails.trim(),
-                      ),
-                    );
-
-                    if (!sheetContext.mounted) return;
-
-                    Navigator.pop(sheetContext);
-
-                    if (!mounted) return;
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Emergency trip details copied.',
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Emergency / SOS',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.copy_rounded),
-                  label: const Text(
-                    'Copy Emergency Trip Details',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: DrunkDriveColors.danger.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: DrunkDriveColors.danger.withValues(alpha: 0.5),
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: DrunkDriveColors.danger,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 15,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                  child: const Text(
+                    'This app does not automatically contact emergency services. '
+                    'If you are in immediate danger, contact the appropriate local '
+                    'emergency service directly.',
+                    style: TextStyle(
+                      color: Colors.white,
+                      height: 1.4,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-              ),
 
-              if (_booking.driverId != null) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 16),
+
+                const Text(
+                  'You can copy your trip details so they are ready to provide '
+                  'to someone assisting you.',
+                  style: TextStyle(
+                    color: DrunkDriveColors.textMuted,
+                    height: 1.4,
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: emergencyDetails.trim()),
+                      );
+
+                      if (!sheetContext.mounted) return;
+
                       Navigator.pop(sheetContext);
 
                       if (!mounted) return;
 
-                      _contactDriver();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Emergency trip details copied.'),
+                        ),
+                      );
                     },
-                    icon: const Icon(Icons.phone_rounded),
+                    icon: const Icon(Icons.copy_rounded),
                     label: const Text(
-                      'Contact Driver',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                      ),
+                      'Copy Emergency Trip Details',
+                      style: TextStyle(fontWeight: FontWeight.w800),
                     ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: DrunkDriveColors.accent,
-                      side: const BorderSide(
-                        color: DrunkDriveColors.accent,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 15,
-                      ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: DrunkDriveColors.danger,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                   ),
                 ),
-              ],
 
-              const SizedBox(height: 10),
+                if (_booking.driverId != null) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(sheetContext);
 
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(sheetContext),
-                  child: const Text(
-                    'Close',
-                    style: TextStyle(
-                      color: DrunkDriveColors.textMuted,
-                      fontWeight: FontWeight.w700,
+                        if (!mounted) return;
+
+                        _contactDriver();
+                      },
+                      icon: const Icon(Icons.phone_rounded),
+                      label: const Text(
+                        'Contact Driver',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: DrunkDriveColors.accent,
+                        side: const BorderSide(color: DrunkDriveColors.accent),
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 10),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(sheetContext),
+                    child: const Text(
+                      'Close',
+                      style: TextStyle(
+                        color: DrunkDriveColors.textMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      );
-    },
-  );
-}
-  
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
