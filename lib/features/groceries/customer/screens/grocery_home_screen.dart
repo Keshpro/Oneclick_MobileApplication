@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../../seller/screens/become_seller_screen.dart';
 import 'my_orders_screen.dart';
 import '../../controllers/grocery_controller.dart';
 import '../../models/grocery_product_model.dart';
@@ -41,6 +41,18 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
       appBar: AppBar(
         title: const Text('Groceries'),
         actions: [
+          IconButton(
+  tooltip: 'Become a Seller',
+  icon: const Icon(Icons.storefront_outlined),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BecomeSellerScreen(),
+      ),
+    );
+  },
+),
           IconButton(
             tooltip: 'My Orders',
             icon: const Icon(Icons.receipt_long_outlined),

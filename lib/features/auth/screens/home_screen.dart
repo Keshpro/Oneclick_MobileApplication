@@ -4,11 +4,9 @@ import 'package:flutter/material.dart';
 
 import 'services_screen.dart';
 import 'explore_screen.dart';
-import '../../doctor/patient/screens/patient_home_screen.dart';
 import '../../doctor/patient/screens/doctor_entry_screen.dart';
 import '../../groceries/customer/screens/grocery_home_screen.dart';
 
-import '../../doctor/patient/screens/doctor_entry_screen.dart';
 import '../../drunk_drive/passenger/screens/drunk_drive_home_screen.dart';
 import '../../Personal Vault/screens/dashboard.dart' as personal_vault;
 
@@ -514,14 +512,6 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (_) => const personal_vault.PersonalDashboardScreen(),
           ),
         );
-        break;
-
-      // --------------------------------------------------------
-      // GROCERIES
-      // --------------------------------------------------------
-
-      case 'Groceries':
-        _showLoginRequired('Groceries');
         break;
 
       default:
