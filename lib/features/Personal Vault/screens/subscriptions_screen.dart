@@ -1,51 +1,55 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'add_subscription_screen.dart';
 import 'subscription_details_screen.dart';
 import 'ai_subscription_checkup_screen.dart';
 import 'dashboard.dart';
 import 'vault_screen.dart';
 import 'sharing_center_screen.dart';
-
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
-
   @override
   State<SubscriptionsScreen> createState() =>
       _SubscriptionsScreenState();
 }
-
 class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
-  static const Color bg = Color(0xFFF9F7FF);
-  static const Color surface = Color(0xFFFBF9FF);
-  static const Color ink = Color(0xFF292B43);
-  static const Color muted = Color(0xFF6F7185);
-  static const Color purple = Color(0xFF5E5BFF);
-  static const Color purple2 = Color(0xFF7C35FF);
-  static const Color danger = Color(0xFFCE334B);
-
+  static const Color bg = Color(0xFFF8FAFC);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color ink = Color(0xFF0F172A);
+  static const Color muted = Color(0xFF64748B);
+  static const Color purple = Color(0xFF4F46E5);
+  static const Color purple2 = Color(0xFF9333EA);
+  static const Color danger = Color(0xFFF43F5E);
   String selectedFilter = 'All';
   String selectedCurrency = 'USD';
   String searchQuery = '';
-
+  String _statusKey(String status) {
+    final normalized = status.trim().toLowerCase();
+    return normalized == 'free trials' ? 'free trial' : normalized;
+  }
+  bool _matchesStatus(SubscriptionItem item, String filter) =>
+      filter == 'All' || _statusKey(item.status) == _statusKey(filter);
+  int _countFor(String filter) =>
+      subscriptions.where((item) => _matchesStatus(item, filter)).length;
+  double _monthlyCost(Iterable<SubscriptionItem> items) => items
+      .where((item) => _statusKey(item.status) == 'active')
+      .fold<double>(0, (sum, item) => sum +
+          (double.tryParse(item.price.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0));
   List<SubscriptionItem> get filteredSubscriptions {
-  return subscriptions.where((item) {
-    final matchesSearch =
-        item.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
-        item.subtitle.toLowerCase().contains(searchQuery.toLowerCase());
-
-    final matchesFilter =
-        selectedFilter == 'All' ||
-        item.status == selectedFilter;
-
-    return matchesSearch && matchesFilter;
-  }).toList();
-}
-
+    final query = searchQuery.trim().toLowerCase();
+    return subscriptions.where((item) {
+      final matchesSearch = item.name.toLowerCase().contains(query) ||
+          item.subtitle.toLowerCase().contains(query);
+      return matchesSearch && _matchesStatus(item, selectedFilter);
+    }).toList();
+  }
   final List<SubscriptionItem> subscriptions = const [
     SubscriptionItem(
       name: 'Adobe Creative Cloud',
       subtitle: 'All Apps Individual • Monthly',
-      price: '\$54.99',
+      price: '\LKR 18.000',
       renewal: 'Renews in 5 days',
       usage: 'Often used',
       icon: Icons.layers_outlined,
@@ -55,7 +59,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     SubscriptionItem(
       name: 'ChatGPT Plus',
       subtitle: 'OpenAI • Monthly',
-      price: '\$20.00',
+      price: '\LKR 6,500',
       renewal: 'Renews Dec 01',
       usage: 'Daily usage',
       icon: Icons.psychology_outlined,
@@ -64,7 +68,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     SubscriptionItem(
       name: 'Claude Pro',
       subtitle: 'Anthropic • Monthly',
-      price: '\$20.00',
+      price: '\LKR 6,500',
       renewal: 'Renews Dec 04',
       usage: 'Rarely used',
       icon: Icons.memory_outlined,
@@ -73,7 +77,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     SubscriptionItem(
       name: 'Spotify Family',
       subtitle: 'Premium 6 Accounts • Monthly',
-      price: '\$19.99',
+      price: '\LKR 6,200',
       renewal: 'Renews Nov 24',
       usage: 'Often used',
       icon: Icons.music_note,
@@ -82,7 +86,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     SubscriptionItem(
       name: 'Netflix Standard',
       subtitle: '1080p 2-Screens • Monthly',
-      price: '\$15.99',
+      price: '\LKR 4,000',
       renewal: 'Renews Nov 19',
       usage: 'Unused this month',
       icon: Icons.tv_outlined,
@@ -91,11 +95,39 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     SubscriptionItem(
       name: 'iCloud+ 2TB',
       subtitle: 'Apple Family Storage • Monthly',
-      price: '\$9.99',
+      price: '\LKR 3,000',
       renewal: 'Renews Nov 28',
       usage: '1.4 TB / 2 TB used',
       icon: Icons.cloud_done_outlined,
       category: 'Storage & Utilities',
+    ),
+    SubscriptionItem(
+      name: 'Figma Pro',
+      subtitle: 'Design workspace • Trial plan',
+      price: 'Free', renewal: 'Trial ends in 7 days', usage: 'Trial in progress',
+      icon: Icons.design_services_outlined, category: 'Productivity & AI',
+      status: 'Free Trial',
+    ),
+    SubscriptionItem(
+      name: 'HBO Max',
+      subtitle: 'Streaming • 7-day trial',
+      price: 'Free', renewal: 'Trial ends in 3 days', usage: 'Trial in progress',
+      icon: Icons.movie_outlined, category: 'Entertainment & Media',
+      status: 'Free Trial',
+    ),
+    SubscriptionItem(
+      name: 'YouTube Premium',
+      subtitle: 'Cancelled • No scheduled charge',
+      price: '—', renewal: 'Auto-renewal off', usage: 'Cancelled',
+      icon: Icons.play_circle_outline, category: 'Entertainment & Media',
+      status: 'Cancelled',
+    ),
+    SubscriptionItem(
+      name: 'Google One',
+      subtitle: 'Storage plan • No scheduled charge',
+      price: '—', renewal: 'Auto-renewal off', usage: 'Cancelled',
+      icon: Icons.cloud_outlined, category: 'Storage & Utilities',
+      status: 'Cancelled',
     ),
   ];
 void _showSearch() {
@@ -120,13 +152,13 @@ void _showSearch() {
             autofocus: true,
             decoration: InputDecoration(
               hintText: 'Search subscriptions...',
-              prefixIcon: const Icon(
+              prefixIcon: const _VaultReferenceIcon(
                 Icons.search,
                 color: purple,
               ),
               suffixIcon: searchQuery.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: const _VaultReferenceIcon(Icons.close),
                       onPressed: () {
                         setState(() {
                           searchQuery = '';
@@ -158,43 +190,174 @@ void _showSearch() {
 }
   @override
   Widget build(BuildContext context) {
+    final base = Theme.of(context);
+    final typography = GoogleFonts.plusJakartaSansTextTheme(base.textTheme);
+    return Theme(
+      data: base.copyWith(
+        textTheme: typography,
+        primaryTextTheme: GoogleFonts.plusJakartaSansTextTheme(base.primaryTextTheme),
+        colorScheme: base.colorScheme.copyWith(
+          primary: purple, onPrimary: Colors.white,
+          secondary: const Color(0xFF0891B2),
+          surface: bg, onSurface: ink,
+        ),
+        dividerColor: const Color(0xFFEFF2F7),
+        navigationBarTheme: NavigationBarThemeData(
+          labelTextStyle: WidgetStateProperty.resolveWith((states) =>
+            GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.w800 : FontWeight.w600,
+              color: states.contains(WidgetState.selected)
+                  ? purple : const Color(0xFF94A3B8),
+            )),
+          iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+            size: 21,
+            color: states.contains(WidgetState.selected)
+                ? purple : const Color(0xFF94A3B8),
+          )),
+        ),
+      ),
+      child: Builder(builder: (themedContext) => DecoratedBox(
+        decoration: const BoxDecoration(color: bg),
+        child: Stack(
+          children: [
+            Positioned.fill(child: IgnorePointer(child: DecoratedBox(
+              decoration: const BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment(-0.8, -1), radius: 1.4,
+                  colors: [Color(0xB0E0E7FF), Color(0x00E0E7FF)],
+                ),
+              ),
+            ))),
+            Positioned.fill(child: IgnorePointer(child: DecoratedBox(
+              decoration: const BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment(1, -0.5), radius: 0.9,
+                  colors: [Color(0x73F3E8FF), Color(0x00F3E8FF)],
+                ),
+              ),
+            ))),
+            Positioned.fill(child: IgnorePointer(child: DecoratedBox(
+              decoration: const BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment(0, 1), radius: 1,
+                  colors: [Color(0x66E0F2FE), Color(0x00E0F2FE)],
+                ),
+              ),
+            ))),
+            _buildSubscriptions(themedContext),
+          ],
+        ),
+      )),
+    );
+  }
+  Widget _buildSubscriptions(BuildContext context) {
     return Scaffold(
-      backgroundColor: bg,
+      extendBody: true,
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: ink,
+        surfaceTintColor: Colors.transparent,
+        automaticallyImplyLeading: false,
+        elevation: 0,
+        toolbarHeight: 88,
+        titleSpacing: 24,
+        title: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              padding: const EdgeInsets.all(1.5),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.bottomLeft,
+                  end: Alignment.topRight,
+                  colors: [purple, Color(0xFF6366F1)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [BoxShadow(
+                  color: Color(0x306366F1), blurRadius: 14,
+                  offset: Offset(0, 4),
+                )],
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(235),
+                  borderRadius: BorderRadius.circular(14.5),
+                ),
+                child: const _VaultReferenceIcon(Icons.verified_user_outlined,
+                  size: 22, color: purple),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('OneClick', style: TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5, color: ink,
+                  )),
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    const _VaultPulseDot(color: purple, size: 8, ping: true),
+                    const SizedBox(width: 7),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F3FF),
+                        border: Border.all(color: const Color(0xFFE0E7FE)),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text('PERSONAL', style: TextStyle(
+                        fontSize: 10, letterSpacing: 1.2,
+                        fontWeight: FontWeight.w800, color: Color(0xFF4338CA))),
+                    ),
+                  ]),
+                ],
+              ),
+            ),
+          ],
+        ),
+              actions: [
+          Padding(padding: const EdgeInsets.only(right: 24),
+            child: _headerButton(Icons.search, _showSearch)),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+                padding: const EdgeInsets.fromLTRB(24, 6, 24, 130),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
+                    constraints: const BoxConstraints(maxWidth: 430),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildHeader(),
-
                         const SizedBox(height: 24),
-
                         _buildForecastCard(),
-
                         const SizedBox(height: 28),
-
                         _buildAICheckup(),
-
                         const SizedBox(height: 34),
-
                         _buildRenewals(),
-
                         const SizedBox(height: 30),
-
                         _buildFilters(),
-
+                        const SizedBox(height: 14),
+                        Text('${filteredSubscriptions.length} subscriptions shown',
+                          style: const TextStyle(color: muted, fontSize: 12)),
+                        if (filteredSubscriptions.isEmpty) ...[
+                          const SizedBox(height: 20),
+                          _buildEmptySubscriptions(),
+                        ],
                         const SizedBox(height: 28),
-
                         _buildCategory(
                           title: 'PRODUCTIVITY & AI',
-                          total: '\$94.99/mo',
+                          total: '\LKR 30,000/mo',
                           icon: Icons.terminal_outlined,
                           items: filteredSubscriptions
                               .where(
@@ -204,12 +367,10 @@ void _showSearch() {
                               )
                               .toList(),
                         ),
-
                         const SizedBox(height: 28),
-
                         _buildCategory(
                           title: 'ENTERTAINMENT & MEDIA',
-                          total: '\$35.98/mo',
+                          total: '\LKR 11,000/mo',
                           icon: Icons.play_circle_outline,
                           items: filteredSubscriptions
                               .where(
@@ -219,12 +380,10 @@ void _showSearch() {
                               )
                               .toList(),
                         ),
-
                         const SizedBox(height: 28),
-
                         _buildCategory(
                           title: 'STORAGE & UTILITIES',
-                          total: '\$9.99/mo',
+                          total: '\LKR 3,000/mo',
                           icon: Icons.cloud_outlined,
                           items: filteredSubscriptions
                               .where(
@@ -234,11 +393,8 @@ void _showSearch() {
                               )
                               .toList(),
                         ),
-
                         const SizedBox(height: 38),
-
                         _buildAddSubscriptionButton(),
-
                         const SizedBox(height: 35),
                       ],
                     ),
@@ -247,74 +403,27 @@ void _showSearch() {
               ),
             ),
 
-            _buildBottomNavigation(),
           ],
         ),
       ),
+          bottomNavigationBar: _buildBottomNavigation(),
     );
   }
-
   // ============================================================
   // HEADER
   // ============================================================
-
 Widget _buildHeader() {
-  return Row(
+  return const Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _circleIcon(
-        Icons.shield_outlined,
-        color: purple,
-      ),
-
-      const SizedBox(width: 14),
-
-      const Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'My Subscriptions',
-              style: TextStyle(
-                color: ink,
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            SizedBox(height: 3),
-            Row(
-              children: [
-                Icon(
-                  Icons.circle,
-                  color: purple,
-                  size: 7,
-                ),
-                SizedBox(width: 6),
-                Text(
-                  'VAULT',
-                  style: TextStyle(
-                    color: muted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-
-      _headerButton(
-        Icons.search,
-        _showSearch,
-      ),
+      Text('My Subscriptions', style: TextStyle(
+        color: ink, fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.6)),
     ],
   );
 }
-
   // ============================================================
   // FORECAST
   // ============================================================
-
   Widget _buildForecastCard() {
     return _card(
       child: Column(
@@ -325,61 +434,47 @@ Widget _buildHeader() {
               const Text(
                 'SPENDING FORECAST',
                 style: TextStyle(
-                  color: Color(0xFF484A68),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  letterSpacing: .3,
+                  color: Color(0xFF94A3B8),
+                  fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1.6,
                 ),
               ),
-
               const SizedBox(width: 8),
-
-              const Icon(
+              const _VaultReferenceIcon(
                 Icons.circle,
                 color: purple,
                 size: 8,
               ),
-
               const Spacer(),
-
               _currencyButton('USD'),
-
               const SizedBox(width: 6),
-
-              _currencyButton('EUR'),
+              _currencyButton('LKR'),
             ],
           ),
-
           const SizedBox(height: 26),
-
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Text(
-                '\$148.50',
+              Text(
+                '${_monthlyCost(subscriptions).toStringAsFixed(2)}',
                 style: TextStyle(
                   color: ink,
-                  fontSize: 42,
+                  fontSize: 32,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -1,
                 ),
               ),
-
               const SizedBox(width: 8),
-
               const Padding(
                 padding: EdgeInsets.only(bottom: 7),
                 child: Text(
                   '/mo',
                   style: TextStyle(
-                    color: Color(0xFF4E506A),
+                    color: Color(0xFF64748B),
                     fontSize: 18,
                   ),
                 ),
               ),
-
               const Spacer(),
-
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -392,7 +487,7 @@ Widget _buildHeader() {
                 ),
                 child: const Row(
                   children: [
-                    Icon(
+                    _VaultReferenceIcon(
                       Icons.trending_up,
                       color: danger,
                       size: 17,
@@ -410,9 +505,7 @@ Widget _buildHeader() {
               ),
             ],
           ),
-
           const SizedBox(height: 2),
-
           Row(
             children: [
               const Text(
@@ -422,8 +515,8 @@ Widget _buildHeader() {
                   fontSize: 14,
                 ),
               ),
-              const Text(
-                '\$1,782.00',
+              Text(
+                '${(_monthlyCost(subscriptions) * 12).toStringAsFixed(2)}',
                 style: TextStyle(
                   color: ink,
                   fontWeight: FontWeight.w700,
@@ -447,34 +540,28 @@ Widget _buildHeader() {
               ),
             ],
           ),
-
           const SizedBox(height: 30),
-
           Row(
             children: [
               Expanded(
                 child: _statCard(
-                  number: '9',
+                  number: _countFor('Active').toString(),
                   label: 'Active Subs',
                   color: purple,
                 ),
               ),
-
               const SizedBox(width: 14),
-
               Expanded(
                 child: _statCard(
-                  number: '2',
+                  number: _countFor('Free Trials').toString(),
                   label: 'Trials Ending',
                   color: purple2,
                 ),
               ),
-
               const SizedBox(width: 14),
-
               Expanded(
                 child: _statCard(
-                  number: '1',
+                  number: subscriptions.where((item) => item.priceHiked && _statusKey(item.status) == 'active').length.toString(),
                   label: 'Price Hike',
                   color: danger,
                 ),
@@ -485,10 +572,8 @@ Widget _buildHeader() {
       ),
     );
   }
-
   Widget _currencyButton(String currency) {
     final selected = selectedCurrency == currency;
-
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -497,16 +582,16 @@ Widget _buildHeader() {
       },
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: 14,
+          horizontal: 8,
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFFFAF9FF),
+          color: const Color(0xFFF0F3FF),
           borderRadius: BorderRadius.circular(22),
-          boxShadow: selected ? _shadow() : null,
+          border: Border.all(color: selected ? const Color(0xFFE0E7FE) : Colors.white),
         ),
         child: Text(
-          currency == 'USD' ? 'USD \$' : 'EUR €',
+          currency == 'USD' ? 'USD ' : 'LKR ',
           style: TextStyle(
             color: selected ? purple : ink,
             fontWeight:
@@ -516,7 +601,6 @@ Widget _buildHeader() {
       ),
     );
   }
-
   Widget _statCard({
     required String number,
     required String label,
@@ -528,8 +612,8 @@ Widget _buildHeader() {
         horizontal: 5,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFFFBFAFF),
-        borderRadius: BorderRadius.circular(28),
+        color: const Color(0xFFF0F3FF),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: _shadow(),
       ),
       child: Column(
@@ -547,7 +631,7 @@ Widget _buildHeader() {
             label,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: Color(0xFF56586F),
+              color: Color(0xFF64748B),
               fontSize: 12,
             ),
           ),
@@ -555,11 +639,9 @@ Widget _buildHeader() {
       ),
     );
   }
-
   // ============================================================
   // AI CHECKUP
   // ============================================================
-
   Widget _buildAICheckup() {
     return _card(
       child: Column(
@@ -567,22 +649,8 @@ Widget _buildHeader() {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFBFAFF),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  color: purple2,
-                  size: 28,
-                ),
-              ),
-
+              _circleIcon(Icons.auto_awesome, color: purple2, size: 44),
               const SizedBox(width: 15),
-
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -603,13 +671,11 @@ Widget _buildHeader() {
                         _NewBadge(),
                       ],
                     ),
-
                     SizedBox(height: 6),
-
                     Text.rich(
                       TextSpan(
                         style: TextStyle(
-                          color: Color(0xFF54566E),
+                          color: Color(0xFF64748B),
                           fontSize: 14,
                           height: 1.4,
                         ),
@@ -619,7 +685,7 @@ Widget _buildHeader() {
                                 'You can trim up to ',
                           ),
                           TextSpan(
-                            text: '\$34.00/mo',
+                            text: '\LKR 11,000/mo',
                             style: TextStyle(
                               color: purple,
                               fontWeight: FontWeight.w700,
@@ -637,9 +703,7 @@ Widget _buildHeader() {
               ),
             ],
           ),
-
           const SizedBox(height: 20),
-
           Align(
             alignment: Alignment.centerRight,
             child: _pillButton(
@@ -661,11 +725,9 @@ Widget _buildHeader() {
       ),
     );
   }
-
   // ============================================================
   // ACTION REQUIRED
   // ============================================================
-
   Widget _buildRenewals() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -676,10 +738,8 @@ Widget _buildHeader() {
               child: Text(
                 'ACTION REQUIRED & RENEWALS',
                 style: TextStyle(
-                  color: Color(0xFF4A4C68),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  letterSpacing: .3,
+                  color: Color(0xFF94A3B8),
+                  fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1.6,
                 ),
               ),
             ),
@@ -693,9 +753,7 @@ Widget _buildHeader() {
             ),
           ],
         ),
-
         const SizedBox(height: 16),
-
         SizedBox(
           height: 195,
           child: ListView(
@@ -706,12 +764,10 @@ Widget _buildHeader() {
                 subtitle: 'Free 7-Day Trial',
                 badge: '3 days left',
                 description:
-                    'Converts to \$15.99/mo on Nov 08 unless cancelled.',
+                    'Converts to \LKR 5,000/mo on Nov 08 unless cancelled.',
                 icon: Icons.movie_outlined,
               ),
-
               const SizedBox(width: 16),
-
               _renewalCard(
                 title: 'Figma Pro',
                 subtitle: 'Annual Billing',
@@ -727,7 +783,6 @@ Widget _buildHeader() {
       ],
     );
   }
-
   Widget _renewalCard({
     required String title,
     required String subtitle,
@@ -736,14 +791,9 @@ Widget _buildHeader() {
     required IconData icon,
     bool urgent = true,
   }) {
-    return Container(
+    return SizedBox(
       width: 340,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: _shadow(),
-      ),
+      child: _VaultGlassCard(padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -754,9 +804,7 @@ Widget _buildHeader() {
                 color: purple,
                 size: 45,
               ),
-
               const SizedBox(width: 12),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -779,7 +827,6 @@ Widget _buildHeader() {
                   ],
                 ),
               ),
-
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 11,
@@ -802,20 +849,16 @@ Widget _buildHeader() {
               ),
             ],
           ),
-
           const SizedBox(height: 14),
-
           Text(
             description,
             style: const TextStyle(
-              color: Color(0xFF5E6078),
+              color: Color(0xFF64748B),
               fontSize: 13,
               height: 1.4,
             ),
           ),
-
           const Spacer(),
-
           Row(
             children: [
               Expanded(
@@ -832,7 +875,6 @@ Widget _buildHeader() {
                   ),
                 ),
               ),
-
               Expanded(
                 child: TextButton(
                   onPressed: () {
@@ -851,33 +893,29 @@ Widget _buildHeader() {
           ),
         ],
       ),
-    );
+    ));
   }
-
   // ============================================================
   // FILTERS
   // ============================================================
-
   Widget _buildFilters() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _filter('All', '11'),
+          _filter('All', _countFor('All').toString()),
           const SizedBox(width: 10),
-          _filter('Active', '9'),
+          _filter('Active', _countFor('Active').toString()),
           const SizedBox(width: 10),
-          _filter('Free Trials', '2'),
+          _filter('Free Trials', _countFor('Free Trials').toString()),
           const SizedBox(width: 10),
-          _filter('Cancelled', '4'),
+          _filter('Cancelled', _countFor('Cancelled').toString()),
         ],
       ),
     );
   }
-
   Widget _filter(String title, String count) {
     final selected = selectedFilter == title;
-
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -890,14 +928,14 @@ Widget _buildHeader() {
           vertical: 10,
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFFFAF9FF),
+          color: selected ? const Color(0xFFE0E7FE) : Colors.white.withAlpha(220),
           borderRadius: BorderRadius.circular(24),
-          boxShadow: _shadow(),
+          border: Border.all(color: const Color(0xFFE0E7FE)),
         ),
         child: Text(
           '$title ($count)',
           style: TextStyle(
-            color: selected ? purple : const Color(0xFF55576E),
+            color: selected ? purple : const Color(0xFF64748B),
             fontSize: 13,
             fontWeight:
                 selected ? FontWeight.w600 : FontWeight.w400,
@@ -906,54 +944,52 @@ Widget _buildHeader() {
       ),
     );
   }
-
   // ============================================================
   // CATEGORY
   // ============================================================
-
   Widget _buildCategory({
     required String title,
     required String total,
     required IconData icon,
     required List<SubscriptionItem> items,
   }) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    final categoryAmount = _monthlyCost(items);
+    final categoryLabel = _statusKey(selectedFilter) == 'cancelled'
+        ? 'No renewals'
+        : _statusKey(selectedFilter) == 'free trial'
+            ? '${items.length} trials'
+            : '\$${categoryAmount.toStringAsFixed(2)}/mo';
     return Column(
       children: [
         Row(
           children: [
-            Icon(
+            _VaultReferenceIcon(
               icon,
               color: purple,
               size: 19,
             ),
-
             const SizedBox(width: 9),
-
             Expanded(
               child: Text(
                 title,
                 style: const TextStyle(
-                  color: Color(0xFF4A4C68),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: .3,
+                  color: Color(0xFF94A3B8),
+                  fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1.6,
                 ),
               ),
             ),
-
             Text(
-              total,
+              categoryLabel,
               style: const TextStyle(
-                color: Color(0xFF4A4C68),
+                color: Color(0xFF94A3B8),
                 fontWeight: FontWeight.w700,
                 fontSize: 14,
               ),
             ),
           ],
         ),
-
         const SizedBox(height: 15),
-
         ...items.map(
           (item) => Padding(
             padding: const EdgeInsets.only(bottom: 17),
@@ -963,10 +999,9 @@ Widget _buildHeader() {
       ],
     );
   }
-
   Widget _subscriptionCard(SubscriptionItem item) {
   return InkWell(
-    borderRadius: BorderRadius.circular(30),
+    borderRadius: BorderRadius.circular(24),
     onTap: () {
       if (item.name == 'Adobe Creative Cloud') {
         Navigator.push(
@@ -979,20 +1014,22 @@ Widget _buildHeader() {
         _message('${item.name} details will be added soon.');
       }
     },
-    child: _card(
+    child: _VaultGlassCard(interactive: true,
+      accent: _statusKey(item.status) == 'free trial'
+          ? const Color(0xFF9333EA)
+          : _statusKey(item.status) == 'cancelled'
+              ? const Color(0xFF94A3B8) : purple,
       padding: const EdgeInsets.all(19),
-      child: Column(
+      child: Builder(builder: (context) => Column(
         children: [
           Row(
             children: [
               _circleIcon(
                 item.icon,
                 color: purple,
-                size: 50,
+                size: 44,
               ),
-
               const SizedBox(width: 14),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1002,14 +1039,12 @@ Widget _buildHeader() {
                         Flexible(
                           child: Text(
                             item.name,
-                            style: const TextStyle(
-                              color: ink,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
+                            style: TextStyle(
+                              color: _VaultGlassScope.hoveredOf(context) ? purple : ink,
+                              fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: -0.35,
                             ),
                           ),
                         ),
-
                         if (item.priceHiked) ...[
                           const SizedBox(width: 7),
                           Container(
@@ -1033,22 +1068,20 @@ Widget _buildHeader() {
                         ],
                       ],
                     ),
-
                     const SizedBox(height: 4),
-
                     Text(
                       item.subtitle,
                       style: const TextStyle(
-                        color: Color(0xFF55576F),
+                        color: Color(0xFF64748B),
                         fontSize: 13,
                       ),
                     ),
+                    const SizedBox(height: 7),
+                    _statusBadge(item.status),
                   ],
                 ),
               ),
-
               const SizedBox(width: 10),
-
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -1056,17 +1089,15 @@ Widget _buildHeader() {
                     item.price,
                     style: const TextStyle(
                       color: ink,
-                      fontSize: 17,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-
                   const SizedBox(height: 3),
-
-                  const Text(
-                    '/mo',
+                  Text(
+                    _statusKey(item.status) == 'active' ? '/mo' : '',
                     style: TextStyle(
-                      color: Color(0xFF575970),
+                      color: Color(0xFF64748B),
                       fontSize: 12,
                     ),
                   ),
@@ -1074,9 +1105,7 @@ Widget _buildHeader() {
               ),
             ],
           ),
-
           const SizedBox(height: 18),
-
           Row(
             children: [
               Container(
@@ -1085,12 +1114,12 @@ Widget _buildHeader() {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F3FA),
+                  color: const Color(0xFFF0F3FF),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   children: [
-                    Icon(
+                    _VaultReferenceIcon(
                       Icons.circle,
                       size: 7,
                       color: item.usage.contains('Rarely') ||
@@ -1102,7 +1131,7 @@ Widget _buildHeader() {
                     Text(
                       item.usage,
                       style: const TextStyle(
-                        color: Color(0xFF56586E),
+                        color: Color(0xFF64748B),
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1110,28 +1139,53 @@ Widget _buildHeader() {
                   ],
                 ),
               ),
-
               const Spacer(),
-
               Text(
                 item.renewal,
                 style: const TextStyle(
-                  color: Color(0xFF56586E),
+                  color: Color(0xFF64748B),
                   fontSize: 12,
                 ),
               ),
             ],
           ),
         ],
-      ),
+      )),
     ),
   );
 }
-
+  Widget _statusBadge(String status) {
+    final trial = _statusKey(status) == 'free trial';
+    final cancelled = _statusKey(status) == 'cancelled';
+    final color = trial ? const Color(0xFF9333EA)
+        : cancelled ? const Color(0xFF64748B) : const Color(0xFF059669);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: color.withAlpha(16),
+        borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withAlpha(30))),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: 5, height: 5,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 5),
+        Text(trial ? 'Free Trial' : status, style: TextStyle(
+          fontSize: 10, fontWeight: FontWeight.w700, color: color)),
+      ]),
+    );
+  }
+  Widget _buildEmptySubscriptions() {
+    return _card(child: Column(children: [
+      _circleIcon(Icons.search, color: purple, size: 44),
+      const SizedBox(height: 16),
+      const Text('No subscriptions found', style: TextStyle(
+        fontSize: 16, fontWeight: FontWeight.w700, color: ink)),
+      const SizedBox(height: 6),
+      const Text('Try another filter or clear your search.',
+        textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: muted)),
+    ]));
+  }
   // ============================================================
   // ADD SUBSCRIPTION
   // ============================================================
-
 Widget _buildAddSubscriptionButton() {
   return Center(
     child: _pillButton(
@@ -1149,27 +1203,33 @@ Widget _buildAddSubscriptionButton() {
     ),
   );
 }
-
   // ============================================================
   // BOTTOM NAVIGATION
   // ============================================================
-
   Widget _buildBottomNavigation() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(28, 14, 28, 18),
-      decoration: BoxDecoration(
-        color: bg,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .04),
-            blurRadius: 12,
-            offset: const Offset(0, -3),
-          ),
-        ],
-      ),
-      child: SafeArea(
+    return SafeArea(
         top: false,
-        child: Row(
+        minimum: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: Colors.white.withAlpha(240)),
+                boxShadow: const [BoxShadow(
+                  color: Color(0x140F172A), blurRadius: 24,
+                  offset: Offset(0, -4),
+                )],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: ColoredBox(
+                    color: Colors.white.withAlpha(235),
+                    child: Padding(padding: const EdgeInsets.all(8), child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _navItem(
@@ -1178,7 +1238,7 @@ Widget _buildAddSubscriptionButton() {
               false,
             ),
             _navItem(
-              Icons.folder_copy_outlined,
+              Icons.folder_special_outlined,
               'Vault',
               false,
             ),
@@ -1188,26 +1248,29 @@ Widget _buildAddSubscriptionButton() {
               true,
             ),
             _navItem(
-              Icons.handshake_outlined,
+              Icons.share_outlined,
               'Sharing',
               false,
             ),
           ],
+        )),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
-      ),
-    );
+      );
   }
-
   Widget _navItem(
     IconData icon,
     String label,
     bool selected,
   ) {
     return InkWell(
-      borderRadius: BorderRadius.circular(25),
+      borderRadius: BorderRadius.circular(16),
       onTap: () {
   if (selected) return;
-
   if (label == 'Home') {
     Navigator.pushReplacement(
       context,
@@ -1234,25 +1297,25 @@ Widget _buildAddSubscriptionButton() {
     );
   }
 },
-      child: Container(
+      child: _VaultPressFeedback(child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 8,
         ),
         decoration: selected
             ? BoxDecoration(
-                color: const Color(0xFFF4F2FC),
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: _shadow(),
+                color: const Color(0xFFF0F3FF),
+                borderRadius: BorderRadius.circular(16),
+                
               )
             : null,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            _VaultReferenceIcon(
               icon,
               color: selected ? purple : muted,
-              size: 24,
+              size: 20,
             ),
             const SizedBox(height: 4),
             Text(
@@ -1261,56 +1324,47 @@ Widget _buildAddSubscriptionButton() {
                 color: selected ? purple : muted,
                 fontSize: 11,
                 fontWeight:
-                    selected ? FontWeight.w700 : FontWeight.w500,
+                    selected ? FontWeight.w800 : FontWeight.w600,
               ),
             ),
           ],
         ),
       ),
-    );
+    ));
   }
-
   // ============================================================
   // REUSABLE
   // ============================================================
-
-  Widget _card({
-    required Widget child,
-    EdgeInsetsGeometry padding = const EdgeInsets.all(24),
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: _shadow(),
-      ),
-      child: child,
-    );
-  }
-
-  Widget _circleIcon(
-    IconData icon, {
-    required Color color,
-    double size = 50,
-  }) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: const Color(0xFFFBFAFF),
-        shape: BoxShape.circle,
-        boxShadow: _shadow(),
-      ),
-      child: Icon(
-        icon,
-        color: color,
-        size: size * .48,
+  Widget _card({required Widget child,
+  EdgeInsetsGeometry padding = const EdgeInsets.all(20)}) {
+  return SizedBox(width: double.infinity,
+    child: _VaultGlassCard(padding: padding, child: child));
+}
+  Widget _circleIcon(IconData icon, {required Color color, double size = 44}) {
+  final accent = icon == Icons.music_note || icon == Icons.cloud_done_outlined
+      ? const Color(0xFF059669)
+      : icon == Icons.tv_outlined || icon == Icons.movie_outlined
+          ? const Color(0xFFF43F5E)
+          : icon == Icons.psychology_outlined || icon == Icons.memory_outlined
+              ? purple2 : color;
+  return Builder(builder: (context) {
+    final hovered = _VaultGlassScope.hoveredOf(context);
+    return AnimatedScale(scale: hovered ? 1.05 : 1,
+      duration: const Duration(milliseconds: 300),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        width: size, height: size, alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: hovered ? accent : accent.withAlpha(18),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accent.withAlpha(30)),
+        ),
+        child: _VaultReferenceIcon(icon,
+          color: hovered ? Colors.white : accent, size: size * .46),
       ),
     );
-  }
-
+  });
+}
   Widget _headerButton(
     IconData icon,
     VoidCallback onTap,
@@ -1325,7 +1379,6 @@ Widget _buildAddSubscriptionButton() {
       ),
     );
   }
-
   Widget _pillButton({
     required IconData icon,
     required String text,
@@ -1334,21 +1387,21 @@ Widget _buildAddSubscriptionButton() {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(28),
+      borderRadius: BorderRadius.circular(24),
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: 22,
           vertical: 14,
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFFFBFAFF),
-          borderRadius: BorderRadius.circular(28),
+          color: const Color(0xFFF0F3FF),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: _shadow(),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            _VaultReferenceIcon(
               icon,
               color: color,
               size: 20,
@@ -1367,26 +1420,17 @@ Widget _buildAddSubscriptionButton() {
       ),
     );
   }
-
   List<BoxShadow> _shadow() {
-    return [
-      BoxShadow(
-        color: Colors.white.withValues(alpha: .9),
-        offset: const Offset(-4, -4),
-        blurRadius: 10,
-      ),
-      BoxShadow(
-        color: Colors.black.withValues(alpha: .07),
-        offset: const Offset(5, 7),
-        blurRadius: 15,
-      ),
+    return const [
+      BoxShadow(color: Color(0x1464748B), offset: Offset(0, 10),
+        blurRadius: 30, spreadRadius: -4),
+      BoxShadow(color: Color(0x0864748B), offset: Offset(0, 4),
+        blurRadius: 12, spreadRadius: -2),
     ];
   }
-
   // ============================================================
-  // DIALOGS / DEMO ACTIONS
+  // DIALOGS / ACTIONS
   // ============================================================
-
   void _message(String text) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1394,11 +1438,9 @@ Widget _buildAddSubscriptionButton() {
       ),
     );
   }
-
   void _showAddSubscriptionDialog() {
     final nameController = TextEditingController();
     final priceController = TextEditingController();
-
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -1420,7 +1462,7 @@ Widget _buildAddSubscriptionButton() {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: 'Monthly price',
-                  prefixText: '\$ ',
+                  prefixText: '\LKR ',
                 ),
               ),
             ],
@@ -1435,7 +1477,6 @@ Widget _buildAddSubscriptionButton() {
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
-
                 _message(
                   'Subscription UI added. Backend connection comes next.',
                 );
@@ -1453,11 +1494,9 @@ Widget _buildAddSubscriptionButton() {
     );
   }
 }
-
 // ================================================================
 // SUBSCRIPTION MODEL
 // ================================================================
-
 class SubscriptionItem {
   final String name;
   final String subtitle;
@@ -1468,7 +1507,6 @@ class SubscriptionItem {
   final String category;
   final bool priceHiked;
   final String status;
-
   const SubscriptionItem({
     required this.name,
     required this.subtitle,
@@ -1481,14 +1519,11 @@ class SubscriptionItem {
     this.status = 'Active',
   });
 }
-
 // ================================================================
 // NEW BADGE
 // ================================================================
-
 class _NewBadge extends StatelessWidget {
   const _NewBadge();
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1510,4 +1545,406 @@ class _NewBadge extends StatelessWidget {
       ),
     );
   }
+}
+
+class _VaultGlassScope extends InheritedWidget {
+  const _VaultGlassScope({required this.hovered, required super.child});
+  final bool hovered;
+  static bool hoveredOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_VaultGlassScope>()?.hovered ?? false;
+  @override
+  bool updateShouldNotify(_VaultGlassScope oldWidget) => hovered != oldWidget.hovered;
+}
+class _VaultGlassCard extends StatefulWidget {
+  const _VaultGlassCard({required this.child, required this.padding, this.interactive = false, this.accent});
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final bool interactive;
+  final Color? accent;
+  @override
+  State<_VaultGlassCard> createState() => _VaultGlassCardState();
+}
+class _VaultGlassCardState extends State<_VaultGlassCard> {
+  bool _hovered = false;
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: widget.interactive ? SystemMouseCursors.click : MouseCursor.defer,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() { _hovered = false; _pressed = false; }),
+      child: Listener(
+        onPointerDown: (_) { if (widget.interactive) setState(() => _pressed = true); },
+        onPointerUp: (_) { if (_pressed) setState(() => _pressed = false); },
+        onPointerCancel: (_) { if (_pressed) setState(() => _pressed = false); },
+        child: AnimatedScale(
+          scale: _pressed ? 0.98 : 1,
+          duration: const Duration(milliseconds: 150),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: _hovered ? const Color(0x1F6366F1) : const Color(0x1464748B),
+                  offset: Offset(0, _hovered ? 20 : 10),
+                  blurRadius: _hovered ? 35 : 30, spreadRadius: _hovered ? -8 : -4,
+                ),
+                const BoxShadow(color: Color(0x0864748B),
+                  offset: Offset(0, 4), blurRadius: 12, spreadRadius: -2),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: widget.padding,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(_hovered ? 255 : 204),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: widget.accent?.withAlpha(_hovered ? 65 : 30)
+                      ?? Colors.white.withAlpha(217)),
+                  ),
+                  child: _VaultGlassScope(hovered: _hovered, child: widget.child),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+class _VaultActionContent extends StatelessWidget {
+  const _VaultActionContent({required this.icon, required this.title,
+    required this.subtitle, required this.accent});
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color accent;
+  @override
+  Widget build(BuildContext context) {
+    final hovered = _VaultGlassScope.hoveredOf(context);
+    final isAI = icon == Icons.auto_awesome;
+    final hoverColor = icon == Icons.document_scanner_outlined
+        ? const Color(0xFF6366F1) : accent;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 116),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          if (isAI) Positioned(right: -4, top: -4,
+            child: IgnorePointer(child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+              child: Container(width: 64, height: 64,
+                decoration: const BoxDecoration(color: Color(0x1A9333EA),
+                  shape: BoxShape.circle)),
+            )),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AnimatedScale(
+                scale: hovered ? 1.05 : 1,
+                duration: const Duration(milliseconds: 300),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: 44, height: 44, alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: hovered ? hoverColor : accent.withAlpha(15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: accent.withAlpha(30)),
+                  ),
+                  child: _VaultReferenceIcon(icon, size: 20,
+                    color: hovered ? Colors.white : accent),
+                ),
+              ),
+              const SizedBox(height: 24),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14, fontWeight: FontWeight.w700,
+                  letterSpacing: -0.35, height: 1.3,
+                  color: hovered ? accent : const Color(0xFF0F172A),
+                ),
+                child: Text(title),
+              ),
+              const SizedBox(height: 2),
+              Text(subtitle, style: GoogleFonts.plusJakartaSans(
+                fontSize: 11, fontWeight: FontWeight.w500,
+                height: 1.35, color: const Color(0xFF94A3B8),
+              )),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+class _VaultSearchSurface extends StatefulWidget {
+  const _VaultSearchSurface({required this.child, required this.padding});
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  @override
+  State<_VaultSearchSurface> createState() => _VaultSearchSurfaceState();
+}
+class _VaultSearchSurfaceState extends State<_VaultSearchSurface> {
+  bool _focused = false;
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      onFocusChange: (value) => setState(() => _focused = value),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: widget.padding,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(179),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: _focused ? const Color(0x666366F1) : Colors.white.withAlpha(204),
+                width: _focused ? 2 : 1,
+              ),
+              boxShadow: const [BoxShadow(color: Color(0x080F172A),
+                offset: Offset(0, 2), blurRadius: 4)],
+            ),
+            child: widget.child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+class _VaultRowFeedback extends StatefulWidget {
+  const _VaultRowFeedback({required this.builder});
+  final Widget Function(BuildContext, bool) builder;
+  @override
+  State<_VaultRowFeedback> createState() => _VaultRowFeedbackState();
+}
+class _VaultRowFeedbackState extends State<_VaultRowFeedback> {
+  bool _hovered = false;
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    onEnter: (_) => setState(() => _hovered = true),
+    onExit: (_) => setState(() => _hovered = false),
+    child: widget.builder(context, _hovered),
+  );
+}
+class _VaultRecordSubtitle extends StatelessWidget {
+  const _VaultRecordSubtitle({required this.text, required this.color});
+  final String text;
+  final Color color;
+  @override
+  Widget build(BuildContext context) {
+    final expiring = text.startsWith('Expires');
+    final urgent = expiring && color == Colors.red;
+    final textColor = urgent ? const Color(0xFFF43F5E) : color;
+    final label = Text(text, style: GoogleFonts.plusJakartaSans(
+      fontSize: 12, fontWeight: urgent ? FontWeight.w600 : FontWeight.w500,
+      color: textColor,
+    ));
+    if (!expiring) return label;
+    return Row(children: [
+      _VaultPulseDot(color: urgent ? textColor : const Color(0xFF94A3B8),
+        size: 6, animate: urgent),
+      const SizedBox(width: 6), Flexible(child: label),
+    ]);
+  }
+}
+class _VaultPulseDot extends StatefulWidget {
+  const _VaultPulseDot({required this.color, required this.size,
+    this.ping = false, this.animate = true});
+  final Color color;
+  final double size;
+  final bool ping;
+  final bool animate;
+  @override
+  State<_VaultPulseDot> createState() => _VaultPulseDotState();
+}
+class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this, duration: const Duration(milliseconds: 1400));
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.animate && !MediaQuery.disableAnimationsOf(context)) {
+      _controller.repeat(reverse: !widget.ping);
+    } else { _controller.stop(); }
+  }
+  @override
+  void dispose() { _controller.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _controller,
+    builder: (context, child) => SizedBox(width: widget.size, height: widget.size,
+      child: Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
+        if (widget.ping) Transform.scale(scale: 1 + _controller.value,
+          child: Opacity(opacity: (1 - _controller.value) * 0.75,
+            child: Container(decoration: BoxDecoration(
+              color: widget.color, shape: BoxShape.circle)))),
+        Opacity(opacity: widget.ping || !widget.animate ? 1 : 1 - _controller.value * 0.5,
+          child: Container(decoration: BoxDecoration(
+            color: widget.color, shape: BoxShape.circle))),
+      ])),
+  );
+}
+class _VaultNavGlyph extends StatefulWidget {
+  const _VaultNavGlyph(this.icon, {this.color});
+  final IconData icon;
+  final Color? color;
+  @override
+  State<_VaultNavGlyph> createState() => _VaultNavGlyphState();
+}
+class _VaultNavGlyphState extends State<_VaultNavGlyph> {
+  bool _hovered = false;
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: SystemMouseCursors.click,
+    onEnter: (_) => setState(() => _hovered = true),
+    onExit: (_) => setState(() { _hovered = false; _pressed = false; }),
+    child: Listener(
+      onPointerDown: (_) => setState(() => _pressed = true),
+      onPointerUp: (_) => setState(() => _pressed = false),
+      onPointerCancel: (_) => setState(() => _pressed = false),
+      child: AnimatedScale(scale: _pressed ? 0.95 : 1,
+        duration: const Duration(milliseconds: 200),
+        child: _VaultReferenceIcon(widget.icon, size: 20,
+          color: widget.color ?? (_hovered ? const Color(0xFF1E293B)
+            : IconTheme.of(context).color ?? const Color(0xFF94A3B8))),
+      ),
+    ),
+  );
+}
+class _VaultReferenceIcon extends StatelessWidget {
+  const _VaultReferenceIcon(this.icon, {this.size, this.color});
+  final IconData icon;
+  final double? size;
+  final Color? color;
+  static final Map<IconData, String> _svg = {
+    Icons.verified_user_outlined: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+<path d="m9 12 2 2 4-4"></path>
+</svg>''',
+    Icons.search: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="2" viewBox="0 0 24 24">
+<path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>''',
+    Icons.tune: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+<line x1="4" x2="4" y1="21" y2="14"></line>
+<line x1="4" x2="4" y1="10" y2="3"></line>
+<line x1="12" x2="12" y1="21" y2="12"></line>
+<line x1="12" x2="12" y1="8" y2="3"></line>
+<line x1="20" x2="20" y1="21" y2="16"></line>
+<line x1="20" x2="20" y1="12" y2="3"></line>
+<line x1="1" x2="7" y1="14" y2="14"></line>
+<line x1="9" x2="15" y1="8" y2="8"></line>
+<line x1="17" x2="23" y1="16" y2="16"></line>
+</svg>''',
+    Icons.document_scanner_outlined: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="2" viewBox="0 0 24 24">
+<path d="M3 7V5a2 2 0 012-2h2m10 0h2a2 2 0 012 2v2m0 10v2a2 2 0 01-2 2h-2m-10 0H5a2 2 0 01-2-2v-2M9 10h6m-6 4h4" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>''',
+    Icons.shield_outlined: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="2" viewBox="0 0 24 24">
+<path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>''',
+    Icons.auto_awesome: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="2" viewBox="0 0 24 24">
+<path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>''',
+    Icons.folder_copy_outlined: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="2" viewBox="0 0 24 24">
+<path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M12 11v6m3-3H9" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>''',
+    Icons.laptop_mac: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="1.8" viewBox="0 0 24 24">
+<path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>''',
+    Icons.chevron_right: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>''',
+    Icons.badge_outlined: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="1.8" viewBox="0 0 24 24">
+<path d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>''',
+    Icons.image_outlined: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="2" viewBox="0 0 24 24">
+<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>''',
+    Icons.more_vert: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="2" viewBox="0 0 24 24">
+<path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>''',
+    Icons.picture_as_pdf_outlined: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="2" viewBox="0 0 24 24">
+<path d="M9 12h6m2 4H7m6-12H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>''',
+    Icons.home: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="#000000" viewBox="0 0 24 24">
+<path d="M11.47 3.84a.75.75 0 011.06 0l8.69 8.69a.75.75 0 101.06-1.06l-8.689-8.69a2.25 2.25 0 00-3.182 0l-8.69 8.69a.75.75 0 001.061 1.06l8.69-8.69z"></path>
+<path d="M12 5.432l8.159 8.159c.03.03.06.058.091.086v6.198c0 1.035-.84 1.875-1.875 1.875H15a.75.75 0 01-.75-.75v-4.5a.75.75 0 00-.75-.75h-3a.75.75 0 00-.75.75V21a.75.75 0 01-.75.75H5.625a1.875 1.875 0 01-1.875-1.875v-6.198a2.29 2.29 0 00.091-.086L12 5.43z"></path>
+</svg>''',
+    Icons.home_outlined: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="#000000" viewBox="0 0 24 24">
+<path d="M11.47 3.84a.75.75 0 011.06 0l8.69 8.69a.75.75 0 101.06-1.06l-8.689-8.69a2.25 2.25 0 00-3.182 0l-8.69 8.69a.75.75 0 001.061 1.06l8.69-8.69z"></path>
+<path d="M12 5.432l8.159 8.159c.03.03.06.058.091.086v6.198c0 1.035-.84 1.875-1.875 1.875H15a.75.75 0 01-.75-.75v-4.5a.75.75 0 00-.75-.75h-3a.75.75 0 00-.75.75V21a.75.75 0 01-.75.75H5.625a1.875 1.875 0 01-1.875-1.875v-6.198a2.29 2.29 0 00.091-.086L12 5.43z"></path>
+</svg>''',
+    Icons.folder_special_outlined: r'''<svg xmlns="http://www.w3.org/2000/svg" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" stroke="#000000" viewBox="0 0 24 24">
+<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+<polygon points="12 11 12.7 13.1 15 13.1 13.1 14.5 13.8 16.7 12 15.3 10.2 16.7 10.9 14.5 9 13.1 11.3 13.1 12 11"></polygon>
+</svg>''',
+    Icons.folder_special: r'''<svg xmlns="http://www.w3.org/2000/svg" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" stroke="#000000" viewBox="0 0 24 24">
+<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+<polygon points="12 11 12.7 13.1 15 13.1 13.1 14.5 13.8 16.7 12 15.3 10.2 16.7 10.9 14.5 9 13.1 11.3 13.1 12 11"></polygon>
+</svg>''',
+    Icons.credit_card_outlined: r'''<svg xmlns="http://www.w3.org/2000/svg" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" stroke="#000000" viewBox="0 0 24 24">
+<rect height="14" rx="3" width="20" x="2" y="5"></rect>
+<line x1="2" x2="22" y1="10" y2="10"></line>
+</svg>''',
+    Icons.credit_card: r'''<svg xmlns="http://www.w3.org/2000/svg" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" stroke="#000000" viewBox="0 0 24 24">
+<rect height="14" rx="3" width="20" x="2" y="5"></rect>
+<line x1="2" x2="22" y1="10" y2="10"></line>
+</svg>''',
+    Icons.share_outlined: r'''<svg xmlns="http://www.w3.org/2000/svg" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" stroke="#000000" viewBox="0 0 24 24">
+<circle cx="18" cy="5" r="3"></circle>
+<circle cx="6" cy="12" r="3"></circle>
+<circle cx="18" cy="19" r="3"></circle>
+<line x1="8.59" x2="15.42" y1="13.51" y2="17.49"></line>
+<line x1="15.41" x2="8.59" y1="6.51" y2="10.49"></line>
+</svg>''',
+    Icons.share: r'''<svg xmlns="http://www.w3.org/2000/svg" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" stroke="#000000" viewBox="0 0 24 24">
+<circle cx="18" cy="5" r="3"></circle>
+<circle cx="6" cy="12" r="3"></circle>
+<circle cx="18" cy="19" r="3"></circle>
+<line x1="8.59" x2="15.42" y1="13.51" y2="17.49"></line>
+<line x1="15.41" x2="8.59" y1="6.51" y2="10.49"></line>
+</svg>''',
+  };
+  @override
+  Widget build(BuildContext context) {
+    final svg = _svg[icon];
+    final theme = IconTheme.of(context);
+    final resolvedColor = color ?? theme.color ?? const Color(0xFF64748B);
+    final resolvedSize = size ?? theme.size ?? 24;
+    if (svg == null) return Icon(icon, size: resolvedSize, color: resolvedColor);
+    return SvgPicture.string(svg, width: resolvedSize, height: resolvedSize,
+      colorFilter: ColorFilter.mode(resolvedColor, BlendMode.srcIn));
+  }
+}
+
+class _VaultPressFeedback extends StatefulWidget {
+  const _VaultPressFeedback({required this.child});
+  final Widget child;
+  @override
+  State<_VaultPressFeedback> createState() => _VaultPressFeedbackState();
+}
+class _VaultPressFeedbackState extends State<_VaultPressFeedback> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: Listener(
+      onPointerDown: (_) => setState(() => _pressed = true),
+      onPointerUp: (_) => setState(() => _pressed = false),
+      onPointerCancel: (_) => setState(() => _pressed = false),
+      child: AnimatedScale(scale: _pressed ? .95 : 1,
+        duration: const Duration(milliseconds: 150), child: widget.child),
+    ),
+  );
 }
