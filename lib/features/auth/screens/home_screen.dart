@@ -13,6 +13,7 @@ import '../../Personal Vault/screens/dashboard.dart' as personal_vault;
 import '../../food/screens/food_home_screen.dart';
 import '../../quickfix/user/screens/home_services_screen.dart';
 
+
 class _Palette {
   static const bg = Color(0xFFF3F1FF);
   static const surface = Color(0xFFFFFFFF);
@@ -414,8 +415,13 @@ class _HomeScreenState extends State<HomeScreen> {
         screen = const HomeServicesScreen();
         break;
       case 'Personal Vault':
-        screen = const personal_vault.PersonalDashboardScreen();
-        break;
+  if (FirebaseAuth.instance.currentUser == null) {
+    _showLoginRequired('Personal Vault');
+    return;
+  }
+
+  screen = const personal_vault.PersonalDashboardScreen();
+  break;
     }
 
     if (screen != null) {
