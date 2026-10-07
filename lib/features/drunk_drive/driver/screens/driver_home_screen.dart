@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../../models/booking_model.dart';
+import '../../models/booking_status.dart';
 import '../../models/vehicle_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/driver_service.dart';
+import '../../services/vehicle_service.dart';
+import '../../services/driver_rating_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 import 'driver_application_screen.dart';
+import 'driver_active_trip_screen.dart';
+import 'driver_trip_history_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -17,15 +22,28 @@ class DriverHomeScreen extends StatefulWidget {
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
   final DriverService _driverService = DriverService();
   final BookingService _bookingService = BookingService();
+  final DriverRatingService _driverRatingService = DriverRatingService();
 
   bool _isOnline = false;
   bool _isApproved = false;
   List<BookingModel> _incomingRequests = [];
+  BookingModel? _activeTrip;
+  final TextEditingController _pinController = TextEditingController();
+  bool _isStartingTrip = false;
+  int _todayTrips = 0;
+  double _todayEarnings = 0;
+  double _weeklyEarnings = 0;
 
   @override
   void initState() {
     super.initState();
     _checkAuthorization();
+  }
+
+  @override
+  void dispose() {
+    _pinController.dispose();
+    super.dispose();
   }
 
   void _checkAuthorization() {
@@ -36,15 +54,266 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
     if (isApproved) {
       _loadRequests();
+      _loadActiveTrip();
+      _loadDriverStats();
     }
   }
 
   void _loadRequests() {
-    // Incoming requests for drivers (e.g. requested bookings)
-    final allBookings = _bookingService.getMyBookings();
     setState(() {
-      _incomingRequests = allBookings;
+      _incomingRequests = _bookingService.getAvailableRequests();
     });
+  }
+
+  void _loadActiveTrip() {
+    setState(() {
+      _activeTrip = _bookingService.getMyActiveDriverBooking(
+        VehicleService.currentUserId,
+      );
+    });
+  }
+
+  String get _driverRatingText {
+    final average = _driverRatingService.getAverageRating(
+      VehicleService.currentUserId,
+    );
+
+    final count = _driverRatingService.getRatingCount(
+      VehicleService.currentUserId,
+    );
+
+    if (average == null || count == 0) {
+      return 'No ratings';
+    }
+
+    return '${average.toStringAsFixed(1)} ★ ($count)';
+  }
+
+  void _loadDriverStats() {
+    final completedTrips = _bookingService.getCompletedDriverTrips(
+      VehicleService.currentUserId,
+    );
+
+    final now = DateTime.now();
+
+    final startOfToday = DateTime(now.year, now.month, now.day);
+
+    final startOfWeek = startOfToday.subtract(Duration(days: now.weekday - 1));
+
+    int todayTrips = 0;
+    double todayEarnings = 0;
+    double weeklyEarnings = 0;
+
+    for (final booking in completedTrips) {
+      final completedAt = booking.completedAt;
+
+      if (completedAt == null) {
+        continue;
+      }
+
+      if (!completedAt.isBefore(startOfToday)) {
+        todayTrips++;
+        todayEarnings += booking.fareEstimate.total;
+      }
+
+      if (!completedAt.isBefore(startOfWeek)) {
+        weeklyEarnings += booking.fareEstimate.total;
+      }
+    }
+
+    setState(() {
+      _todayTrips = todayTrips;
+      _todayEarnings = todayEarnings;
+      _weeklyEarnings = weeklyEarnings;
+    });
+  }
+
+  void _onStartHeading() {
+    if (_activeTrip == null) return;
+
+    final updated = _bookingService.startHeadingToCustomer(
+      _activeTrip!.id,
+      VehicleService.currentUserId,
+    );
+
+    if (updated == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to update trip status.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _activeTrip = updated;
+    });
+  }
+
+  void _onDriverArrived() {
+    if (_activeTrip == null) return;
+
+    final updated = _bookingService.markDriverArrived(
+      _activeTrip!.id,
+      VehicleService.currentUserId,
+    );
+
+    if (updated == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to update trip status.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _activeTrip = updated;
+    });
+  }
+
+  void _onBeginVerification() {
+    if (_activeTrip == null) return;
+
+    final updated = _bookingService.beginVerification(
+      _activeTrip!.id,
+      VehicleService.currentUserId,
+    );
+
+    if (updated == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to start verification.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _activeTrip = updated;
+    });
+  }
+
+  Future<void> _onStartTrip() async {
+    if (_activeTrip == null) return;
+
+    setState(() => _isStartingTrip = true);
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final updated = _bookingService.startTrip(
+      bookingId: _activeTrip!.id,
+      driverId: VehicleService.currentUserId,
+      enteredPin: _pinController.text,
+    );
+
+    if (!mounted) return;
+    setState(() => _isStartingTrip = false);
+
+    if (updated == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Incorrect PIN. Please try again.')),
+      );
+      return;
+    }
+
+    _pinController.clear();
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DriverActiveTripScreen(booking: updated),
+      ),
+    );
+
+    _loadActiveTrip();
+    _loadRequests();
+    _loadDriverStats();
+  }
+
+  Future<void> _onCancelBooking() async {
+    if (_activeTrip == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: DrunkDriveColors.surface,
+          title: const Text(
+            'Cancel Booking?',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            'Are you sure you want to cancel this booking?',
+            style: TextStyle(color: DrunkDriveColors.textMuted),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Keep Booking'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text(
+                'Cancel Booking',
+                style: TextStyle(color: DrunkDriveColors.danger),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final cancelled = _bookingService.cancelBookingByDriver(
+      _activeTrip!.id,
+      VehicleService.currentUserId,
+    );
+
+    if (cancelled == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This booking can no longer be cancelled.'),
+        ),
+      );
+      return;
+    }
+
+    _pinController.clear();
+    _loadActiveTrip();
+    _loadRequests();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Booking cancelled.')));
+  }
+
+  // NOTE: in this prototype, the same mock account acts as both the
+  // passenger and the driver (there's only one test user). So a
+  // driver "accepting" a booking here may be accepting their own
+  // trip. This resolves naturally once there are separate real
+  // accounts — the accept/decline logic itself doesn't change.
+  void _onAccept(BookingModel booking) {
+    final updated = _bookingService.acceptBooking(
+      booking.id,
+      VehicleService.currentUserId,
+    );
+    if (updated == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This booking is no longer available.')),
+      );
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Booking Accepted!')));
+    }
+    _loadRequests();
+    _loadActiveTrip();
+  }
+
+  void _onDecline(BookingModel booking) {
+    // Mock-stage decline: this driver simply stops seeing it. A real
+    // backend would record which driver declined so it isn't shown
+    // to them again, without affecting other drivers.
+    setState(() {
+      _incomingRequests.removeWhere((b) => b.id == booking.id);
+    });
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Request declined')));
   }
 
   void _toggleOnline(bool value) {
@@ -58,11 +327,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     setState(() {
       _isOnline = value;
     });
-
+    if (_isOnline) {
+      _loadRequests();
+      _loadActiveTrip();
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(_isOnline ? 'You are now ONLINE' : 'You are now OFFLINE'),
-        backgroundColor: _isOnline ? DrunkDriveColors.success : DrunkDriveColors.surfaceBorder,
+        backgroundColor: _isOnline
+            ? DrunkDriveColors.success
+            : DrunkDriveColors.surfaceBorder,
       ),
     );
   }
@@ -113,7 +387,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             const Text(
               'Your account has not been approved for Driver Mode yet. You must complete verification and receive backend approval first.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: DrunkDriveColors.textMuted, fontSize: 13, height: 1.4),
+              style: TextStyle(
+                color: DrunkDriveColors.textMuted,
+                fontSize: 13,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -128,10 +406,18 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: DrunkDriveColors.accent,
                 foregroundColor: DrunkDriveColors.background,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
-              child: const Text('View Driver Application Status', style: TextStyle(fontWeight: FontWeight.w800)),
+              child: const Text(
+                'View Driver Application Status',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
             ),
           ],
         ),
@@ -150,7 +436,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             color: DrunkDriveColors.surface,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: _isOnline ? DrunkDriveColors.success : DrunkDriveColors.surfaceBorder,
+              color: _isOnline
+                  ? DrunkDriveColors.success
+                  : DrunkDriveColors.surfaceBorder,
               width: 1.5,
             ),
           ),
@@ -163,7 +451,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     width: 12,
                     height: 12,
                     decoration: BoxDecoration(
-                      color: _isOnline ? DrunkDriveColors.success : DrunkDriveColors.textMuted,
+                      color: _isOnline
+                          ? DrunkDriveColors.success
+                          : DrunkDriveColors.textMuted,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -171,7 +461,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   Text(
                     _isOnline ? 'ONLINE' : 'OFFLINE',
                     style: TextStyle(
-                      color: _isOnline ? DrunkDriveColors.success : DrunkDriveColors.textMuted,
+                      color: _isOnline
+                          ? DrunkDriveColors.success
+                          : DrunkDriveColors.textMuted,
                       fontWeight: FontWeight.w800,
                       fontSize: 16,
                     ),
@@ -192,11 +484,21 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         Row(
           children: [
             Expanded(
-              child: _statCard('Today\'s Trips', '4', Icons.local_taxi_rounded, DrunkDriveColors.accent),
+              child: _statCard(
+                'Today\'s Trips',
+                _todayTrips.toString(),
+                Icons.local_taxi_rounded,
+                DrunkDriveColors.accent,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _statCard('Today\'s Earnings', _rs(4500), Icons.payments_rounded, DrunkDriveColors.success),
+              child: _statCard(
+                'Today\'s Earnings',
+                _rs(_todayEarnings),
+                Icons.payments_rounded,
+                DrunkDriveColors.success,
+              ),
             ),
           ],
         ),
@@ -204,31 +506,119 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         Row(
           children: [
             Expanded(
-              child: _statCard('Driver Rating', '4.8 ★', Icons.star_rounded, Colors.amber),
+              child: _statCard(
+                'Driver Rating',
+                _driverRatingText,
+                Icons.star_rounded,
+                Colors.amber,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _statCard('Weekly Total', _rs(18200), Icons.account_balance_wallet_rounded, Colors.cyanAccent),
+              child: _statCard(
+                'Weekly Total',
+                _rs(_weeklyEarnings),
+                Icons.account_balance_wallet_rounded,
+                Colors.cyanAccent,
+              ),
             ),
           ],
         ),
+        const SizedBox(height: 16),
+
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DriverTripHistoryScreen(),
+                ),
+              );
+
+              _loadDriverStats();
+            },
+            icon: const Icon(Icons.history_rounded),
+            label: const Text(
+              'View Trip History',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: DrunkDriveColors.accent,
+              side: const BorderSide(color: DrunkDriveColors.accent),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ),
+
         const SizedBox(height: 24),
 
-        // Booking Requests Section
-        const Text(
-          'Booking Requests',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          _isOnline
-              ? 'Searching for customer trip requests in your area...'
-              : 'Switch to ONLINE to start receiving booking requests.',
-          style: const TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
-        ),
-        const SizedBox(height: 14),
+        if (_activeTrip != null) ...[
+          const Text(
+            'Your Current Trip',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _ActiveTripCard(
+            booking: _activeTrip!,
+            pinController: _pinController,
+            isStarting: _isStartingTrip,
+            onStartHeading: _onStartHeading,
+            onDriverArrived: _onDriverArrived,
+            onBeginVerification: _onBeginVerification,
+            onStartTrip: _onStartTrip,
+            onCancelBooking: _onCancelBooking,
+            onViewActiveTrip: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      DriverActiveTripScreen(booking: _activeTrip!),
+                ),
+              );
+              _loadActiveTrip();
+              _loadRequests();
+              _loadDriverStats();
+            },
+          ),
+          const SizedBox(height: 24),
+        ],
 
-        if (!_isOnline)
+        // Booking Requests Section — hidden while the driver already
+        // has an active trip (spec section 33).
+        if (_activeTrip == null) ...[
+          const Text(
+            'Booking Requests',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _isOnline
+                ? 'Searching for customer trip requests in your area...'
+                : 'Switch to ONLINE to start receiving booking requests.',
+            style: const TextStyle(
+              color: DrunkDriveColors.textMuted,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+
+        if (_activeTrip != null)
+          const SizedBox.shrink()
+        else if (!_isOnline)
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -257,10 +647,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             ),
           )
         else
-          ..._incomingRequests.map((booking) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _BookingRequestCard(booking: booking),
-              )),
+          ..._incomingRequests.map(
+            (booking) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _BookingRequestCard(
+                booking: booking,
+                onAccept: () => _onAccept(booking),
+                onDecline: () => _onDecline(booking),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -277,9 +673,22 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         children: [
           Icon(icon, color: color, size: 22),
           const SizedBox(height: 10),
-          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(color: DrunkDriveColors.textMuted, fontSize: 11)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: DrunkDriveColors.textMuted,
+              fontSize: 11,
+            ),
+          ),
         ],
       ),
     );
@@ -288,8 +697,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
 class _BookingRequestCard extends StatelessWidget {
   final BookingModel booking;
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
 
-  const _BookingRequestCard({required this.booking});
+  const _BookingRequestCard({
+    required this.booking,
+    required this.onAccept,
+    required this.onDecline,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -298,7 +713,9 @@ class _BookingRequestCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: DrunkDriveColors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: DrunkDriveColors.accent.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: DrunkDriveColors.accent.withValues(alpha: 0.5),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,30 +725,53 @@ class _BookingRequestCard extends StatelessWidget {
             children: [
               const Text(
                 'New Trip Request',
-                style: TextStyle(color: DrunkDriveColors.accent, fontWeight: FontWeight.w800, fontSize: 14),
+                style: TextStyle(
+                  color: DrunkDriveColors.accent,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
               ),
               Text(
                 'Rs. ${booking.fareEstimate.total.toStringAsFixed(0)}',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Text('Pickup: ${booking.pickup.name}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-          Text('Destination: ${booking.destination.name}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(
+            'Pickup: ${booking.pickup.name}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            'Destination: ${booking.destination.name}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
             'Vehicle: ${booking.vehicle.displayName} (${booking.vehicle.transmission.label})',
-            style: const TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+            style: const TextStyle(
+              color: DrunkDriveColors.textMuted,
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request declined')));
-                  },
+                  onPressed: onDecline,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: DrunkDriveColors.danger,
                     side: const BorderSide(color: DrunkDriveColors.danger),
@@ -342,18 +782,282 @@ class _BookingRequestCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking Accepted!')));
-                  },
+                  onPressed: onAccept,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: DrunkDriveColors.success,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('ACCEPT', style: TextStyle(fontWeight: FontWeight.w800)),
+                  child: const Text(
+                    'ACCEPT',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
                 ),
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveTripCard extends StatelessWidget {
+  final BookingModel booking;
+  final TextEditingController pinController;
+  final bool isStarting;
+  final VoidCallback onStartHeading;
+  final VoidCallback onDriverArrived;
+  final VoidCallback onBeginVerification;
+  final VoidCallback onStartTrip;
+  final VoidCallback onCancelBooking;
+  final VoidCallback onViewActiveTrip;
+
+  const _ActiveTripCard({
+    required this.booking,
+    required this.pinController,
+    required this.isStarting,
+    required this.onStartHeading,
+    required this.onDriverArrived,
+    required this.onBeginVerification,
+    required this.onStartTrip,
+    required this.onCancelBooking,
+    required this.onViewActiveTrip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: DrunkDriveColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: DrunkDriveColors.success.withValues(alpha: 0.6),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                booking.status.label,
+                style: const TextStyle(
+                  color: DrunkDriveColors.success,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                'Rs. ${booking.fareEstimate.total.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Pickup: ${booking.pickup.name}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            'Destination: ${booking.destination.name}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Vehicle: ${booking.vehicle.displayName} (${booking.vehicle.registrationNumber})',
+            style: const TextStyle(
+              color: DrunkDriveColors.textMuted,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (booking.status == BookingStatus.driverAssigned) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onStartHeading,
+                icon: const Icon(Icons.directions_car_rounded),
+                label: const Text(
+                  'Start Heading to Customer',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DrunkDriveColors.accent,
+                  foregroundColor: DrunkDriveColors.background,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ] else if (booking.status == BookingStatus.driverArriving) ...[
+            const Text(
+              'You are heading to the customer pickup location.',
+              style: TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onDriverArrived,
+                icon: const Icon(Icons.location_on_rounded),
+                label: const Text(
+                  "I've Arrived",
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DrunkDriveColors.accent,
+                  foregroundColor: DrunkDriveColors.background,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ] else if (booking.status == BookingStatus.driverArrived) ...[
+            const Text(
+              'You have arrived at the pickup location.',
+              style: TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onBeginVerification,
+                icon: const Icon(Icons.verified_user_rounded),
+                label: const Text(
+                  'Verify Customer',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DrunkDriveColors.accent,
+                  foregroundColor: DrunkDriveColors.background,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ] else if (booking.status == BookingStatus.verification) ...[
+            const Text(
+              'Ask the customer for their Trip PIN to start the trip.',
+              style: TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: pinController,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                letterSpacing: 4,
+              ),
+              decoration: InputDecoration(
+                counterText: '',
+                hintText: '••••',
+                hintStyle: const TextStyle(color: DrunkDriveColors.textMuted),
+                filled: true,
+                fillColor: DrunkDriveColors.background,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: isStarting ? null : onStartTrip,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DrunkDriveColors.accent,
+                  foregroundColor: DrunkDriveColors.background,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: isStarting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: DrunkDriveColors.background,
+                        ),
+                      )
+                    : const Text(
+                        'Start Trip',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+              ),
+            ),
+          ] else if (booking.status == BookingStatus.tripStarted ||
+              booking.status == BookingStatus.tripInProgress) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onViewActiveTrip,
+                icon: const Icon(Icons.navigation_rounded),
+                label: const Text(
+                  'View Active Trip',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DrunkDriveColors.accent,
+                  foregroundColor: DrunkDriveColors.background,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
+          if (booking.status == BookingStatus.driverAssigned ||
+              booking.status == BookingStatus.driverArriving ||
+              booking.status == BookingStatus.driverArrived ||
+              booking.status == BookingStatus.verification) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: isStarting ? null : onCancelBooking,
+                icon: const Icon(Icons.cancel_outlined),
+                label: const Text(
+                  'Cancel Booking',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: DrunkDriveColors.danger,
+                  side: const BorderSide(color: DrunkDriveColors.danger),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

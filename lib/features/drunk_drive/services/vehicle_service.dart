@@ -1,5 +1,5 @@
 import '../models/vehicle_model.dart';
-
+import 'dart:typed_data';
 // Mock, in-memory vehicle service.
 //
 // This follows the same pattern as admin_service.dart's dummyUsers list —
@@ -47,7 +47,8 @@ class VehicleService {
     required String colour,
     required VehicleType vehicleType,
     required TransmissionType transmission,
-    String? photoPath,
+    Uint8List? photoBytes,
+String? photoName,
   }) {
     final isFirstVehicle = getMyVehicles().isEmpty;
 
@@ -60,7 +61,8 @@ class VehicleService {
       colour: colour.trim(),
       vehicleType: vehicleType,
       transmission: transmission,
-      photoPath: photoPath,
+      photoBytes: photoBytes,
+      photoName: photoName,
       // The first vehicle a user adds becomes their default automatically.
       isDefault: isFirstVehicle,
     );

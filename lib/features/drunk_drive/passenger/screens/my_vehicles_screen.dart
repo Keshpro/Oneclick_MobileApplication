@@ -63,12 +63,28 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
     }
   }
 
-  void _onEditVehicle(VehicleModel vehicle) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Edit Vehicle — coming soon')));
-  }
+  Future<void> _onEditVehicle(VehicleModel vehicle) async {
+  final updated = await Navigator.push<bool>(
+    context,
+    MaterialPageRoute(
+      builder: (context) => AddVehicleScreen(
+        vehicle: vehicle,
+      ),
+    ),
+  );
 
+  if (updated == true) {
+    await _loadVehicles();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Vehicle updated'),
+      ),
+    );
+  }
+}
   Future<void> _onSetDefault(VehicleModel vehicle) async {
     _vehicleService.setDefaultVehicle(vehicle.id);
     await _loadVehicles();
