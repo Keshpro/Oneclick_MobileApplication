@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'share_record_screen.dart';
-import 'shared_with_me_details_screen.dart';
 import 'dashboard.dart';
 import 'vault_screen.dart';
 import 'subscriptions_screen.dart';
@@ -30,14 +29,17 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
   
   List<SharedRecord> sharedRecords = [];
 
+  List<SharedRecord> receivedRecords = [];
+
   bool sharedByMe = true;
 
-  @override
+@override
 void initState() {
   super.initState();
 
   if (FirebaseAuth.instance.currentUser != null) {
     _loadSharedRecords();
+    _loadReceivedRecords();
   }
 }
 
@@ -47,6 +49,15 @@ void _loadSharedRecords() {
 
     setState(() {
       sharedRecords = records;
+    });
+  });
+}
+void _loadReceivedRecords() {
+  _sharingService.getReceivedRecords().listen((records) {
+    if (!mounted) return;
+
+    setState(() {
+      receivedRecords = records;
     });
   });
 }
@@ -1077,106 +1088,94 @@ Widget _buildTopBar() {
   // ============================================================
   // SHARED WITH ME
   // ============================================================
-  Widget _buildReceivedSection() {
-    return _card(
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const _VaultReferenceIcon(
-                Icons.folder_shared_outlined,
-                color: purple,
-                size: 22,
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Shared with Me',
-                  style: TextStyle(
-                    color: ink,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Text(
-                '2 Received',
-                style: TextStyle(
-                  color: purple.withValues(alpha: .9),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          const Text(
-            'Decrypted items sent to your OneClick address from '
-            'verified contacts.',
-            style: TextStyle(
-              color: muted,
-              fontSize: 12,
-              height: 1.6,
+Widget _buildReceivedSection() {
+  return _card(
+    padding: const EdgeInsets.all(22),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const _VaultReferenceIcon(
+              Icons.folder_shared_outlined,
+              color: purple,
+              size: 22,
             ),
-          ),
-          const SizedBox(height: 21),
-          _receivedItem(
-            icon: Icons.health_and_safety_outlined,
-            title: 'Family Health Insurance Group',
-            from: 'From Arthur Miller (Owner)',
-            permission: 'View & Download',
-            footerIcon: Icons.event_available_outlined,
-            footer: 'Valid until Dec 2026',
-            onOpen: () {
-              showSharedWithMeDetails(
-                context,
-                const SharedWithMeItem(
-                  title: 'Family Health Insurance Group',
-                  owner: 'Arthur Miller',
-                  permission: 'View & Download',
-                  expiry: 'Valid until Dec 2026',
-                  fileName: 'Family_Health_Insurance.pdf',
-                  fileType: 'PDF',
-                  fileSize: '2.8 MB',
-                  icon: Icons.health_and_safety_outlined,
-                  canDownload: true,
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Shared with Me',
+                style: TextStyle(
+                  color: ink,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                 ),
-              );
-            },
+              ),
+            ),
+            Text(
+              '${receivedRecords.length} Received',
+              style: TextStyle(
+                color: purple.withValues(alpha: .9),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 22),
+
+        const Text(
+          'Records shared with your OneClick account.',
+          style: TextStyle(
+            color: muted,
+            fontSize: 12,
+            height: 1.6,
           ),
-          const SizedBox(height: 14),
-          _receivedItem(
-            icon: Icons.directions_car_outlined,
-            title: 'Rental Car Protection Receipt',
-            from: 'From Chloe Bennett (Owner)',
-            permission: 'View only',
-            footerIcon: Icons.timer_outlined,
-            footer: 'Expires tomorrow',
-            dangerFooter: true,
-            onOpen: () {
-              showSharedWithMeDetails(
-                context,
-                const SharedWithMeItem(
-                  title: 'Rental Car Protection Receipt',
-                  owner: 'Chloe Bennett',
-                  permission: 'View only',
-                  expiry: 'Expires tomorrow',
-                  fileName: 'Rental_Car_Protection_Receipt.pdf',
-                  fileType: 'PDF',
-                  fileSize: '1.4 MB',
-                  icon: Icons.directions_car_outlined,
-                  canDownload: false,
-                  expiringSoon: true,
+        ),
+
+        const SizedBox(height: 21),
+
+        if (receivedRecords.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 25),
+              child: Text(
+                'No records have been shared with you yet.',
+                style: TextStyle(
+                  color: muted,
+                  fontSize: 12,
                 ),
-              );
-            },
+              ),
+            ),
+          )
+        else
+          ...receivedRecords.map((record) {
+            final expiryText = record.expiryDate == null
+                ? 'No expiry'
+                : 'Expires ${record.expiryDate!.day}/${record.expiryDate!.month}/${record.expiryDate!.year}';
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _receivedItem(
+                icon: Icons.description_outlined,
+                title: record.recordTitle,
+                from: 'Shared by ${record.ownerId}',
+                permission: record.permission,
+                footerIcon: record.expiryDate == null
+                    ? Icons.all_inclusive
+                    : Icons.event_available_outlined,
+                footer: expiryText,
+                onOpen: () {
+                  _message('Opening ${record.recordTitle}');
+                },
+              ),
+            );
+          }),
+      ],
     ),
-        ],
-      ),
-    );
-  }
+  );
+}
   Widget _receivedItem({
     required IconData icon,
     required String title,
