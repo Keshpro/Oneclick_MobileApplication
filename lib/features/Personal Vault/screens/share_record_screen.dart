@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/sharing_service.dart';
-import '../models/vault_record.dart';
 import '../services/vault_service.dart';
 
 class ShareRecordItem {
