@@ -7,6 +7,11 @@ import 'shared_with_me_details_screen.dart';
 import 'dashboard.dart';
 import 'vault_screen.dart';
 import 'subscriptions_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/shared_record.dart';
+import '../services/sharing_service.dart';
+
+
 class SharingCenterScreen extends StatefulWidget {
   const SharingCenterScreen({super.key});
   @override
@@ -20,7 +25,32 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
   static const Color purple = Color(0xFF4F46E5);
   static const Color purple2 = Color(0xFF9333EA);
   static const Color danger = Color(0xFFF43F5E);
+
+  final SharingService _sharingService = SharingService();
+  
+  List<SharedRecord> sharedRecords = [];
+
   bool sharedByMe = true;
+
+  @override
+void initState() {
+  super.initState();
+
+  if (FirebaseAuth.instance.currentUser != null) {
+    _loadSharedRecords();
+  }
+}
+
+void _loadSharedRecords() {
+  _sharingService.getSharedRecords().listen((records) {
+    if (!mounted) return;
+
+    setState(() {
+      sharedRecords = records;
+    });
+  });
+}
+
   @override
   Widget build(BuildContext context) {
     final base = Theme.of(context);
@@ -107,20 +137,35 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
                         _buildTabs(),
                         const SizedBox(height: 30),
                         if (sharedByMe) ...[
-                          _buildRevocationNotice(),
-                          const SizedBox(height: 28),
-                          _buildApartmentLease(),
-                          const SizedBox(height: 18),
-                          _buildHomePurchase(),
-                          const SizedBox(height: 18),
-                          _buildWifiAdmin(),
-                          const SizedBox(height: 30),
-                          _buildReceivedSection(),
-                        ] else ...[
-                          _buildReceivedSection(),
-                        ],
+                        _buildRevocationNotice(),
                         const SizedBox(height: 28),
+
+                        if (sharedRecords.isEmpty)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 30),
+                              child: Text(
+                                'No shared records yet.',
+                                style: TextStyle(
+                                  color: muted,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          ...sharedRecords.map(
+                            (record) => Padding(
+                              padding: const EdgeInsets.only(bottom: 18),
+                              child: _buildSharedRecordCard(record),
+                            ),
+                          ),
+
+                        const SizedBox(height: 10),
                         _buildShareNewRecord(),
+                      ] else ...[
+                        _buildReceivedSection(),
+                      ],
                       ],
                     ),
                   ),
@@ -562,6 +607,128 @@ Widget _buildTopBar() {
       ),
     );
   }
+
+  Widget _buildSharedRecordCard(SharedRecord record) {
+  final recipientName = record.recipientName.trim();
+
+  final initials = recipientName.isNotEmpty
+      ? recipientName[0].toUpperCase()
+      : '?';
+
+  final expiryText = record.expiryDate == null
+      ? 'Never expires'
+      : 'Expires ${record.expiryDate!.day}/${record.expiryDate!.month}/${record.expiryDate!.year}';
+
+  final isRevoked = record.status == 'Revoked';
+
+  return _card(
+    padding: const EdgeInsets.all(22),
+    child: Column(
+      children: [
+        Row(
+          children: [
+            _circleIcon(
+              Icons.description_outlined,
+              color: purple,
+              size: 44,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    record.recordTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: ink,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'Shared record',
+                    style: const TextStyle(
+                      color: muted,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _pill(
+              icon: record.permission == 'View and download'
+                  ? Icons.cloud_download_outlined
+                  : Icons.visibility_outlined,
+              text: record.permission,
+              color: purple2,
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 23),
+
+        _recipient(
+          initials: initials,
+          name: record.recipientName,
+          email: record.recipientEmail,
+          rightTitle: 'Status',
+          rightValue: record.status,
+          rightValueColor: isRevoked ? danger : purple,
+          verified: !isRevoked,
+        ),
+
+        const SizedBox(height: 21),
+
+        Row(
+          children: [
+            Expanded(
+              child: _infoPill(
+                record.expiryDate == null
+                    ? Icons.all_inclusive
+                    : Icons.schedule,
+                expiryText,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _infoPill(
+                Icons.shield_outlined,
+                record.permission,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 22),
+
+        Row(
+          children: [
+            Expanded(
+              child: _actionButton(
+                icon: isRevoked
+                    ? Icons.check_circle_outline
+                    : Icons.block,
+                text: isRevoked
+                    ? 'Access Revoked'
+                    : 'Revoke Access',
+                color: isRevoked ? muted : danger,
+                onTap: () {
+                  if (!isRevoked) {
+                    _confirmRevoke(record);
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
   // ============================================================
   // APARTMENT LEASE
   // ============================================================
@@ -647,7 +814,7 @@ Widget _buildTopBar() {
                   text: 'Revoke Access',
                   color: danger,
                   onTap: () {
-                    _confirmRevoke('Marcus Vance');
+                    _message('This mock card is no longer active.');
                   },
                 ),
               ),
@@ -754,7 +921,7 @@ Widget _buildTopBar() {
                   text: 'Revoke Access',
                   color: danger,
                   onTap: () {
-                    _confirmRevoke('Elena Rostova');
+                    _message('This mock card is no longer active.');
                   },
                 ),
               ),
@@ -1589,53 +1756,66 @@ _navItem(
       ),
     );
   }
-  void _confirmRevoke(String person) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: surface,
-          title: const Text(
-            'Revoke Access?',
-            style: TextStyle(
-              color: ink,
-              fontWeight: FontWeight.w700,
+Future<void> _confirmRevoke(SharedRecord record) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        backgroundColor: surface,
+        title: const Text(
+          'Revoke Access?',
+          style: TextStyle(
+            color: ink,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          '${record.recipientName} will immediately lose access to this shared record.',
+          style: const TextStyle(
+            color: muted,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, false);
+            },
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: muted),
             ),
           ),
-          content: Text(
-            '$person will immediately lose access to this shared record.',
-            style: const TextStyle(
-              color: muted,
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, true);
+            },
+            child: const Text(
+              'Revoke',
+              style: TextStyle(
+                color: danger,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: muted),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                _message('Access revoked for $person');
-              },
-              child: const Text(
-                'Revoke',
-                style: TextStyle(
-                  color: danger,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) return;
+
+  try {
+    await _sharingService.revokeAccess(record.id);
+
+    if (!mounted) return;
+
+    _message('Access revoked for ${record.recipientName}');
+  } catch (e) {
+    if (!mounted) return;
+
+    _message('Failed to revoke access: $e');
   }
+}
 }
 
 class _VaultGlassScope extends InheritedWidget {

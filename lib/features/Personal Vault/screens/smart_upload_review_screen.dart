@@ -1037,9 +1037,6 @@ Widget _buildTopBar(BuildContext context) {
           String? fileUrl;
 
           if (widget.selectedFile != null) {
-            final bytes = await widget.selectedFile!.readAsBytes();
-
-            if (widget.selectedFile != null) {
   final bytes = await widget.selectedFile!.readAsBytes();
 
   fileUrl = await _vaultService.uploadFile(
@@ -1047,11 +1044,6 @@ Widget _buildTopBar(BuildContext context) {
     bytes: bytes,
   );
 }
-            fileUrl = await _vaultService.uploadFile(
-              fileName: widget.selectedFile!.name,
-              bytes: bytes,
-            );
-          }
 
           await _vaultService.addRecord(
             title: titleController.text.trim(),

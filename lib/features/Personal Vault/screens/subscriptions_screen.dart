@@ -8,6 +8,9 @@ import 'ai_subscription_checkup_screen.dart';
 import 'dashboard.dart';
 import 'vault_screen.dart';
 import 'sharing_center_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/subscription_service.dart';
+
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
   @override
@@ -22,6 +25,234 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   static const Color purple = Color(0xFF4F46E5);
   static const Color purple2 = Color(0xFF9333EA);
   static const Color danger = Color(0xFFF43F5E);
+
+  final SubscriptionService _subscriptionService = SubscriptionService();
+
+  Future<void> _deleteSubscription(SubscriptionItem item) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Delete Subscription'),
+        content: Text(
+          'Are you sure you want to delete "${item.name}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, false);
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, true);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      );
+    },
+  );
+
+
+  if (confirmed != true) return;
+
+  try {
+    await _subscriptionService.deleteSubscription(item.id);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Subscription deleted'),
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to delete subscription: $e'),
+      ),
+    );
+  }
+  }
+  Future<void> _editSubscription(SubscriptionItem item) async {
+  final nameController = TextEditingController(text: item.name);
+  final subtitleController = TextEditingController(text: item.subtitle);
+  final priceController = TextEditingController(text: item.price);
+  final renewalController = TextEditingController(text: item.renewal);
+  final usageController = TextEditingController(text: item.usage);
+  final categoryController = TextEditingController(text: item.category);
+
+  String status = item.status;
+  bool priceHiked = item.priceHiked;
+
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Edit Subscription'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Name',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: subtitleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Subtitle',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: priceController,
+                    decoration: const InputDecoration(
+                      labelText: 'Price',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: renewalController,
+                    decoration: const InputDecoration(
+                      labelText: 'Renewal',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: usageController,
+                    decoration: const InputDecoration(
+                      labelText: 'Usage',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: categoryController,
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    value: status,
+                    decoration: const InputDecoration(
+                      labelText: 'Status',
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'Active',
+                        child: Text('Active'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Free Trial',
+                        child: Text('Free Trial'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Cancelled',
+                        child: Text('Cancelled'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          status = value;
+                        });
+                      }
+                    },
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Price Hiked'),
+                    value: priceHiked,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        priceHiked = value;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext, false);
+                },
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext, true);
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+
+  if (result != true) {
+    nameController.dispose();
+    subtitleController.dispose();
+    priceController.dispose();
+    renewalController.dispose();
+    usageController.dispose();
+    categoryController.dispose();
+    return;
+  }
+
+  try {
+    await _subscriptionService.updateSubscription(
+      subscriptionId: item.id,
+      name: nameController.text.trim(),
+      subtitle: subtitleController.text.trim(),
+      price: priceController.text.trim(),
+      renewal: renewalController.text.trim(),
+      usage: usageController.text.trim(),
+      category: categoryController.text.trim(),
+      status: status,
+      priceHiked: priceHiked,
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Subscription updated'),
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to update subscription: $e'),
+      ),
+    );
+  } finally {
+    nameController.dispose();
+    subtitleController.dispose();
+    priceController.dispose();
+    renewalController.dispose();
+    usageController.dispose();
+    categoryController.dispose();
+  }
+}
+
+
+
+
   String selectedFilter = 'All';
   String selectedCurrency = 'USD';
   String searchQuery = '';
@@ -29,6 +260,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     final normalized = status.trim().toLowerCase();
     return normalized == 'free trials' ? 'free trial' : normalized;
   }
+
   bool _matchesStatus(SubscriptionItem item, String filter) =>
       filter == 'All' || _statusKey(item.status) == _statusKey(filter);
   int _countFor(String filter) =>
@@ -45,91 +277,39 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       return matchesSearch && _matchesStatus(item, selectedFilter);
     }).toList();
   }
-  final List<SubscriptionItem> subscriptions = const [
-    SubscriptionItem(
-      name: 'Adobe Creative Cloud',
-      subtitle: 'All Apps Individual • Monthly',
-      price: '\LKR 18.000',
-      renewal: 'Renews in 5 days',
-      usage: 'Often used',
-      icon: Icons.layers_outlined,
-      category: 'Productivity & AI',
-      priceHiked: true,
-    ),
-    SubscriptionItem(
-      name: 'ChatGPT Plus',
-      subtitle: 'OpenAI • Monthly',
-      price: '\LKR 6,500',
-      renewal: 'Renews Dec 01',
-      usage: 'Daily usage',
-      icon: Icons.psychology_outlined,
-      category: 'Productivity & AI',
-    ),
-    SubscriptionItem(
-      name: 'Claude Pro',
-      subtitle: 'Anthropic • Monthly',
-      price: '\LKR 6,500',
-      renewal: 'Renews Dec 04',
-      usage: 'Rarely used',
-      icon: Icons.memory_outlined,
-      category: 'Productivity & AI',
-    ),
-    SubscriptionItem(
-      name: 'Spotify Family',
-      subtitle: 'Premium 6 Accounts • Monthly',
-      price: '\LKR 6,200',
-      renewal: 'Renews Nov 24',
-      usage: 'Often used',
-      icon: Icons.music_note,
-      category: 'Entertainment & Media',
-    ),
-    SubscriptionItem(
-      name: 'Netflix Standard',
-      subtitle: '1080p 2-Screens • Monthly',
-      price: '\LKR 4,000',
-      renewal: 'Renews Nov 19',
-      usage: 'Unused this month',
-      icon: Icons.tv_outlined,
-      category: 'Entertainment & Media',
-    ),
-    SubscriptionItem(
-      name: 'iCloud+ 2TB',
-      subtitle: 'Apple Family Storage • Monthly',
-      price: '\LKR 3,000',
-      renewal: 'Renews Nov 28',
-      usage: '1.4 TB / 2 TB used',
-      icon: Icons.cloud_done_outlined,
-      category: 'Storage & Utilities',
-    ),
-    SubscriptionItem(
-      name: 'Figma Pro',
-      subtitle: 'Design workspace • Trial plan',
-      price: 'Free', renewal: 'Trial ends in 7 days', usage: 'Trial in progress',
-      icon: Icons.design_services_outlined, category: 'Productivity & AI',
-      status: 'Free Trial',
-    ),
-    SubscriptionItem(
-      name: 'HBO Max',
-      subtitle: 'Streaming • 7-day trial',
-      price: 'Free', renewal: 'Trial ends in 3 days', usage: 'Trial in progress',
-      icon: Icons.movie_outlined, category: 'Entertainment & Media',
-      status: 'Free Trial',
-    ),
-    SubscriptionItem(
-      name: 'YouTube Premium',
-      subtitle: 'Cancelled • No scheduled charge',
-      price: '—', renewal: 'Auto-renewal off', usage: 'Cancelled',
-      icon: Icons.play_circle_outline, category: 'Entertainment & Media',
-      status: 'Cancelled',
-    ),
-    SubscriptionItem(
-      name: 'Google One',
-      subtitle: 'Storage plan • No scheduled charge',
-      price: '—', renewal: 'Auto-renewal off', usage: 'Cancelled',
-      icon: Icons.cloud_outlined, category: 'Storage & Utilities',
-      status: 'Cancelled',
-    ),
-  ];
+  List<SubscriptionItem> subscriptions = [];
+  @override
+void initState() {
+  super.initState();
+
+  if (FirebaseAuth.instance.currentUser != null) {
+    _loadSubscriptions();
+  }
+}
+
+void _loadSubscriptions() {
+  _subscriptionService.getSubscriptions().listen((records) {
+    if (!mounted) return;
+
+    setState(() {
+      subscriptions = records.map((record) {
+        return SubscriptionItem(
+          id: record.id,
+          name: record.name,
+          subtitle: record.subtitle,
+          price: record.price,
+          renewal: record.renewal,
+          usage: record.usage,
+          icon: Icons.subscriptions_outlined,
+          category: record.category,
+          priceHiked: record.priceHiked,
+          status: record.status,
+        );
+      }).toList();
+    });
+  });
+}
+
 void _showSearch() {
   showModalBottomSheet(
     context: context,
@@ -157,16 +337,16 @@ void _showSearch() {
                 color: purple,
               ),
               suffixIcon: searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const _VaultReferenceIcon(Icons.close),
-                      onPressed: () {
-                        setState(() {
-                          searchQuery = '';
-                        });
-                        Navigator.pop(context);
-                      },
-                    )
-                  : null,
+    ? IconButton(
+        icon: const _VaultReferenceIcon(Icons.close),
+        onPressed: () {
+          setState(() {
+            searchQuery = '';
+          });
+          Navigator.pop(context);
+        },
+      )
+    : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(24),
                 borderSide: BorderSide.none,
@@ -1096,12 +1276,26 @@ Widget _buildHeader() {
                   const SizedBox(height: 3),
                   Text(
                     _statusKey(item.status) == 'active' ? '/mo' : '',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Color(0xFF64748B),
                       fontSize: 12,
                     ),
                   ),
                 ],
+              ),
+
+              const SizedBox(width: 6),
+
+              IconButton(
+                tooltip: 'Edit',
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: () => _editSubscription(item),
+              ),
+
+              IconButton(
+                tooltip: 'Delete',
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () => _deleteSubscription(item),
               ),
             ],
           ),
@@ -1154,6 +1348,7 @@ Widget _buildHeader() {
     ),
   );
 }
+
   Widget _statusBadge(String status) {
     final trial = _statusKey(status) == 'free trial';
     final cancelled = _statusKey(status) == 'cancelled';
@@ -1498,6 +1693,7 @@ Widget _buildAddSubscriptionButton() {
 // SUBSCRIPTION MODEL
 // ================================================================
 class SubscriptionItem {
+  final String id;
   final String name;
   final String subtitle;
   final String price;
@@ -1508,6 +1704,7 @@ class SubscriptionItem {
   final bool priceHiked;
   final String status;
   const SubscriptionItem({
+    required this.id,
     required this.name,
     required this.subtitle,
     required this.price,

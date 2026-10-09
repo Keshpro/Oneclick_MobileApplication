@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/vault_record.dart';
 
@@ -42,9 +43,17 @@ class VaultService {
         .child('vault')
         .child(safeFileName);
 
-    await ref.putData(bytes);
+    debugPrint('VAULT: Starting file upload...');
 
-    return ref.getDownloadURL();
+await ref.putData(bytes);
+
+debugPrint('VAULT: Upload finished. Getting download URL...');
+
+final url = await ref.getDownloadURL();
+
+debugPrint('VAULT: Download URL received: $url');
+
+return url;
   }
 
   Future<void> addRecord({
@@ -78,6 +87,25 @@ class VaultService {
     await doc.set(record.toMap());
   }
 
+Future<void> deleteRecord(String recordId) async {
+  await _recordsCollection.doc(recordId).delete();
+}
+Future<void> updateRecord({
+  required String recordId,
+  required String title,
+  required String category,
+  required String recordType,
+  required String notes,
+  required List<String> tags,
+}) async {
+  await _recordsCollection.doc(recordId).update({
+    'title': title,
+    'category': category,
+    'recordType': recordType,
+    'notes': notes,
+    'tags': tags,
+  });
+}
   Stream<List<VaultRecord>> getRecords() {
     return _recordsCollection
         .orderBy('createdAt', descending: true)
