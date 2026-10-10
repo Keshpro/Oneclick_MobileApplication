@@ -1,8 +1,29 @@
 import 'package:flutter/material.dart';
 import 'vault_screen.dart';
+import 'package:file_picker/file_picker.dart';
+import '../services/vault_service.dart';
 
 class SmartUploadReviewScreen extends StatefulWidget {
-  const SmartUploadReviewScreen({super.key});
+  final String title;
+  final String recordType;
+  final String category;
+  final DateTime renewalDate;
+  final bool expiryNotification;
+  final String notes;
+  final List<String> tags;
+  final PlatformFile? selectedFile;
+
+  const SmartUploadReviewScreen({
+    super.key,
+    required this.title,
+    required this.recordType,
+    required this.category,
+    required this.renewalDate,
+    required this.expiryNotification,
+    required this.notes,
+    required this.tags,
+    this.selectedFile,
+  });
 
   @override
   State<SmartUploadReviewScreen> createState() =>
@@ -11,30 +32,40 @@ class SmartUploadReviewScreen extends StatefulWidget {
 
 class _SmartUploadReviewScreenState
     extends State<SmartUploadReviewScreen> {
+
+  final VaultService _vaultService = VaultService();
+  bool _isSaving = false;
+
   bool renewalReminder = true;
 
-  String selectedCategory = 'Legal & Property';
+late String selectedCategory;
+late TextEditingController titleController;
 
-  final TextEditingController titleController = TextEditingController(
-    text: 'Apartment Lease Agreement - 404 Elm St',
-  );
+final TextEditingController amountController = TextEditingController();
 
-  final TextEditingController amountController = TextEditingController(
-    text: '\$ 2,450.00',
-  );
-
-  final List<String> tags = [
-    '#lease',
-    '#property',
-    '#landlord',
-    '#rent',
-  ];
+late List<String> tags;
 
   static const Color backgroundColor = Color(0xFFF2F3F8);
   static const Color cardColor = Color(0xFFF7F8FC);
   static const Color primaryColor = Color(0xFF6667FF);
   static const Color textColor = Color(0xFF303244);
   static const Color secondaryText = Color(0xFF6F7180);
+
+@override
+void initState() {
+  super.initState();
+
+  selectedCategory = widget.category;
+  titleController = TextEditingController(
+    text: widget.title,
+  );
+
+  tags = widget.tags
+      .map((tag) => tag.startsWith('#') ? tag : '#$tag')
+      .toList();
+
+  renewalReminder = widget.expiryNotification;
+}
 
   @override
   void dispose() {
@@ -997,21 +1028,66 @@ Widget _buildTopBar(BuildContext context) {
       width: double.infinity,
       height: 67,
       child: ElevatedButton.icon(
-        onPressed: () {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Document saved to Vault'),
-    ),
-  );
+        onPressed: _isSaving
+    ? null
+    : () async {
+        setState(() => _isSaving = true);
 
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const VaultScreen(),
-    ),
-    (route) => route.isFirst,
+        try {
+          String? fileUrl;
+
+          if (widget.selectedFile != null) {
+  final bytes = await widget.selectedFile!.readAsBytes();
+
+  fileUrl = await _vaultService.uploadFile(
+    fileName: widget.selectedFile!.name,
+    bytes: bytes,
   );
-},
+}
+
+          await _vaultService.addRecord(
+            title: titleController.text.trim(),
+            recordType: widget.recordType,
+            category: selectedCategory,
+            notes: widget.notes,
+            tags: tags
+                .map((tag) => tag.replaceFirst('#', ''))
+                .toList(),
+            renewalDate: widget.renewalDate,
+            expiryNotification: renewalReminder,
+            fileName: widget.selectedFile?.name,
+            fileUrl: fileUrl,
+          );
+
+          if (!mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Document saved to Vault'),
+            ),
+          );
+
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const VaultScreen(),
+            ),
+            (route) => route.isFirst,
+          );
+        } catch (e) {
+          if (!mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to save document: $e'),
+            ),
+          );
+        } finally {
+          if (mounted) {
+            setState(() => _isSaving = false);
+          }
+        }
+      },
         icon: const Icon(
           Icons.shield_outlined,
           color: primaryColor,

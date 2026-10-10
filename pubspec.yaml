@@ -36,6 +36,7 @@ dependencies:
   file_picker: ^13.1.0
   google_fonts: 8.0.2
   flutter_svg: ^2.3.0
+  firebase_storage: ^13.6.0
 
 # Packages used during development
 dev_dependencies:

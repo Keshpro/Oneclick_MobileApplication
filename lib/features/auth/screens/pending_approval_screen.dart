@@ -39,6 +39,20 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     });
   }
 
+  // Helper method to find which collection the provider belongs to
+  Future<String> _getProviderCollection(String uid) async {
+    // Check in 'doctors' collection first
+    final doctorDoc = await FirebaseFirestore.instance.collection('doctors').doc(uid).get();
+    if (doctorDoc.exists) return 'doctors';
+
+    // Check in 'drivers' collection next
+    final driverDoc = await FirebaseFirestore.instance.collection('drivers').doc(uid).get();
+    if (driverDoc.exists) return 'drivers';
+
+    // Fallback to 'users' if not found in specific collections
+    return 'users';
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -72,94 +86,101 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
           ),
         ],
       ),
-      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return _StatusContent(
-              icon: Icons.wifi_off_rounded,
-              title: 'Could not load your status',
-              message: 'Check your connection and try again.',
-              actionLabel: 'Log out',
-              onAction: _logOut,
-            );
-          }
-
-          if (!snapshot.hasData) {
+      // FutureBuilder to dynamically check whether user is in 'doctors' or 'drivers' collection
+      body: FutureBuilder<String>(
+        future: _getProviderCollection(user.uid),
+        builder: (context, collectionSnapshot) {
+          if (collectionSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final document = snapshot.data;
+          final collectionName = collectionSnapshot.data ?? 'users';
 
-          if (document == null || !document.exists) {
-            return _StatusContent(
-              icon: Icons.person_off_outlined,
-              title: 'Profile not found',
-              message: 'Your account profile is unavailable.',
-              actionLabel: 'Log out',
-              onAction: _logOut,
-            );
-          }
+          return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection(collectionName) // Dynamically targets 'doctors', 'drivers', or 'users'
+                .doc(user.uid)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return _StatusContent(
+                  icon: Icons.wifi_off_rounded,
+                  title: 'Could not load your status',
+                  message: 'Check your connection and try again.',
+                  actionLabel: 'Log out',
+                  onAction: _logOut,
+                );
+              }
 
-          final data = document.data() ?? <String, dynamic>{};
-          final name = (data['name'] as String?)?.trim() ?? '';
-          final role = (data['role'] as String?)?.trim() ?? '';
-          final status = (data['status'] as String?)?.trim() ?? '';
+              if (!snapshot.hasData || !snapshot.data!.exists) {
+                return _StatusContent(
+                  icon: Icons.person_off_outlined,
+                  title: 'Profile not found',
+                  message: 'Your account profile is unavailable.',
+                  actionLabel: 'Log out',
+                  onAction: _logOut,
+                );
+              }
 
-          if (status == 'active') {
-            _goToRoleGate();
+              final document = snapshot.data!;
+              final data = document.data() ?? <String, dynamic>{};
+              final name = (data['name'] as String?)?.trim() ?? '';
+              final role = (data['role'] as String?)?.trim() ?? '';
+              final status = (data['status'] as String?)?.trim() ?? '';
 
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+              if (status == 'active') {
+                _goToRoleGate();
 
-          if (status == 'rejected') {
-            final rejectionReason =
-                (data['rejectionReason'] as String?)?.trim();
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              }
 
-            return _StatusContent(
-              icon: Icons.cancel_outlined,
-              title: 'Registration rejected',
-              message: rejectionReason != null &&
-                      rejectionReason.isNotEmpty
-                  ? rejectionReason
-                  : 'Your registration was not approved. '
-                      'Please contact support for more information.',
-              actionLabel: 'Log out',
-              onAction: _logOut,
-            );
-          }
+              if (status == 'rejected') {
+                final rejectionReason =
+                    (data['rejectionReason'] as String?)?.trim();
 
-          if (status != 'pending') {
-            return _StatusContent(
-              icon: Icons.info_outline,
-              title: 'Status unavailable',
-              message: 'Please contact support about your account.',
-              actionLabel: 'Log out',
-              onAction: _logOut,
-            );
-          }
+                return _StatusContent(
+                  icon: Icons.cancel_outlined,
+                  title: 'Registration rejected',
+                  message: rejectionReason != null &&
+                          rejectionReason.isNotEmpty
+                      ? rejectionReason
+                      : 'Your registration was not approved. '
+                          'Please contact support for more information.',
+                  actionLabel: 'Log out',
+                  onAction: _logOut,
+                );
+              }
 
-          final roleName = switch (role) {
-            'doctor' => 'doctor',
-            'driver' => 'driver',
-            _ => 'user',
-          };
+              if (status != 'pending') {
+                return _StatusContent(
+                  icon: Icons.info_outline,
+                  title: 'Status unavailable',
+                  message: 'Please contact support about your account.',
+                  actionLabel: 'Log out',
+                  onAction: _logOut,
+                );
+              }
 
-          return _StatusContent(
-            icon: Icons.hourglass_top_rounded,
-            title: 'Approval pending',
-            message: [
-              if (name.isNotEmpty) 'Hi $name!',
-              'Your $roleName registration is being reviewed by an admin.',
-              'This page will update automatically once a decision is made.',
-            ].join('\n\n'),
-            actionLabel: 'Log out',
-            onAction: _logOut,
+              final roleName = switch (role) {
+                'doctor' => 'doctor',
+                'driver' => 'driver',
+                _ => 'user',
+              };
+
+              return _StatusContent(
+                icon: Icons.hourglass_top_rounded,
+                title: 'Approval pending',
+                message: [
+                  if (name.isNotEmpty) 'Hi $name!',
+                  'Your $roleName registration is being reviewed by an admin.',
+                  'This page will update automatically once a decision is made.',
+                ].join('\n\n'),
+                actionLabel: 'Log out',
+                onAction: _logOut,
+              );
+            },
           );
         },
       ),
