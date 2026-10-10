@@ -6,28 +6,6 @@ import 'home_screen.dart';
 // Admin Dashboard
 import '../../../admin/screens/admin_dashboard.dart';
 
-extension AuthServiceLogin on AuthService {
-  Future<String> login({
-    required String email,
-    required String password,
-  }) async {
-    final normalizedEmail = email.trim().toLowerCase();
-    final normalizedPassword = password.trim();
-
-    if (normalizedEmail.isEmpty || normalizedPassword.isEmpty) {
-      throw const FormatException('Email and password are required.');
-    }
-
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-
-    if (normalizedEmail.contains('admin') ||
-        normalizedEmail == 'admin@example.com') {
-      return 'admin';
-    }
-
-    return 'user';
-  }
-}
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

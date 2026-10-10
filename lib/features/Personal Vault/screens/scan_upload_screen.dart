@@ -46,7 +46,16 @@ Future<void> _chooseFile() async {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const SmartUploadReviewScreen(),
+        builder: (_) => SmartUploadReviewScreen(
+  title: 'Scanned Document',
+  recordType: 'Document',
+  category: 'Other',
+  renewalDate: DateTime.now(),
+  expiryNotification: false,
+  notes: '',
+  tags: const [],
+  selectedFile: null,
+),
       ),
     );
   }
