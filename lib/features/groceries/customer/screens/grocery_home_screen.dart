@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-
 import 'my_orders_screen.dart';
 import '../../controllers/grocery_controller.dart';
 import '../../models/grocery_product_model.dart';
 import 'cart_screen.dart';
 import 'product_details_screen.dart';
+import '../../../auth/screens/provider_rules_screen.dart';
 
 class GroceryHomeScreen extends StatefulWidget {
   const GroceryHomeScreen({super.key});
@@ -41,6 +41,19 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
       appBar: AppBar(
         title: const Text('Groceries'),
         actions: [
+          IconButton(
+  tooltip: 'Become a Seller',
+  icon: const Icon(Icons.storefront_outlined),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ProviderRulesScreen(),
+      ),
+    );
+  },
+),
+
           IconButton(
             tooltip: 'My Orders',
             icon: const Icon(Icons.receipt_long_outlined),
