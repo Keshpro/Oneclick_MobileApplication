@@ -38,7 +38,7 @@ Future<void> showSharedWithMeDetails(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.25),
+    barrierColor: Colors.black.withValues(alpha: 0.25),
     builder: (context) {
       return SharedWithMeDetailsScreen(
         item: item,
@@ -456,7 +456,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
       ),
       child: Divider(
         height: 1,
-        color: muted.withOpacity(.10),
+        color: muted.withValues(alpha: .10),
       ),
     );
   }
@@ -748,12 +748,12 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
   static List<BoxShadow> _shadow() {
     return [
       BoxShadow(
-        color: Colors.white.withOpacity(.85),
+        color: Colors.white.withValues(alpha: .85),
         offset: const Offset(-3, -3),
         blurRadius: 8,
       ),
       BoxShadow(
-        color: Colors.black.withOpacity(.055),
+        color: Colors.black.withValues(alpha: .055),
         offset: const Offset(4, 6),
         blurRadius: 12,
       ),

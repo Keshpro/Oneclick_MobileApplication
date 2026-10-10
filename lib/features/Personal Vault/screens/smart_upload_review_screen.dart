@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'vault_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/vault_service.dart';
+import 'pdf_preview_screen.dart';
 
 class SmartUploadReviewScreen extends StatefulWidget {
   final String title;
@@ -207,7 +208,7 @@ Widget _buildTopBar(BuildContext context) {
           color: const Color(0xFFF0F1F6),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 15,
               offset: const Offset(0, 6),
             ),
@@ -377,7 +378,36 @@ Widget _buildTopBar(BuildContext context) {
                 const SizedBox(height: 10),
 
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () {
+                    final file = widget.selectedFile;
+
+                    if (file == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('No PDF selected to preview.'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (file.extension?.toLowerCase() != 'pdf') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Preview is currently available for PDF files only.'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PdfPreviewScreen(
+                          file: file,
+                        ),
+                      ),
+                    );
+                  },
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -558,7 +588,7 @@ Widget _buildTopBar(BuildContext context) {
           borderRadius: BorderRadius.circular(25),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -977,7 +1007,7 @@ Widget _buildTopBar(BuildContext context) {
 
               Switch(
                 value: renewalReminder,
-                activeColor: primaryColor,
+                activeThumbColor: primaryColor,
                 onChanged: (value) {
                   setState(() {
                     renewalReminder = value;
@@ -1102,7 +1132,7 @@ Widget _buildTopBar(BuildContext context) {
         ),
         style: ElevatedButton.styleFrom(
           elevation: 8,
-          shadowColor: Colors.black.withOpacity(0.10),
+          shadowColor: Colors.black.withValues(alpha: 0.10),
           backgroundColor: const Color(0xFFF4F5F9),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(35),
@@ -1117,7 +1147,9 @@ Widget _buildTopBar(BuildContext context) {
       width: double.infinity,
       height: 52,
       child: ElevatedButton.icon(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.pop(context);
+        },
         icon: const Icon(
           Icons.sync,
           color: secondaryText,
@@ -1133,7 +1165,7 @@ Widget _buildTopBar(BuildContext context) {
         ),
         style: ElevatedButton.styleFrom(
           elevation: 4,
-          shadowColor: Colors.black.withOpacity(0.08),
+          shadowColor: Colors.black.withValues(alpha: 0.08),
           backgroundColor: const Color(0xFFF4F5F9),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
@@ -1158,7 +1190,7 @@ Widget _buildTopBar(BuildContext context) {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.07),
+            color: Colors.black.withValues(alpha: 0.07),
             blurRadius: 22,
             offset: const Offset(0, 10),
           ),

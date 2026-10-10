@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -44,16 +42,52 @@ class VaultService {
         .child(safeFileName);
 
     debugPrint('VAULT: Starting file upload...');
+debugPrint('VAULT: File size: ${bytes.length} bytes');
+debugPrint('VAULT: Storage path: ${ref.fullPath}');
 
-await ref.putData(bytes);
+try {
+  final uploadTask = ref.putData(bytes);
 
-debugPrint('VAULT: Upload finished. Getting download URL...');
+uploadTask.snapshotEvents.listen(
+  (snapshot) {
+    final total = snapshot.totalBytes;
+    final transferred = snapshot.bytesTransferred;
 
-final url = await ref.getDownloadURL();
+    final progress = total > 0
+        ? (transferred / total * 100).toStringAsFixed(1)
+        : '0.0';
 
-debugPrint('VAULT: Download URL received: $url');
+    debugPrint(
+      'VAULT UPLOAD STATE: ${snapshot.state} | '
+      '$transferred / $total bytes | $progress%',
+    );
+  },
+  onError: (error) {
+    debugPrint('VAULT SNAPSHOT ERROR: $error');
+  },
+);
 
-return url;
+await uploadTask.timeout(
+  const Duration(seconds: 20),
+);
+
+  debugPrint('VAULT: Upload finished. Getting download URL...');
+
+  final url = await ref.getDownloadURL().timeout(
+    const Duration(seconds: 20),
+  );
+
+  debugPrint('VAULT: Download URL received: $url');
+
+  return url;
+} on FirebaseException catch (e) {
+  debugPrint('VAULT FIREBASE ERROR CODE: ${e.code}');
+  debugPrint('VAULT FIREBASE ERROR MESSAGE: ${e.message}');
+  rethrow;
+} catch (e) {
+  debugPrint('VAULT UPLOAD ERROR: $e');
+  rethrow;
+}
   }
 
   Future<void> addRecord({

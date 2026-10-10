@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class SharedRecord {
   final String id;
   final String ownerId;
+  final String ownerEmail;
   final String recordTitle;
   final String recipientName;
   final String recipientEmail;
@@ -14,6 +15,7 @@ class SharedRecord {
   const SharedRecord({
     required this.id,
     required this.ownerId,
+    required this.ownerEmail,
     required this.recordTitle,
     required this.recipientName,
     required this.recipientEmail,
@@ -26,6 +28,7 @@ class SharedRecord {
   Map<String, dynamic> toMap() {
     return {
       'ownerId': ownerId,
+      'ownerEmail': ownerEmail,
       'recordTitle': recordTitle,
       'recipientName': recipientName,
       'recipientEmail': recipientEmail,
@@ -44,6 +47,7 @@ class SharedRecord {
     return SharedRecord(
       id: id,
       ownerId: map['ownerId'] ?? '',
+      ownerEmail: map['ownerEmail'] ?? map['ownerId'] ?? '',
       recordTitle: map['recordTitle'] ?? '',
       recipientName: map['recipientName'] ?? '',
       recipientEmail: map['recipientEmail'] ?? '',

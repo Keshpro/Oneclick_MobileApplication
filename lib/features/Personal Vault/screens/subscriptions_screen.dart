@@ -143,7 +143,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
-                    value: status,
+                    initialValue: status,
                     decoration: const InputDecoration(
                       labelText: 'Status',
                     ),
@@ -537,7 +537,7 @@ void _showSearch() {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'PRODUCTIVITY & AI',
-                          total: '\LKR 30,000/mo',
+                          total: 'LKR 30,000/mo',
                           icon: Icons.terminal_outlined,
                           items: filteredSubscriptions
                               .where(
@@ -550,7 +550,7 @@ void _showSearch() {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'ENTERTAINMENT & MEDIA',
-                          total: '\LKR 11,000/mo',
+                          total: 'LKR 11,000/mo',
                           icon: Icons.play_circle_outline,
                           items: filteredSubscriptions
                               .where(
@@ -563,7 +563,7 @@ void _showSearch() {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'STORAGE & UTILITIES',
-                          total: '\LKR 3,000/mo',
+                          total: 'LKR 3,000/mo',
                           icon: Icons.cloud_outlined,
                           items: filteredSubscriptions
                               .where(
@@ -635,7 +635,7 @@ Widget _buildHeader() {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${_monthlyCost(subscriptions).toStringAsFixed(2)}',
+                _monthlyCost(subscriptions).toStringAsFixed(2),
                 style: TextStyle(
                   color: ink,
                   fontSize: 32,
@@ -696,7 +696,7 @@ Widget _buildHeader() {
                 ),
               ),
               Text(
-                '${(_monthlyCost(subscriptions) * 12).toStringAsFixed(2)}',
+                (_monthlyCost(subscriptions) * 12).toStringAsFixed(2),
                 style: TextStyle(
                   color: ink,
                   fontWeight: FontWeight.w700,
@@ -865,7 +865,7 @@ Widget _buildHeader() {
                                 'You can trim up to ',
                           ),
                           TextSpan(
-                            text: '\LKR 11,000/mo',
+                            text: 'LKR 11,000/mo',
                             style: TextStyle(
                               color: purple,
                               fontWeight: FontWeight.w700,
@@ -944,7 +944,7 @@ Widget _buildHeader() {
                 subtitle: 'Free 7-Day Trial',
                 badge: '3 days left',
                 description:
-                    'Converts to \LKR 5,000/mo on Nov 08 unless cancelled.',
+                    'Converts to LKR 5,000/mo on Nov 08 unless cancelled.',
                 icon: Icons.movie_outlined,
               ),
               const SizedBox(width: 16),
@@ -1633,61 +1633,6 @@ Widget _buildAddSubscriptionButton() {
       ),
     );
   }
-  void _showAddSubscriptionDialog() {
-    final nameController = TextEditingController();
-    final priceController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Add Subscription'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Subscription name',
-                  hintText: 'e.g. YouTube Premium',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: priceController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Monthly price',
-                  prefixText: '\LKR ',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                _message(
-                  'Subscription UI added. Backend connection comes next.',
-                );
-              },
-              child: const Text(
-                'Add',
-                style: TextStyle(
-                  color: purple,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }
 // ================================================================
 // SUBSCRIPTION MODEL
@@ -1815,72 +1760,7 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
     );
   }
 }
-class _VaultActionContent extends StatelessWidget {
-  const _VaultActionContent({required this.icon, required this.title,
-    required this.subtitle, required this.accent});
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color accent;
-  @override
-  Widget build(BuildContext context) {
-    final hovered = _VaultGlassScope.hoveredOf(context);
-    final isAI = icon == Icons.auto_awesome;
-    final hoverColor = icon == Icons.document_scanner_outlined
-        ? const Color(0xFF6366F1) : accent;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 116),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (isAI) Positioned(right: -4, top: -4,
-            child: IgnorePointer(child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-              child: Container(width: 64, height: 64,
-                decoration: const BoxDecoration(color: Color(0x1A9333EA),
-                  shape: BoxShape.circle)),
-            )),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AnimatedScale(
-                scale: hovered ? 1.05 : 1,
-                duration: const Duration(milliseconds: 300),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: 44, height: 44, alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: hovered ? hoverColor : accent.withAlpha(15),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: accent.withAlpha(30)),
-                  ),
-                  child: _VaultReferenceIcon(icon, size: 20,
-                    color: hovered ? Colors.white : accent),
-                ),
-              ),
-              const SizedBox(height: 24),
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14, fontWeight: FontWeight.w700,
-                  letterSpacing: -0.35, height: 1.3,
-                  color: hovered ? accent : const Color(0xFF0F172A),
-                ),
-                child: Text(title),
-              ),
-              const SizedBox(height: 2),
-              Text(subtitle, style: GoogleFonts.plusJakartaSans(
-                fontSize: 11, fontWeight: FontWeight.w500,
-                height: 1.35, color: const Color(0xFF94A3B8),
-              )),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
+
 class _VaultSearchSurface extends StatefulWidget {
   const _VaultSearchSurface({required this.child, required this.padding});
   final Widget child;
@@ -1933,48 +1813,35 @@ class _VaultRowFeedbackState extends State<_VaultRowFeedback> {
     child: widget.builder(context, _hovered),
   );
 }
-class _VaultRecordSubtitle extends StatelessWidget {
-  const _VaultRecordSubtitle({required this.text, required this.color});
-  final String text;
-  final Color color;
-  @override
-  Widget build(BuildContext context) {
-    final expiring = text.startsWith('Expires');
-    final urgent = expiring && color == Colors.red;
-    final textColor = urgent ? const Color(0xFFF43F5E) : color;
-    final label = Text(text, style: GoogleFonts.plusJakartaSans(
-      fontSize: 12, fontWeight: urgent ? FontWeight.w600 : FontWeight.w500,
-      color: textColor,
-    ));
-    if (!expiring) return label;
-    return Row(children: [
-      _VaultPulseDot(color: urgent ? textColor : const Color(0xFF94A3B8),
-        size: 6, animate: urgent),
-      const SizedBox(width: 6), Flexible(child: label),
-    ]);
-  }
-}
+
 class _VaultPulseDot extends StatefulWidget {
-  const _VaultPulseDot({required this.color, required this.size,
-    this.ping = false, this.animate = true});
+  const _VaultPulseDot({
+  required this.color,
+  required this.size,
+  this.ping = false,
+});
   final Color color;
   final double size;
   final bool ping;
-  final bool animate;
+
   @override
   State<_VaultPulseDot> createState() => _VaultPulseDotState();
 }
 class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this, duration: const Duration(milliseconds: 1400));
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (widget.animate && !MediaQuery.disableAnimationsOf(context)) {
-      _controller.repeat(reverse: !widget.ping);
-    } else { _controller.stop(); }
+@override
+void didChangeDependencies() {
+  super.didChangeDependencies();
+
+  if (!MediaQuery.disableAnimationsOf(context)) {
+    _controller.repeat(reverse: !widget.ping);
+  } else {
+    _controller.stop();
   }
-  @override
+}
+
+@override
   void dispose() { _controller.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -1985,16 +1852,16 @@ class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProvide
           child: Opacity(opacity: (1 - _controller.value) * 0.75,
             child: Container(decoration: BoxDecoration(
               color: widget.color, shape: BoxShape.circle)))),
-        Opacity(opacity: widget.ping || !widget.animate ? 1 : 1 - _controller.value * 0.5,
+        Opacity(opacity: widget.ping ? 1 : 1 - _controller.value * 0.5,
           child: Container(decoration: BoxDecoration(
             color: widget.color, shape: BoxShape.circle))),
       ])),
   );
 }
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon, {this.color});
+  const _VaultNavGlyph(this.icon);
   final IconData icon;
-  final Color? color;
+
   @override
   State<_VaultNavGlyph> createState() => _VaultNavGlyphState();
 }
@@ -2010,14 +1877,19 @@ class _VaultNavGlyphState extends State<_VaultNavGlyph> {
       onPointerDown: (_) => setState(() => _pressed = true),
       onPointerUp: (_) => setState(() => _pressed = false),
       onPointerCancel: (_) => setState(() => _pressed = false),
-      child: AnimatedScale(scale: _pressed ? 0.95 : 1,
-        duration: const Duration(milliseconds: 200),
-        child: _VaultReferenceIcon(widget.icon, size: 20,
-          color: widget.color ?? (_hovered ? const Color(0xFF1E293B)
-            : IconTheme.of(context).color ?? const Color(0xFF94A3B8))),
-      ),
-    ),
-  );
+child: AnimatedScale(
+  scale: _pressed ? 0.95 : 1,
+  duration: const Duration(milliseconds: 200),
+  child: _VaultReferenceIcon(
+    widget.icon,
+    size: 20,
+    color: _hovered
+        ? const Color(0xFF1E293B)
+        : IconTheme.of(context).color ?? const Color(0xFF94A3B8),
+  ),
+),
+),
+);
 }
 class _VaultReferenceIcon extends StatelessWidget {
   const _VaultReferenceIcon(this.icon, {this.size, this.color});
