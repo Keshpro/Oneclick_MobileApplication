@@ -53,8 +53,9 @@ flutter:
   uses-material-design: true
 
   # Uncomment these after adding files inside the folders.
-  # assets:
-  #   - assets/images/
-  #   - assets/icons/
+  assets:
+    - assets/images/food/dishes/
+    - assets/images/food/restaurants/
+    - assets/icons/
 
   # Add a fonts section here if the app uses custom fonts.
