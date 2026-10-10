@@ -16,6 +16,10 @@ class BookingModel {
   final int durationMinutes;
   final BookingStatus status;
   final DateTime createdAt;
+  final String? driverId;
+  final String? tripPin;
+  final DateTime? startedAt;
+  final DateTime? completedAt;
 
   const BookingModel({
     required this.id,
@@ -29,9 +33,19 @@ class BookingModel {
     required this.durationMinutes,
     required this.status,
     required this.createdAt,
+            this.driverId,
+    this.tripPin,
+    this.startedAt,
+    this.completedAt,
   });
 
-  BookingModel copyWith({BookingStatus? status}) {
+  BookingModel copyWith({
+    BookingStatus? status,
+    String? driverId,
+    String? tripPin,
+    DateTime? startedAt,
+    DateTime? completedAt,
+  }) {
     return BookingModel(
       id: id,
       passengerId: passengerId,
@@ -44,6 +58,10 @@ class BookingModel {
       durationMinutes: durationMinutes,
       status: status ?? this.status,
       createdAt: createdAt,
+      driverId: driverId ?? this.driverId,
+      tripPin: tripPin ?? this.tripPin,
+      startedAt: startedAt ?? this.startedAt,
+      completedAt: completedAt ?? this.completedAt,
     );
   }
 }
