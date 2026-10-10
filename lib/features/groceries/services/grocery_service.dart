@@ -10,7 +10,7 @@ class GroceryService {
       description: 'Fresh full cream milk - 1L',
       price: 550.00,
       discountPrice: 500.00,
-      imageUrl: '',
+      imageUrl: 'assets/images/groceries/milk.jpg',
       stock: 20,
     ),
     const GroceryProduct(
@@ -19,7 +19,7 @@ class GroceryService {
       category: 'Vegetables',
       description: 'Fresh carrots - 1kg',
       price: 650.00,
-      imageUrl: '',
+      imageUrl: 'assets/images/groceries/carrot.jpg',
       stock: 30,
     ),
     const GroceryProduct(
@@ -29,7 +29,7 @@ class GroceryService {
       description: 'Fresh chicken - 1kg',
       price: 1450.00,
       discountPrice: 1350.00,
-      imageUrl: '',
+      imageUrl: 'assets/images/groceries/chicken.jpg',
       stock: 15,
     ),
     const GroceryProduct(
@@ -38,7 +38,7 @@ class GroceryService {
       category: 'Bakery',
       description: 'Fresh sliced bread',
       price: 250.00,
-      imageUrl: '',
+      imageUrl: 'assets/images/groceries/bread.jpg',
       stock: 25,
     ),
     const GroceryProduct(
@@ -47,7 +47,7 @@ class GroceryService {
       category: 'Beverages',
       description: 'Orange juice - 1L',
       price: 850.00,
-      imageUrl: '',
+     imageUrl: 'assets/images/groceries/orange_juice.jpg',
       stock: 12,
     ),
     const GroceryProduct(
@@ -57,7 +57,7 @@ class GroceryService {
       description: 'Fresh apples - 1kg',
       price: 1200.00,
       discountPrice: 1100.00,
-      imageUrl: '',
+      imageUrl: 'assets/images/groceries/apple.jpg',
       stock: 18,
     ),
   ];
