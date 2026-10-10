@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:oneclick/shared/models/user_model.dart';
 
 import 'firebase_options.dart';
@@ -14,6 +15,13 @@ void main() async {
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Initialize App Check with both Android and Web providers
+  // This prevents the app from crashing when accidentally run on Chrome
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: AndroidProvider.debug,
+    webProvider: ReCaptchaV3Provider('dummy-key'), // Added to fix the Web startup crash
   );
 
   runApp(const MyApp());
