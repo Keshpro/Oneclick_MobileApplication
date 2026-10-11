@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'pending_approval_screen.dart';
 
-enum ProviderRole { doctor, driver, grocerySeller }
+enum ProviderRole { doctor, driver, grocerySeller, worker, foodSeller }
 
 class ProviderRegisterScreen extends StatefulWidget {
   final ProviderRole role;
@@ -12,7 +12,8 @@ class ProviderRegisterScreen extends StatefulWidget {
   const ProviderRegisterScreen({super.key, required this.role});
 
   @override
-  State<ProviderRegisterScreen> createState() => _ProviderRegisterScreenState();
+  State<ProviderRegisterScreen> createState() =>
+      _ProviderRegisterScreenState();
 }
 
 class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
@@ -28,7 +29,7 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
   final _doctorIdController = TextEditingController();
   final _experienceController = TextEditingController();
 
-  // Doctor Categories (Matching User / Patient Side Categories)
+  // Doctor Categories
   final List<String> _doctorCategories = [
     'General Physician',
     'Cardiologist',
@@ -39,11 +40,29 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
     'Dentist',
   ];
 
+  // Quick Fix Worker Categories
+  final List<String> _workerCategories = [
+    'Electrician',
+    'Plumber',
+    'Carpenter',
+    'Painter',
+    'Cleaning',
+    'AC Repair',
+    'Appliances',
+    'Gardening',
+    'Locksmith',
+    'Masonry',
+  ];
+
   String? _selectedCategory;
 
   // Driver
   final _licenseController = TextEditingController();
   final _licenseExpiryController = TextEditingController();
+
+  // Worker / Food Partner
+  final _hourlyRateController = TextEditingController();
+  final _restaurantNameController = TextEditingController();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -53,7 +72,24 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
   bool _obscureConfirmPassword = true;
 
   bool get _isDoctor => widget.role == ProviderRole.doctor;
-  String get _roleName => _isDoctor ? 'Doctor' : 'Driver';
+  bool get _isDriver => widget.role == ProviderRole.driver;
+  bool get _isWorker => widget.role == ProviderRole.worker;
+  bool get _isFoodSeller => widget.role == ProviderRole.foodSeller;
+
+  String get _roleName {
+    switch (widget.role) {
+      case ProviderRole.doctor:
+        return 'Doctor';
+      case ProviderRole.driver:
+        return 'Driver';
+      case ProviderRole.worker:
+        return 'Quick Fix Worker';
+      case ProviderRole.foodSeller:
+        return 'Food Partner';
+      default:
+        return 'Provider';
+    }
+  }
 
   @override
   void dispose() {
@@ -68,6 +104,9 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
 
     _licenseController.dispose();
     _licenseExpiryController.dispose();
+
+    _hourlyRateController.dispose();
+    _restaurantNameController.dispose();
 
     super.dispose();
   }
@@ -95,10 +134,10 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
       return;
     }
 
-    if (_isDoctor && _selectedCategory == null) {
+    if ((_isDoctor || _isWorker) && _selectedCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a doctor category'),
+        SnackBar(
+          content: Text('Please select a ${_isDoctor ? "doctor" : "worker skill"} category'),
           backgroundColor: Colors.red,
         ),
       );
@@ -126,22 +165,42 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
         throw Exception('Unable to create provider account.');
       }
 
-      // 2. Determine target collection
-      final String targetCollection = _isDoctor ? 'doctors' : 'drivers';
+      await user.updateDisplayName(_nameController.text.trim());
+
+      // 2. Determine target collection (Worker data directed to 'workers' collection)
+      String targetCollection = 'users';
+      if (_isDoctor) targetCollection = 'doctors';
+      if (_isDriver) targetCollection = 'drivers';
+      if (_isWorker) targetCollection = 'workers'; // Saved in 'workers' collection
+      if (_isFoodSeller) targetCollection = 'food_sellers';
 
       // 3. Prepare details based on role
-      final providerDetails = _isDoctor
-          ? {
-              'doctorId': _doctorIdController.text.trim(),
-              'specialization': _selectedCategory, // Selected Dropdown Category
-              'experienceYears': _experienceController.text.trim(),
-            }
-          : {
-              'drivingLicenseNumber': _licenseController.text.trim(),
-              'licenseExpiryDate': _licenseExpiryController.text.trim(),
-            };
+      Map<String, dynamic> providerDetails = {};
 
-      // 4. Save data into the specific role-based collection
+      if (_isDoctor) {
+        providerDetails = {
+          'doctorId': _doctorIdController.text.trim(),
+          'specialization': _selectedCategory,
+          'experienceYears': _experienceController.text.trim(),
+        };
+      } else if (_isDriver) {
+        providerDetails = {
+          'drivingLicenseNumber': _licenseController.text.trim(),
+          'licenseExpiryDate': _licenseExpiryController.text.trim(),
+        };
+      } else if (_isWorker) {
+        providerDetails = {
+          'category': _selectedCategory,
+          'hourlyRate': _hourlyRateController.text.trim(),
+          'experienceYears': _experienceController.text.trim(),
+        };
+      } else if (_isFoodSeller) {
+        providerDetails = {
+          'restaurantName': _restaurantNameController.text.trim(),
+        };
+      }
+
+      // 4. Save data into the specific role-based collection in Firestore
       await _firestore.collection(targetCollection).doc(user.uid).set({
         'uid': user.uid,
         'name': _nameController.text.trim(),
@@ -151,21 +210,29 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
         'accountType': 'provider',
         'status': 'pending',
         'requiresApproval': true,
+        'category': _selectedCategory,
         'providerDetails': providerDetails,
         'providerAgreementAccepted': true,
         'createdAt': FieldValue.serverTimestamp(),
         'approvedAt': null,
       });
 
+      // Also save user profile in main 'users' collection
+      await _firestore.collection('users').doc(user.uid).set({
+        'uid': user.uid,
+        'name': _nameController.text.trim(),
+        'email': _emailController.text.trim().toLowerCase(),
+        'role': widget.role.name,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
       // 5. Add to Activity Logs for Admin Dashboard
       await _firestore.collection('activity_logs').add({
         'action': 'New $_roleName Application',
-        'details': '${_nameController.text.trim()} applied as $_roleName${_isDoctor ? " ($_selectedCategory)" : ""}.',
+        'details': '${_nameController.text.trim()} applied as $_roleName${_selectedCategory != null ? " ($_selectedCategory)" : ""}.',
         'performedBy': 'System',
         'timestamp': FieldValue.serverTimestamp(),
       });
-
-      // SignOut එක ඉවත් කරන ලදී (Keep user logged in so PendingApprovalScreen works smoothly)
 
       if (!mounted) return;
 
@@ -279,10 +346,10 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                   keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 28),
-                _sectionTitle(
-                  _isDoctor ? 'Professional Information' : 'Driver Information',
-                ),
+                _sectionTitle('$_roleName Information'),
                 const SizedBox(height: 14),
+
+                // Doctor Role Fields
                 if (_isDoctor) ...[
                   _field(
                     controller: _doctorIdController,
@@ -290,8 +357,6 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                     icon: Icons.badge_outlined,
                   ),
                   const SizedBox(height: 14),
-
-                  // Specialization / Category Dropdown Selection
                   DropdownButtonFormField<String>(
                     value: _selectedCategory,
                     decoration: _decoration(
@@ -316,7 +381,6 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                       return null;
                     },
                   ),
-
                   const SizedBox(height: 14),
                   _field(
                     controller: _experienceController,
@@ -324,7 +388,9 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                     icon: Icons.work_history_outlined,
                     keyboardType: TextInputType.number,
                   ),
-                ] else ...[
+                ]
+                // Driver Role Fields
+                else if (_isDriver) ...[
                   _field(
                     controller: _licenseController,
                     label: 'Driving Licence Number',
@@ -347,7 +413,57 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                       return null;
                     },
                   ),
+                ]
+                // Worker Role Fields
+                else if (_isWorker) ...[
+                  DropdownButtonFormField<String>(
+                    value: _selectedCategory,
+                    decoration: _decoration(
+                      label: 'Worker Skill Category',
+                      icon: Icons.handyman_outlined,
+                    ),
+                    items: _workerCategories.map((category) {
+                      return DropdownMenuItem<String>(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedCategory = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select worker skill category';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  _field(
+                    controller: _hourlyRateController,
+                    label: 'Expected Hourly Rate (LKR)',
+                    icon: Icons.payments_outlined,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 14),
+                  _field(
+                    controller: _experienceController,
+                    label: 'Years of Experience',
+                    icon: Icons.work_history_outlined,
+                    keyboardType: TextInputType.number,
+                  ),
+                ]
+                // Food Seller Role Fields
+                else if (_isFoodSeller) ...[
+                  _field(
+                    controller: _restaurantNameController,
+                    label: 'Restaurant / Business Name',
+                    icon: Icons.storefront_outlined,
+                  ),
                 ],
+
                 const SizedBox(height: 28),
                 _sectionTitle('Account Security'),
                 const SizedBox(height: 14),
