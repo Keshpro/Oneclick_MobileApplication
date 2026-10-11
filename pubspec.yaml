@@ -57,5 +57,6 @@ flutter:
     - assets/images/food/dishes/
     - assets/images/food/restaurants/
     - assets/icons/
+    - assets/animations/doctor_entry.mp4
 
   # Add a fonts section here if the app uses custom fonts.

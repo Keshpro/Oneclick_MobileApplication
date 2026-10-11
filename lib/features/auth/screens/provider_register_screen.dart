@@ -165,7 +165,7 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      await _auth.signOut();
+      // SignOut එක ඉවත් කරන ලදී (Keep user logged in so PendingApprovalScreen works smoothly)
 
       if (!mounted) return;
 
