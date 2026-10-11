@@ -395,35 +395,46 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openService(String serviceTitle) {
-    Widget? screen;
-    switch (serviceTitle) {
-      case 'Doctor':
-        screen = const DoctorEntryScreen();
-        break;
-      case 'Drunk & Drive':
-        screen = const DrunkDriveHomeScreen();
-        break;
-      case 'Food':
-        screen = const FoodHomeScreen();
-        break;
-      case 'Groceries':
-        screen = const GroceryHomeScreen();
-        break;
-      case 'Quick Fix':
-        screen = const HomeServicesScreen();
-        break;
-      case 'Personal Vault':
-        screen = const personal_vault.PersonalDashboardScreen();
-        break;
-    }
+void _openService(String serviceTitle) {
+  Widget? screen;
 
-    if (screen != null) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => screen!));
-    } else {
-      _showLoginRequired(serviceTitle);
-    }
+  switch (serviceTitle) {
+    case 'Doctor':
+      screen = const DoctorEntryScreen();
+      break;
+
+    case 'Drunk & Drive':
+      screen = const DrunkDriveHomeScreen();
+      break;
+
+    case 'Food':
+      screen = const FoodHomeScreen();
+      break;
+
+    case 'Groceries':
+      screen = const GroceryHomeScreen();
+      break;
+
+    case 'Quick Fix':
+      screen = const HomeServicesScreen();
+      break;
+
+    case 'Personal Vault':
+      screen = const personal_vault.PersonalDashboardScreen();
+      break;
   }
+
+  if (screen != null) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => screen!,
+      ),
+    );
+  } else {
+    _showLoginRequired(serviceTitle);
+  }
+}
 
   void _onNavigationSelected(int index) {
     if (index == 0) {

@@ -10,6 +10,14 @@ import 'document_pack_requirements_screen.dart';
 import 'scan_upload_screen.dart';
 import 'add_account_screen.dart';
 import 'vault_settings_screen.dart';
+import '../models/vault_record.dart';
+import '../models/subscription_record.dart';
+import '../services/vault_service.dart';
+import '../services/subscription_service.dart';
+import 'record_details_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+
 class PersonalDashboardScreen extends StatefulWidget {
   const PersonalDashboardScreen({super.key});
   @override
@@ -22,14 +30,28 @@ class _PersonalDashboardScreenState
   static const Color purple = Color(0xFF4F46E5);
   static const Color ink = Color(0xFF0F172A);
   static const Color muted = Color(0xFF64748B);
-final Map<String, bool> _favorites = {
-  'Passport': true,
-  'Wi-Fi Account': true,
-  'Car Records': true,
-  'Health Insurance': false,
-  'Apartment Lease': false,
-  'Google Account': false,
-};
+  final VaultService _vaultService = VaultService();
+final SubscriptionService _subscriptionService = SubscriptionService();
+
+bool get _isLoggedIn =>
+    FirebaseAuth.instance.currentUser != null;
+
+Stream<List<VaultRecord>> get _vaultRecordsStream {
+  if (!_isLoggedIn) {
+    return Stream.value(<VaultRecord>[]);
+  }
+
+  return _vaultService.getRecords();
+}
+
+Stream<List<SubscriptionRecord>> get _subscriptionRecordsStream {
+  if (!_isLoggedIn) {
+    return Stream.value(<SubscriptionRecord>[]);
+  }
+
+  return _subscriptionService.getSubscriptions();
+}
+
   // ============================================================
   // PLACEHOLDER MESSAGE
   // ============================================================
@@ -41,40 +63,134 @@ final Map<String, bool> _favorites = {
       ),
     );
   }
-void _showSearchPanel(BuildContext context) {
-  final TextEditingController searchController = TextEditingController();
-  final List<Map<String, dynamic>> items = [
-    {
-      'title': 'Passport',
+
+  bool _requireLogin(BuildContext context) {
+  if (_isLoggedIn) {
+    return true;
+  }
+
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: const Color(0xFFF8FAFC),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(24),
+      ),
+    ),
+    builder: (sheetContext) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.lock_outline_rounded,
+                size: 42,
+                color: purple,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Login Required',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: ink,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Please login first to use Personal Vault features.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: muted,
+                ),
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.pushNamed(
+                      context,
+                      '/login',
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: purple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 15,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    'Login',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(sheetContext);
+                },
+                child: const Text('Not now'),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+
+  return false;
+}
+
+Future<void> _showSearchPanel(BuildContext context) async {
+  if (!_requireLogin(context)) return;
+
+  final TextEditingController searchController =
+      TextEditingController();
+  final vaultRecords = await _vaultService.getRecords().first;
+  final subscriptions = await _subscriptionService.getSubscriptions().first;
+
+  if (!context.mounted) return;
+
+final List<Map<String, dynamic>> items = [
+  ...vaultRecords.map(
+    (VaultRecord record) => {
+      'id': record.id,
+      'title': record.title,
       'type': 'Document',
-      'icon': Icons.badge_outlined,
+      'category': record.category,
+      'recordType': record.recordType,
+      'tags': record.tags,
+      'icon': Icons.description_outlined,
+      'source': 'vault',
+      'record': record,
     },
-    {
-      'title': 'Apartment Lease Agreement',
-      'type': 'Document',
-      'icon': Icons.picture_as_pdf_outlined,
-    },
-    {
-      'title': 'Health Insurance Card',
-      'type': 'Document',
-      'icon': Icons.health_and_safety_outlined,
-    },
-    {
-      'title': 'Google Account',
-      'type': 'Account Access',
-      'icon': Icons.account_circle_outlined,
-    },
-    {
-      'title': 'Netflix Premium',
+  ),
+  ...subscriptions.map(
+    (SubscriptionRecord subscription) => {
+      'id': subscription.id,
+      'title': subscription.name,
       'type': 'Subscription',
-      'icon': Icons.movie_outlined,
+      'category': subscription.category,
+      'subtitle': subscription.subtitle,
+      'status': subscription.status,
+      'icon': Icons.subscriptions_outlined,
+      'source': 'subscription',
+      'record': subscription,
     },
-    {
-      'title': 'Figma Workspace',
-      'type': 'Subscription',
-      'icon': Icons.design_services_outlined,
-    },
-  ];
+  ),
+];
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -176,39 +292,64 @@ void _showSearchPanel(BuildContext context) {
                   },
                 ),
                 const SizedBox(height: 14),
-SingleChildScrollView(
-  scrollDirection: Axis.horizontal,
-  child: Row(
-    children: [
-      'All',
-      'Document',
-      'Account Access',
-      'Subscription',
-    ].map((filter) {
-      final selected =
-          selectedFilter == filter;
-      return Padding(
-        padding: const EdgeInsets.only(right: 8),
-        child: ChoiceChip(
-          label: Text(filter),
-          selected: selected,
-          selectedColor: purple.withAlpha(35),
-          backgroundColor: Colors.white,
-          side: BorderSide.none,
-          labelStyle: TextStyle(
-            color: selected ? purple : muted,
-            fontWeight: selected
-                ? FontWeight.w600
-                : FontWeight.w500,
-          ),
-          onSelected: (_) {
-            selectedFilter = filter;
-            applyFilters();
-          },
+StreamBuilder<List<VaultRecord>>(
+  stream: _vaultRecordsStream,
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: CircularProgressIndicator(),
         ),
       );
-    }).toList(),
-  ),
+    }
+
+    if (snapshot.hasError) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          'Could not load favorites.',
+          style: TextStyle(
+            color: muted,
+            fontSize: 13,
+          ),
+        ),
+      );
+    }
+
+    final favorites = (snapshot.data ?? [])
+        .where((record) => record.isFavorite)
+        .toList();
+
+    if (favorites.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          'No favorite records yet.',
+          style: TextStyle(
+            color: muted,
+            fontSize: 13,
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final record in favorites) ...[
+            _favorite(
+              context,
+              Icons.description_outlined,
+              record,
+            ),
+            const SizedBox(width: 12),
+          ],
+        ],
+      ),
+    );
+  },
 ),
                 const SizedBox(height: 16),
                 if (searchController.text.isEmpty)
@@ -391,13 +532,28 @@ SingleChildScrollView(
       // APP BAR
       // ========================================================
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        foregroundColor: ink,
-        surfaceTintColor: Colors.transparent,
-        automaticallyImplyLeading: false,
-        elevation: 0,
-        toolbarHeight: 88,
-        titleSpacing: 24,
+  backgroundColor: Colors.transparent,
+  foregroundColor: ink,
+  surfaceTintColor: Colors.transparent,
+  automaticallyImplyLeading: false,
+  elevation: 0,
+  toolbarHeight: 88,
+  leadingWidth: 60,
+  leading: Padding(
+    padding: const EdgeInsets.only(left: 12),
+    child: IconButton(
+      tooltip: 'Back',
+      onPressed: () {
+        Navigator.pop(context);
+      },
+      icon: const Icon(
+        Icons.arrow_back_ios_new_rounded,
+        size: 20,
+        color: ink,
+      ),
+    ),
+  ),
+  titleSpacing: 8,
         title: Row(
           children: [
             Container(
@@ -502,11 +658,8 @@ SingleChildScrollView(
                         suffixIcon: IconButton(
                           tooltip: 'Filter records',
                           onPressed: () {
-                            _showNextStep(
-                              context,
-                              'Filters',
-                            );
-                          },
+  _showSearchPanel(context);
+},
                           icon: const _VaultReferenceIcon(
                             Icons.tune,
                             color: purple,
@@ -538,6 +691,8 @@ SingleChildScrollView(
                             'Scan & Upload',
                             'Auto-tagging OCR',
                             onTap: () {
+                              if (!_requireLogin(context)) return;
+
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -553,6 +708,8 @@ SingleChildScrollView(
                             'Add Account Access',
                             'Save login & recovery details',
                             onTap: () {
+                              if (!_requireLogin(context)) return;
+
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -568,6 +725,8 @@ SingleChildScrollView(
                             'Ask Vault AI',
                             'Ask about your documents',
                             onTap: () {
+                              if (!_requireLogin(context)) return;
+
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -584,6 +743,8 @@ SingleChildScrollView(
                             'Build Document Pack',
                             'Match Vault files to a checklist',
                             onTap: () {
+                              if (!_requireLogin(context)) return;
+
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -601,117 +762,382 @@ SingleChildScrollView(
                   // =================================================
                   // EXPIRING SOON
                   // =================================================
-                  _heading(
-                    'EXPIRING SOON',
-                    trailing: '2 items',
-                  ),
-                  _surface(
-                    child: Column(
-                      children: [
-                        _record(
-  context,
-  icon: Icons.laptop_mac,
-  title: 'MacBook Pro M2 Warranty',
-  subtitle: 'Expires in 14 days',
-  subtitleColor: Colors.red,
-  onTap: () {
-    _showExpiringDetails(
-      context,
-      icon: Icons.laptop_mac,
-      title: 'MacBook Pro M2 Warranty',
-      status: 'Expires in 14 days',
-      details: 'Warranty document for MacBook Pro M2.',
+                  StreamBuilder<List<VaultRecord>>(
+  stream: _vaultRecordsStream,
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _heading(
+            'EXPIRING SOON',
+            trailing: '...',
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: CircularProgressIndicator(),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (snapshot.hasError) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _heading(
+            'EXPIRING SOON',
+            trailing: '0 items',
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              'Could not load expiring records.',
+              style: TextStyle(
+                color: muted,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(
+      now.year,
+      now.month,
+      now.day,
     );
-  },
-),
-                        const Divider(
-                          height: 24,
-                        ),
-                        _record(
-  context,
-  icon: Icons.badge_outlined,
-  title: 'Passport Renewal',
-  subtitle: 'Expires in 45 days',
-  onTap: () {
-    _showExpiringDetails(
-      context,
-      icon: Icons.badge_outlined,
-      title: 'Passport Renewal',
-      status: 'Expires in 45 days',
-      details: 'Passport renewal reminder and document information.',
+
+    final cutoff = today.add(
+      const Duration(days: 60),
     );
-  },
-),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // =================================================
-                  // UPCOMING RENEWALS
-                  // =================================================
-                  _heading(
-                    'UPCOMING RENEWALS',
-                    trailing: 'View all',
-                    // Opens Subscription Screen
-                    onTap: () {
-                      Navigator.push(
+
+    final expiringRecords = (snapshot.data ?? [])
+        .where((record) {
+          final renewal = DateTime(
+            record.renewalDate.year,
+            record.renewalDate.month,
+            record.renewalDate.day,
+          );
+
+          return !renewal.isBefore(today) &&
+              !renewal.isAfter(cutoff);
+        })
+        .toList()
+      ..sort(
+        (a, b) => a.renewalDate.compareTo(
+          b.renewalDate,
+        ),
+      );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _heading(
+          'EXPIRING SOON',
+          trailing:
+              '${expiringRecords.length} ${expiringRecords.length == 1 ? 'item' : 'items'}',
+        ),
+
+        if (expiringRecords.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              'No records expiring in the next 60 days.',
+              style: TextStyle(
+                color: muted,
+                fontSize: 13,
+              ),
+            ),
+          )
+        else
+          _surface(
+            child: Column(
+              children: [
+                for (int i = 0;
+                    i < expiringRecords.length;
+                    i++) ...[
+                  Builder(
+                    builder: (context) {
+                      final record = expiringRecords[i];
+
+                      final renewal = DateTime(
+                        record.renewalDate.year,
+                        record.renewalDate.month,
+                        record.renewalDate.day,
+                      );
+
+                      final days =
+                          renewal.difference(today).inDays;
+
+                      final status = days == 0
+                          ? 'Expires today'
+                          : days == 1
+                              ? 'Expires tomorrow'
+                              : 'Expires in $days days';
+
+                      return _record(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const SubscriptionsScreen(),
-                        ),
+                        icon: Icons.description_outlined,
+                        title: record.title,
+                        subtitle: status,
+                        subtitleColor:
+                            days <= 14 ? Colors.red : muted,
+                        onTap: () {
+                          if (!_requireLogin(context)) return;
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  RecordDetailsScreen(
+                                recordId: record.id,
+                                title: record.title,
+                                category: record.category,
+                                type: record.recordType,
+                                details: record.notes,
+                                tags: record.tags,
+                                fileName: record.fileName,
+                                filePath: record.filePath,
+                              ),
+                            ),
+                          );
+                        },
                       );
                     },
                   ),
-                  _surface(
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Due in the next 7 days',
-                          style: TextStyle(
-                            color: muted,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'LKR 4,700',
-                          style: TextStyle(
-                            fontSize: 25,
-                            fontWeight: FontWeight.bold,
-                            color: ink,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          '2 renewals · Sample amounts',
-                          style: TextStyle(
-                            color: muted,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        _record(
-                          context,
-                          icon: Icons.movie_outlined,
-                          title: 'Netflix Premium',
-                          subtitle: 'Renews in 3 days',
-                          endText: 'LKR 3,500',
-                          iconColor: Colors.red,
-                        ),
-                        const SizedBox(height: 18),
-                        _record(
-                          context,
-                          icon: Icons.design_services_outlined,
-                          title: 'Figma Workspace',
-                          subtitle: 'Renews in 6 days',
-                          endText: 'LKR 1,200',
-                        ),
-                      ],
+
+                  if (i != expiringRecords.length - 1)
+                    const Divider(
+                      height: 24,
                     ),
+                ],
+              ],
+            ),
+          ),
+      ],
+    );
+  },
+),
+                  // =================================================
+                  // UPCOMING RENEWALS
+                  // =================================================
+                  StreamBuilder<List<SubscriptionRecord>>(
+  stream: _subscriptionRecordsStream,
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _heading(
+            'UPCOMING RENEWALS',
+            trailing: 'View all',
+            onTap: () {
+              if (!_requireLogin(context)) return;
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SubscriptionsScreen(),
+                ),
+              );
+            },
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: CircularProgressIndicator(),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (snapshot.hasError) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _heading(
+            'UPCOMING RENEWALS',
+            trailing: 'View all',
+            onTap: () {
+              if (!_requireLogin(context)) return;
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SubscriptionsScreen(),
+                ),
+              );
+            },
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              'Could not load upcoming renewals.',
+              style: TextStyle(
+                color: muted,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    final cutoff = today.add(
+      const Duration(days: 7),
+    );
+
+    final upcoming = (snapshot.data ?? [])
+        .where((subscription) {
+          final renewalDate =
+              _parseSubscriptionRenewal(subscription.renewal);
+
+          if (renewalDate == null) {
+            return false;
+          }
+
+          final date = DateTime(
+            renewalDate.year,
+            renewalDate.month,
+            renewalDate.day,
+          );
+
+          return !date.isBefore(today) &&
+              !date.isAfter(cutoff);
+        })
+        .toList()
+      ..sort((a, b) {
+        final aDate =
+            _parseSubscriptionRenewal(a.renewal)!;
+        final bDate =
+            _parseSubscriptionRenewal(b.renewal)!;
+
+        return aDate.compareTo(bDate);
+      });
+
+    double total = 0;
+
+    for (final subscription in upcoming) {
+      final numericPrice = subscription.price
+          .replaceAll(RegExp(r'[^0-9.]'), '');
+
+      total += double.tryParse(numericPrice) ?? 0;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _heading(
+          'UPCOMING RENEWALS',
+          trailing: 'View all',
+          onTap: () {
+            if (!_requireLogin(context)) return;
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const SubscriptionsScreen(),
+              ),
+            );
+          },
+        ),
+        _surface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Due in the next 7 days',
+                style: TextStyle(
+                  color: muted,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 4),
+
+              Text(
+                'LKR ${total.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  fontSize: 25,
+                  fontWeight: FontWeight.bold,
+                  color: ink,
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              Text(
+                '${upcoming.length} ${upcoming.length == 1 ? 'renewal' : 'renewals'}',
+                style: const TextStyle(
+                  color: muted,
+                  fontSize: 12,
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              if (upcoming.isEmpty)
+                const Text(
+                  'No subscriptions renewing in the next 7 days.',
+                  style: TextStyle(
+                    color: muted,
+                    fontSize: 13,
                   ),
+                )
+              else
+                for (int i = 0; i < upcoming.length; i++) ...[
+                  Builder(
+                    builder: (context) {
+                      final subscription = upcoming[i];
+
+                      final renewalDate =
+                          _parseSubscriptionRenewal(
+                        subscription.renewal,
+                      )!;
+
+                      final days =
+                          renewalDate.difference(today).inDays;
+
+                      final subtitle = days == 0
+                          ? 'Renews today'
+                          : days == 1
+                              ? 'Renews tomorrow'
+                              : 'Renews in $days days';
+
+                      return _record(
+                        context,
+                        icon: Icons.subscriptions_outlined,
+                        title: subscription.name,
+                        subtitle: subtitle,
+                        endText: subscription.price,
+                        iconColor:
+                            days <= 3 ? Colors.red : purple,
+                      );
+                    },
+                  ),
+
+                  if (i != upcoming.length - 1)
+                    const SizedBox(height: 18),
+                ],
+            ],
+          ),
+        ),
+      ],
+    );
+  },
+),
                   const SizedBox(height: 24),
                   // =================================================
                   // FAVORITES
@@ -723,59 +1149,65 @@ SingleChildScrollView(
                       _showManageFavorites(context);
                     },
                   ),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-  if (_favorites['Passport'] == true) ...[
-    _favorite(
-      context,
-      Icons.badge_outlined,
-      'Passport',
-    ),
-    const SizedBox(width: 12),
-  ],
-  if (_favorites['Wi-Fi Account'] == true) ...[
-    _favorite(
-      context,
-      Icons.wifi,
-      'Wi-Fi Account',
-    ),
-    const SizedBox(width: 12),
-  ],
-  if (_favorites['Car Records'] == true) ...[
-    _favorite(
-      context,
-      Icons.directions_car,
-      'Car Records',
-    ),
-    const SizedBox(width: 12),
-  ],
-  if (_favorites['Health Insurance'] == true) ...[
-    _favorite(
-      context,
-      Icons.health_and_safety_outlined,
-      'Health Insurance',
-    ),
-    const SizedBox(width: 12),
-  ],
-  if (_favorites['Apartment Lease'] == true) ...[
-    _favorite(
-      context,
-      Icons.home_outlined,
-      'Apartment Lease',
-    ),
-    const SizedBox(width: 12),
-  ],
-  if (_favorites['Google Account'] == true)
-    _favorite(
-      context,
-      Icons.account_circle_outlined,
-      'Google Account',
-    ),
-],
-                    ),
-                  ),
+                  StreamBuilder<List<VaultRecord>>(
+  stream: _vaultRecordsStream,
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (snapshot.hasError) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          'Could not load favorites.',
+          style: TextStyle(
+            color: muted,
+            fontSize: 13,
+          ),
+        ),
+      );
+    }
+
+    final favorites = (snapshot.data ?? [])
+        .where((record) => record.isFavorite)
+        .toList();
+
+    if (favorites.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          'No favorite records yet.',
+          style: TextStyle(
+            color: muted,
+            fontSize: 13,
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final record in favorites) ...[
+            _favorite(
+              context,
+              Icons.description_outlined,
+              record,
+            ),
+            const SizedBox(width: 12),
+          ],
+        ],
+      ),
+    );
+  },
+),
                   const SizedBox(height: 24),
                   // =================================================
                   // BACKUPS
@@ -791,6 +1223,8 @@ _surface(
         'BACKUPS',
         trailing: 'Manage',
         onTap: () {
+          if (!_requireLogin(context)) return;
+
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -802,6 +1236,8 @@ _surface(
       ),
       GestureDetector(
         onTap: () {
+          if (!_requireLogin(context)) return;
+
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -865,32 +1301,72 @@ const SizedBox(height: 24),
   'RECENTLY OPENED',
   trailing: 'History',
   onTap: () {
+    if (!_requireLogin(context)) return;
     _showRecentHistory(context);
   },
 ),
-                  _recent(
-                    context,
-                    Icons.picture_as_pdf_outlined,
-                    'Apartment Lease Agreement',
-                    'PDF · 2.4 MB · 2 hours ago',
-                    Colors.red,
-                  ),
-                  const SizedBox(height: 14),
-                  _recent(
-                    context,
-                    Icons.image_outlined,
-                    'Health Insurance Card',
-                    'Image · Yesterday',
-                    purple,
-                  ),
-                  const SizedBox(height: 14),
-                  _recent(
-                    context,
-                    Icons.password,
-                    'Shopping Account',
-                    'Account · 3 days ago',
-                    purple,
-                  ),
+                 StreamBuilder<List<VaultRecord>>(
+  stream: _vaultRecordsStream,
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (snapshot.hasError) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          'Could not load recent history.',
+          style: TextStyle(
+            color: muted,
+            fontSize: 13,
+          ),
+        ),
+      );
+    }
+
+    final recentRecords = (snapshot.data ?? [])
+        .where((record) => record.lastOpenedAt != null)
+        .toList()
+      ..sort(
+        (a, b) => b.lastOpenedAt!.compareTo(a.lastOpenedAt!),
+      );
+
+    final visibleRecords = recentRecords.take(3).toList();
+
+    if (visibleRecords.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          'No recently opened records yet.',
+          style: TextStyle(
+            color: muted,
+            fontSize: 13,
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        for (int i = 0; i < visibleRecords.length; i++) ...[
+          _recent(
+            context,
+            visibleRecords[i],
+            '${visibleRecords[i].recordType} · ${_formatRelativeTime(visibleRecords[i].lastOpenedAt!)}',
+          ),
+          if (i != visibleRecords.length - 1)
+            const SizedBox(height: 14),
+        ],
+      ],
+    );
+  },
+),
                 ],
               ),
             ),
@@ -937,6 +1413,8 @@ const SizedBox(height: 24),
           }
           // VAULT
           if (index == 1) {
+            if (!_requireLogin(context)) return;
+
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -948,6 +1426,8 @@ const SizedBox(height: 24),
           }
           // SUBSCRIPTIONS
           if (index == 2) {
+            if (!_requireLogin(context)) return;
+
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -959,6 +1439,8 @@ const SizedBox(height: 24),
           }
           // SHARING
           if (index == 3) {
+            if (!_requireLogin(context)) return;
+
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -1228,97 +1710,41 @@ Widget _record(
       ),
     );
   }
-  void _showExpiringDetails(
-  BuildContext context, {
-  required IconData icon,
-  required String title,
-  required String status,
-  required String details,
-}) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: const Color(0xFFF8FAFC),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(24),
-      ),
-    ),
-    builder: (context) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _iconBadge(
-                icon,
-                purple,
-              ),
-              const SizedBox(height: 18),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: ink,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                status,
-                style: const TextStyle(
-                  color: purple,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                details,
-                style: const TextStyle(
-                  color: muted,
-                  fontSize: 14,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Close'),
-                ),
-              ),
-            ],
+
+  // ============================================================
+  // FAVORITE
+  // ============================================================
+Widget _favorite(
+  BuildContext context,
+  IconData icon,
+  VaultRecord record,
+) {
+  return ActionChip(
+    onPressed: () {
+      if (!_requireLogin(context)) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RecordDetailsScreen(
+            recordId: record.id,
+            title: record.title,
+            category: record.category,
+            type: record.recordType,
+            details: record.notes,
+            tags: record.tags,
+            fileName: record.fileName,
+            filePath: record.filePath,
           ),
         ),
       );
     },
-  );
-}
-  // ============================================================
-  // FAVORITE
-  // ============================================================
-  Widget _favorite(
-    BuildContext context,
-    IconData icon,
-    String label,
-  ) {
-    return ActionChip(
-      onPressed: () {
-        _showNextStep(
-          context,
-          label,
-        );
-      },
       avatar: _VaultReferenceIcon(
         icon,
         size: 19,
         color: purple,
       ),
-      label: Text(label),
+      label: Text(record.title),
       backgroundColor: const Color(0xFFF8FAFC),
       side: BorderSide.none,
       padding:
@@ -1328,9 +1754,19 @@ Widget _record(
       ),
     );
   }
-void _showManageFavorites(BuildContext context) {
-  final Map<String, bool> tempFavorites =
-      Map<String, bool>.from(_favorites);
+
+Future<void> _showManageFavorites(BuildContext context) async {
+  if (!_requireLogin(context)) return;
+
+  final records = await _vaultService.getRecords().first;
+
+  if (!context.mounted) return;
+
+  final Map<String, bool> tempFavorites = {
+    for (final record in records)
+      record.id: record.isFavorite,
+  };
+
   showModalBottomSheet(
     context: context,
     backgroundColor: const Color(0xFFF8FAFC),
@@ -1340,9 +1776,9 @@ void _showManageFavorites(BuildContext context) {
         top: Radius.circular(24),
       ),
     ),
-    builder: (context) {
+    builder: (sheetContext) {
       return StatefulBuilder(
-        builder: (context, setModalState) {
+        builder: (sheetContext, setModalState) {
           return SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -1353,8 +1789,7 @@ void _showManageFavorites(BuildContext context) {
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
@@ -1363,15 +1798,14 @@ void _showManageFavorites(BuildContext context) {
                           'Manage Favorites',
                           style: TextStyle(
                             fontSize: 20,
-                            fontWeight:
-                                FontWeight.w700,
+                            fontWeight: FontWeight.w700,
                             color: ink,
                           ),
                         ),
                       ),
                       IconButton(
                         onPressed: () {
-                          Navigator.pop(context);
+                          Navigator.pop(sheetContext);
                         },
                         icon: const _VaultReferenceIcon(
                           Icons.close,
@@ -1389,45 +1823,81 @@ void _showManageFavorites(BuildContext context) {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  ...tempFavorites.entries.map(
-                    (entry) {
-                      return CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        activeColor: purple,
-                        controlAffinity:
-                            ListTileControlAffinity.trailing,
-                        title: Text(
-                          entry.key,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight:
-                                FontWeight.w600,
-                            color: ink,
-                          ),
+
+                  if (records.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        'No Vault records available.',
+                        style: TextStyle(
+                          color: muted,
+                          fontSize: 13,
                         ),
-                        value: entry.value,
-                        onChanged: (value) {
-                          setModalState(() {
-                            tempFavorites[entry.key] =
-                                value ?? false;
-                          });
-                        },
-                      );
-                    },
-                  ),
+                      ),
+                    )
+                  else
+                    Flexible(
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: records.map((record) {
+                          return CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            activeColor: purple,
+                            controlAffinity:
+                                ListTileControlAffinity.trailing,
+                            title: Text(
+                              record.title,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: ink,
+                              ),
+                            ),
+                            subtitle: Text(
+                              record.category,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: muted,
+                              ),
+                            ),
+                            value:
+                                tempFavorites[record.id] ?? false,
+                            onChanged: (value) {
+                              setModalState(() {
+                                tempFavorites[record.id] =
+                                    value ?? false;
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ),
+
                   const SizedBox(height: 14),
+
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _favorites
-                            ..clear()
-                            ..addAll(tempFavorites);
-                        });
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(
+                      onPressed: () async {
+                        for (final record in records) {
+                          final newValue =
+                              tempFavorites[record.id] ?? false;
+
+                          if (newValue != record.isFavorite) {
+                            await _vaultService.updateFavorite(
+                              recordId: record.id,
+                              isFavorite: newValue,
+                            );
+                          }
+                        }
+
+                        if (!sheetContext.mounted) return;
+
+                        Navigator.pop(sheetContext);
+
+                        if (!context.mounted) return;
+
+                        ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text(
                               'Favorites updated',
@@ -1438,13 +1908,11 @@ void _showManageFavorites(BuildContext context) {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: purple,
                         foregroundColor: Colors.white,
-                        padding:
-                            const EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           vertical: 15,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                       ),
                       child: const Text(
@@ -1467,12 +1935,72 @@ void _showManageFavorites(BuildContext context) {
 // ============================================================
 // RECENT
 // ============================================================
+
+DateTime? _parseSubscriptionRenewal(String renewal) {
+  final cleaned = renewal.replaceFirst('Renews ', '').trim();
+
+  final match = RegExp(
+    r'^([A-Za-z]{3})\s+(\d{1,2}),\s+(\d{4})$',
+  ).firstMatch(cleaned);
+
+  if (match == null) return null;
+
+  const months = {
+    'Jan': 1,
+    'Feb': 2,
+    'Mar': 3,
+    'Apr': 4,
+    'May': 5,
+    'Jun': 6,
+    'Jul': 7,
+    'Aug': 8,
+    'Sep': 9,
+    'Oct': 10,
+    'Nov': 11,
+    'Dec': 12,
+  };
+
+  final month = months[match.group(1)];
+  final day = int.tryParse(match.group(2)!);
+  final year = int.tryParse(match.group(3)!);
+
+  if (month == null || day == null || year == null) {
+    return null;
+  }
+
+  return DateTime(year, month, day);
+}
+
+String _formatRelativeTime(DateTime dateTime) {
+  final difference = DateTime.now().difference(dateTime);
+
+  if (difference.inMinutes < 1) {
+    return 'Just now';
+  }
+
+  if (difference.inMinutes < 60) {
+    return '${difference.inMinutes} min ago';
+  }
+
+  if (difference.inHours < 24) {
+    return '${difference.inHours} hr ago';
+  }
+
+  if (difference.inDays == 1) {
+    return 'Yesterday';
+  }
+
+  if (difference.inDays < 7) {
+    return '${difference.inDays} days ago';
+  }
+
+  return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+}
+
 Widget _recent(
   BuildContext context,
-  IconData icon,
-  String title,
+  VaultRecord record,
   String subtitle,
-  Color color,
 ) {
   return _surface(
     child: Row(
@@ -1480,18 +2008,27 @@ Widget _recent(
         Expanded(
           child: _record(
             context,
-            icon: icon,
-            title: title,
+            icon: Icons.description_outlined,
+            title: record.title,
             subtitle: subtitle,
-            iconColor: color,
-            // Opens this recently viewed item
+            iconColor: purple,
             onTap: () {
-              _showRecentDetails(
+              if (!_requireLogin(context)) return;
+
+              Navigator.push(
                 context,
-                icon: icon,
-                title: title,
-                subtitle: subtitle,
-                color: color,
+                MaterialPageRoute(
+                  builder: (_) => RecordDetailsScreen(
+                    recordId: record.id,
+                    title: record.title,
+                    category: record.category,
+                    type: record.recordType,
+                    details: record.notes,
+                    tags: record.tags,
+                    fileName: record.fileName,
+                    filePath: record.filePath,
+                  ),
+                ),
               );
             },
           ),
@@ -1501,7 +2038,7 @@ Widget _recent(
           onPressed: () {
             _showRecentOptions(
               context,
-              title,
+              record.title,
             );
           },
           icon: const _VaultReferenceIcon(
@@ -1513,113 +2050,8 @@ Widget _recent(
     ),
   );
 }
-void _showRecentDetails(
-  BuildContext context, {
-  required IconData icon,
-  required String title,
-  required String subtitle,
-  required Color color,
-}) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: const Color(0xFFF8FAFC),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(24),
-      ),
-    ),
-    builder: (context) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _iconBadge(
-                icon,
-                color,
-              ),
-              const SizedBox(height: 18),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: ink,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: muted,
-                ),
-              ),
-              const SizedBox(height: 22),
-              const Text(
-                'Recently opened from your Personal Vault.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: muted,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: purple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 15,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
-                    'Close',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-}
+
 void _showRecentHistory(BuildContext context) {
-  final recentItems = [
-    {
-      'icon': Icons.picture_as_pdf_outlined,
-      'title': 'Apartment Lease Agreement',
-      'subtitle': 'PDF · 2.4 MB · 2 hours ago',
-      'color': Colors.red,
-    },
-    {
-      'icon': Icons.image_outlined,
-      'title': 'Health Insurance Card',
-      'subtitle': 'Image · Yesterday',
-      'color': purple,
-    },
-    {
-      'icon': Icons.password,
-      'title': 'Shopping Account',
-      'subtitle': 'Account · 3 days ago',
-      'color': purple,
-    },
-  ];
   showModalBottomSheet(
     context: context,
     backgroundColor: const Color(0xFFF8FAFC),
@@ -1638,107 +2070,181 @@ void _showRecentHistory(BuildContext context) {
             24,
             24,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Recently Opened',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: ink,
-                      ),
-                    ),
+          child: StreamBuilder<List<VaultRecord>>(
+            stream: _vaultRecordsStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState ==
+                  ConnectionState.waiting) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: CircularProgressIndicator(),
                   ),
-                  IconButton(
-                    onPressed: () {
-                      Navigator.pop(sheetContext);
-                    },
-                    icon: const _VaultReferenceIcon(
-                      Icons.close,
+                );
+              }
+
+              if (snapshot.hasError) {
+                return const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    'Could not load history.',
+                    style: TextStyle(
                       color: muted,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Your recently opened Vault records.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: muted,
-                ),
-              ),
-              const SizedBox(height: 20),
-              ...recentItems.map((item) {
-                return Padding(
-                  padding: const EdgeInsets.only(
-                    bottom: 12,
-                  ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      _showRecentDetails(
-                        context,
-                        icon: item['icon'] as IconData,
-                        title: item['title'] as String,
-                        subtitle: item['subtitle'] as String,
-                        color: item['color'] as Color,
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        children: [
-                          _iconBadge(
-                            item['icon'] as IconData,
-                            item['color'] as Color,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item['title'] as String,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: ink,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  item['subtitle'] as String,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: muted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const _VaultReferenceIcon(
-                            Icons.chevron_right,
-                            color: muted,
-                          ),
-                        ],
-                      ),
+                      fontSize: 13,
                     ),
                   ),
                 );
-              }),
-            ],
+              }
+
+              final recentRecords = (snapshot.data ?? [])
+                  .where((record) => record.lastOpenedAt != null)
+                  .toList()
+                ..sort(
+                  (a, b) =>
+                      b.lastOpenedAt!.compareTo(a.lastOpenedAt!),
+                );
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Recently Opened',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: ink,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pop(sheetContext);
+                        },
+                        icon: const _VaultReferenceIcon(
+                          Icons.close,
+                          color: muted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Your recently opened Vault records.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: muted,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  if (recentRecords.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(
+                        vertical: 20,
+                      ),
+                      child: Text(
+                        'No history yet.',
+                        style: TextStyle(
+                          color: muted,
+                          fontSize: 13,
+                        ),
+                      ),
+                    )
+                  else
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: recentRecords.length,
+                        itemBuilder: (context, index) {
+                          final record = recentRecords[index];
+
+                          return Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: 12,
+                            ),
+                            child: InkWell(
+                              borderRadius:
+                                  BorderRadius.circular(14),
+                              onTap: () {
+                                Navigator.pop(sheetContext);
+
+                                if (!_requireLogin(context)) return;
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        RecordDetailsScreen(
+                                      recordId: record.id,
+                                      title: record.title,
+                                      category: record.category,
+                                      type: record.recordType,
+                                      details: record.notes,
+                                      tags: record.tags,
+                                      fileName: record.fileName,
+                                      filePath: record.filePath,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius:
+                                      BorderRadius.circular(14),
+                                ),
+                                child: Row(
+                                  children: [
+                                    _iconBadge(
+                                      Icons.description_outlined,
+                                      purple,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            record.title,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight:
+                                                  FontWeight.w600,
+                                              color: ink,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '${record.recordType} · ${_formatRelativeTime(record.lastOpenedAt!)}',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: muted,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const _VaultReferenceIcon(
+                                      Icons.chevron_right,
+                                      color: muted,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ),
       );

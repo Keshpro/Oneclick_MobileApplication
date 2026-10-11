@@ -50,6 +50,9 @@ int _totalPdfPages = 0;
 void initState() {
   super.initState();
   _pdfBytesFuture = _loadPdfBytes();
+  _vaultService.markRecordOpened(
+    recordId: widget.recordId,
+  );
 }
 
 Future<Uint8List?> _loadPdfBytes() async {

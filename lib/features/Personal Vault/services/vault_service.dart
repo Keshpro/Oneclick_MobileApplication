@@ -89,6 +89,23 @@ Future<void> updateRecord({
     'tags': tags,
   });
 }
+Future<void> updateFavorite({
+  required String recordId,
+  required bool isFavorite,
+}) async {
+  await _recordsCollection.doc(recordId).update({
+    'isFavorite': isFavorite,
+  });
+}
+
+Future<void> markRecordOpened({
+  required String recordId,
+}) async {
+  await _recordsCollection.doc(recordId).update({
+    'lastOpenedAt': FieldValue.serverTimestamp(),
+  });
+}
+
   Stream<List<VaultRecord>> getRecords() {
     return _recordsCollection
         .orderBy('createdAt', descending: true)
