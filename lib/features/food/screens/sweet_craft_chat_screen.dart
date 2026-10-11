@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/sweet_craft_request.dart';
 import '../services/sweet_craft_service.dart';
 import 'sweet_craft_final_offer_screen.dart';
 
@@ -37,6 +38,16 @@ class _SweetCraftChatScreenState extends State<SweetCraftChatScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+
+    SweetCraftService.instance.updateRequestStatus(
+      widget.requestId,
+      SweetCraftRequestStatus.negotiating,
+    );
+  }
+
+  @override
   void dispose() {
     messageController.dispose();
     super.dispose();
@@ -64,7 +75,7 @@ class _SweetCraftChatScreenState extends State<SweetCraftChatScreen> {
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             ),
             const Text(
-              'SweetCraft private chat',
+              'Private negotiation',
               style: TextStyle(fontSize: 11, color: Colors.grey),
             ),
           ],
@@ -89,6 +100,28 @@ class _SweetCraftChatScreenState extends State<SweetCraftChatScreen> {
       ),
       body: Column(
         children: [
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(18, 14, 18, 4),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE6EE),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.lock_outline, color: Color(0xFFE91E63), size: 20),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'This is a private chat between you and the selected seller.',
+                    style: TextStyle(fontSize: 12, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(18),
@@ -134,6 +167,8 @@ class _SweetCraftChatScreenState extends State<SweetCraftChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: messageController,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _sendMessage(),
                       decoration: InputDecoration(
                         hintText: 'Write a message...',
                         filled: true,

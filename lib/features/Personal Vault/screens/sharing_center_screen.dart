@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'share_record_screen.dart';
-import 'shared_with_me_details_screen.dart';
 import 'dashboard.dart';
 import 'vault_screen.dart';
 import 'subscriptions_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/shared_record.dart';
+import '../services/sharing_service.dart';
+
+
 class SharingCenterScreen extends StatefulWidget {
   const SharingCenterScreen({super.key});
   @override
@@ -20,7 +24,44 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
   static const Color purple = Color(0xFF4F46E5);
   static const Color purple2 = Color(0xFF9333EA);
   static const Color danger = Color(0xFFF43F5E);
+
+  final SharingService _sharingService = SharingService();
+  
+  List<SharedRecord> sharedRecords = [];
+
+  List<SharedRecord> receivedRecords = [];
+
   bool sharedByMe = true;
+
+@override
+void initState() {
+  super.initState();
+
+  if (FirebaseAuth.instance.currentUser != null) {
+    _loadSharedRecords();
+    _loadReceivedRecords();
+  }
+}
+
+void _loadSharedRecords() {
+  _sharingService.getSharedRecords().listen((records) {
+    if (!mounted) return;
+
+    setState(() {
+      sharedRecords = records;
+    });
+  });
+}
+void _loadReceivedRecords() {
+  _sharingService.getReceivedRecords().listen((records) {
+    if (!mounted) return;
+
+    setState(() {
+      receivedRecords = records;
+    });
+  });
+}
+
   @override
   Widget build(BuildContext context) {
     final base = Theme.of(context);
@@ -107,20 +148,35 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
                         _buildTabs(),
                         const SizedBox(height: 30),
                         if (sharedByMe) ...[
-                          _buildRevocationNotice(),
-                          const SizedBox(height: 28),
-                          _buildApartmentLease(),
-                          const SizedBox(height: 18),
-                          _buildHomePurchase(),
-                          const SizedBox(height: 18),
-                          _buildWifiAdmin(),
-                          const SizedBox(height: 30),
-                          _buildReceivedSection(),
-                        ] else ...[
-                          _buildReceivedSection(),
-                        ],
+                        _buildRevocationNotice(),
                         const SizedBox(height: 28),
+
+                        if (sharedRecords.isEmpty)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 30),
+                              child: Text(
+                                'No shared records yet.',
+                                style: TextStyle(
+                                  color: muted,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          ...sharedRecords.map(
+                            (record) => Padding(
+                              padding: const EdgeInsets.only(bottom: 18),
+                              child: _buildSharedRecordCard(record),
+                            ),
+                          ),
+
+                        const SizedBox(height: 10),
                         _buildShareNewRecord(),
+                      ] else ...[
+                        _buildReceivedSection(),
+                      ],
                       ],
                     ),
                   ),
@@ -562,6 +618,128 @@ Widget _buildTopBar() {
       ),
     );
   }
+
+  Widget _buildSharedRecordCard(SharedRecord record) {
+  final recipientName = record.recipientName.trim();
+
+  final initials = recipientName.isNotEmpty
+      ? recipientName[0].toUpperCase()
+      : '?';
+
+  final expiryText = record.expiryDate == null
+      ? 'Never expires'
+      : 'Expires ${record.expiryDate!.day}/${record.expiryDate!.month}/${record.expiryDate!.year}';
+
+  final isRevoked = record.status == 'Revoked';
+
+  return _card(
+    padding: const EdgeInsets.all(22),
+    child: Column(
+      children: [
+        Row(
+          children: [
+            _circleIcon(
+              Icons.description_outlined,
+              color: purple,
+              size: 44,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    record.recordTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: ink,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'Shared record',
+                    style: const TextStyle(
+                      color: muted,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _pill(
+              icon: record.permission == 'View and download'
+                  ? Icons.cloud_download_outlined
+                  : Icons.visibility_outlined,
+              text: record.permission,
+              color: purple2,
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 23),
+
+        _recipient(
+          initials: initials,
+          name: record.recipientName,
+          email: record.recipientEmail,
+          rightTitle: 'Status',
+          rightValue: record.status,
+          rightValueColor: isRevoked ? danger : purple,
+          verified: !isRevoked,
+        ),
+
+        const SizedBox(height: 21),
+
+        Row(
+          children: [
+            Expanded(
+              child: _infoPill(
+                record.expiryDate == null
+                    ? Icons.all_inclusive
+                    : Icons.schedule,
+                expiryText,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _infoPill(
+                Icons.shield_outlined,
+                record.permission,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 22),
+
+        Row(
+          children: [
+            Expanded(
+              child: _actionButton(
+                icon: isRevoked
+                    ? Icons.check_circle_outline
+                    : Icons.block,
+                text: isRevoked
+                    ? 'Access Revoked'
+                    : 'Revoke Access',
+                color: isRevoked ? muted : danger,
+                onTap: () {
+                  if (!isRevoked) {
+                    _confirmRevoke(record);
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
   // ============================================================
   // APARTMENT LEASE
   // ============================================================
@@ -647,7 +825,7 @@ Widget _buildTopBar() {
                   text: 'Revoke Access',
                   color: danger,
                   onTap: () {
-                    _confirmRevoke('Marcus Vance');
+                    _message('This mock card is no longer active.');
                   },
                 ),
               ),
@@ -754,7 +932,7 @@ Widget _buildTopBar() {
                   text: 'Revoke Access',
                   color: danger,
                   onTap: () {
-                    _confirmRevoke('Elena Rostova');
+                    _message('This mock card is no longer active.');
                   },
                 ),
               ),
@@ -910,106 +1088,94 @@ Widget _buildTopBar() {
   // ============================================================
   // SHARED WITH ME
   // ============================================================
-  Widget _buildReceivedSection() {
-    return _card(
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const _VaultReferenceIcon(
-                Icons.folder_shared_outlined,
-                color: purple,
-                size: 22,
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Shared with Me',
-                  style: TextStyle(
-                    color: ink,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Text(
-                '2 Received',
-                style: TextStyle(
-                  color: purple.withValues(alpha: .9),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          const Text(
-            'Decrypted items sent to your OneClick address from '
-            'verified contacts.',
-            style: TextStyle(
-              color: muted,
-              fontSize: 12,
-              height: 1.6,
+Widget _buildReceivedSection() {
+  return _card(
+    padding: const EdgeInsets.all(22),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const _VaultReferenceIcon(
+              Icons.folder_shared_outlined,
+              color: purple,
+              size: 22,
             ),
-          ),
-          const SizedBox(height: 21),
-          _receivedItem(
-            icon: Icons.health_and_safety_outlined,
-            title: 'Family Health Insurance Group',
-            from: 'From Arthur Miller (Owner)',
-            permission: 'View & Download',
-            footerIcon: Icons.event_available_outlined,
-            footer: 'Valid until Dec 2026',
-            onOpen: () {
-              showSharedWithMeDetails(
-                context,
-                const SharedWithMeItem(
-                  title: 'Family Health Insurance Group',
-                  owner: 'Arthur Miller',
-                  permission: 'View & Download',
-                  expiry: 'Valid until Dec 2026',
-                  fileName: 'Family_Health_Insurance.pdf',
-                  fileType: 'PDF',
-                  fileSize: '2.8 MB',
-                  icon: Icons.health_and_safety_outlined,
-                  canDownload: true,
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Shared with Me',
+                style: TextStyle(
+                  color: ink,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                 ),
-              );
-            },
+              ),
+            ),
+            Text(
+              '${receivedRecords.length} Received',
+              style: TextStyle(
+                color: purple.withValues(alpha: .9),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 22),
+
+        const Text(
+          'Records shared with your OneClick account.',
+          style: TextStyle(
+            color: muted,
+            fontSize: 12,
+            height: 1.6,
           ),
-          const SizedBox(height: 14),
-          _receivedItem(
-            icon: Icons.directions_car_outlined,
-            title: 'Rental Car Protection Receipt',
-            from: 'From Chloe Bennett (Owner)',
-            permission: 'View only',
-            footerIcon: Icons.timer_outlined,
-            footer: 'Expires tomorrow',
-            dangerFooter: true,
-            onOpen: () {
-              showSharedWithMeDetails(
-                context,
-                const SharedWithMeItem(
-                  title: 'Rental Car Protection Receipt',
-                  owner: 'Chloe Bennett',
-                  permission: 'View only',
-                  expiry: 'Expires tomorrow',
-                  fileName: 'Rental_Car_Protection_Receipt.pdf',
-                  fileType: 'PDF',
-                  fileSize: '1.4 MB',
-                  icon: Icons.directions_car_outlined,
-                  canDownload: false,
-                  expiringSoon: true,
+        ),
+
+        const SizedBox(height: 21),
+
+        if (receivedRecords.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 25),
+              child: Text(
+                'No records have been shared with you yet.',
+                style: TextStyle(
+                  color: muted,
+                  fontSize: 12,
                 ),
-              );
-            },
+              ),
+            ),
+          )
+        else
+          ...receivedRecords.map((record) {
+            final expiryText = record.expiryDate == null
+                ? 'No expiry'
+                : 'Expires ${record.expiryDate!.day}/${record.expiryDate!.month}/${record.expiryDate!.year}';
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _receivedItem(
+                icon: Icons.description_outlined,
+                title: record.recordTitle,
+                from: 'Shared by ${record.ownerId}',
+                permission: record.permission,
+                footerIcon: record.expiryDate == null
+                    ? Icons.all_inclusive
+                    : Icons.event_available_outlined,
+                footer: expiryText,
+                onOpen: () {
+                  _message('Opening ${record.recordTitle}');
+                },
+              ),
+            );
+          }),
+      ],
     ),
-        ],
-      ),
-    );
-  }
+  );
+}
   Widget _receivedItem({
     required IconData icon,
     required String title,
@@ -1589,53 +1755,66 @@ _navItem(
       ),
     );
   }
-  void _confirmRevoke(String person) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: surface,
-          title: const Text(
-            'Revoke Access?',
-            style: TextStyle(
-              color: ink,
-              fontWeight: FontWeight.w700,
+Future<void> _confirmRevoke(SharedRecord record) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        backgroundColor: surface,
+        title: const Text(
+          'Revoke Access?',
+          style: TextStyle(
+            color: ink,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          '${record.recipientName} will immediately lose access to this shared record.',
+          style: const TextStyle(
+            color: muted,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, false);
+            },
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: muted),
             ),
           ),
-          content: Text(
-            '$person will immediately lose access to this shared record.',
-            style: const TextStyle(
-              color: muted,
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, true);
+            },
+            child: const Text(
+              'Revoke',
+              style: TextStyle(
+                color: danger,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: muted),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                _message('Access revoked for $person');
-              },
-              child: const Text(
-                'Revoke',
-                style: TextStyle(
-                  color: danger,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) return;
+
+  try {
+    await _sharingService.revokeAccess(record.id);
+
+    if (!mounted) return;
+
+    _message('Access revoked for ${record.recipientName}');
+  } catch (e) {
+    if (!mounted) return;
+
+    _message('Failed to revoke access: $e');
   }
+}
 }
 
 class _VaultGlassScope extends InheritedWidget {

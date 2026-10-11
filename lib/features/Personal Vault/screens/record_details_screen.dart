@@ -2,15 +2,32 @@ import 'package:flutter/material.dart';
 
 import 'explain_document_screen.dart';
 import 'share_record_screen.dart';
+import '../services/vault_service.dart';
 
 class RecordDetailsScreen extends StatefulWidget {
-  const RecordDetailsScreen({super.key});
+  final String recordId;
+  final String title;
+  final String category;
+  final String type;
+  final String details;
+  final List<String> tags;
+
+  const RecordDetailsScreen({
+    super.key,
+    required this.recordId,
+    required this.title,
+    required this.category,
+    required this.type,
+    required this.details,
+    required this.tags,
+  });
 
   @override
   State<RecordDetailsScreen> createState() => _RecordDetailsScreenState();
 }
 
 class _RecordDetailsScreenState extends State<RecordDetailsScreen> {
+  final VaultService _vaultService = VaultService();
   bool passwordVisible = false;
 
   static const Color background = Color(0xFFE9EBF2);
@@ -157,11 +174,11 @@ class _RecordDetailsScreenState extends State<RecordDetailsScreen> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     _smallLabel(
-                      'Legal & Property',
+                      widget.category,
                       color: purple,
                     ),
 
-                    const Row(
+                    Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
@@ -171,7 +188,7 @@ class _RecordDetailsScreenState extends State<RecordDetailsScreen> {
                         ),
                         SizedBox(width: 5),
                         Text(
-                          'Home & Lease',
+                          widget.category,
                           style: TextStyle(
                             color: muted,
                             fontSize: 14,
@@ -184,8 +201,8 @@ class _RecordDetailsScreenState extends State<RecordDetailsScreen> {
 
                 const SizedBox(height: 10),
 
-                const Text(
-                  'Apartment Lease Agreement',
+                Text(
+                  widget.title,
                   style: TextStyle(
                     color: ink,
                     fontSize: 22,
@@ -281,8 +298,8 @@ class _RecordDetailsScreenState extends State<RecordDetailsScreen> {
   text: 'Share',
   onTap: () {
     final record = ShareRecordItem(
-      title: 'Apartment Lease Agreement.pdf',
-      subtitle: 'Legal & Property • 2.4 MB',
+      title: widget.title,
+      subtitle: '${widget.category} • ${widget.type}',
       icon: Icons.picture_as_pdf_outlined,
     );
 
@@ -1338,6 +1355,124 @@ class _RecordDetailsScreenState extends State<RecordDetailsScreen> {
     );
   }
 
+  Future<void> _showEditDialog() async {
+  final titleController = TextEditingController(
+    text: widget.title,
+  );
+
+  final categoryController = TextEditingController(
+    text: widget.category,
+  );
+
+  final typeController = TextEditingController(
+    text: widget.type,
+  );
+
+  final notesController = TextEditingController(
+    text: widget.details,
+  );
+
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Edit Record'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: categoryController,
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: typeController,
+                decoration: const InputDecoration(
+                  labelText: 'Record Type',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: notesController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, false);
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, true);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (result != true) {
+    titleController.dispose();
+    categoryController.dispose();
+    typeController.dispose();
+    notesController.dispose();
+    return;
+  }
+
+  try {
+    await _vaultService.updateRecord(
+      recordId: widget.recordId,
+      title: titleController.text.trim(),
+      category: categoryController.text.trim(),
+      recordType: typeController.text.trim(),
+      notes: notesController.text.trim(),
+      tags: widget.tags,
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Record updated'),
+      ),
+    );
+
+    Navigator.pop(context);
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to update record: $e'),
+      ),
+    );
+  } finally {
+    titleController.dispose();
+    categoryController.dispose();
+    typeController.dispose();
+    notesController.dispose();
+  }
+}
+
   void _showMoreOptions() {
     showModalBottomSheet(
       context: context,
@@ -1355,13 +1490,13 @@ class _RecordDetailsScreenState extends State<RecordDetailsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  leading: const Icon(Icons.edit_outlined),
-                  title: const Text('Edit Record'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showMessage('Edit record will be connected next.');
-                  },
-                ),
+  leading: const Icon(Icons.edit_outlined),
+  title: const Text('Edit Record'),
+  onTap: () {
+    Navigator.pop(context);
+    _showEditDialog();
+  },
+),
 
                 ListTile(
                   leading: const Icon(Icons.star_border),

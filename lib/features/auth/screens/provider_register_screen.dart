@@ -7,6 +7,7 @@ import 'pending_approval_screen.dart';
 enum ProviderRole {
   doctor,
   driver,
+  grocerySeller,
 }
 
 class ProviderRegisterScreen

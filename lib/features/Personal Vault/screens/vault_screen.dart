@@ -9,82 +9,58 @@ import 'vault_settings_screen.dart';
 import 'dashboard.dart';
 import 'sharing_center_screen.dart';
 import 'share_record_screen.dart';
+import '../services/vault_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+
 class VaultScreen extends StatefulWidget {
   const VaultScreen({super.key});
   @override
   State<VaultScreen> createState() => _VaultScreenState();
 }
 class _VaultScreenState extends State<VaultScreen> {
+  final VaultService _vaultService = VaultService();
   static const background = Color(0xFFF8FAFC);
   static const purple = Color(0xFF4F46E5);
   static const ink = Color(0xFF0F172A);
   static const muted = Color(0xFF64748B);
-  String _query = '';
-  String _filter = 'All';
-  String? _folder;
-  String? _tag;
-  bool _ascending = true;
-  final List<_VaultItem> _items = [
-    _VaultItem(
-      title: 'US Passport',
-      type: 'Document',
-      details: 'Sample passport • Exp: 2030',
-      folder: 'Personal ID',
-      tags: ['travel'],
-      icon: Icons.badge_outlined,
-      favorite: true,
-    ),
-    _VaultItem(
-      title: 'Wi-Fi & Router',
-      type: 'Account',
-      details: 'Netgear 6E • Sample account',
-      folder: 'Home & Lease',
-      tags: ['home'],
-      icon: Icons.wifi,
-      favorite: true,
-    ),
-    _VaultItem(
-      title: 'Apartment Lease Agreement',
-      type: 'Document',
-      details: 'PDF • 2.4 MB • Sample document',
-      folder: 'Home & Lease',
-      tags: ['renewals', 'urgent'],
-      icon: Icons.description_outlined,
-      favorite: true,
-    ),
-    _VaultItem(
-      title: 'GitHub Personal Access',
-      type: 'Account',
-      details: 'user@example.com • Sample account',
-      folder: 'Digital Accounts',
-      tags: ['work'],
-      icon: Icons.key,
-    ),
-    _VaultItem(
-      title: 'Sony WH-1000XM5',
-      type: 'Receipt & Warranty',
-      details: 'Sample receipt • Warranty information',
-      folder: 'Receipts',
-      tags: ['warranty'],
-      icon: Icons.verified_outlined,
-    ),
-    _VaultItem(
-      title: 'Automobile Insurance Card',
-      type: 'Document',
-      details: 'Sample insurance document',
-      folder: 'Personal ID',
-      tags: ['renewals'],
-      icon: Icons.directions_car_outlined,
-    ),
-    _VaultItem(
-      title: 'Vanguard Retirement',
-      type: 'Account',
-      details: 'me@example.com • Sample account',
-      folder: 'Digital Accounts',
-      tags: ['work'],
-      icon: Icons.account_balance_outlined,
-    ),
-  ];
+String _query = '';
+String _filter = 'All';
+String? _folder;
+String? _tag;
+bool _ascending = true;
+
+List<_VaultItem> _items = [];
+
+@override
+void initState() {
+  super.initState();
+
+  if (FirebaseAuth.instance.currentUser != null) {
+    _loadRecords();
+  }
+}
+void _loadRecords() {
+  _vaultService.getRecords().listen((records) {
+    if (!mounted) return;
+
+    setState(() {
+      _items = records.map((record) {
+        return _VaultItem(
+          id: record.id,
+          title: record.title,
+          type: record.recordType,
+          details: record.fileName ?? record.notes,
+          folder: record.category,
+          tags: record.tags,
+          icon: Icons.description_outlined,
+          favorite: false,
+        );
+      }).toList();
+    });
+  });
+}
+
   List<_VaultItem> get _visibleItems {
     final query = _query.trim().toLowerCase();
     final results = _items.where((item) {
@@ -609,6 +585,52 @@ class _VaultScreenState extends State<VaultScreen> {
       ),
     );
   }
+  Future<void> _deleteRecord(_VaultItem item) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Delete record?'),
+        content: Text(
+          'Are you sure you want to delete "${item.title}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) return;
+
+  try {
+    await _vaultService.deleteRecord(item.id);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Record deleted'),
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to delete record: $e'),
+      ),
+    );
+  }
+}
+
   Widget _recordCard(_VaultItem item) {
     return _surface(
       child: Builder(builder: (context) => Column(
@@ -665,18 +687,31 @@ class _VaultScreenState extends State<VaultScreen> {
                 ),
               ),
               IconButton(
+  tooltip: 'Delete',
+  onPressed: () {
+    _deleteRecord(item);
+  },
+  icon: const Icon(
+    Icons.delete_outline,
+    color: Colors.red,
+  ),
+),
+              IconButton(
                 tooltip: 'View details',
                 onPressed: () {
-                  if (item.title == 'Apartment Lease Agreement') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const RecordDetailsScreen(),
-                      ),
-                    );
-                  } else {
-                     _showDetails(item);
-                  }
+                  Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => RecordDetailsScreen(
+      recordId: item.id,
+      title: item.title,
+      category: item.folder,
+      type: item.type,
+      details: item.details,
+      tags: item.tags,
+    ),
+  ),
+);
                 },
                 icon: const _VaultReferenceIcon(
                   Icons.chevron_right,
@@ -694,16 +729,19 @@ class _VaultScreenState extends State<VaultScreen> {
       width: 172,
       child: GestureDetector(
         onTap: () {
-          if (item.title == 'Apartment Lease Agreement') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const RecordDetailsScreen(),
-              ),
-            );
-            } else {
-              _showDetails(item);
-              }
+          Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => RecordDetailsScreen(
+      recordId: item.id,
+      title: item.title,
+      category: item.folder,
+      type: item.type,
+      details: item.details,
+      tags: item.tags,
+    ),
+  ),
+);
             },
         child: _VaultGlassCard(interactive: true, padding: const EdgeInsets.all(16),
           child: Column(
@@ -828,6 +866,7 @@ class _VaultScreenState extends State<VaultScreen> {
   }
 }
 class _VaultItem {
+  final String id;
   final String title;
   final String type;
   final String details;
@@ -836,6 +875,7 @@ class _VaultItem {
   final IconData icon;
   bool favorite;
   _VaultItem({
+    required this.id,
     required this.title,
     required this.type,
     required this.details,
