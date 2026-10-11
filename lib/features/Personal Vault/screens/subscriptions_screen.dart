@@ -143,7 +143,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
-                    value: status,
+                    initialValue: status,
                     decoration: const InputDecoration(
                       labelText: 'Status',
                     ),
@@ -537,7 +537,7 @@ void _showSearch() {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'PRODUCTIVITY & AI',
-                          total: '\LKR 30,000/mo',
+                          total: 'LKR 30,000/mo',
                           icon: Icons.terminal_outlined,
                           items: filteredSubscriptions
                               .where(
@@ -550,7 +550,7 @@ void _showSearch() {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'ENTERTAINMENT & MEDIA',
-                          total: '\LKR 11,000/mo',
+                          total: 'LKR 11,000/mo',
                           icon: Icons.play_circle_outline,
                           items: filteredSubscriptions
                               .where(
@@ -563,7 +563,7 @@ void _showSearch() {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'STORAGE & UTILITIES',
-                          total: '\LKR 3,000/mo',
+                          total: 'LKR 3,000/mo',
                           icon: Icons.cloud_outlined,
                           items: filteredSubscriptions
                               .where(
@@ -635,7 +635,7 @@ Widget _buildHeader() {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${_monthlyCost(subscriptions).toStringAsFixed(2)}',
+                _monthlyCost(subscriptions).toStringAsFixed(2),
                 style: TextStyle(
                   color: ink,
                   fontSize: 32,
@@ -696,7 +696,7 @@ Widget _buildHeader() {
                 ),
               ),
               Text(
-                '${(_monthlyCost(subscriptions) * 12).toStringAsFixed(2)}',
+                (_monthlyCost(subscriptions) * 12).toStringAsFixed(2),
                 style: TextStyle(
                   color: ink,
                   fontWeight: FontWeight.w700,
@@ -865,7 +865,7 @@ Widget _buildHeader() {
                                 'You can trim up to ',
                           ),
                           TextSpan(
-                            text: '\LKR 11,000/mo',
+                            text: 'LKR 11,000/mo',
                             style: TextStyle(
                               color: purple,
                               fontWeight: FontWeight.w700,
@@ -944,7 +944,7 @@ Widget _buildHeader() {
                 subtitle: 'Free 7-Day Trial',
                 badge: '3 days left',
                 description:
-                    'Converts to \LKR 5,000/mo on Nov 08 unless cancelled.',
+                    'Converts to LKR 5,000/mo on Nov 08 unless cancelled.',
                 icon: Icons.movie_outlined,
               ),
               const SizedBox(width: 16),
@@ -1657,7 +1657,7 @@ Widget _buildAddSubscriptionButton() {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: 'Monthly price',
-                  prefixText: '\LKR ',
+                  prefixText: 'LKR ',
                 ),
               ),
             ],
@@ -1992,7 +1992,7 @@ class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProvide
   );
 }
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon, {this.color});
+  const _VaultNavGlyph(this.icon) : color = null;
   final IconData icon;
   final Color? color;
   @override

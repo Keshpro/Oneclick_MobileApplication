@@ -124,7 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final doc = await firestore.collection(collection).doc(uid).get();
 
     if (doc.exists) {
-      final data = doc.data() as Map<String, dynamic>?;
+      final data = doc.data();
       final status = data?['status'] ?? 'pending';
 
       if (status != 'active') {

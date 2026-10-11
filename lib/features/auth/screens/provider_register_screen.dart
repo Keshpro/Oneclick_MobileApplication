@@ -19,28 +19,33 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final _nameController = TextEditingController();
-
   final _emailController = TextEditingController();
-
   final _phoneController = TextEditingController();
-
   final _passwordController = TextEditingController();
-
   final _confirmPasswordController = TextEditingController();
 
   // Doctor
   final _doctorIdController = TextEditingController();
-
-  final _specializationController = TextEditingController();
   final _experienceController = TextEditingController();
+
+  // Doctor Categories (Matching User / Patient Side Categories)
+  final List<String> _doctorCategories = [
+    'General Physician',
+    'Cardiologist',
+    'Dermatologist',
+    'Pediatrician',
+    'Neurologist',
+    'Gynecologist',
+    'Dentist',
+  ];
+
+  String? _selectedCategory;
 
   // Driver
   final _licenseController = TextEditingController();
-
   final _licenseExpiryController = TextEditingController();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
-
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool _isLoading = false;
@@ -48,7 +53,6 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
   bool _obscureConfirmPassword = true;
 
   bool get _isDoctor => widget.role == ProviderRole.doctor;
-
   String get _roleName => _isDoctor ? 'Doctor' : 'Driver';
 
   @override
@@ -60,7 +64,6 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
     _confirmPasswordController.dispose();
 
     _doctorIdController.dispose();
-    _specializationController.dispose();
     _experienceController.dispose();
 
     _licenseController.dispose();
@@ -92,6 +95,16 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
       return;
     }
 
+    if (_isDoctor && _selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a doctor category'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     FocusScope.of(context).unfocus();
 
     setState(() {
@@ -113,15 +126,14 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
         throw Exception('Unable to create provider account.');
       }
 
-      // 2. Determine which collection to use based on the role
-      // If it's a doctor, save to 'doctors' collection. If driver, save to 'drivers' collection.
+      // 2. Determine target collection
       final String targetCollection = _isDoctor ? 'doctors' : 'drivers';
 
-      // 3. Prepare specific details based on the role
+      // 3. Prepare details based on role
       final providerDetails = _isDoctor
           ? {
               'doctorId': _doctorIdController.text.trim(),
-              'specialization': _specializationController.text.trim(),
+              'specialization': _selectedCategory, // Selected Dropdown Category
               'experienceYears': _experienceController.text.trim(),
             }
           : {
@@ -129,29 +141,29 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
               'licenseExpiryDate': _licenseExpiryController.text.trim(),
             };
 
-      // 4. Save data into the specific role-based collection in Firestore
-      await _firestore
-          .collection(
-            targetCollection,
-          ) // <--- මෙතන දැන් වෙනම collection එකකට (doctors/drivers) save වෙනවා
-          .doc(user.uid)
-          .set({
-            'uid': user.uid,
-            'name': _nameController.text.trim(),
-            'email': _emailController.text.trim().toLowerCase(),
-            'phone': _phoneController.text.trim(),
-            'role': widget.role.name,
-            'accountType': 'provider',
-            'status': 'pending',
-            'requiresApproval': true,
-            'providerDetails': providerDetails,
-            'providerAgreementAccepted': true,
-            'createdAt': FieldValue.serverTimestamp(),
-            'approvedAt': null,
-          });
+      // 4. Save data into the specific role-based collection
+      await _firestore.collection(targetCollection).doc(user.uid).set({
+        'uid': user.uid,
+        'name': _nameController.text.trim(),
+        'email': _emailController.text.trim().toLowerCase(),
+        'phone': _phoneController.text.trim(),
+        'role': widget.role.name,
+        'accountType': 'provider',
+        'status': 'pending',
+        'requiresApproval': true,
+        'providerDetails': providerDetails,
+        'providerAgreementAccepted': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'approvedAt': null,
+      });
 
-      // Also keep a reference in a general 'users' collection if needed for auth mapping,
-      // or you can completely rely on the specific collection. (এখানে වෙනම collection එකට ගියා)
+      // 5. Add to Activity Logs for Admin Dashboard
+      await _firestore.collection('activity_logs').add({
+        'action': 'New $_roleName Application',
+        'details': '${_nameController.text.trim()} applied as $_roleName${_isDoctor ? " ($_selectedCategory)" : ""}.',
+        'performedBy': 'System',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
 
       await _auth.signOut();
 
@@ -214,7 +226,6 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7FC),
-
       appBar: AppBar(
         backgroundColor: const Color(0xFFF7F7FC),
         elevation: 0,
@@ -224,7 +235,6 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
-
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
@@ -241,69 +251,73 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 const Text(
                   'Complete the information below. Your application will be reviewed before your provider account is activated.',
                   style: TextStyle(color: Color(0xFF747187), height: 1.5),
                 ),
-
                 const SizedBox(height: 30),
-
                 _sectionTitle('Personal Information'),
-
                 const SizedBox(height: 14),
-
                 _field(
                   controller: _nameController,
                   label: 'Full Name',
                   icon: Icons.person_outline_rounded,
                 ),
-
                 const SizedBox(height: 14),
-
                 _field(
                   controller: _emailController,
                   label: 'Email Address',
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                 ),
-
                 const SizedBox(height: 14),
-
                 _field(
                   controller: _phoneController,
                   label: 'Phone Number',
                   icon: Icons.phone_outlined,
                   keyboardType: TextInputType.phone,
                 ),
-
                 const SizedBox(height: 28),
-
                 _sectionTitle(
                   _isDoctor ? 'Professional Information' : 'Driver Information',
                 ),
-
                 const SizedBox(height: 14),
-
                 if (_isDoctor) ...[
                   _field(
                     controller: _doctorIdController,
                     label: 'Doctor / Medical Registration ID',
                     icon: Icons.badge_outlined,
                   ),
-
                   const SizedBox(height: 14),
 
-                  _field(
-                    controller: _specializationController,
-                    label: 'Specialization',
-                    icon: Icons.medical_information_outlined,
+                  // Specialization / Category Dropdown Selection
+                  DropdownButtonFormField<String>(
+                    value: _selectedCategory,
+                    decoration: _decoration(
+                      label: 'Doctor Category / Specialization',
+                      icon: Icons.medical_information_outlined,
+                    ),
+                    items: _doctorCategories.map((category) {
+                      return DropdownMenuItem<String>(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedCategory = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select doctor category';
+                      }
+                      return null;
+                    },
                   ),
 
                   const SizedBox(height: 14),
-
                   _field(
                     controller: _experienceController,
                     label: 'Years of Experience',
@@ -316,9 +330,7 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                     label: 'Driving Licence Number',
                     icon: Icons.badge_outlined,
                   ),
-
                   const SizedBox(height: 14),
-
                   TextFormField(
                     controller: _licenseExpiryController,
                     readOnly: true,
@@ -332,18 +344,13 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                       if (value == null || value.trim().isEmpty) {
                         return 'Please select licence expiry date';
                       }
-
                       return null;
                     },
                   ),
                 ],
-
                 const SizedBox(height: 28),
-
                 _sectionTitle('Account Security'),
-
                 const SizedBox(height: 14),
-
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
@@ -367,17 +374,13 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter a password';
                     }
-
                     if (value.length < 6) {
                       return 'Password must contain at least 6 characters';
                     }
-
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 14),
-
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
@@ -401,17 +404,13 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please confirm your password';
                     }
-
                     if (value != _passwordController.text) {
                       return 'Passwords do not match';
                     }
-
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 28),
-
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -440,9 +439,7 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 22),
-
                 SizedBox(
                   height: 54,
                   child: ElevatedButton(

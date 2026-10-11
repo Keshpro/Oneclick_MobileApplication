@@ -100,7 +100,7 @@ class WorkersListScreen extends StatelessWidget {
                 // Worker Avatar
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: const Color(0xff032744).withOpacity(0.1),
+                  backgroundColor: const Color(0xff032744).withValues(alpha: 0.1),
                   child: Text(
                     worker['name'].substring(0, 1),
                     style: const TextStyle(
@@ -173,7 +173,7 @@ class WorkersListScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isAvailable ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                    color: isAvailable ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(

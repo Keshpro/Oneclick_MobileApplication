@@ -146,7 +146,7 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.arrow_back_ios_new_rounded,
@@ -157,7 +157,7 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.notifications_none_rounded,
@@ -180,7 +180,7 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
             'What do you need help with today?',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.75),
+              color: Colors.white.withValues(alpha: 0.75),
             ),
           ),
           const SizedBox(height: 20),
@@ -190,7 +190,7 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.12),
+                  color: Colors.black.withValues(alpha: 0.12),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -225,7 +225,7 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFFF8008).withOpacity(0.3),
+              color: const Color(0xFFFF8008).withValues(alpha: 0.3),
               blurRadius: 14,
               offset: const Offset(0, 6),
             ),
@@ -236,7 +236,7 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white.withValues(alpha: 0.25),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.verified_rounded,
@@ -312,7 +312,7 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
             border: Border.all(color: Colors.grey.shade200),
             boxShadow: [
               BoxShadow(
-                color: s.gradient.last.withOpacity(0.10),
+                color: s.gradient.last.withValues(alpha: 0.10),
                 blurRadius: 18,
                 offset: const Offset(0, 8),
               ),
@@ -333,7 +333,7 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: s.gradient.last.withOpacity(0.35),
+                      color: s.gradient.last.withValues(alpha: 0.35),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),

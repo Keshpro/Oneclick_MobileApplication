@@ -1277,12 +1277,12 @@ class _SubscriptionDetailsScreenState
   List<BoxShadow> _shadow() {
     return [
       BoxShadow(
-        color: Colors.white.withOpacity(.9),
+        color: Colors.white.withValues(alpha: .9),
         offset: const Offset(-4, -4),
         blurRadius: 10,
       ),
       BoxShadow(
-        color: Colors.black.withOpacity(.065),
+        color: Colors.black.withValues(alpha: .065),
         offset: const Offset(5, 7),
         blurRadius: 15,
       ),
@@ -1384,7 +1384,7 @@ class _CancellationStep extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(.05),
+                color: Colors.black.withValues(alpha: .05),
                 blurRadius: 8,
                 offset: const Offset(3, 4),
               ),

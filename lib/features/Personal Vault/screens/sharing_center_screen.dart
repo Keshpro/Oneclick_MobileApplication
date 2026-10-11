@@ -194,7 +194,7 @@ void _loadReceivedRecords() {
   // TOP BAR
   // ============================================================
 Widget _buildTopBar() {
-  void _showSharingSearch() {
+  void showSharingSearch() {
   final controller = TextEditingController();
   final searchItems = [
     'Apartment Lease Agreement',
@@ -291,7 +291,7 @@ Widget _buildTopBar() {
                         : ListView.separated(
                             shrinkWrap: true,
                             itemCount: results.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (_, _) =>
                                 const Divider(height: 1),
                             itemBuilder: (context, index) {
                               final item = results[index];
@@ -394,7 +394,7 @@ Widget _buildTopBar() {
                 ],
               ),
             ),
-                      _topCircle(Icons.search_rounded, onTap: _showSharingSearch),
+                      _topCircle(Icons.search_rounded, onTap: showSharingSearch),
 ],
         ),
   );
@@ -1253,7 +1253,7 @@ Widget _buildReceivedSection() {
               InkWell(
                 onTap: () {
                   if (onOpen != null) {
-                    onOpen!();
+                    onOpen();
                   } else {
                     _message('Opening $title');
                   }
@@ -1826,7 +1826,7 @@ class _VaultGlassScope extends InheritedWidget {
   bool updateShouldNotify(_VaultGlassScope oldWidget) => hovered != oldWidget.hovered;
 }
 class _VaultGlassCard extends StatefulWidget {
-  const _VaultGlassCard({required this.child, required this.padding, this.interactive = false});
+  const _VaultGlassCard({required this.child, required this.padding}) : interactive = false;
   final Widget child;
   final EdgeInsetsGeometry padding;
   final bool interactive;
@@ -2063,7 +2063,7 @@ class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProvide
   );
 }
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon, {this.color});
+  const _VaultNavGlyph(this.icon) : color = null;
   final IconData icon;
   final Color? color;
   @override

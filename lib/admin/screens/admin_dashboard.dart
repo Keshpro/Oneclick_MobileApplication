@@ -717,7 +717,7 @@ class _StatCard extends StatelessWidget {
   final Color color;
   final String? subtitle;
 
-  const _StatCard({required this.title, required this.value, required this.icon, required this.color, this.subtitle});
+  const _StatCard({required this.title, required this.value, required this.icon, required this.color}) : subtitle = null;
 
   @override
   Widget build(BuildContext context) {
