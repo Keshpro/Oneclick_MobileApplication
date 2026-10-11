@@ -44,15 +44,16 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
           IconButton(
   tooltip: 'Become a Seller',
   icon: const Icon(Icons.storefront_outlined),
- onPressed: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const ProviderRulesScreen(),
-    ),
-  );
-},
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ProviderRulesScreen(),
+      ),
+    );
+  },
 ),
+
           IconButton(
             tooltip: 'My Orders',
             icon: const Icon(Icons.receipt_long_outlined),
