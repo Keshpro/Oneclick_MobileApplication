@@ -1049,7 +1049,7 @@ You are part of OneClick Health.
                 itemCount:
                     _quickQuestions.length,
                 separatorBuilder:
-                    (_, __) =>
+                    (_, _) =>
                         const SizedBox(
                   width: 8,
                 ),

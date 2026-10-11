@@ -57,13 +57,13 @@ class MyBookingsScreen extends StatelessWidget {
 
     if (booking['status'] == 'Pending') {
       statusColor = Colors.orange;
-      statusBgColor = Colors.orange.withOpacity(0.1);
+      statusBgColor = Colors.orange.withValues(alpha: 0.1);
     } else if (booking['status'] == 'Accepted') {
       statusColor = Colors.blue;
-      statusBgColor = Colors.blue.withOpacity(0.1);
+      statusBgColor = Colors.blue.withValues(alpha: 0.1);
     } else {
       statusColor = Colors.green;
-      statusBgColor = Colors.green.withOpacity(0.1);
+      statusBgColor = Colors.green.withValues(alpha: 0.1);
     }
 
     return Card(
@@ -106,7 +106,7 @@ class MyBookingsScreen extends StatelessWidget {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: const Color(0xff032744).withOpacity(0.1),
+                  backgroundColor: const Color(0xff032744).withValues(alpha: 0.1),
                   child: Text(
                     booking['workerName'].substring(0, 1),
                     style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xff032744)),

@@ -1001,12 +1001,12 @@ Widget _buildHeader() {
   List<BoxShadow> _shadow() {
     return [
       BoxShadow(
-        color: Colors.white.withOpacity(.9),
+        color: Colors.white.withValues(alpha: .9),
         offset: const Offset(-4, -4),
         blurRadius: 10,
       ),
       BoxShadow(
-        color: Colors.black.withOpacity(.065),
+        color: Colors.black.withValues(alpha: .065),
         offset: const Offset(5, 7),
         blurRadius: 15,
       ),

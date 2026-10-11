@@ -821,7 +821,7 @@ class _MyAppointmentsScreenState
               ),
               scrollDirection: Axis.horizontal,
               itemCount: _tabs.length,
-              separatorBuilder: (_, __) =>
+              separatorBuilder: (_, _) =>
                   const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final tab = _tabs[index];
@@ -895,7 +895,7 @@ class _MyAppointmentsScreenState
                     ),
                     itemCount:
                         appointments.length,
-                    separatorBuilder: (_, __) =>
+                    separatorBuilder: (_, _) =>
                         const SizedBox(
                       height: 11,
                     ),

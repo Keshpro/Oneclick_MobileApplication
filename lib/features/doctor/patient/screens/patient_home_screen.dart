@@ -1206,7 +1206,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   itemCount:
                       _specialties.length,
                   separatorBuilder:
-                      (_, __) =>
+                      (_, _) =>
                           const SizedBox(
                     width: 10,
                   ),

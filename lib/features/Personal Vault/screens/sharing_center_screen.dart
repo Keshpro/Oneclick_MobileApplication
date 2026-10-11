@@ -93,7 +93,7 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
   // ============================================================
 
 Widget _buildTopBar() {
-  void _showSharingSearch() {
+  void showSharingSearch() {
   final controller = TextEditingController();
 
   final searchItems = [
@@ -200,7 +200,7 @@ Widget _buildTopBar() {
                         : ListView.separated(
                             shrinkWrap: true,
                             itemCount: results.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (_, _) =>
                                 const Divider(height: 1),
                             itemBuilder: (context, index) {
                               final item = results[index];
@@ -254,7 +254,7 @@ Widget _buildTopBar() {
       color: const Color(0xFFF0F1F8),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(.025),
+          color: Colors.black.withValues(alpha: .025),
           blurRadius: 12,
           offset: const Offset(0, 7),
         ),
@@ -298,7 +298,7 @@ Widget _buildTopBar() {
 
             _topCircle(
               Icons.search_rounded,
-              onTap: _showSharingSearch,
+              onTap: showSharingSearch,
             ),
           ],
         ),
@@ -1150,7 +1150,7 @@ Widget _buildTopBar() {
               InkWell(
                 onTap: () {
                   if (onOpen != null) {
-                    onOpen!();
+                    onOpen();
                   } else {
                     _message('Opening $title');
                   }
@@ -1231,7 +1231,7 @@ Widget _buildTopBar() {
         color: const Color(0xFFF0F1F7),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(.04),
+            color: Colors.black.withValues(alpha: .04),
             blurRadius: 14,
             offset: const Offset(0, -3),
           ),
@@ -1677,12 +1677,12 @@ _navItem(
   List<BoxShadow> _shadow() {
     return [
       BoxShadow(
-        color: Colors.white.withOpacity(.9),
+        color: Colors.white.withValues(alpha: .9),
         offset: const Offset(-4, -4),
         blurRadius: 10,
       ),
       BoxShadow(
-        color: Colors.black.withOpacity(.065),
+        color: Colors.black.withValues(alpha: .065),
         offset: const Offset(5, 7),
         blurRadius: 15,
       ),

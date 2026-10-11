@@ -135,7 +135,7 @@ class _VaultScreenState extends State<VaultScreen> {
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.25),
+    barrierColor: Colors.black.withValues(alpha: 0.25),
     builder: (context) {
       return ShareRecordSheet(
         selectedRecord: shareItem,

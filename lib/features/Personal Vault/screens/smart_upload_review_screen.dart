@@ -176,7 +176,7 @@ Widget _buildTopBar(BuildContext context) {
           color: const Color(0xFFF0F1F6),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 15,
               offset: const Offset(0, 6),
             ),
@@ -527,7 +527,7 @@ Widget _buildTopBar(BuildContext context) {
           borderRadius: BorderRadius.circular(25),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -946,7 +946,7 @@ Widget _buildTopBar(BuildContext context) {
 
               Switch(
                 value: renewalReminder,
-                activeColor: primaryColor,
+                activeThumbColor: primaryColor,
                 onChanged: (value) {
                   setState(() {
                     renewalReminder = value;
@@ -1026,7 +1026,7 @@ Widget _buildTopBar(BuildContext context) {
         ),
         style: ElevatedButton.styleFrom(
           elevation: 8,
-          shadowColor: Colors.black.withOpacity(0.10),
+          shadowColor: Colors.black.withValues(alpha: 0.10),
           backgroundColor: const Color(0xFFF4F5F9),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(35),
@@ -1057,7 +1057,7 @@ Widget _buildTopBar(BuildContext context) {
         ),
         style: ElevatedButton.styleFrom(
           elevation: 4,
-          shadowColor: Colors.black.withOpacity(0.08),
+          shadowColor: Colors.black.withValues(alpha: 0.08),
           backgroundColor: const Color(0xFFF4F5F9),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
@@ -1082,7 +1082,7 @@ Widget _buildTopBar(BuildContext context) {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.07),
+            color: Colors.black.withValues(alpha: 0.07),
             blurRadius: 22,
             offset: const Offset(0, 10),
           ),

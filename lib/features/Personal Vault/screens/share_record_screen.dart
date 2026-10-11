@@ -23,7 +23,7 @@ Future<void> showShareRecordFlow(BuildContext context) async {
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.25),
+    barrierColor: Colors.black.withValues(alpha: 0.25),
     builder: (context) {
       return const ChooseRecordSheet();
     },
@@ -35,7 +35,7 @@ Future<void> showShareRecordFlow(BuildContext context) async {
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.25),
+    barrierColor: Colors.black.withValues(alpha: 0.25),
     builder: (context) {
       return ShareRecordSheet(
         selectedRecord: selectedRecord,
@@ -192,7 +192,7 @@ class _ChooseRecordSheetState extends State<ChooseRecordSheet> {
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: selected
-                ? purple.withOpacity(.55)
+                ? purple.withValues(alpha: .55)
                 : Colors.transparent,
             width: 1.4,
           ),
@@ -243,7 +243,7 @@ class _ChooseRecordSheetState extends State<ChooseRecordSheet> {
                 border: Border.all(
                   color: selected
                       ? purple
-                      : muted.withOpacity(.35),
+                      : muted.withValues(alpha: .35),
                   width: 1.5,
                 ),
               ),
@@ -293,7 +293,7 @@ class _ChooseRecordSheetState extends State<ChooseRecordSheet> {
               style: TextStyle(
                 color: enabled
                     ? Colors.white
-                    : muted.withOpacity(.6),
+                    : muted.withValues(alpha: .6),
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
@@ -303,7 +303,7 @@ class _ChooseRecordSheetState extends State<ChooseRecordSheet> {
               Icons.arrow_forward_rounded,
               color: enabled
                   ? Colors.white
-                  : muted.withOpacity(.6),
+                  : muted.withValues(alpha: .6),
               size: 19,
             ),
           ],
@@ -371,12 +371,12 @@ class _ChooseRecordSheetState extends State<ChooseRecordSheet> {
   List<BoxShadow> _shadow() {
     return [
       BoxShadow(
-        color: Colors.white.withOpacity(.85),
+        color: Colors.white.withValues(alpha: .85),
         offset: const Offset(-3, -3),
         blurRadius: 8,
       ),
       BoxShadow(
-        color: Colors.black.withOpacity(.055),
+        color: Colors.black.withValues(alpha: .055),
         offset: const Offset(4, 6),
         blurRadius: 12,
       ),
@@ -895,7 +895,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
                 border: Border.all(
                   color: selected
                       ? purple
-                      : muted.withOpacity(.35),
+                      : muted.withValues(alpha: .35),
                   width: 1.5,
                 ),
               ),
@@ -976,12 +976,12 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
             ),
             decoration: BoxDecoration(
               color: selected
-                  ? purple.withOpacity(.10)
+                  ? purple.withValues(alpha: .10)
                   : const Color(0xFFF7F7FC),
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
                 color: selected
-                    ? purple.withOpacity(.35)
+                    ? purple.withValues(alpha: .35)
                     : Colors.transparent,
               ),
               boxShadow: _shadow(),
@@ -1085,7 +1085,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
               Icons.lock_outline_rounded,
               color: enabled
                   ? Colors.white
-                  : muted.withOpacity(.55),
+                  : muted.withValues(alpha: .55),
               size: 20,
             ),
 
@@ -1096,7 +1096,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
               style: TextStyle(
                 color: enabled
                     ? Colors.white
-                    : muted.withOpacity(.55),
+                    : muted.withValues(alpha: .55),
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
@@ -1253,12 +1253,12 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
   List<BoxShadow> _shadow() {
     return [
       BoxShadow(
-        color: Colors.white.withOpacity(.85),
+        color: Colors.white.withValues(alpha: .85),
         offset: const Offset(-3, -3),
         blurRadius: 8,
       ),
       BoxShadow(
-        color: Colors.black.withOpacity(.055),
+        color: Colors.black.withValues(alpha: .055),
         offset: const Offset(4, 6),
         blurRadius: 12,
       ),

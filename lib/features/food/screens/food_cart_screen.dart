@@ -41,7 +41,7 @@ class _FoodCartScreenState extends State<FoodCartScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: cart.items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       return _CartItemCard(
                         item: cart.items[index],
@@ -151,7 +151,7 @@ class _FoodCartScreenState extends State<FoodCartScreen> {
 
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, -4),
           ),
@@ -271,7 +271,7 @@ class _CartItemCard extends StatelessWidget {
 
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -291,7 +291,7 @@ class _CartItemCard extends StatelessWidget {
               width: 90,
               fit: BoxFit.cover,
 
-              errorBuilder: (_, __, ___) {
+              errorBuilder: (_, _, _) {
                 return Container(
                   height: 90,
                   width: 90,
