@@ -1,15 +1,15 @@
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart';
 
+import 'supabase_storage_service.dart';
 import '../models/vault_record.dart';
 
 class VaultService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final SupabaseStorageService _storageService = SupabaseStorageService();
 
   String get _userId {
     final user = _auth.currentUser;
@@ -27,32 +27,14 @@ class VaultService {
         .doc(_userId)
         .collection('vaultRecords');
   }
-
-  Future<String?> uploadFile({
+    Future<String?> uploadFile({
     required String fileName,
     required Uint8List bytes,
   }) async {
-    final safeFileName =
-        '${DateTime.now().millisecondsSinceEpoch}_$fileName';
-
-    final ref = _storage
-        .ref()
-        .child('users')
-        .child(_userId)
-        .child('vault')
-        .child(safeFileName);
-
-    debugPrint('VAULT: Starting file upload...');
-
-await ref.putData(bytes);
-
-debugPrint('VAULT: Upload finished. Getting download URL...');
-
-final url = await ref.getDownloadURL();
-
-debugPrint('VAULT: Download URL received: $url');
-
-return url;
+    return _storageService.uploadFile(
+      fileName: fileName,
+      bytes: bytes,
+    );
   }
 
   Future<void> addRecord({
@@ -65,7 +47,8 @@ return url;
     required bool expiryNotification,
     String? fileName,
     String? fileUrl,
-  }) async {
+    String? filePath,
+    }) async {
     final doc = _recordsCollection.doc();
 
     final record = VaultRecord(
@@ -80,6 +63,7 @@ return url;
       expiryNotification: expiryNotification,
       fileName: fileName,
       fileUrl: fileUrl,
+      filePath: filePath,
       createdAt: DateTime.now(),
     );
 
@@ -105,6 +89,23 @@ Future<void> updateRecord({
     'tags': tags,
   });
 }
+Future<void> updateFavorite({
+  required String recordId,
+  required bool isFavorite,
+}) async {
+  await _recordsCollection.doc(recordId).update({
+    'isFavorite': isFavorite,
+  });
+}
+
+Future<void> markRecordOpened({
+  required String recordId,
+}) async {
+  await _recordsCollection.doc(recordId).update({
+    'lastOpenedAt': FieldValue.serverTimestamp(),
+  });
+}
+
   Stream<List<VaultRecord>> getRecords() {
     return _recordsCollection
         .orderBy('createdAt', descending: true)

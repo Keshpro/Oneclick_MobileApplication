@@ -44,14 +44,6 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     super.dispose();
   }
 
-  void _placeholder(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature is not connected yet.'),
-      ),
-    );
-  }
-
   Future<void> _pickDate() async {
     final date = await showDatePicker(
       context: context,

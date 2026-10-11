@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'vault_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/vault_service.dart';
+import 'pdf_preview_screen.dart';
 
 class SmartUploadReviewScreen extends StatefulWidget {
   final String title;
@@ -377,7 +378,36 @@ Widget _buildTopBar(BuildContext context) {
                 const SizedBox(height: 10),
 
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () {
+                    final file = widget.selectedFile;
+
+                    if (file == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('No PDF selected to preview.'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (file.extension?.toLowerCase() != 'pdf') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Preview is currently available for PDF files only.'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PdfPreviewScreen(
+                          file: file,
+                        ),
+                      ),
+                    );
+                  },
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1034,30 +1064,30 @@ Widget _buildTopBar(BuildContext context) {
         setState(() => _isSaving = true);
 
         try {
-          String? fileUrl;
+          String? filePath;
 
-          if (widget.selectedFile != null) {
+if (widget.selectedFile != null) {
   final bytes = await widget.selectedFile!.readAsBytes();
 
-  fileUrl = await _vaultService.uploadFile(
+  filePath = await _vaultService.uploadFile(
     fileName: widget.selectedFile!.name,
     bytes: bytes,
   );
 }
 
-          await _vaultService.addRecord(
-            title: titleController.text.trim(),
-            recordType: widget.recordType,
-            category: selectedCategory,
-            notes: widget.notes,
-            tags: tags
-                .map((tag) => tag.replaceFirst('#', ''))
-                .toList(),
-            renewalDate: widget.renewalDate,
-            expiryNotification: renewalReminder,
-            fileName: widget.selectedFile?.name,
-            fileUrl: fileUrl,
-          );
+await _vaultService.addRecord(
+  title: titleController.text.trim(),
+  recordType: widget.recordType,
+  category: selectedCategory,
+  notes: widget.notes,
+  tags: tags
+      .map((tag) => tag.replaceFirst('#', ''))
+      .toList(),
+  renewalDate: widget.renewalDate,
+  expiryNotification: renewalReminder,
+  fileName: widget.selectedFile?.name,
+  filePath: filePath,
+);
 
           if (!mounted) return;
 
@@ -1117,7 +1147,9 @@ Widget _buildTopBar(BuildContext context) {
       width: double.infinity,
       height: 52,
       child: ElevatedButton.icon(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.pop(context);
+        },
         icon: const Icon(
           Icons.sync,
           color: secondaryText,
