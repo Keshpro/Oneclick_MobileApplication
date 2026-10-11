@@ -1064,30 +1064,30 @@ Widget _buildTopBar(BuildContext context) {
         setState(() => _isSaving = true);
 
         try {
-          String? fileUrl;
+          String? filePath;
 
-          if (widget.selectedFile != null) {
+if (widget.selectedFile != null) {
   final bytes = await widget.selectedFile!.readAsBytes();
 
-  fileUrl = await _vaultService.uploadFile(
+  filePath = await _vaultService.uploadFile(
     fileName: widget.selectedFile!.name,
     bytes: bytes,
   );
 }
 
-          await _vaultService.addRecord(
-            title: titleController.text.trim(),
-            recordType: widget.recordType,
-            category: selectedCategory,
-            notes: widget.notes,
-            tags: tags
-                .map((tag) => tag.replaceFirst('#', ''))
-                .toList(),
-            renewalDate: widget.renewalDate,
-            expiryNotification: renewalReminder,
-            fileName: widget.selectedFile?.name,
-            fileUrl: fileUrl,
-          );
+await _vaultService.addRecord(
+  title: titleController.text.trim(),
+  recordType: widget.recordType,
+  category: selectedCategory,
+  notes: widget.notes,
+  tags: tags
+      .map((tag) => tag.replaceFirst('#', ''))
+      .toList(),
+  renewalDate: widget.renewalDate,
+  expiryNotification: renewalReminder,
+  fileName: widget.selectedFile?.name,
+  filePath: filePath,
+);
 
           if (!mounted) return;
 

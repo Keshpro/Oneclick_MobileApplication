@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 import 'explain_document_screen.dart';
 import 'share_record_screen.dart';
 import '../services/vault_service.dart';
+import '../services/supabase_storage_service.dart';
+import 'dart:typed_data';
+
 
 class RecordDetailsScreen extends StatefulWidget {
   final String recordId;
@@ -11,6 +16,8 @@ class RecordDetailsScreen extends StatefulWidget {
   final String type;
   final String details;
   final List<String> tags;
+  final String? fileName;
+  final String? filePath;
 
   const RecordDetailsScreen({
     super.key,
@@ -20,7 +27,9 @@ class RecordDetailsScreen extends StatefulWidget {
     required this.type,
     required this.details,
     required this.tags,
-  });
+    this.fileName,
+    this.filePath,
+});
 
   @override
   State<RecordDetailsScreen> createState() => _RecordDetailsScreenState();
@@ -28,7 +37,40 @@ class RecordDetailsScreen extends StatefulWidget {
 
 class _RecordDetailsScreenState extends State<RecordDetailsScreen> {
   final VaultService _vaultService = VaultService();
-  bool passwordVisible = false;
+final SupabaseStorageService _storageService = SupabaseStorageService();
+final PdfViewerController _pdfController = PdfViewerController();
+
+Future<Uint8List?>? _pdfBytesFuture;
+
+bool passwordVisible = false;
+int _currentPdfPage = 1;
+int _totalPdfPages = 0;
+
+@override
+void initState() {
+  super.initState();
+  _pdfBytesFuture = _loadPdfBytes();
+}
+
+Future<Uint8List?> _loadPdfBytes() async {
+  final filePath = widget.filePath;
+
+  if (filePath == null || filePath.isEmpty) {
+    return null;
+  }
+
+  final fileName = widget.fileName?.toLowerCase() ?? '';
+
+  if (!fileName.endsWith('.pdf')) {
+    return null;
+  }
+
+  final bytes = await _storageService.downloadFile(
+    path: filePath,
+  );
+
+  return Uint8List.fromList(bytes);
+}
 
   static const Color background = Color(0xFFE9EBF2);
   static const Color card = Color(0xFFEEF0F6);
@@ -320,12 +362,38 @@ class _RecordDetailsScreenState extends State<RecordDetailsScreen> {
           const SizedBox(width: 14),
 
           _actionButton(
-            icon: Icons.download_outlined,
-            text: 'Download',
-            onTap: () {
-              _showMessage('Download will be available when this record has an uploaded file.');
-            },
-          ),
+  icon: Icons.download_outlined,
+  text: 'Download',
+  onTap: () async {
+    final filePath = widget.filePath;
+
+    if (filePath == null || filePath.isEmpty) {
+      _showMessage('This record does not have an uploaded file.');
+      return;
+    }
+
+    try {
+      final signedUrl = await _storageService.createSignedUrl(
+        path: filePath,
+      );
+
+      final uri = Uri.parse(signedUrl);
+
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!opened && mounted) {
+        _showMessage('Could not open the file.');
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      _showMessage('Failed to open file: $e');
+    }
+  },
+),
         ],
       ),
     );
@@ -335,180 +403,177 @@ class _RecordDetailsScreenState extends State<RecordDetailsScreen> {
   // DOCUMENT VIEW
   // =========================================================
 
-  Widget _buildDocumentView() {
-    return _surface(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.menu_book_outlined,
-                color: muted,
-                size: 22,
-              ),
-
-              const SizedBox(width: 10),
-
-              const Text(
-                'Document View',
-                style: TextStyle(
-                  color: ink,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-
-              const SizedBox(width: 14),
-
-              _smallLabel(
-                'Page 1 of 14',
-                color: muted,
-              ),
-
-              const Spacer(),
-
-              _miniCircleButton(
-                Icons.zoom_in,
-                () {
-                  _showMessage('Zoom controls will be connected to PDF view.');
-                },
-              ),
-
-              const SizedBox(width: 8),
-
-              _miniCircleButton(
-                Icons.fullscreen,
-                () {
-                  _showMessage('Full screen PDF view will be connected next.');
-                },
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE7E9F0),
-              borderRadius: BorderRadius.circular(28),
+Widget _buildDocumentView() {
+  return _surface(
+    padding: const EdgeInsets.all(24),
+    child: Column(
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.menu_book_outlined,
+              color: muted,
+              size: 22,
             ),
-            child: Column(
-              children: [
-                Container(
-                  width: double.infinity,
-                  height: 280,
-                  padding: const EdgeInsets.all(28),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF6F7FB),
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: _smallShadow(),
-                  ),
-                  child: Stack(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 105,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFD7D9E4),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                              ),
 
-                              const Spacer(),
+            const SizedBox(width: 10),
 
-                              Container(
-                                width: 55,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFBFC1CE),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                              ),
-                            ],
-                          ),
+            const Text(
+              'Document View',
+              style: TextStyle(
+                color: ink,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
 
-                          const SizedBox(height: 25),
+            const SizedBox(width: 14),
 
-                          Container(
-                            width: 280,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFD2D4DE),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
+            _smallLabel(
+              _totalPdfPages > 0
+                  ? 'Page $_currentPdfPage of $_totalPdfPages'
+                  : 'PDF Preview',
+              color: muted,
+            ),
 
-                          const SizedBox(height: 22),
+            const Spacer(),
 
-                          _fakeDocumentLine(1),
-                          const SizedBox(height: 8),
-                          _fakeDocumentLine(1),
-                          const SizedBox(height: 8),
-                          _fakeDocumentLine(.75),
-                          const SizedBox(height: 8),
-                          _fakeDocumentLine(.85),
-                        ],
-                      ),
+            _miniCircleButton(
+              Icons.zoom_in,
+              () {
+                final nextZoom = _pdfController.zoomLevel + 0.25;
 
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        child: _smallLabel(
-                          'VERIFIED LEASE',
-                          color: purple,
-                        ),
-                      ),
+                _pdfController.zoomLevel =
+                    nextZoom > 3 ? 3 : nextZoom;
+              },
+            ),
 
-                      const Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Icon(
-                          Icons.verified_outlined,
-                          color: Color(0xFF8384FF),
-                          size: 38,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            const SizedBox(width: 8),
 
-                const SizedBox(height: 14),
+            _miniCircleButton(
+  Icons.fullscreen,
+  () async {
+    final bytes = await _pdfBytesFuture;
 
-                const Text(
-                  'Tap preview to navigate pages',
-                  style: TextStyle(
-                    color: muted,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
+    if (!mounted) return;
+
+    if (bytes == null || bytes.isEmpty) {
+      _showMessage('No PDF file available.');
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: Text(
+              widget.fileName ?? widget.title,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _fakeDocumentLine(double widthFactor) {
-    return FractionallySizedBox(
-      widthFactor: widthFactor,
-      child: Container(
-        height: 11,
-        decoration: BoxDecoration(
-          color: const Color(0xFFE0E1E8),
-          borderRadius: BorderRadius.circular(20),
+          body: SfPdfViewer.memory(
+            bytes,
+          ),
         ),
       ),
     );
-  }
+  },
+),            
+],
+),
+
+        const SizedBox(height: 24),
+
+        Container(
+          width: double.infinity,
+          height: 420,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE7E9F0),
+            borderRadius: BorderRadius.circular(28),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: FutureBuilder<Uint8List?>(
+            future: _pdfBytesFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState ==
+                  ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'Unable to load document preview: '
+                      '${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: muted,
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              final bytes = snapshot.data;
+
+if (bytes == null || bytes.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      widget.filePath == null
+                          ? 'No uploaded document is attached to this record.'
+                          : 'Preview is currently available for PDF files only.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: muted,
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return SfPdfViewer.memory(
+  bytes,
+  controller: _pdfController,
+                onDocumentLoaded: (details) {
+                  if (!mounted) return;
+
+                  setState(() {
+                    _totalPdfPages = details.document.pages.count;
+                    _currentPdfPage = 1;
+                  });
+                },
+                onPageChanged: (details) {
+                  if (!mounted) return;
+
+                  setState(() {
+                    _currentPdfPage = details.newPageNumber;
+                  });
+                },
+              );
+            },
+          ),
+        ),
+
+        const SizedBox(height: 14),
+
+        Text(
+          widget.fileName ?? 'Uploaded document',
+          style: const TextStyle(
+            color: muted,
+            fontSize: 13,
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   // =========================================================
   // EXTRACTED DETAILS
@@ -1543,39 +1608,69 @@ class _RecordDetailsScreenState extends State<RecordDetailsScreen> {
   }
 
   void _confirmDelete() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Delete Record?'),
-          content: const Text(
-            'Are you sure you want to delete this record? '
-            'This action cannot be undone.',
+  showDialog(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Delete Record?'),
+        content: const Text(
+          'Are you sure you want to delete this record? '
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
 
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
 
-                _showMessage(
-                  'Demo only. Record was not permanently deleted.',
+              try {
+                final filePath = widget.filePath;
+
+                if (filePath != null && filePath.isNotEmpty) {
+                  await _storageService.deleteFile(
+                    path: filePath,
+                  );
+                }
+
+                await _vaultService.deleteRecord(
+                  widget.recordId,
                 );
-              },
-              child: const Text(
-                'Delete',
-                style: TextStyle(
-                  color: Colors.red,
-                ),
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Record deleted successfully'),
+                  ),
+                );
+
+                Navigator.pop(context);
+              } catch (e) {
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Failed to delete record: $e',
+                    ),
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                color: Colors.red,
               ),
             ),
-          ],
-        );
-      },
-    );
-  }
+          ),
+        ],
+      );
+    },
+  );
+}
 }

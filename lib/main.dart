@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:oneclick/shared/models/user_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'firebase_options.dart';
 
@@ -15,6 +17,18 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  const supabasePublishableKey =
+      String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
+
+  await Supabase.initialize(
+  url: supabaseUrl,
+  publishableKey: supabasePublishableKey,
+  accessToken: () async {
+    return FirebaseAuth.instance.currentUser?.getIdToken();
+  },
+);
 
   runApp(const MyApp());
 }

@@ -53,6 +53,8 @@ void _loadRecords() {
           details: record.fileName ?? record.notes,
           folder: record.category,
           tags: record.tags,
+          fileName: record.fileName,
+          filePath: record.filePath,
           icon: Icons.description_outlined,
           favorite: false,
         );
@@ -665,6 +667,8 @@ void _loadRecords() {
       type: item.type,
       details: item.details,
       tags: item.tags,
+      fileName: item.fileName,
+      filePath: item.filePath,
     ),
   ),
 );
@@ -695,6 +699,8 @@ void _loadRecords() {
       type: item.type,
       details: item.details,
       tags: item.tags,
+      fileName: item.fileName,
+      filePath: item.filePath,
     ),
   ),
 );
@@ -828,8 +834,11 @@ class _VaultItem {
   final String details;
   final String folder;
   final List<String> tags;
+  final String? fileName;
+  final String? filePath;
   final IconData icon;
   bool favorite;
+
   _VaultItem({
     required this.id,
     required this.title,
@@ -837,6 +846,8 @@ class _VaultItem {
     required this.details,
     required this.folder,
     required this.tags,
+    this.fileName,
+    this.filePath,
     required this.icon,
     this.favorite = false,
   });

@@ -12,6 +12,7 @@ class VaultRecord {
   final bool expiryNotification;
   final String? fileName;
   final String? fileUrl;
+  final String? filePath;
   final DateTime createdAt;
 
   const VaultRecord({
@@ -26,7 +27,8 @@ class VaultRecord {
     required this.expiryNotification,
     this.fileName,
     this.fileUrl,
-    required this.createdAt,
+    this.filePath,
+  required this.createdAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -41,6 +43,7 @@ class VaultRecord {
       'expiryNotification': expiryNotification,
       'fileName': fileName,
       'fileUrl': fileUrl,
+      'filePath': filePath,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -62,6 +65,7 @@ class VaultRecord {
       expiryNotification: map['expiryNotification'] ?? false,
       fileName: map['fileName'],
       fileUrl: map['fileUrl'],
+      filePath: map['filePath'],
       createdAt:
           (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );

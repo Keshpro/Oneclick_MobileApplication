@@ -1,14 +1,15 @@
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart';
 
+import 'supabase_storage_service.dart';
 import '../models/vault_record.dart';
 
 class VaultService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final SupabaseStorageService _storageService = SupabaseStorageService();
 
   String get _userId {
     final user = _auth.currentUser;
@@ -26,68 +27,14 @@ class VaultService {
         .doc(_userId)
         .collection('vaultRecords');
   }
-
-  Future<String?> uploadFile({
+    Future<String?> uploadFile({
     required String fileName,
     required Uint8List bytes,
   }) async {
-    final safeFileName =
-        '${DateTime.now().millisecondsSinceEpoch}_$fileName';
-
-    final ref = _storage
-        .ref()
-        .child('users')
-        .child(_userId)
-        .child('vault')
-        .child(safeFileName);
-
-    debugPrint('VAULT: Starting file upload...');
-debugPrint('VAULT: File size: ${bytes.length} bytes');
-debugPrint('VAULT: Storage path: ${ref.fullPath}');
-
-try {
-  final uploadTask = ref.putData(bytes);
-
-uploadTask.snapshotEvents.listen(
-  (snapshot) {
-    final total = snapshot.totalBytes;
-    final transferred = snapshot.bytesTransferred;
-
-    final progress = total > 0
-        ? (transferred / total * 100).toStringAsFixed(1)
-        : '0.0';
-
-    debugPrint(
-      'VAULT UPLOAD STATE: ${snapshot.state} | '
-      '$transferred / $total bytes | $progress%',
+    return _storageService.uploadFile(
+      fileName: fileName,
+      bytes: bytes,
     );
-  },
-  onError: (error) {
-    debugPrint('VAULT SNAPSHOT ERROR: $error');
-  },
-);
-
-await uploadTask.timeout(
-  const Duration(seconds: 20),
-);
-
-  debugPrint('VAULT: Upload finished. Getting download URL...');
-
-  final url = await ref.getDownloadURL().timeout(
-    const Duration(seconds: 20),
-  );
-
-  debugPrint('VAULT: Download URL received: $url');
-
-  return url;
-} on FirebaseException catch (e) {
-  debugPrint('VAULT FIREBASE ERROR CODE: ${e.code}');
-  debugPrint('VAULT FIREBASE ERROR MESSAGE: ${e.message}');
-  rethrow;
-} catch (e) {
-  debugPrint('VAULT UPLOAD ERROR: $e');
-  rethrow;
-}
   }
 
   Future<void> addRecord({
@@ -100,7 +47,8 @@ await uploadTask.timeout(
     required bool expiryNotification,
     String? fileName,
     String? fileUrl,
-  }) async {
+    String? filePath,
+    }) async {
     final doc = _recordsCollection.doc();
 
     final record = VaultRecord(
@@ -115,6 +63,7 @@ await uploadTask.timeout(
       expiryNotification: expiryNotification,
       fileName: fileName,
       fileUrl: fileUrl,
+      filePath: filePath,
       createdAt: DateTime.now(),
     );
 
