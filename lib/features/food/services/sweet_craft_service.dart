@@ -128,6 +128,24 @@ class SweetCraftService {
     application.status = status;
   }
 
+  void selectSeller(String requestId, String applicationId) {
+    final request = getRequestById(requestId);
+
+    if (request == null) {
+      return;
+    }
+
+    for (final application in getApplicationsForRequest(requestId)) {
+      if (application.id == applicationId) {
+        application.status = SweetCraftApplicationStatus.accepted;
+      } else {
+        application.status = SweetCraftApplicationStatus.rejected;
+      }
+    }
+
+    request.status = SweetCraftRequestStatus.sellerSelected;
+  }
+
   SweetCraftApplication? getAcceptedApplication(String requestId) {
     try {
       return applications.firstWhere(

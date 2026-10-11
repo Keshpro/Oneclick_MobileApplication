@@ -62,18 +62,18 @@ class _SplashScreenState extends State<SplashScreen>
     // SPLASH -> GUEST DASHBOARD
     // ============================================================
 
-    _timer = Timer(
-      const Duration(seconds: 3),
-      () {
-        if (!mounted) return;
+_timer = Timer(
+  const Duration(seconds: 3),
+  () {
+    if (!mounted) return;
 
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const HomeScreen(),
-          ),
-        );
-      },
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const HomeScreen(),
+      ),
     );
+  },
+);
   }
 
   // ============================================================

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/subscription_service.dart';
 
 class AddSubscriptionScreen extends StatefulWidget {
   const AddSubscriptionScreen({super.key});
@@ -22,6 +23,8 @@ class _AddSubscriptionScreenState
 
   final TextEditingController _costController =
       TextEditingController(text: '19.99');
+
+  final SubscriptionService _subscriptionService = SubscriptionService();
 
   String selectedService = 'Netflix';
   String billingCycle = 'Monthly';
@@ -964,38 +967,51 @@ Widget _header() {
   // SAVE FUNCTION
   // ============================================================
 
-  void _saveSubscription() {
-    final String name =
-        _nameController.text.trim();
+Future<void> _saveSubscription() async {
+  final String name = _nameController.text.trim();
+  final String cost = _costController.text.trim();
 
-    final String cost =
-        _costController.text.trim();
+  if (name.isEmpty) {
+    _message('Please enter a subscription name.');
+    return;
+  }
 
-    if (name.isEmpty) {
-      _message(
-        'Please enter a subscription name.',
-      );
-      return;
-    }
+  if (cost.isEmpty) {
+    _message('Please enter the subscription cost.');
+    return;
+  }
 
-    if (cost.isEmpty) {
-      _message(
-        'Please enter the subscription cost.',
-      );
-      return;
-    }
+  try {
+    await _subscriptionService.addSubscription(
+      name: name,
+      subtitle: '$selectedService • $billingCycle',
+      price: 'LKR $cost',
+      renewal: 'Renews ${_formattedDate(renewalDate)}',
+      usage: reminderTime,
+      category: 'Productivity & AI',
+      status: 'Active',
+      priceHiked: false,
+    );
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          '$name subscription saved.',
-        ),
+        content: Text('$name subscription saved.'),
       ),
     );
 
     Navigator.pop(context);
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to save subscription: $e'),
+      ),
+    );
   }
+}
 
   // ============================================================
   // DATE PICKER

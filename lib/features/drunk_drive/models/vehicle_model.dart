@@ -3,6 +3,7 @@
 // A vehicle belongs to exactly one passenger (ownerId). The driver never
 // owns a vehicle in this module — the driver always drives the
 // passenger's own vehicle.
+import 'dart:typed_data';
 
 enum VehicleType { car, van, suv, threeWheeler, other }
 
@@ -51,7 +52,8 @@ class VehicleModel {
   final TransmissionType transmission;
 
   // Local file path or URL to the vehicle photo. Optional.
-  final String? photoPath;
+  final Uint8List? photoBytes;
+  final String? photoName;
 
   final bool isDefault;
 
@@ -64,7 +66,8 @@ class VehicleModel {
     required this.colour,
     required this.vehicleType,
     required this.transmission,
-    this.photoPath,
+    this.photoBytes,
+    this.photoName,
     this.isDefault = false,
   });
 
@@ -77,7 +80,8 @@ class VehicleModel {
     String? colour,
     VehicleType? vehicleType,
     TransmissionType? transmission,
-    String? photoPath,
+    Uint8List? photoBytes,
+    String? photoName,
     bool? isDefault,
   }) {
     return VehicleModel(
@@ -89,7 +93,8 @@ class VehicleModel {
       colour: colour ?? this.colour,
       vehicleType: vehicleType ?? this.vehicleType,
       transmission: transmission ?? this.transmission,
-      photoPath: photoPath ?? this.photoPath,
+      photoBytes: photoBytes ?? this.photoBytes,
+      photoName: photoName ?? this.photoName,
       isDefault: isDefault ?? this.isDefault,
     );
   }
