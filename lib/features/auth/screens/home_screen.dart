@@ -1,5 +1,4 @@
 import 'dart:ui';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +7,8 @@ import 'package:oneclick/features/groceries/customer/screens/grocery_home_screen
 import 'services_screen.dart';
 import 'explore_screen.dart';
 import '../../doctor/patient/screens/doctor_entry_screen.dart';
+import '../../doctor/doctor/screens/doctor_dashboard.dart';
+import '../../../admin/screens/admin_dashboard.dart';
 import '../../drunk_drive/passenger/screens/drunk_drive_home_screen.dart';
 import '../../Personal Vault/screens/dashboard.dart' as personal_vault;
 import '../../food/screens/food_home_screen.dart';
@@ -41,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
   String _userName = '';
   String _userEmail = '';
+  String _userRole = 'user';
   bool _isLoadingUser = true;
 
   bool get _isLoggedIn => _auth.currentUser != null;
@@ -100,6 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
+  // Auto-fetch User Details & Determine Role
   Future<void> _loadCurrentUser() async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -108,14 +111,32 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      final doc = await _firestore.collection('users').doc(user.uid).get();
-      final data = doc.data();
+      // 1. Check if user is a Doctor
+      final docSnapshot = await _firestore.collection('doctors').doc(user.uid).get();
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        if (mounted) {
+          setState(() {
+            _userName = data?['name']?.toString() ?? user.displayName ?? 'Doctor';
+            _userEmail = data?['email']?.toString() ?? user.email ?? '';
+            _userRole = 'doctor';
+            _isLoadingUser = false;
+          });
+        }
+        return;
+      }
+
+      // 2. Check if user is in 'users' collection
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final data = userDoc.data();
       if (!mounted) return;
+
       setState(() {
         _userName = data?['name']?.toString().trim().isNotEmpty == true
             ? data!['name'].toString()
             : (user.displayName?.trim().isNotEmpty == true ? user.displayName! : 'User');
         _userEmail = data?['email']?.toString() ?? user.email ?? '';
+        _userRole = data?['role']?.toString().toLowerCase() ?? 'user';
         _isLoadingUser = false;
       });
     } catch (_) {
@@ -123,6 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _userName = user.displayName?.trim().isNotEmpty == true ? user.displayName! : 'User';
         _userEmail = user.email ?? '';
+        _userRole = 'user';
         _isLoadingUser = false;
       });
     }
@@ -516,6 +538,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // Account Options with Dynamic Role Switcher
   void _showAccountOptions() {
     if (!_isLoggedIn) {
       Navigator.pushNamed(context, '/login');
@@ -549,6 +572,60 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 4),
             Text(_userEmail, style: const TextStyle(color: _Palette.inkSoft, fontSize: 13)),
             const SizedBox(height: 18),
+
+            // DYNAMIC ROLE SWITCHER (Shows ONLY for Providers/Admins)
+            if (_userRole == 'doctor') ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.3)),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.medical_services_rounded, color: Color(0xFF059669)),
+                  title: const Text(
+                    'Switch to Doctor Mode',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Color(0xFF059669)),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DoctorDashboardScreen()),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ),
+            ] else if (_userRole == 'admin') ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5B4DFF).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF5B4DFF).withValues(alpha: 0.3)),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF5B4DFF)),
+                  title: const Text(
+                    'Switch to Admin Portal',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF5B4DFF)),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Color(0xFF5B4DFF)),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AdminDashboard()),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ),
+            ],
+
             ListTile(
               leading: const Icon(Icons.person_outline_rounded, color: _Palette.primary),
               title: const Text('My Profile'),
@@ -572,6 +649,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 setState(() {
                   _userName = '';
                   _userEmail = '';
+                  _userRole = 'user';
                   _isLoadingUser = false;
                   _selectedIndex = 0;
                 });
