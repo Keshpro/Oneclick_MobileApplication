@@ -7,6 +7,7 @@ import '../../../auth/screens/login_screen.dart';
 import '../../patient/screens/patient_home_screen.dart';
 import 'appointment_requests_screen.dart';
 import 'doctor_profile_manage_screen.dart';
+import 'doctor_schedule_manage_screen.dart';
 
 class DoctorDashboardScreen extends StatefulWidget {
   const DoctorDashboardScreen({super.key});
@@ -69,6 +70,90 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     );
   }
 
+  // Appointment Reschedule Dialog + Patient Notification Function
+  void _showRescheduleDialog(
+      String appointmentDocId, String patientUid, String currentEmail) {
+    final dateController = TextEditingController();
+    final timeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reschedule Booking'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: dateController,
+              decoration: const InputDecoration(
+                labelText: 'New Date (e.g. 2026-10-20)',
+                prefixIcon: Icon(Icons.calendar_today),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: timeController,
+              decoration: const InputDecoration(
+                labelText: 'New Time (e.g. 10:30 AM)',
+                prefixIcon: Icon(Icons.access_time),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newDate = dateController.text.trim();
+              final newTime = timeController.text.trim();
+
+              if (newDate.isNotEmpty && newTime.isNotEmpty) {
+                // 1. Update Appointment in Firestore
+                await FirebaseFirestore.instance
+                    .collection('appointments')
+                    .doc(appointmentDocId)
+                    .update({
+                  'date': newDate,
+                  'time': newTime,
+                  'status': 'Rescheduled',
+                  'updatedAt': FieldValue.serverTimestamp(),
+                });
+
+                // 2. Send Real-time Notification to Patient
+                await FirebaseFirestore.instance.collection('notifications').add({
+                  'userId': patientUid,
+                  'userEmail': currentEmail,
+                  'title': 'Appointment Rescheduled 📅',
+                  'message':
+                      'Your doctor updated your appointment to $newDate at $newTime.',
+                  'isRead': false,
+                  'timestamp': FieldValue.serverTimestamp(),
+                });
+
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Appointment Rescheduled & Patient Notified!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Update & Notify'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final uid = _currentDoctor?.uid;
@@ -87,6 +172,18 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          IconButton(
+            tooltip: 'Charges & Schedule',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const DoctorScheduleManageScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.edit_calendar_rounded),
+          ),
           IconButton(
             tooltip: 'Manage Profile',
             onPressed: () {
@@ -123,10 +220,12 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
           final specialty =
               providerDetails['specialization'] ?? 'General Physician';
           final isOnline = doctorData['isAvailable'] ?? true;
+          final double consultationFee =
+              (doctorData['consultationFee'] ?? 2500.0).toDouble();
 
           return Column(
             children: [
-              // Doctor Header Card
+              // Header Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
@@ -243,7 +342,50 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+
+              // KPI & Revenue Analytics Section
+              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: FirebaseFirestore.instance
+                    .collection('appointments')
+                    .where('doctorId', isEqualTo: uid)
+                    .snapshots(),
+                builder: (context, apptSnapshot) {
+                  final docs = apptSnapshot.data?.docs ?? [];
+                  final totalBookings = docs.length;
+                  final approvedDocs = docs
+                      .where((d) => (d.data()['status'] ?? '') == 'Approved')
+                      .length;
+                  final totalRevenue = approvedDocs * consultationFee;
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _buildKpiCard(
+                            title: 'Est. Revenue',
+                            value: 'LKR ${totalRevenue.toStringAsFixed(0)}',
+                            icon: Icons.account_balance_wallet_rounded,
+                            color: const Color(0xFF059669),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildKpiCard(
+                            title: 'Approved',
+                            value: '$approvedDocs / $totalBookings',
+                            icon: Icons.check_circle_rounded,
+                            color: const Color(0xFF0284C7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 14),
 
               // Quick Navigation Buttons
               Padding(
@@ -267,19 +409,19 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                         },
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: _buildQuickNavCard(
-                        icon: Icons.manage_accounts_rounded,
-                        title: 'Profile',
-                        subtitle: 'Edit Details',
-                        color: const Color(0xFF7C3AED),
+                        icon: Icons.edit_calendar_rounded,
+                        title: 'Schedule',
+                        subtitle: 'Fee & Holidays',
+                        color: const Color(0xFFD97706),
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) =>
-                                  const DoctorProfileManageScreen(),
+                                  const DoctorScheduleManageScreen(),
                             ),
                           );
                         },
@@ -289,18 +431,18 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Patient Appointments Section Header
+              // Patient Appointments List Header
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'My Appointments',
+                      'My Patient Appointments',
                       style: TextStyle(
-                        fontSize: 17,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF111827),
                       ),
@@ -327,9 +469,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                 ),
               ),
 
-              const SizedBox(height: 5),
-
-              // Fetch Appointments for this Doctor
+              // Appointments Stream
               Expanded(
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: FirebaseFirestore.instance
@@ -342,13 +482,6 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    if (apptSnapshot.hasError) {
-                      return Center(
-                        child: Text(
-                            'Error loading appointments: ${apptSnapshot.error}'),
-                      );
-                    }
-
                     final apptDocs = apptSnapshot.data?.docs ?? [];
 
                     if (apptDocs.isEmpty) {
@@ -357,12 +490,12 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.calendar_today_outlined,
-                                size: 50, color: Colors.grey.shade400),
-                            const SizedBox(height: 12),
+                                size: 45, color: Colors.grey.shade400),
+                            const SizedBox(height: 10),
                             Text(
-                              'No appointments assigned to you yet.',
+                              'No appointments assigned yet.',
                               style: TextStyle(
-                                  color: Colors.grey.shade600, fontSize: 14),
+                                  color: Colors.grey.shade600, fontSize: 13),
                             ),
                           ],
                         ),
@@ -371,27 +504,27 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
 
                     return ListView.builder(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 6),
+                          horizontal: 20, vertical: 4),
                       itemCount: apptDocs.length,
                       itemBuilder: (context, index) {
-                        final appt = apptDocs[index].data();
-                        final patientName = appt['userEmail'] ?? 'Patient';
+                        final doc = apptDocs[index];
+                        final appt = doc.data();
+                        final patientEmail = appt['userEmail'] ?? 'Patient';
+                        final patientUid = appt['userId'] ?? '';
                         final date = appt['date'] ?? 'N/A';
                         final time = appt['time'] ?? 'N/A';
                         final type = appt['type'] ?? 'In-person';
                         final status = appt['status'] ?? 'Upcoming';
-                        final reason =
-                            appt['reason'] ?? 'Routine consultation';
 
                         return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
+                          margin: const EdgeInsets.only(bottom: 10),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(14),
                             side: const BorderSide(color: Color(0xFFE5E7EB)),
                           ),
                           elevation: 0,
                           child: Padding(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(14),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -400,25 +533,25 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      patientName,
+                                      patientEmail,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 15,
+                                        fontSize: 14,
                                       ),
                                     ),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
+                                          horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
                                         color: _getStatusBgColor(status),
                                         borderRadius:
-                                            BorderRadius.circular(12),
+                                            BorderRadius.circular(10),
                                       ),
                                       child: Text(
                                         status,
                                         style: TextStyle(
                                           color: _getStatusTextColor(status),
-                                          fontSize: 11,
+                                          fontSize: 10,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -426,22 +559,25 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 6),
-                                Text(
-                                  'Date: $date at $time • $type',
-                                  style: const TextStyle(
-                                      fontSize: 13, color: Color(0xFF4B5563)),
-                                ),
-                                if (reason.toString().trim().isNotEmpty) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'Reason: $reason',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                      fontStyle: FontStyle.italic,
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Date: $date at $time • $type',
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF4B5563)),
                                     ),
-                                  ),
-                                ],
+                                    IconButton(
+                                      tooltip: 'Reschedule',
+                                      icon: const Icon(Icons.edit_calendar,
+                                          size: 18, color: _primary),
+                                      onPressed: () => _showRescheduleDialog(
+                                          doc.id, patientUid, patientEmail),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                           ),
@@ -458,6 +594,55 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     );
   }
 
+  Widget _buildKpiCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                      fontSize: 11, color: Color(0xFF6B7280)),
+                ),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildQuickNavCard({
     required IconData icon,
     required String title,
@@ -467,27 +652,27 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   }) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: const Color(0xFFE5E7EB)),
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: color, size: 22),
+                child: Icon(icon, color: color, size: 20),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -496,14 +681,14 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                       title,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 13,
                         color: Color(0xFF111827),
                       ),
                     ),
                     Text(
                       subtitle,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: Color(0xFF6B7280),
                       ),
                     ),
@@ -521,8 +706,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     switch (status) {
       case 'Approved':
         return Colors.green.withValues(alpha: 0.1);
-      case 'Upcoming':
-        return Colors.blue.withValues(alpha: 0.1);
+      case 'Rescheduled':
+        return Colors.purple.withValues(alpha: 0.1);
       case 'Cancelled':
         return Colors.red.withValues(alpha: 0.1);
       default:
@@ -534,8 +719,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     switch (status) {
       case 'Approved':
         return Colors.green;
-      case 'Upcoming':
-        return Colors.blue;
+      case 'Rescheduled':
+        return Colors.purple;
       case 'Cancelled':
         return Colors.red;
       default:
