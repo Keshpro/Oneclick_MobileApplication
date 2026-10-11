@@ -165,7 +165,7 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
               const SizedBox(height: 8),
 
               DropdownButtonFormField<String>(
-                value: selectedCategory,
+                initialValue: selectedCategory,
 
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
@@ -303,7 +303,7 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
                   // FROM
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: selectedFromTime,
+                      initialValue: selectedFromTime,
 
                       decoration: const InputDecoration(
                         labelText: 'From',
@@ -344,7 +344,7 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
                   // UNTIL
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: selectedUntilTime,
+                      initialValue: selectedUntilTime,
 
                       decoration: const InputDecoration(
                         labelText: 'Until',

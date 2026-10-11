@@ -100,7 +100,7 @@ void _loadRecords() {
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.25),
+    barrierColor: Colors.black.withValues(alpha: 0.25),
     builder: (context) {
       return ShareRecordSheet(
         selectedRecord: shareItem,
@@ -1132,7 +1132,7 @@ class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProvide
   );
 }
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon, {this.color});
+  const _VaultNavGlyph(this.icon) : color = null;
   final IconData icon;
   final Color? color;
   @override

@@ -254,7 +254,7 @@ SingleChildScrollView(
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: filteredItems.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final item = filteredItems[index];
@@ -698,7 +698,7 @@ SingleChildScrollView(
                           icon: Icons.movie_outlined,
                           title: 'Netflix Premium',
                           subtitle: 'Renews in 3 days',
-                          endText: '\LKR 3,500',
+                          endText: 'LKR 3,500',
                           iconColor: Colors.red,
                         ),
                         const SizedBox(height: 18),
@@ -707,7 +707,7 @@ SingleChildScrollView(
                           icon: Icons.design_services_outlined,
                           title: 'Figma Workspace',
                           subtitle: 'Renews in 6 days',
-                          endText: '\LKR 1,200',
+                          endText: 'LKR 1,200',
                         ),
                       ],
                     ),
