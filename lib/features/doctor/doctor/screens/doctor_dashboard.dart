@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:oneclick/features/auth/screens/home_screen.dart';
 
 import '../../../auth/screens/login_screen.dart';
+import '../../patient/screens/patient_home_screen.dart';
 import 'appointment_requests_screen.dart';
 import 'doctor_profile_manage_screen.dart';
 
@@ -58,6 +60,15 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     );
   }
 
+  void _switchToPatientMode() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const HomeScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final uid = _currentDoctor?.uid;
@@ -96,7 +107,6 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         ],
       ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        // 1. Fetch strictly THIS logged-in Doctor's profile details
         stream: FirebaseFirestore.instance
             .collection('doctors')
             .doc(uid)
@@ -157,6 +167,36 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                                 ),
                               ),
                             ],
+                          ),
+                        ),
+                        // Patient Mode Switch Button
+                        InkWell(
+                          onTap: _switchToPatientMode,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2)),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.swap_horiz_rounded,
+                                    color: Colors.white, size: 16),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Customer Mode',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -289,7 +329,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
 
               const SizedBox(height: 5),
 
-              // 2. Fetch ONLY Appointments assigned strictly to THIS Doctor (doctorId == uid)
+              // Fetch Appointments for this Doctor
               Expanded(
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: FirebaseFirestore.instance

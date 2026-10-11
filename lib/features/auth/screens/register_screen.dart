@@ -5,17 +5,6 @@ import '../../../shared/models/user_model.dart';
 import 'pending_approval_screen.dart';
 import 'provider_rules_screen.dart';
 
-extension AuthServiceRegistration on AuthService {
-  Future<void> register({
-    required String name,
-    required String email,
-    required String password,
-    required String role,
-  }) async {
-    await Future<void>.value();
-  }
-}
-
 class RegisterScreen extends StatefulWidget {
   final UserRole role;
 
@@ -41,7 +30,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool get _requiresApproval {
     final role = widget.role.name.toLowerCase();
-
     return role == 'doctor' || role == 'driver';
   }
 
@@ -66,6 +54,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
+      // AuthService හරහා Firebase Registration ක්‍රියාත්මක කිරීම
       await _authService.register(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
@@ -81,7 +70,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           MaterialPageRoute(builder: (_) => const PendingApprovalScreen()),
           (route) => false,
         );
-
         return;
       }
 
@@ -97,7 +85,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
 
       String message = e.toString();
-
       if (message.startsWith('Exception: ')) {
         message = message.replaceFirst('Exception: ', '');
       }
@@ -127,7 +114,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7FC),
-
       appBar: AppBar(
         backgroundColor: const Color(0xFFF7F7FC),
         elevation: 0,
@@ -137,7 +123,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
-
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
@@ -154,9 +139,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: Color(0xFF17152A),
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 Text(
                   _requiresApproval
                       ? 'Your account will be reviewed by an administrator before access is granted.'
@@ -167,9 +150,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     height: 1.5,
                   ),
                 ),
-
                 const SizedBox(height: 30),
-
                 TextFormField(
                   controller: _nameController,
                   textInputAction: TextInputAction.next,
@@ -181,17 +162,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter your full name';
                     }
-
                     if (value.trim().length < 3) {
                       return 'Please enter a valid name';
                     }
-
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 16),
-
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -204,19 +181,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter your email address';
                     }
-
                     final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-
                     if (!emailRegex.hasMatch(value.trim())) {
                       return 'Please enter a valid email address';
                     }
-
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 16),
-
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
@@ -241,17 +213,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter a password';
                     }
-
                     if (value.length < 6) {
                       return 'Password must contain at least 6 characters';
                     }
-
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 16),
-
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
@@ -281,17 +249,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please confirm your password';
                     }
-
                     if (value != _passwordController.text) {
                       return 'Passwords do not match';
                     }
-
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 24),
-
                 SizedBox(
                   height: 54,
                   child: ElevatedButton(
@@ -319,9 +283,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                   ),
                 ),
-
-                // Only show provider notice for old
-                // provider routes if they are still used.
                 if (_requiresApproval) ...[
                   const SizedBox(height: 16),
                   const Row(
@@ -345,9 +306,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ],
                   ),
                 ],
-
                 const SizedBox(height: 38),
-
                 const Row(
                   children: [
                     Expanded(child: Divider(color: Color(0xFFE4E2EC))),
@@ -365,12 +324,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Expanded(child: Divider(color: Color(0xFFE4E2EC))),
                   ],
                 ),
-
                 const SizedBox(height: 24),
-
-                // ==========================================
-                // EARN WITH ONECLICK
-                // ==========================================
                 Material(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(22),
@@ -402,9 +356,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               size: 27,
                             ),
                           ),
-
                           const SizedBox(width: 15),
-
                           const Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,9 +381,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ],
                             ),
                           ),
-
                           const SizedBox(width: 10),
-
                           const Icon(
                             Icons.arrow_forward_ios_rounded,
                             size: 17,
@@ -442,9 +392,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
                 const Text(
                   'Provider applications are reviewed before activation.',
                   textAlign: TextAlign.center,
