@@ -35,7 +35,7 @@ class ProductCard extends StatelessWidget {
                   child: imageUrl != null && imageUrl!.isNotEmpty
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(10),
-                          child: Image.network(imageUrl!, fit: BoxFit.cover),
+                          child: Image.asset(imageUrl!, fit: BoxFit.cover),
                         )
                       : const Icon(Icons.shopping_basket_outlined, size: 50),
                 ),
