@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../groceries/seller/screens/become_seller_screen.dart';
-
 import 'provider_register_screen.dart';
 
-class ProviderRoleSelectionScreen
-    extends StatelessWidget {
+class ProviderRoleSelectionScreen extends StatelessWidget {
   const ProviderRoleSelectionScreen({
     super.key,
   });
@@ -27,7 +25,6 @@ class ProviderRoleSelectionScreen
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7FC),
-
       appBar: AppBar(
         backgroundColor: const Color(0xFFF7F7FC),
         elevation: 0,
@@ -39,13 +36,11 @@ class ProviderRoleSelectionScreen
           ),
         ),
       ),
-
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 30),
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'How would you like\nto earn?',
@@ -56,9 +51,7 @@ class ProviderRoleSelectionScreen
                   fontWeight: FontWeight.w900,
                 ),
               ),
-
               const SizedBox(height: 10),
-
               const Text(
                 'Select the service you want to provide through OneClick.',
                 style: TextStyle(
@@ -67,15 +60,14 @@ class ProviderRoleSelectionScreen
                   height: 1.5,
                 ),
               ),
+              const SizedBox(height: 24),
 
-              const SizedBox(height: 30),
-
+              // 1. Doctor Role Card
               _ProviderRoleCard(
                 title: 'Doctor',
                 description:
                     'Provide healthcare services and receive appointment requests.',
-                icon:
-                    Icons.medical_services_rounded,
+                icon: Icons.medical_services_rounded,
                 colors: const [
                   Color(0xFF11D999),
                   Color(0xFF059669),
@@ -88,12 +80,12 @@ class ProviderRoleSelectionScreen
 
               const SizedBox(height: 16),
 
+              // 2. Driver Role Card
               _ProviderRoleCard(
                 title: 'Driver',
                 description:
                     'Join the driver network and receive customer ride requests.',
-                icon:
-                    Icons.directions_car_rounded,
+                icon: Icons.directions_car_rounded,
                 colors: const [
                   Color(0xFFA78BFA),
                   Color(0xFF7C3AED),
@@ -106,24 +98,60 @@ class ProviderRoleSelectionScreen
 
               const SizedBox(height: 16),
 
+              // 3. Quick Fix Worker Role Card
+              _ProviderRoleCard(
+                title: 'Quick Fix Worker',
+                description:
+                    'Offer home repair, plumbing, electrical, and technical services.',
+                icon: Icons.handyman_rounded,
+                colors: const [
+                  Color(0xFF38BDF8),
+                  Color(0xFF0284C7),
+                ],
+                onTap: () => _selectRole(
+                  context,
+                  ProviderRole.worker, 
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // 4. Food Seller Role Card
+              _ProviderRoleCard(
+                title: 'Food Partner / Restaurant',
+                description:
+                    'List your restaurant or food items and manage food delivery orders.',
+                icon: Icons.restaurant_rounded,
+                colors: const [
+                  Color(0xFFFF8A65),
+                  Color(0xFFE85D04),
+                ],
+                onTap: () => _selectRole(
+                  context,
+                  ProviderRole.foodSeller,
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // 5. Grocery Seller Role Card
               _ProviderRoleCard(
                 title: 'Grocery Seller',
                 description:
                     'Sell groceries and receive orders from customers.',
-                icon:
-                    Icons.local_grocery_store_rounded,
+                icon: Icons.local_grocery_store_rounded,
                 colors: const [
                   Color(0xFFFFD54F),
                   Color(0xFFFFA000),
                 ],
-              onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const BecomeSellerScreen(),
-    ),
-  );
-},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const BecomeSellerScreen(),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -133,8 +161,7 @@ class ProviderRoleSelectionScreen
   }
 }
 
-class _ProviderRoleCard
-    extends StatelessWidget {
+class _ProviderRoleCard extends StatelessWidget {
   final String title;
   final String description;
   final IconData icon;
@@ -160,8 +187,7 @@ class _ProviderRoleCard
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            borderRadius:
-                BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: const Color(0xFFE4E2EC),
             ),
@@ -172,10 +198,8 @@ class _ProviderRoleCard
                 width: 62,
                 height: 62,
                 decoration: BoxDecoration(
-                  gradient:
-                      LinearGradient(colors: colors),
-                  borderRadius:
-                      BorderRadius.circular(19),
+                  gradient: LinearGradient(colors: colors),
+                  borderRadius: BorderRadius.circular(19),
                 ),
                 child: Icon(
                   icon,
@@ -183,30 +207,24 @@ class _ProviderRoleCard
                   size: 30,
                 ),
               ),
-
               const SizedBox(width: 16),
-
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
                       style: const TextStyle(
-                        color:
-                            Color(0xFF17152A),
+                        color: Color(0xFF17152A),
                         fontSize: 18,
-                        fontWeight:
-                            FontWeight.w900,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       description,
                       style: const TextStyle(
-                        color:
-                            Color(0xFF747187),
+                        color: Color(0xFF747187),
                         fontSize: 12.5,
                         height: 1.4,
                       ),
@@ -214,7 +232,6 @@ class _ProviderRoleCard
                   ],
                 ),
               ),
-
               const Icon(
                 Icons.arrow_forward_ios_rounded,
                 color: Color(0xFF5B4DFF),

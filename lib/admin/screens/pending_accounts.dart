@@ -12,7 +12,7 @@ class PendingAccounts extends StatelessWidget {
     String name,
   ) async {
     try {
-      // 1. Update account status in Firestore
+      // 1. Update account status in Provider Collection (workers, food_sellers, doctors, drivers)
       await FirebaseFirestore.instance
           .collection(collection)
           .doc(docId)
@@ -21,8 +21,17 @@ class PendingAccounts extends StatelessWidget {
         'approvedAt': newStatus == 'active' ? FieldValue.serverTimestamp() : null,
       });
 
-      // 2. Add entry to activity logs collection
-      final actionTitle = newStatus == 'active' ? 'Account Approved' : 'Account Rejected';
+      // 2. Also update account status in main 'users' collection
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(docId)
+          .update({
+        'status': newStatus,
+      }).catchError((_) {});
+
+      // 3. Add entry to activity logs collection for Admin Dashboard
+      final actionTitle =
+          newStatus == 'active' ? 'Account Approved' : 'Account Rejected';
       final details = '$name ($collection) was marked as $newStatus.';
 
       await FirebaseFirestore.instance.collection('activity_logs').add({
@@ -35,7 +44,7 @@ class PendingAccounts extends StatelessWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$name approved successfully as $newStatus'),
+          content: Text('$name marked successfully as $newStatus'),
           backgroundColor: newStatus == 'active' ? Colors.green : Colors.red,
         ),
       );
@@ -53,7 +62,7 @@ class PendingAccounts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 4, // Updated length for 4 Provider Roles
       child: Scaffold(
         backgroundColor: const Color(0xFFF4F6FB),
         appBar: AppBar(
@@ -64,10 +73,13 @@ class PendingAccounts extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           bottom: const TabBar(
+            isScrollable: true,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white60,
             indicatorColor: Colors.white,
             tabs: [
+              Tab(text: 'Workers'),
+              Tab(text: 'Food Sellers'),
               Tab(text: 'Doctors'),
               Tab(text: 'Drivers'),
             ],
@@ -75,6 +87,8 @@ class PendingAccounts extends StatelessWidget {
         ),
         body: TabBarView(
           children: [
+            _buildPendingList(context, 'workers'),
+            _buildPendingList(context, 'food_sellers'),
             _buildPendingList(context, 'doctors'),
             _buildPendingList(context, 'drivers'),
           ],
@@ -138,6 +152,7 @@ class PendingAccounts extends StatelessWidget {
             final email = data['email'] ?? 'No Email';
             final phone = data['phone'] ?? 'No Phone';
             final role = data['role'] ?? collectionName;
+            final category = data['category'] ?? '';
             final details =
                 data['providerDetails'] as Map<String, dynamic>? ?? {};
 
@@ -211,6 +226,12 @@ class PendingAccounts extends StatelessWidget {
                     Text('Phone: $phone', style: const TextStyle(fontSize: 13)),
                     const SizedBox(height: 4),
                     Text('Role: $role', style: const TextStyle(fontSize: 13)),
+                    if (category.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text('Category / Skill: $category',
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.bold)),
+                    ],
                     if (details.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Container(
