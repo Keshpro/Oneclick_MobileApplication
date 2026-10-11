@@ -3,11 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'home_screen.dart';
+import 'register_screen.dart'; // Direct RegisterScreen import
 import 'package:oneclick/admin/screens/admin_dashboard.dart';
 import 'package:oneclick/features/doctor/doctor/screens/doctor_dashboard.dart';
-// NOTE: The imported doctor dashboard widget name in the feature file must be
-// referenced exactly as defined there. Use the generated class name instead of a
-// non-existent alias.
+import '../../../shared/models/user_model.dart';
+
 class AuthService {
   Future<String> login({
     required String email,
@@ -28,7 +28,7 @@ class AuthService {
     // 2. Firestore chya 'users' collection madhye role check karne
     final userDoc =
         await FirebaseFirestore.instance.collection('users').doc(uid).get();
-        
+
     if (userDoc.exists) {
       final data = userDoc.data();
       final role = data?['role'];
@@ -59,27 +59,6 @@ class LoginScreen extends StatefulWidget {
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class RoleSelectionScreen extends StatelessWidget {
-  const RoleSelectionScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Select Role')),
-      body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Registration flow is not available yet.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class PendingApprovalScreen extends StatelessWidget {
@@ -119,6 +98,14 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // Direct route to RegisterScreen
+  void _goToRegister() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const RegisterScreen(role: UserRole.user)),
+    );
+  }
+
   // Provider (Doctor/Driver) chi status ani dashboard routing check karne
   Future<void> _checkProviderStatusAndNavigate(String uid, String role) async {
     final firestore = FirebaseFirestore.instance;
@@ -132,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (status == 'active' || status == 'approved') {
         if (!mounted) return;
-        
+
         // Doctor sathi Unique DoctorDashboardScreen var navigate karne
         if (role == 'doctor') {
           Navigator.of(context).pushAndRemoveUntil(
@@ -245,7 +232,38 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 70),
+                const SizedBox(height: 16),
+                // Top Back Button
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: InkWell(
+                    onTap: () {
+                      if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      } else {
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                              builder: (context) => const HomeScreen()),
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Color(0xFF120F2E),
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
                 Container(
                   width: 82,
                   height: 82,
@@ -380,6 +398,29 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                   ),
                 ),
+                const SizedBox(height: 20),
+                // Direct link to RegisterScreen
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Don't have an account? ",
+                      style: TextStyle(color: Color(0xFF6B6584), fontSize: 14),
+                    ),
+                    GestureDetector(
+                      onTap: _goToRegister,
+                      child: const Text(
+                        'Register',
+                        style: TextStyle(
+                          color: Color(0xFF5B4DFF),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
               ],
             ),
           ),
