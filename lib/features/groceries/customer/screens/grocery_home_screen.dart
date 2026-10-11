@@ -159,7 +159,7 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
           ],
         ),
       ),
-    )
+    );
   }
 
   Widget _buildProductCard(GroceryProduct product) {
