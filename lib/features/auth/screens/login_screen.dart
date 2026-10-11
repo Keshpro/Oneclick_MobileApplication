@@ -4,13 +4,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'home_screen.dart';
 import 'package:oneclick/admin/screens/admin_dashboard.dart';
-
+import 'package:oneclick/features/doctor/doctor/screens/doctor_dashboard.dart';
+// NOTE: The imported doctor dashboard widget name in the feature file must be
+// referenced exactly as defined there. Use the generated class name instead of a
+// non-existent alias.
 class AuthService {
   Future<String> login({
     required String email,
     required String password,
   }) async {
-    // 1. Firebase Authentication මඟින් ලොග් වීම
+    // 1. Firebase Authentication dwara sign in karne
     final userCredential = await FirebaseAuth.instance
         .signInWithEmailAndPassword(email: email.trim(), password: password);
 
@@ -22,7 +25,7 @@ class AuthService {
       );
     }
 
-    // 2. Firestore එකේ 'users' collection එකෙන් role එක පරීක්ෂා කිරීම
+    // 2. Firestore chya 'users' collection madhye role check karne
     final userDoc =
         await FirebaseFirestore.instance.collection('users').doc(uid).get();
         
@@ -34,7 +37,7 @@ class AuthService {
       }
     }
 
-    // 3. doctors හෝ drivers collection වල ඇත්දැයි බැලීම
+    // 3. 'doctors' kiva 'drivers' collection madhye doc ahe ka check karne
     final doctorDoc =
         await FirebaseFirestore.instance.collection('doctors').doc(uid).get();
     if (doctorDoc.exists) {
@@ -116,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Provider (Doctor/Driver) ලාගේ status එක පරීක්ෂා කිරීම
+  // Provider (Doctor/Driver) chi status ani dashboard routing check karne
   Future<void> _checkProviderStatusAndNavigate(String uid, String role) async {
     final firestore = FirebaseFirestore.instance;
     final collection = role == 'doctor' ? 'doctors' : 'drivers';
@@ -127,10 +130,33 @@ class _LoginScreenState extends State<LoginScreen> {
       final data = doc.data();
       final status = data?['status'] ?? 'pending';
 
-      if (status != 'active') {
+      if (status == 'active' || status == 'approved') {
+        if (!mounted) return;
+        
+        // Doctor sathi Unique DoctorDashboardScreen var navigate karne
+        if (role == 'doctor') {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const DoctorDashboardScreen(),
+            ),
+            (Route<dynamic> route) => false,
+          );
+          return;
+        }
+
+        // Driver / standard active users sathi HomeScreen var navigate karne
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          (Route<dynamic> route) => false,
+        );
+        return;
+      } else {
+        // Pending kiva non-active doctors/drivers sathi PendingApprovalScreen
         if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const PendingApprovalScreen()),
+          MaterialPageRoute(
+            builder: (context) => const PendingApprovalScreen(),
+          ),
           (Route<dynamic> route) => false,
         );
         return;
@@ -156,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // 1. AuthService හරහා ලොග් වී role එක ලබා ගැනීම
+      // 1. AuthService madhun user role ghene
       final role = await _authService.login(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -164,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      // 2. Role එක 'admin' නම් කෙලින්ම AdminDashboard වෙත යැවීම
+      // 2. Role 'admin' asel tar AdminDashboard var navigate karne
       if (role == 'admin') {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const AdminDashboard()),
@@ -173,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // 3. අනෙකුත් role (doctor, driver, user) සඳහා අදාළ තිර වෙත යැවීම
+      // 3. Role 'doctor', 'driver' kiva 'user' asel tar dashboard navigation karne
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser != null && (role == 'doctor' || role == 'driver')) {
         await _checkProviderStatusAndNavigate(currentUser.uid, role);
@@ -205,13 +231,6 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
-  }
-
-  void _goToRegister() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
-    );
   }
 
   @override
