@@ -90,7 +90,7 @@ class DatabaseManagement extends StatelessWidget {
   Widget _buildStatCard(IconData icon, String title, String count, Color color) {
     return Card(
       elevation: 1,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: Colors.grey.shade200),
@@ -102,7 +102,7 @@ class DatabaseManagement extends StatelessWidget {
             Container(
                padding: const EdgeInsets.all(12),
                decoration: BoxDecoration(
-                 color: color.withOpacity(0.15),
+                 color: color.withValues(alpha: 0.15),
                  borderRadius: BorderRadius.circular(12),
                ),
                child: Icon(icon, color: color, size: 28),

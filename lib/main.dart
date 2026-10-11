@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:oneclick/shared/models/user_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -23,13 +24,19 @@ void main() async {
       String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
 
   await Supabase.initialize(
-  url: supabaseUrl,
-  publishableKey: supabasePublishableKey,
-  accessToken: () async {
-    return FirebaseAuth.instance.currentUser?.getIdToken();
-  },
-);
+    url: supabaseUrl,
+    publishableKey: supabasePublishableKey,
+    accessToken: () async {
+      return FirebaseAuth.instance.currentUser?.getIdToken();
+    },
+  );
 
+  // Initialize App Check with both Android and Web providers
+  // This prevents the app from crashing when accidentally run on Chrome
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: AndroidProvider.debug,
+    webProvider: ReCaptchaV3Provider('dummy-key'),
+  );
   runApp(const MyApp());
 }
 

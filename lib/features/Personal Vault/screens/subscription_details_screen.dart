@@ -1282,7 +1282,7 @@ class _SubscriptionDetailsScreenState
         blurRadius: 10,
       ),
       BoxShadow(
-        color: Colors.black.withValues(alpha: .05),
+        color: Colors.black.withValues(alpha: .065),
         offset: const Offset(5, 7),
         blurRadius: 15,
       ),

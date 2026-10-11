@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../groceries/seller/screens/become_seller_screen.dart';
 
 import 'provider_register_screen.dart';
 
@@ -101,6 +102,28 @@ class ProviderRoleSelectionScreen
                   context,
                   ProviderRole.driver,
                 ),
+              ),
+
+              const SizedBox(height: 16),
+
+              _ProviderRoleCard(
+                title: 'Grocery Seller',
+                description:
+                    'Sell groceries and receive orders from customers.',
+                icon:
+                    Icons.local_grocery_store_rounded,
+                colors: const [
+                  Color(0xFFFFD54F),
+                  Color(0xFFFFA000),
+                ],
+              onTap: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const BecomeSellerScreen(),
+    ),
+  );
+},
               ),
             ],
           ),

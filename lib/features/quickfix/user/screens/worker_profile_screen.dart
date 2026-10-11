@@ -25,7 +25,7 @@ class WorkerProfileScreen extends StatelessWidget {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),
@@ -94,7 +94,7 @@ class WorkerProfileScreen extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 45,
-                    backgroundColor: const Color(0xff032744).withOpacity(0.1),
+                    backgroundColor: const Color(0xff032744).withValues(alpha: 0.1),
                     child: Text(
                       name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'W',
                       style: const TextStyle(
@@ -118,8 +118,8 @@ class WorkerProfileScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: isAvailable
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.red.withOpacity(0.1),
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : Colors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(

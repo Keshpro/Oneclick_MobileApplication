@@ -1479,9 +1479,9 @@ class _VaultGlassScope extends InheritedWidget {
 }
 class _VaultGlassCard extends StatefulWidget {
   const _VaultGlassCard({
-  required this.child,
-  required this.padding,
-});
+    required this.child,
+    required this.padding,
+  });
   final Widget child;
   final EdgeInsetsGeometry padding;
 
