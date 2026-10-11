@@ -58,6 +58,5 @@ flutter:
     - assets/images/food/dishes/
     - assets/images/food/restaurants/
     - assets/icons/
-    - assets/icons/
 
   # Add a fonts section here if the app uses custom fonts.

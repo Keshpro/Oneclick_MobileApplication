@@ -103,10 +103,15 @@ class AuthService {
       final data = document.data()!;
 
       final role =
-          (data['role'] ?? 'user').toString().toLowerCase();
+          (data['role'] ?? 'user').toString().trim().toLowerCase();
+
+      // Admins are never blocked by the approval flow
+      if (role == 'admin') {
+        return role;
+      }
 
       final status =
-          (data['status'] ?? 'pending').toString().toLowerCase();
+          (data['status'] ?? 'pending').toString().trim().toLowerCase();
 
       // Pending provider
       if (status == 'pending') {
@@ -124,12 +129,13 @@ class AuthService {
         );
       }
 
-      if (status != 'approved') {
+      // 'active' and 'approved' both mean the account may log in
+      if (status != 'approved' && status != 'active') {
         await _auth.signOut();
         throw Exception('Account access is unavailable.');
       }
 
-      // Successful login → return role
+      // Successful login -> return role
       return role;
     } on FirebaseAuthException catch (e) {
       switch (e.code) {
