@@ -54,6 +54,7 @@ flutter:
 
   # Uncomment these after adding files inside the folders.
   assets:
+    - assets/images/groceries/
     - assets/images/food/dishes/
     - assets/images/food/restaurants/
     - assets/icons/
