@@ -39,17 +39,15 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     });
   }
 
-  // Helper method to find which collection the provider belongs to
   Future<String> _getProviderCollection(String uid) async {
-    // Check in 'doctors' collection first
-    final doctorDoc = await FirebaseFirestore.instance.collection('doctors').doc(uid).get();
+    final doctorDoc =
+        await FirebaseFirestore.instance.collection('doctors').doc(uid).get();
     if (doctorDoc.exists) return 'doctors';
 
-    // Check in 'drivers' collection next
-    final driverDoc = await FirebaseFirestore.instance.collection('drivers').doc(uid).get();
+    final driverDoc =
+        await FirebaseFirestore.instance.collection('drivers').doc(uid).get();
     if (driverDoc.exists) return 'drivers';
 
-    // Fallback to 'users' if not found in specific collections
     return 'users';
   }
 
@@ -59,24 +57,80 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
 
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Approval status')),
-        body: Center(
-          child: FilledButton(
-            onPressed: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
-            child: const Text('Log in'),
+        backgroundColor: const Color(0xFFF4F6FB),
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xff032744).withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.lock_person_rounded,
+                      size: 60,
+                      color: Color(0xff032744),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Session Expired',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Please log in again to check your account status.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+                  ),
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xff032744),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                              builder: (_) => const LoginScreen()),
+                          (route) => false,
+                        );
+                      },
+                      child: const Text('Back to Login',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       );
     }
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F6FB),
       appBar: AppBar(
-        title: const Text('Approval status'),
+        title: const Text('Application Status'),
+        backgroundColor: const Color(0xff032744),
+        foregroundColor: Colors.white,
+        elevation: 0,
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
@@ -86,7 +140,6 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
           ),
         ],
       ),
-      // FutureBuilder to dynamically check whether user is in 'doctors' or 'drivers' collection
       body: FutureBuilder<String>(
         future: _getProviderCollection(user.uid),
         builder: (context, collectionSnapshot) {
@@ -98,86 +151,68 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
 
           return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance
-                .collection(collectionName) // Dynamically targets 'doctors', 'drivers', or 'users'
+                .collection(collectionName)
                 .doc(user.uid)
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return _StatusContent(
+                return _ModernStatusCard(
                   icon: Icons.wifi_off_rounded,
-                  title: 'Could not load your status',
-                  message: 'Check your connection and try again.',
-                  actionLabel: 'Log out',
+                  iconColor: Colors.orange,
+                  title: 'Network Error',
+                  message: 'Could not fetch status. Check internet connection.',
+                  actionLabel: 'Log Out',
                   onAction: _logOut,
                 );
               }
 
               if (!snapshot.hasData || !snapshot.data!.exists) {
-                return _StatusContent(
+                return _ModernStatusCard(
                   icon: Icons.person_off_outlined,
-                  title: 'Profile not found',
-                  message: 'Your account profile is unavailable.',
-                  actionLabel: 'Log out',
+                  iconColor: Colors.red,
+                  title: 'Account Not Found',
+                  message:
+                      'Your provider application was not found in database.',
+                  actionLabel: 'Log Out',
                   onAction: _logOut,
                 );
               }
 
-              final document = snapshot.data!;
-              final data = document.data() ?? <String, dynamic>{};
+              final data = snapshot.data!.data() ?? <String, dynamic>{};
               final name = (data['name'] as String?)?.trim() ?? '';
               final role = (data['role'] as String?)?.trim() ?? '';
               final status = (data['status'] as String?)?.trim() ?? '';
 
-              if (status == 'active') {
+              if (status == 'active' || status == 'approved') {
                 _goToRoleGate();
-
-                return const Center(
-                  child: CircularProgressIndicator(),
-                );
+                return const Center(child: CircularProgressIndicator());
               }
 
               if (status == 'rejected') {
-                final rejectionReason =
-                    (data['rejectionReason'] as String?)?.trim();
-
-                return _StatusContent(
+                final reason = (data['rejectionReason'] as String?)?.trim();
+                return _ModernStatusCard(
                   icon: Icons.cancel_outlined,
-                  title: 'Registration rejected',
-                  message: rejectionReason != null &&
-                          rejectionReason.isNotEmpty
-                      ? rejectionReason
-                      : 'Your registration was not approved. '
-                          'Please contact support for more information.',
-                  actionLabel: 'Log out',
+                  iconColor: Colors.red,
+                  title: 'Application Rejected',
+                  message: reason != null && reason.isNotEmpty
+                      ? 'Reason: $reason'
+                      : 'Unfortunately, your provider account registration was not approved. Please contact support.',
+                  actionLabel: 'Back to Login',
                   onAction: _logOut,
                 );
               }
 
-              if (status != 'pending') {
-                return _StatusContent(
-                  icon: Icons.info_outline,
-                  title: 'Status unavailable',
-                  message: 'Please contact support about your account.',
-                  actionLabel: 'Log out',
-                  onAction: _logOut,
-                );
-              }
+              final roleName = role.isNotEmpty
+                  ? role[0].toUpperCase() + role.substring(1)
+                  : 'Provider';
 
-              final roleName = switch (role) {
-                'doctor' => 'doctor',
-                'driver' => 'driver',
-                _ => 'user',
-              };
-
-              return _StatusContent(
+              return _ModernStatusCard(
                 icon: Icons.hourglass_top_rounded,
-                title: 'Approval pending',
-                message: [
-                  if (name.isNotEmpty) 'Hi $name!',
-                  'Your $roleName registration is being reviewed by an admin.',
-                  'This page will update automatically once a decision is made.',
-                ].join('\n\n'),
-                actionLabel: 'Log out',
+                iconColor: Colors.amber.shade800,
+                title: 'Approval Pending',
+                message:
+                    'Hi ${name.isNotEmpty ? name : 'there'}!\n\nYour $roleName account application has been received and is currently under review by our Admin team.\n\nOnce approved, you will be able to access the dashboard automatically.',
+                actionLabel: 'Log Out',
                 onAction: _logOut,
               );
             },
@@ -188,9 +223,10 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
   }
 }
 
-class _StatusContent extends StatelessWidget {
-  const _StatusContent({
+class _ModernStatusCard extends StatelessWidget {
+  const _ModernStatusCard({
     required this.icon,
+    required this.iconColor,
     required this.title,
     required this.message,
     required this.actionLabel,
@@ -198,6 +234,7 @@ class _StatusContent extends StatelessWidget {
   });
 
   final IconData icon;
+  final Color iconColor;
   final String title;
   final String message;
   final String actionLabel;
@@ -209,34 +246,71 @@ class _StatusContent extends StatelessWidget {
       child: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 42,
-                  child: Icon(icon, size: 42),
+          child: Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
                 ),
-                const SizedBox(height: 24),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 48, color: iconColor),
+                ),
+                const SizedBox(height: 20),
                 Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF111827),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   message,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF4B5563),
+                    height: 1.5,
+                  ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
                 SizedBox(
                   width: double.infinity,
+                  height: 48,
                   child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xff032744),
+                      side: const BorderSide(color: Color(0xff032744)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                     onPressed: onAction,
-                    icon: const Icon(Icons.logout),
-                    label: Text(actionLabel),
+                    icon: const Icon(Icons.logout, size: 20),
+                    label: Text(
+                      actionLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],

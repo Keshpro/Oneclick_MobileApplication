@@ -3,14 +3,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'home_screen.dart';
+import 'register_screen.dart'; // Direct RegisterScreen import
 import 'package:oneclick/admin/screens/admin_dashboard.dart';
+import 'package:oneclick/features/doctor/doctor/screens/doctor_dashboard.dart';
+import '../../../shared/models/user_model.dart';
 
 class AuthService {
   Future<String> login({
     required String email,
     required String password,
   }) async {
-    // 1. Firebase Authentication මඟින් ලොග් වීම
+    // 1. Firebase Authentication dwara sign in karne
     final userCredential = await FirebaseAuth.instance
         .signInWithEmailAndPassword(email: email.trim(), password: password);
 
@@ -22,10 +25,10 @@ class AuthService {
       );
     }
 
-    // 2. Firestore එකේ 'users' collection එකෙන් role එක පරීක්ෂා කිරීම
+    // 2. Firestore chya 'users' collection madhye role check karne
     final userDoc =
         await FirebaseFirestore.instance.collection('users').doc(uid).get();
-        
+
     if (userDoc.exists) {
       final data = userDoc.data();
       final role = data?['role'];
@@ -34,7 +37,7 @@ class AuthService {
       }
     }
 
-    // 3. doctors හෝ drivers collection වල ඇත්දැයි බැලීම
+    // 3. 'doctors' kiva 'drivers' collection madhye doc ahe ka check karne
     final doctorDoc =
         await FirebaseFirestore.instance.collection('doctors').doc(uid).get();
     if (doctorDoc.exists) {
@@ -56,27 +59,6 @@ class LoginScreen extends StatefulWidget {
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class RoleSelectionScreen extends StatelessWidget {
-  const RoleSelectionScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Select Role')),
-      body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Registration flow is not available yet.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class PendingApprovalScreen extends StatelessWidget {
@@ -116,7 +98,15 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Provider (Doctor/Driver) ලාගේ status එක පරීක්ෂා කිරීම
+  // Direct route to RegisterScreen
+  void _goToRegister() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const RegisterScreen(role: UserRole.user)),
+    );
+  }
+
+  // Provider (Doctor/Driver) chi status ani dashboard routing check karne
   Future<void> _checkProviderStatusAndNavigate(String uid, String role) async {
     final firestore = FirebaseFirestore.instance;
     final collection = role == 'doctor' ? 'doctors' : 'drivers';
@@ -127,10 +117,33 @@ class _LoginScreenState extends State<LoginScreen> {
       final data = doc.data();
       final status = data?['status'] ?? 'pending';
 
-      if (status != 'active') {
+      if (status == 'active' || status == 'approved') {
+        if (!mounted) return;
+
+        // Doctor sathi Unique DoctorDashboardScreen var navigate karne
+        if (role == 'doctor') {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const DoctorDashboardScreen(),
+            ),
+            (Route<dynamic> route) => false,
+          );
+          return;
+        }
+
+        // Driver / standard active users sathi HomeScreen var navigate karne
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          (Route<dynamic> route) => false,
+        );
+        return;
+      } else {
+        // Pending kiva non-active doctors/drivers sathi PendingApprovalScreen
         if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const PendingApprovalScreen()),
+          MaterialPageRoute(
+            builder: (context) => const PendingApprovalScreen(),
+          ),
           (Route<dynamic> route) => false,
         );
         return;
@@ -156,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // 1. AuthService හරහා ලොග් වී role එක ලබා ගැනීම
+      // 1. AuthService madhun user role ghene
       final role = await _authService.login(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -164,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      // 2. Role එක 'admin' නම් කෙලින්ම AdminDashboard වෙත යැවීම
+      // 2. Role 'admin' asel tar AdminDashboard var navigate karne
       if (role == 'admin') {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const AdminDashboard()),
@@ -173,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // 3. අනෙකුත් role (doctor, driver, user) සඳහා අදාළ තිර වෙත යැවීම
+      // 3. Role 'doctor', 'driver' kiva 'user' asel tar dashboard navigation karne
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser != null && (role == 'doctor' || role == 'driver')) {
         await _checkProviderStatusAndNavigate(currentUser.uid, role);
@@ -207,13 +220,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _goToRegister() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -226,7 +232,38 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 70),
+                const SizedBox(height: 16),
+                // Top Back Button
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: InkWell(
+                    onTap: () {
+                      if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      } else {
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                              builder: (context) => const HomeScreen()),
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Color(0xFF120F2E),
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
                 Container(
                   width: 82,
                   height: 82,
@@ -361,6 +398,29 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                   ),
                 ),
+                const SizedBox(height: 20),
+                // Direct link to RegisterScreen
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Don't have an account? ",
+                      style: TextStyle(color: Color(0xFF6B6584), fontSize: 14),
+                    ),
+                    GestureDetector(
+                      onTap: _goToRegister,
+                      child: const Text(
+                        'Register',
+                        style: TextStyle(
+                          color: Color(0xFF5B4DFF),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
               ],
             ),
           ),

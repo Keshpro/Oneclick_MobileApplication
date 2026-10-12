@@ -1,235 +1,205 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'worker_profile_screen.dart'; // Profile screen eka import karanna
-import 'job_booking_screen.dart';    // Booking screen eka import karanna
 
 class WorkersListScreen extends StatelessWidget {
   final String categoryName;
 
   const WorkersListScreen({super.key, required this.categoryName});
 
-  @override
-  Widget build(BuildContext context) {
-    // Danata UI eka check karanna dapu dummy workers data
-    final List<Map<String, dynamic>> workers = [
-      {
-        'name': 'Kamal Perera',
-        'rating': 4.8,
-        'reviews': 124,
-        'distance': '2.5 km',
-        'rate': 'Rs. 1500/hr',
-        'isAvailable': true,
-      },
-      {
-        'name': 'Nimal Silva',
-        'rating': 4.5,
-        'reviews': 89,
-        'distance': '3.2 km',
-        'rate': 'Rs. 1200/hr',
-        'isAvailable': true,
-      },
-      {
-        'name': 'Saman Kumara',
-        'rating': 4.9,
-        'reviews': 210,
-        'distance': '5.0 km',
-        'rate': 'Rs. 1800/hr',
-        'isAvailable': false, // Meka false nisa hire button eka disable wenawa
-      },
-    ];
+  static const Color _navy = Color(0xFF1E293B);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
-      appBar: AppBar(
-        title: Text('$categoryName Professionals'),
-        backgroundColor: const Color(0xff032744),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          // Filter & Sort Section
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            color: Colors.white,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${workers.length} providers found nearby',
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF111827)),
+  void _showBookingDialog(BuildContext context, Map<String, dynamic> workerData, String workerDocId) {
+    final addressController = TextEditingController();
+    final issueController = TextEditingController();
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Book ${workerData['name'] ?? 'Worker'}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: issueController,
+                decoration: const InputDecoration(
+                  labelText: 'Describe the Issue',
+                  hintText: 'e.g., Water leakage in kitchen pipe',
+                  prefixIcon: Icon(Icons.build_circle_outlined),
                 ),
-                Icon(Icons.filter_list, color: Colors.grey.shade700),
-              ],
-            ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: addressController,
+                decoration: const InputDecoration(
+                  labelText: 'Your Address',
+                  hintText: 'e.g., No 12, Main St, Colombo',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final issue = issueController.text.trim();
+              final address = addressController.text.trim();
 
-          // Workers List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: workers.length,
-              itemBuilder: (context, index) {
-                final worker = workers[index];
-                return _buildWorkerCard(context, worker);
-              },
+              if (issue.isNotEmpty && address.isNotEmpty) {
+                try {
+                  // Save Quick Fix Booking Request to 'work_appointments' collection
+                  await FirebaseFirestore.instance.collection('work_appointments').add({
+                    'category': categoryName,
+                    'workerId': workerDocId,
+                    'workerName': workerData['name'] ?? 'Technician',
+                    'customerId': currentUser?.uid ?? '',
+                    'customerEmail': currentUser?.email ?? 'Customer',
+                    'issue': issue,
+                    'address': address,
+                    'status': 'Pending',
+                    'createdAt': FieldValue.serverTimestamp(),
+                  });
+
+                  if (!dialogContext.mounted) return;
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Quick Fix Request Sent Successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  if (!dialogContext.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to book: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _navy,
+              foregroundColor: Colors.white,
             ),
+            child: const Text('Confirm Booking'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildWorkerCard(BuildContext context, Map<String, dynamic> worker) {
-    final bool isAvailable = worker['isAvailable'] == true;
-
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: Text('$categoryName Experts'),
+        backgroundColor: _navy,
+        foregroundColor: Colors.white,
+        elevation: 0,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Worker Avatar
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: const Color(0xff032744).withValues(alpha: 0.1),
-                  child: Text(
-                    worker['name'].substring(0, 1),
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xff032744),
-                    ),
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        // Fetch Workers from 'workers' collection matching selected Category
+        stream: FirebaseFirestore.instance
+            .collection('workers')
+            .where('category', isEqualTo: categoryName)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final docs = snapshot.data?.docs ?? [];
+
+          if (docs.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.person_off_outlined, size: 60, color: Colors.grey.shade400),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No $categoryName experts available right now.',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                   ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final workerDoc = docs[index];
+              final worker = workerDoc.data();
+              final name = worker['name'] ?? 'Expert Technician';
+              final providerDetails = worker['providerDetails'] as Map<String, dynamic>? ?? {};
+              final experience = providerDetails['experienceYears'] ?? '3+ Years';
+              final hourlyRate = providerDetails['hourlyRate'] ?? '1500';
+
+              return Card(
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: Color(0xFFE2E8F0)),
                 ),
-                const SizedBox(width: 16),
-                
-                // Worker Details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            worker['name'],
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF111827),
-                            ),
-                          ),
-                          Text(
-                            worker['rate'],
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xff032744),
-                            ),
-                          ),
-                        ],
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: _navy.withValues(alpha: 0.1),
+                        child: const Icon(Icons.handyman_rounded, color: _navy, size: 28),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${worker['rating']} (${worker['reviews']} reviews)',
-                            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                          ),
-                        ],
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Exp: $experience yrs • LKR $hourlyRate/hr',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on, color: Colors.grey.shade500, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            worker['distance'],
-                            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                      ElevatedButton(
+                        onPressed: () => _showBookingDialog(context, worker, workerDoc.id),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _navy,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        ],
+                        ),
+                        child: const Text('Book'),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            // Actions
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isAvailable ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    isAvailable ? 'Available Now' : 'Busy',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: isAvailable ? Colors.green : Colors.red,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                
-                // View Profile Button
-                OutlinedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => WorkerProfileScreen(worker: worker),
-                      ),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xff032744),
-                    side: const BorderSide(color: Color(0xff032744)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('View Profile'),
-                ),
-                const SizedBox(width: 8),
-
-                // Hire Button
-                ElevatedButton(
-                  onPressed: isAvailable 
-                      ? () {
-                          // Kelinma Job Booking Screen ekata yanawa
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => JobBookingScreen(worker: worker),
-                            ),
-                          );
-                        } 
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xff032744),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Hire'),
-                ),
-              ],
-            ),
-          ],
-        ),
+              );
+            },
+          );
+        },
       ),
     );
   }
