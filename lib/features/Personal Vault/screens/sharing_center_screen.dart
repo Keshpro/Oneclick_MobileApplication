@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'share_record_screen.dart';
-import 'shared_with_me_details_screen.dart';
 import 'dashboard.dart';
 import 'vault_screen.dart';
 import 'subscriptions_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/shared_record.dart';
+import '../services/sharing_service.dart';
+
+
 class SharingCenterScreen extends StatefulWidget {
   const SharingCenterScreen({super.key});
   @override
@@ -20,7 +24,44 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
   static const Color purple = Color(0xFF4F46E5);
   static const Color purple2 = Color(0xFF9333EA);
   static const Color danger = Color(0xFFF43F5E);
+
+  final SharingService _sharingService = SharingService();
+  
+  List<SharedRecord> sharedRecords = [];
+
+  List<SharedRecord> receivedRecords = [];
+
   bool sharedByMe = true;
+
+@override
+void initState() {
+  super.initState();
+
+  if (FirebaseAuth.instance.currentUser != null) {
+    _loadSharedRecords();
+    _loadReceivedRecords();
+  }
+}
+
+void _loadSharedRecords() {
+  _sharingService.getSharedRecords().listen((records) {
+    if (!mounted) return;
+
+    setState(() {
+      sharedRecords = records;
+    });
+  });
+}
+void _loadReceivedRecords() {
+  _sharingService.getReceivedRecords().listen((records) {
+    if (!mounted) return;
+
+    setState(() {
+      receivedRecords = records;
+    });
+  });
+}
+
   @override
   Widget build(BuildContext context) {
     final base = Theme.of(context);
@@ -107,20 +148,35 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
                         _buildTabs(),
                         const SizedBox(height: 30),
                         if (sharedByMe) ...[
-                          _buildRevocationNotice(),
-                          const SizedBox(height: 28),
-                          _buildApartmentLease(),
-                          const SizedBox(height: 18),
-                          _buildHomePurchase(),
-                          const SizedBox(height: 18),
-                          _buildWifiAdmin(),
-                          const SizedBox(height: 30),
-                          _buildReceivedSection(),
-                        ] else ...[
-                          _buildReceivedSection(),
-                        ],
+                        _buildRevocationNotice(),
                         const SizedBox(height: 28),
+
+                        if (sharedRecords.isEmpty)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 30),
+                              child: Text(
+                                'No shared records yet.',
+                                style: TextStyle(
+                                  color: muted,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          ...sharedRecords.map(
+                            (record) => Padding(
+                              padding: const EdgeInsets.only(bottom: 18),
+                              child: _buildSharedRecordCard(record),
+                            ),
+                          ),
+
+                        const SizedBox(height: 10),
                         _buildShareNewRecord(),
+                      ] else ...[
+                        _buildReceivedSection(),
+                      ],
                       ],
                     ),
                   ),
@@ -138,7 +194,7 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
   // TOP BAR
   // ============================================================
 Widget _buildTopBar() {
-  void _showSharingSearch() {
+  void showSharingSearch() {
   final controller = TextEditingController();
   final searchItems = [
     'Apartment Lease Agreement',
@@ -235,7 +291,7 @@ Widget _buildTopBar() {
                         : ListView.separated(
                             shrinkWrap: true,
                             itemCount: results.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (_, _) =>
                                 const Divider(height: 1),
                             itemBuilder: (context, index) {
                               final item = results[index];
@@ -338,27 +394,12 @@ Widget _buildTopBar() {
                 ],
               ),
             ),
-                      _topCircle(Icons.search_rounded, onTap: _showSharingSearch),
+                      _topCircle(Icons.search_rounded, onTap: showSharingSearch),
 ],
         ),
   );
 }
-  Widget _smallLogo() {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F8FF),
-        shape: BoxShape.circle,
-        boxShadow: _shadow(),
-      ),
-      child: const _VaultReferenceIcon(
-        Icons.touch_app_outlined,
-        color: purple,
-        size: 20,
-      ),
-    );
-  }
+
   // ============================================================
   // HERO
   // ============================================================
@@ -562,454 +603,231 @@ Widget _buildTopBar() {
       ),
     );
   }
+
+  Widget _buildSharedRecordCard(SharedRecord record) {
+  final recipientName = record.recipientName.trim();
+
+  final initials = recipientName.isNotEmpty
+      ? recipientName[0].toUpperCase()
+      : '?';
+
+  final expiryText = record.expiryDate == null
+      ? 'Never expires'
+      : 'Expires ${record.expiryDate!.day}/${record.expiryDate!.month}/${record.expiryDate!.year}';
+
+  final isRevoked = record.status == 'Revoked';
+
+  return _card(
+    padding: const EdgeInsets.all(22),
+    child: Column(
+      children: [
+        Row(
+          children: [
+            _circleIcon(
+              Icons.description_outlined,
+              color: purple,
+              size: 44,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    record.recordTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: ink,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'Shared record',
+                    style: const TextStyle(
+                      color: muted,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _pill(
+              icon: record.permission == 'View and download'
+                  ? Icons.cloud_download_outlined
+                  : Icons.visibility_outlined,
+              text: record.permission,
+              color: purple2,
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 23),
+
+        _recipient(
+          initials: initials,
+          name: record.recipientName,
+          email: record.recipientEmail,
+          rightTitle: 'Status',
+          rightValue: record.status,
+          rightValueColor: isRevoked ? danger : purple,
+          verified: !isRevoked,
+        ),
+
+        const SizedBox(height: 21),
+
+        Row(
+          children: [
+            Expanded(
+              child: _infoPill(
+                record.expiryDate == null
+                    ? Icons.all_inclusive
+                    : Icons.schedule,
+                expiryText,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _infoPill(
+                Icons.shield_outlined,
+                record.permission,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 22),
+
+        Row(
+          children: [
+            Expanded(
+              child: _actionButton(
+                icon: isRevoked
+                    ? Icons.check_circle_outline
+                    : Icons.block,
+                text: isRevoked
+                    ? 'Access Revoked'
+                    : 'Revoke Access',
+                color: isRevoked ? muted : danger,
+                onTap: () {
+                  if (!isRevoked) {
+                    _confirmRevoke(record);
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
   // ============================================================
   // APARTMENT LEASE
   // ============================================================
-  Widget _buildApartmentLease() {
-    return _card(
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _circleIcon(
-                Icons.description_outlined,
-                color: purple,
-                size: 44,
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Apartment Lease Agreement',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: ink,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 5),
-                    Text(
-                      'Single PDF document • 4.2 MB',
-                      style: TextStyle(
-                        color: muted,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _pill(
-                icon: Icons.visibility_outlined,
-                text: 'View only',
-                color: purple2,
-              ),
-            ],
-          ),
-          const SizedBox(height: 23),
-          _recipient(
-            initials: 'MV',
-            name: 'Marcus Vance',
-            email: 'm.vance@studio.o',
-            rightTitle: 'Key Fingerprint',
-            rightValue: '#9F02···A1',
-            verified: true,
-          ),
-          const SizedBox(height: 21),
-          Row(
-            children: [
-              Expanded(
-                child: _infoPill(
-                  Icons.schedule,
-                  'Expires in 6d (Nov 15)',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _infoPill(
-                  Icons.history,
-                  'Accessed 2h ago • 3x',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: _actionButton(
-                  icon: Icons.block,
-                  text: 'Revoke Access',
-                  color: danger,
-                  onTap: () {
-                    _confirmRevoke('Marcus Vance');
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _actionButton(
-                  icon: Icons.tune,
-                  text: 'Edit Link',
-                  color: ink,
-                  onTap: () {
-                    _message('Edit sharing link');
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+
   // ============================================================
   // HOME PURCHASE
   // ============================================================
-  Widget _buildHomePurchase() {
-    return _card(
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _circleIcon(
-                Icons.folder_zip_outlined,
-                color: purple2,
-                size: 44,
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Home Purchase Tax Bundle',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: ink,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Encrypted bundle • 6 attachments',
-                      style: TextStyle(
-                        color: muted,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _pill(
-                icon: Icons.cloud_download_outlined,
-                text: 'View & Download',
-                color: purple,
-              ),
-            ],
-          ),
-          const SizedBox(height: 23),
-          _recipient(
-            initials: 'ER',
-            name: 'Elena Rostova (Notary)',
-            email: 'e.rostova@legaladvisors.ch',
-            rightTitle: 'Vault Seal',
-            rightValue: 'Active',
-            rightValueColor: purple,
-            verified: true,
-          ),
-          const SizedBox(height: 21),
-          Row(
-            children: [
-              Expanded(
-                child: _infoPill(
-                  Icons.all_inclusive,
-                  'Never expires',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _infoPill(
-                  Icons.download_done_outlined,
-                  'Downloaded once (Nov 9)',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: _actionButton(
-                  icon: Icons.link_off,
-                  text: 'Revoke Access',
-                  color: danger,
-                  onTap: () {
-                    _confirmRevoke('Elena Rostova');
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _actionButton(
-                  icon: Icons.receipt_long_outlined,
-                  text: 'Audit Log',
-                  color: ink,
-                  onTap: () {
-                    _message('Opening audit log');
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+
   // ============================================================
   // WIFI ADMIN
   // ============================================================
-  Widget _buildWifiAdmin() {
-    return _card(
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _circleIcon(
-                Icons.key_outlined,
-                color: purple,
-                size: 50,
-              ),
-              const SizedBox(width: 15),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Wi-Fi & Router Admin',
-                      style: TextStyle(
-                        color: ink,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Encrypted Secret payload',
-                      style: TextStyle(
-                        color: muted,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _pill(
-                icon: Icons.shield_outlined,
-                text: 'View secret',
-                color: muted,
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(13),
-            decoration: _softDecoration(radius: 16),
-            child: Row(
-              children: [
-                _initialCircle('SM'),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Sarah Miller (Sister)',
-                        style: TextStyle(
-                          color: ink,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'sarah.m@gmail.com',
-                        style: TextStyle(
-                          color: muted,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _simpleBadge('Invited'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: _infoPill(
-                  Icons.hourglass_bottom,
-                  'Expires in 24 hours',
-                  iconColor: danger,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _infoPill(
-                  Icons.mark_email_unread_outlined,
-                  'Pending acceptance',
-                  iconColor: purple,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: _actionButton(
-                  icon: Icons.cancel_outlined,
-                  text: 'Cancel Invite',
-                  color: muted,
-                  onTap: () {
-                    _message('Invitation cancelled');
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _actionButton(
-                  icon: Icons.send_outlined,
-                  text: 'Resend',
-                  color: purple,
-                  onTap: () {
-                    _message('Invitation resent');
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+
   // ============================================================
   // SHARED WITH ME
   // ============================================================
-  Widget _buildReceivedSection() {
-    return _card(
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const _VaultReferenceIcon(
-                Icons.folder_shared_outlined,
-                color: purple,
-                size: 22,
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Shared with Me',
-                  style: TextStyle(
-                    color: ink,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Text(
-                '2 Received',
-                style: TextStyle(
-                  color: purple.withValues(alpha: .9),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          const Text(
-            'Decrypted items sent to your OneClick address from '
-            'verified contacts.',
-            style: TextStyle(
-              color: muted,
-              fontSize: 12,
-              height: 1.6,
+Widget _buildReceivedSection() {
+  return _card(
+    padding: const EdgeInsets.all(22),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const _VaultReferenceIcon(
+              Icons.folder_shared_outlined,
+              color: purple,
+              size: 22,
             ),
-          ),
-          const SizedBox(height: 21),
-          _receivedItem(
-            icon: Icons.health_and_safety_outlined,
-            title: 'Family Health Insurance Group',
-            from: 'From Arthur Miller (Owner)',
-            permission: 'View & Download',
-            footerIcon: Icons.event_available_outlined,
-            footer: 'Valid until Dec 2026',
-            onOpen: () {
-              showSharedWithMeDetails(
-                context,
-                const SharedWithMeItem(
-                  title: 'Family Health Insurance Group',
-                  owner: 'Arthur Miller',
-                  permission: 'View & Download',
-                  expiry: 'Valid until Dec 2026',
-                  fileName: 'Family_Health_Insurance.pdf',
-                  fileType: 'PDF',
-                  fileSize: '2.8 MB',
-                  icon: Icons.health_and_safety_outlined,
-                  canDownload: true,
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Shared with Me',
+                style: TextStyle(
+                  color: ink,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                 ),
-              );
-            },
+              ),
+            ),
+            Text(
+              '${receivedRecords.length} Received',
+              style: TextStyle(
+                color: purple.withValues(alpha: .9),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 22),
+
+        const Text(
+          'Records shared with your OneClick account.',
+          style: TextStyle(
+            color: muted,
+            fontSize: 12,
+            height: 1.6,
           ),
-          const SizedBox(height: 14),
-          _receivedItem(
-            icon: Icons.directions_car_outlined,
-            title: 'Rental Car Protection Receipt',
-            from: 'From Chloe Bennett (Owner)',
-            permission: 'View only',
-            footerIcon: Icons.timer_outlined,
-            footer: 'Expires tomorrow',
-            dangerFooter: true,
-            onOpen: () {
-              showSharedWithMeDetails(
-                context,
-                const SharedWithMeItem(
-                  title: 'Rental Car Protection Receipt',
-                  owner: 'Chloe Bennett',
-                  permission: 'View only',
-                  expiry: 'Expires tomorrow',
-                  fileName: 'Rental_Car_Protection_Receipt.pdf',
-                  fileType: 'PDF',
-                  fileSize: '1.4 MB',
-                  icon: Icons.directions_car_outlined,
-                  canDownload: false,
-                  expiringSoon: true,
+        ),
+
+        const SizedBox(height: 21),
+
+        if (receivedRecords.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 25),
+              child: Text(
+                'No records have been shared with you yet.',
+                style: TextStyle(
+                  color: muted,
+                  fontSize: 12,
                 ),
-              );
-            },
+              ),
+            ),
+          )
+        else
+          ...receivedRecords.map((record) {
+            final expiryText = record.expiryDate == null
+                ? 'No expiry'
+                : 'Expires ${record.expiryDate!.day}/${record.expiryDate!.month}/${record.expiryDate!.year}';
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _receivedItem(
+                icon: Icons.description_outlined,
+                title: record.recordTitle,
+                from: 'Shared by ${record.ownerEmail}',
+                permission: record.permission,
+                footerIcon: record.expiryDate == null
+                    ? Icons.all_inclusive
+                    : Icons.event_available_outlined,
+                footer: expiryText,
+                onOpen: () {
+                  _message('Opening ${record.recordTitle}');
+                },
+              ),
+            );
+          }),
+      ],
     ),
-        ],
-      ),
-    );
-  }
+  );
+}
   Widget _receivedItem({
     required IconData icon,
     required String title,
@@ -1087,7 +905,7 @@ Widget _buildTopBar() {
               InkWell(
                 onTap: () {
                   if (onOpen != null) {
-                    onOpen!();
+                    onOpen();
                   } else {
                     _message('Opening $title');
                   }
@@ -1589,53 +1407,66 @@ _navItem(
       ),
     );
   }
-  void _confirmRevoke(String person) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: surface,
-          title: const Text(
-            'Revoke Access?',
-            style: TextStyle(
-              color: ink,
-              fontWeight: FontWeight.w700,
+Future<void> _confirmRevoke(SharedRecord record) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        backgroundColor: surface,
+        title: const Text(
+          'Revoke Access?',
+          style: TextStyle(
+            color: ink,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          '${record.recipientName} will immediately lose access to this shared record.',
+          style: const TextStyle(
+            color: muted,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, false);
+            },
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: muted),
             ),
           ),
-          content: Text(
-            '$person will immediately lose access to this shared record.',
-            style: const TextStyle(
-              color: muted,
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, true);
+            },
+            child: const Text(
+              'Revoke',
+              style: TextStyle(
+                color: danger,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: muted),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                _message('Access revoked for $person');
-              },
-              child: const Text(
-                'Revoke',
-                style: TextStyle(
-                  color: danger,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) return;
+
+  try {
+    await _sharingService.revokeAccess(record.id);
+
+    if (!mounted) return;
+
+    _message('Access revoked for ${record.recipientName}');
+  } catch (e) {
+    if (!mounted) return;
+
+    _message('Failed to revoke access: $e');
   }
+}
 }
 
 class _VaultGlassScope extends InheritedWidget {
@@ -1647,10 +1478,13 @@ class _VaultGlassScope extends InheritedWidget {
   bool updateShouldNotify(_VaultGlassScope oldWidget) => hovered != oldWidget.hovered;
 }
 class _VaultGlassCard extends StatefulWidget {
-  const _VaultGlassCard({required this.child, required this.padding, this.interactive = false});
+  const _VaultGlassCard({
+    required this.child,
+    required this.padding,
+  });
   final Widget child;
   final EdgeInsetsGeometry padding;
-  final bool interactive;
+
   @override
   State<_VaultGlassCard> createState() => _VaultGlassCardState();
 }
@@ -1660,11 +1494,11 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: widget.interactive ? SystemMouseCursors.click : MouseCursor.defer,
+      cursor: MouseCursor.defer,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() { _hovered = false; _pressed = false; }),
       child: Listener(
-        onPointerDown: (_) { if (widget.interactive) setState(() => _pressed = true); },
+        onPointerDown: (_) {},
         onPointerUp: (_) { if (_pressed) setState(() => _pressed = false); },
         onPointerCancel: (_) { if (_pressed) setState(() => _pressed = false); },
         child: AnimatedScale(
@@ -1707,72 +1541,7 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
     );
   }
 }
-class _VaultActionContent extends StatelessWidget {
-  const _VaultActionContent({required this.icon, required this.title,
-    required this.subtitle, required this.accent});
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color accent;
-  @override
-  Widget build(BuildContext context) {
-    final hovered = _VaultGlassScope.hoveredOf(context);
-    final isAI = icon == Icons.auto_awesome;
-    final hoverColor = icon == Icons.document_scanner_outlined
-        ? const Color(0xFF6366F1) : accent;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 116),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (isAI) Positioned(right: -4, top: -4,
-            child: IgnorePointer(child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-              child: Container(width: 64, height: 64,
-                decoration: const BoxDecoration(color: Color(0x1A9333EA),
-                  shape: BoxShape.circle)),
-            )),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AnimatedScale(
-                scale: hovered ? 1.05 : 1,
-                duration: const Duration(milliseconds: 300),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: 44, height: 44, alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: hovered ? hoverColor : accent.withAlpha(15),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: accent.withAlpha(30)),
-                  ),
-                  child: _VaultReferenceIcon(icon, size: 20,
-                    color: hovered ? Colors.white : accent),
-                ),
-              ),
-              const SizedBox(height: 24),
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14, fontWeight: FontWeight.w700,
-                  letterSpacing: -0.35, height: 1.3,
-                  color: hovered ? accent : const Color(0xFF0F172A),
-                ),
-                child: Text(title),
-              ),
-              const SizedBox(height: 2),
-              Text(subtitle, style: GoogleFonts.plusJakartaSans(
-                fontSize: 11, fontWeight: FontWeight.w500,
-                height: 1.35, color: const Color(0xFF94A3B8),
-              )),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
+
 class _VaultSearchSurface extends StatefulWidget {
   const _VaultSearchSurface({required this.child, required this.padding});
   final Widget child;
@@ -1825,34 +1594,17 @@ class _VaultRowFeedbackState extends State<_VaultRowFeedback> {
     child: widget.builder(context, _hovered),
   );
 }
-class _VaultRecordSubtitle extends StatelessWidget {
-  const _VaultRecordSubtitle({required this.text, required this.color});
-  final String text;
-  final Color color;
-  @override
-  Widget build(BuildContext context) {
-    final expiring = text.startsWith('Expires');
-    final urgent = expiring && color == Colors.red;
-    final textColor = urgent ? const Color(0xFFF43F5E) : color;
-    final label = Text(text, style: GoogleFonts.plusJakartaSans(
-      fontSize: 12, fontWeight: urgent ? FontWeight.w600 : FontWeight.w500,
-      color: textColor,
-    ));
-    if (!expiring) return label;
-    return Row(children: [
-      _VaultPulseDot(color: urgent ? textColor : const Color(0xFF94A3B8),
-        size: 6, animate: urgent),
-      const SizedBox(width: 6), Flexible(child: label),
-    ]);
-  }
-}
+
 class _VaultPulseDot extends StatefulWidget {
-  const _VaultPulseDot({required this.color, required this.size,
-    this.ping = false, this.animate = true});
+  const _VaultPulseDot({
+  required this.color,
+  required this.size,
+  this.ping = false,
+});
   final Color color;
   final double size;
   final bool ping;
-  final bool animate;
+
   @override
   State<_VaultPulseDot> createState() => _VaultPulseDotState();
 }
@@ -1860,14 +1612,19 @@ class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProvide
   late final AnimationController _controller = AnimationController(
     vsync: this, duration: const Duration(milliseconds: 1400));
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (widget.animate && !MediaQuery.disableAnimationsOf(context)) {
-      _controller.repeat(reverse: !widget.ping);
-    } else { _controller.stop(); }
+void didChangeDependencies() {
+  super.didChangeDependencies();
+
+  if (!MediaQuery.disableAnimationsOf(context)) {
+    _controller.repeat(reverse: !widget.ping);
+  } else {
+    _controller.stop();
   }
-  @override
-  void dispose() { _controller.dispose(); super.dispose(); }
+}
+
+@override
+void dispose() {
+     _controller.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _controller,
@@ -1877,16 +1634,16 @@ class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProvide
           child: Opacity(opacity: (1 - _controller.value) * 0.75,
             child: Container(decoration: BoxDecoration(
               color: widget.color, shape: BoxShape.circle)))),
-        Opacity(opacity: widget.ping || !widget.animate ? 1 : 1 - _controller.value * 0.5,
+        Opacity(opacity: widget.ping ? 1 : 1 - _controller.value * 0.5,
           child: Container(decoration: BoxDecoration(
             color: widget.color, shape: BoxShape.circle))),
       ])),
   );
 }
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon, {this.color});
+  const _VaultNavGlyph(this.icon);
   final IconData icon;
-  final Color? color;
+ 
   @override
   State<_VaultNavGlyph> createState() => _VaultNavGlyphState();
 }
@@ -1905,10 +1662,12 @@ class _VaultNavGlyphState extends State<_VaultNavGlyph> {
       child: AnimatedScale(scale: _pressed ? 0.95 : 1,
         duration: const Duration(milliseconds: 200),
         child: _VaultReferenceIcon(widget.icon, size: 20,
-          color: widget.color ?? (_hovered ? const Color(0xFF1E293B)
-            : IconTheme.of(context).color ?? const Color(0xFF94A3B8))),
+          color: _hovered
+    ? const Color(0xFF1E293B)
+    : IconTheme.of(context).color ?? const Color(0xFF94A3B8),
+        ),
       ),
-    ),
+   ),
   );
 }
 class _VaultReferenceIcon extends StatelessWidget {

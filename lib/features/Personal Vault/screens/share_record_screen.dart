@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/sharing_service.dart';
+import '../services/vault_service.dart';
 
 class ShareRecordItem {
   final String title;
@@ -23,7 +25,7 @@ Future<void> showShareRecordFlow(BuildContext context) async {
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.25),
+    barrierColor: Colors.black.withValues(alpha: 0.25),
     builder: (context) {
       return const ChooseRecordSheet();
     },
@@ -35,7 +37,7 @@ Future<void> showShareRecordFlow(BuildContext context) async {
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.25),
+    barrierColor: Colors.black.withValues(alpha: 0.25),
     builder: (context) {
       return ShareRecordSheet(
         selectedRecord: selectedRecord,
@@ -61,31 +63,33 @@ class _ChooseRecordSheetState extends State<ChooseRecordSheet> {
   static const Color muted = Color(0xFF6C6F80);
   static const Color purple = Color(0xFF625CFF);
 
-  int? selectedIndex;
+ int? selectedIndex;
 
-  final List<ShareRecordItem> records = const [
-    ShareRecordItem(
-      title: 'Apartment Lease Agreement.pdf',
-      subtitle: 'Legal & Property • 2.4 MB',
-      icon: Icons.picture_as_pdf_outlined,
-    ),
-    ShareRecordItem(
-      title: 'State ID Card Copy.png',
-      subtitle: 'Identity • 1.8 MB',
-      icon: Icons.badge_outlined,
-    ),
-    ShareRecordItem(
-      title: 'Home Purchase Tax Bundle',
-      subtitle: 'Document Pack • 6 files',
-      icon: Icons.folder_zip_outlined,
-      isPack: true,
-    ),
-    ShareRecordItem(
-      title: 'Wi-Fi & Router Admin',
-      subtitle: 'Secure Record',
-      icon: Icons.key_outlined,
-    ),
-  ];
+final VaultService _vaultService = VaultService();
+
+List<ShareRecordItem> records = [];
+
+@override
+void initState() {
+  super.initState();
+  _loadVaultRecords();
+}
+
+void _loadVaultRecords() {
+  _vaultService.getRecords().listen((vaultRecords) {
+    if (!mounted) return;
+
+    setState(() {
+      records = vaultRecords.map((record) {
+        return ShareRecordItem(
+          title: record.title,
+          subtitle: '${record.category} • ${record.recordType}',
+          icon: Icons.description_outlined,
+        );
+      }).toList();
+    });
+  });
+}
 
   @override
   Widget build(BuildContext context) {
@@ -192,7 +196,7 @@ class _ChooseRecordSheetState extends State<ChooseRecordSheet> {
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: selected
-                ? purple.withOpacity(.55)
+                ? purple.withValues(alpha: .55)
                 : Colors.transparent,
             width: 1.4,
           ),
@@ -243,7 +247,7 @@ class _ChooseRecordSheetState extends State<ChooseRecordSheet> {
                 border: Border.all(
                   color: selected
                       ? purple
-                      : muted.withOpacity(.35),
+                      : muted.withValues(alpha: .35),
                   width: 1.5,
                 ),
               ),
@@ -293,7 +297,7 @@ class _ChooseRecordSheetState extends State<ChooseRecordSheet> {
               style: TextStyle(
                 color: enabled
                     ? Colors.white
-                    : muted.withOpacity(.6),
+                    : muted.withValues(alpha: .6),
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
@@ -303,7 +307,7 @@ class _ChooseRecordSheetState extends State<ChooseRecordSheet> {
               Icons.arrow_forward_rounded,
               color: enabled
                   ? Colors.white
-                  : muted.withOpacity(.6),
+                  : muted.withValues(alpha: .6),
               size: 19,
             ),
           ],
@@ -371,12 +375,12 @@ class _ChooseRecordSheetState extends State<ChooseRecordSheet> {
   List<BoxShadow> _shadow() {
     return [
       BoxShadow(
-        color: Colors.white.withOpacity(.85),
+        color: Colors.white.withValues(alpha: .85),
         offset: const Offset(-3, -3),
         blurRadius: 8,
       ),
       BoxShadow(
-        color: Colors.black.withOpacity(.055),
+        color: Colors.black.withValues(alpha: .055),
         offset: const Offset(4, 6),
         blurRadius: 12,
       ),
@@ -406,6 +410,8 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
   static const Color ink = Color(0xFF303246);
   static const Color muted = Color(0xFF6C6F80);
   static const Color purple = Color(0xFF625CFF);
+
+  final SharingService _sharingService = SharingService();
 
   String permission = 'View only';
   String expiry = 'No expiry';
@@ -895,7 +901,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
                 border: Border.all(
                   color: selected
                       ? purple
-                      : muted.withOpacity(.35),
+                      : muted.withValues(alpha: .35),
                   width: 1.5,
                 ),
               ),
@@ -976,12 +982,12 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
             ),
             decoration: BoxDecoration(
               color: selected
-                  ? purple.withOpacity(.10)
+                  ? purple.withValues(alpha: .10)
                   : const Color(0xFFF7F7FC),
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
                 color: selected
-                    ? purple.withOpacity(.35)
+                    ? purple.withValues(alpha: .35)
                     : Colors.transparent,
               ),
               boxShadow: _shadow(),
@@ -1002,64 +1008,137 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
     );
   }
 
-  Future<void> _chooseCustomDate() async {
-    final now = DateTime.now();
+Future<void> _chooseCustomDate() async {
+  final now = DateTime.now();
 
-    final date = await showDatePicker(
-      context: context,
-      initialDate:
-          now.add(const Duration(days: 7)),
-      firstDate: now,
-      lastDate:
-          now.add(const Duration(days: 365)),
-    );
+  final date = await showDatePicker(
+    context: context,
+    initialDate: now.add(const Duration(days: 1)),
+    firstDate: now,
+    lastDate: DateTime(now.year + 10),
+  );
 
-    if (!mounted || date == null) return;
+  if (date == null) return;
 
-    setState(() {
-      expiry =
-          '${date.day}/${date.month}/${date.year}';
-    });
+  setState(() {
+    expiry = '${date.day}/${date.month}/${date.year}';
+  });
+}
+
+Future<void> _confirmSharing() async {
+  final recipient = recipientController.text.trim();
+
+  if (recipient.isEmpty) {
+    _message('Please select or enter a recipient.');
+    return;
   }
 
-  // ============================================================
-  // WARNING
-  // ============================================================
+  DateTime? expiryDate;
 
-  Widget _buildWarning() {
-    return _card(
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.info_outline_rounded,
-            color: purple,
-            size: 21,
+  if (expiry == '24 Hours') {
+    expiryDate = DateTime.now().add(const Duration(hours: 24));
+  } else if (expiry == '7 Days') {
+    expiryDate = DateTime.now().add(const Duration(days: 7));
+  } else if (expiry == '30 Days') {
+    expiryDate = DateTime.now().add(const Duration(days: 30));
+  } else if (expiry.contains('/')) {
+    final parts = expiry.split('/');
+
+    if (parts.length == 3) {
+      expiryDate = DateTime(
+        int.parse(parts[2]),
+        int.parse(parts[1]),
+        int.parse(parts[0]),
+      );
+    }
+  }
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        backgroundColor: bg,
+        title: const Text(
+          'Confirm Sharing',
+          style: TextStyle(
+            color: ink,
+            fontWeight: FontWeight.w700,
           ),
-
-          SizedBox(width: 12),
-
-          Expanded(
-            child: Text(
-              'Revocation stops future access; it cannot recall '
-              'copies already downloaded.',
+        ),
+        content: Text(
+          'Share "${widget.selectedRecord.title}" with '
+          '$recipient?\n\n'
+          'Permission: $permission\n'
+          'Expiry: $expiry',
+          style: const TextStyle(
+            color: muted,
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, false);
+            },
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: muted),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, true);
+            },
+            child: const Text(
+              'Share',
               style: TextStyle(
-                color: muted,
-                fontSize: 11.5,
-                height: 1.5,
+                color: purple,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
         ],
+      );
+    },
+  );
+
+  if (confirmed != true) return;
+
+  try {
+    await _sharingService.shareRecord(
+      recordTitle: widget.selectedRecord.title,
+      recipientName: recipient,
+      recipientEmail: recipient,
+      permission: permission,
+      expiryDate: expiryDate,
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Record shared successfully'),
+      ),
+    );
+
+    Navigator.pop(context, true);
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to share record: $e'),
       ),
     );
   }
+}
 
   // ============================================================
   // CONFIRM
   // ============================================================
 
   Widget _buildConfirmButton() {
+    
     final enabled = recipientSelected;
 
     return InkWell(
@@ -1085,7 +1164,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
               Icons.lock_outline_rounded,
               color: enabled
                   ? Colors.white
-                  : muted.withOpacity(.55),
+                  : muted.withValues(alpha: .55),
               size: 20,
             ),
 
@@ -1096,7 +1175,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
               style: TextStyle(
                 color: enabled
                     ? Colors.white
-                    : muted.withOpacity(.55),
+                    : muted.withValues(alpha: .55),
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
@@ -1106,59 +1185,41 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
       ),
     );
   }
-
-  void _confirmSharing() {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: bg,
-          title: const Text(
-            'Confirm Sharing',
+  Widget _buildWarning() {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFF7ED),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(
+        color: const Color(0xFFFED7AA),
+      ),
+    ),
+    child: const Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.info_outline,
+          color: Color(0xFFEA580C),
+          size: 20,
+        ),
+        SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'Only share records with people you trust. Access can be revoked later from the Sharing Center.',
             style: TextStyle(
-              color: ink,
-              fontWeight: FontWeight.w700,
+              color: Color(0xFF9A3412),
+              fontSize: 12.5,
+              height: 1.4,
             ),
           ),
-          content: Text(
-            'Share "${widget.selectedRecord.title}" with '
-            'Marcus Vance?\n\n'
-            'Permission: $permission\n'
-            'Expiry: $expiry',
-            style: const TextStyle(
-              color: muted,
-              height: 1.5,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: muted),
-              ),
-            ),
+        ),
+      ],
+    ),
+  );
+}
 
-            TextButton(
-              onPressed: () {
-  Navigator.pop(dialogContext);
-  Navigator.pop(context, true);
-},
-              child: const Text(
-                'Share',
-                style: TextStyle(
-                  color: purple,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   // ============================================================
   // CHANGE RECORD
@@ -1253,12 +1314,12 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
   List<BoxShadow> _shadow() {
     return [
       BoxShadow(
-        color: Colors.white.withOpacity(.85),
+        color: Colors.white.withValues(alpha: .85),
         offset: const Offset(-3, -3),
         blurRadius: 8,
       ),
       BoxShadow(
-        color: Colors.black.withOpacity(.055),
+        color: Colors.black.withValues(alpha: .055),
         offset: const Offset(4, 6),
         blurRadius: 12,
       ),

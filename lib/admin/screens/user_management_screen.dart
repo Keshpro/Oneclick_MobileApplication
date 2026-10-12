@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class UserManagementScreen extends StatefulWidget {
@@ -9,82 +10,124 @@ class UserManagementScreen extends StatefulWidget {
   });
 
   @override
-  State<UserManagementScreen> createState() =>
-      _UserManagementScreenState();
+  State<UserManagementScreen> createState() => _UserManagementScreenState();
 }
 
-class _UserManagementScreenState
-    extends State<UserManagementScreen> {
-  final TextEditingController searchController =
-      TextEditingController();
-
-  final List<Map<String, dynamic>> users = [
-    {
-      'name': 'Amal Perera',
-      'email': 'amal@gmail.com',
-      'role': 'Customer',
-      'status': 'Active',
-    },
-    {
-      'name': 'Kamal Silva',
-      'email': 'kamal@gmail.com',
-      'role': 'Driver',
-      'status': 'Active',
-    },
-    {
-      'name': 'Nimal Fernando',
-      'email': 'nimal@gmail.com',
-      'role': 'Seller',
-      'status': 'Blocked',
-    },
-    {
-      'name': 'Kasun Peris',
-      'email': 'kasun@gmail.com',
-      'role': 'Doctor',
-      'status': 'Active',
-    },
-  ];
-
-  List<Map<String, dynamic>> filteredUsers = [];
+class _UserManagementScreenState extends State<UserManagementScreen> {
+  final TextEditingController searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    filteredUsers = List.from(users);
-
-    searchController.addListener(_searchUsers);
+    searchController.addListener(() {
+      setState(() {
+        _searchQuery = searchController.text.trim().toLowerCase();
+      });
+    });
   }
 
-  void _searchUsers() {
-    final query = searchController.text.toLowerCase();
+  Future<void> _changeStatus(
+    String docId,
+    String userName,
+    String currentStatus,
+  ) async {
+    final newStatus = currentStatus.toLowerCase() == 'blocked' ? 'active' : 'blocked';
 
-    setState(() {
-      filteredUsers = users.where((user) {
-        return user['name']
-                .toString()
-                .toLowerCase()
-                .contains(query) ||
-            user['email']
-                .toString()
-                .toLowerCase()
-                .contains(query) ||
-            user['role']
-                .toString()
-                .toLowerCase()
-                .contains(query);
-      }).toList();
-    });
+    try {
+      // 1. Update status in Firestore
+      await FirebaseFirestore.instance.collection('users').doc(docId).update({
+        'status': newStatus,
+      });
+
+      // 2. Add entry to activity logs
+      await FirebaseFirestore.instance.collection('activity_logs').add({
+        'action': 'User Status Changed',
+        'details': '$userName account was marked as $newStatus.',
+        'performedBy': 'Admin',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$userName is now $newStatus'),
+          backgroundColor: newStatus == 'active' ? Colors.green : Colors.orange,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update status: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteUser(String docId, String userName) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete User'),
+        content: Text('Are you sure you want to delete $userName from Firestore?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      // 1. Delete user document from Firestore
+      await FirebaseFirestore.instance.collection('users').doc(docId).delete();
+
+      // 2. Add entry to activity logs
+      await FirebaseFirestore.instance.collection('activity_logs').add({
+        'action': 'User Deleted',
+        'details': '$userName account profile was removed.',
+        'performedBy': 'Admin',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$userName deleted successfully'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete user: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F6FB),
       appBar: AppBar(
         title: Text(widget.title),
         backgroundColor: const Color(0xff032744),
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
-
       body: Column(
         children: [
           Padding(
@@ -92,123 +135,178 @@ class _UserManagementScreenState
             child: TextField(
               controller: searchController,
               decoration: InputDecoration(
-                hintText: 'Search users...',
+                hintText: 'Search users by name, email or role...',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    searchController.clear();
-                  },
-                ),
+                suffixIcon: searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          searchController.clear();
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                 ),
               ),
             ),
           ),
-
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              itemCount: filteredUsers.length,
-              itemBuilder: (context, index) {
-                final user = filteredUsers[index];
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .orderBy('createdAt', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      child: Text(
-                        user['name'][0],
-                      ),
-                    ),
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text('Error loading users: ${snapshot.error}'),
+                  );
+                }
 
-                    title: Text(
-                      user['name'],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                final docs = snapshot.data?.docs ?? [];
 
-                    subtitle: Text(
-                      '${user['email']}\n'
-                      '${user['role']} • ${user['status']}',
-                    ),
+                // Search Filter Logic
+                final filteredDocs = docs.where((doc) {
+                  final data = doc.data();
+                  final name = (data['name'] ?? '').toString().toLowerCase();
+                  final email = (data['email'] ?? '').toString().toLowerCase();
+                  final role = (data['role'] ?? '').toString().toLowerCase();
 
-                    isThreeLine: true,
+                  return name.contains(_searchQuery) ||
+                      email.contains(_searchQuery) ||
+                      role.contains(_searchQuery);
+                }).toList();
 
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'block') {
-                          _changeStatus(index, 'Blocked');
-                        }
-
-                        if (value == 'activate') {
-                          _changeStatus(index, 'Active');
-                        }
-
-                        if (value == 'delete') {
-                          _deleteUser(index);
-                        }
-                      },
-                      itemBuilder: (_) => [
-                        if (user['status'] == 'Active')
-                          const PopupMenuItem(
-                            value: 'block',
-                            child: Text('Block User'),
+                if (filteredDocs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.people_outline_rounded,
+                          size: 60,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          _searchQuery.isEmpty
+                              ? 'No users found in database'
+                              : 'No matching users found',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade600,
                           ),
-
-                        if (user['status'] == 'Blocked')
-                          const PopupMenuItem(
-                            value: 'activate',
-                            child: Text('Activate User'),
-                          ),
-
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Text('Delete User'),
                         ),
                       ],
                     ),
-                  ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  itemCount: filteredDocs.length,
+                  itemBuilder: (context, index) {
+                    final doc = filteredDocs[index];
+                    final data = doc.data();
+                    final docId = doc.id;
+
+                    final name = data['name'] ?? 'Unknown User';
+                    final email = data['email'] ?? 'No Email';
+                    final role = (data['role'] ?? 'user').toString().toUpperCase();
+                    final status = (data['status'] ?? 'active').toString().toLowerCase();
+
+                    final isBlocked = status == 'blocked';
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                      elevation: 0,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              const Color(0xff032744).withValues(alpha: 0.1),
+                          child: Text(
+                            name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xff032744),
+                            ),
+                          ),
+                        ),
+                        title: Text(
+                          name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '$email\n$role • ${isBlocked ? "Blocked" : "Active"}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isBlocked ? Colors.red : Colors.grey.shade700,
+                            ),
+                          ),
+                        ),
+                        isThreeLine: true,
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'toggle_status') {
+                              _changeStatus(docId, name, status);
+                            } else if (value == 'delete') {
+                              _deleteUser(docId, name);
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            PopupMenuItem(
+                              value: 'toggle_status',
+                              child: Text(
+                                isBlocked ? 'Activate User' : 'Block User',
+                                style: TextStyle(
+                                  color: isBlocked ? Colors.green : Colors.orange,
+                                ),
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Text(
+                                'Delete User',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _changeStatus(int index, String status) {
-    final userName = filteredUsers[index]['name'];
-
-    setState(() {
-      final actualIndex = users.indexOf(filteredUsers[index]);
-
-      users[actualIndex]['status'] = status;
-
-      filteredUsers[index]['status'] = status;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$userName is now $status'),
-      ),
-    );
-  }
-
-  void _deleteUser(int index) {
-    final userName = filteredUsers[index]['name'];
-
-    setState(() {
-      users.remove(filteredUsers[index]);
-      filteredUsers.removeAt(index);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$userName deleted'),
       ),
     );
   }

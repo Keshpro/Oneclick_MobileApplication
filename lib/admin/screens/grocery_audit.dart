@@ -131,8 +131,8 @@ class _GroceryAuditState extends State<GroceryAudit> {
       ),
       decoration: BoxDecoration(
         color: approved
-            ? Colors.green.withOpacity(0.15)
-            : Colors.orange.withOpacity(0.15),
+            ? Colors.green.withValues(alpha: 0.15)
+            : Colors.orange.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(

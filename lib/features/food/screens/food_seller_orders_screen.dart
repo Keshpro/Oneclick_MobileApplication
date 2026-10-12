@@ -72,7 +72,7 @@ class _FoodSellerOrdersScreenState extends State<FoodSellerOrdersScreen> {
 
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -107,7 +107,7 @@ class _FoodSellerOrdersScreenState extends State<FoodSellerOrdersScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
 
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.12),
+                  color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
 

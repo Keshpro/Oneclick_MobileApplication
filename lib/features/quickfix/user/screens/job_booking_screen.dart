@@ -113,7 +113,7 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),
@@ -152,7 +152,7 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: const Color(0xff032744).withOpacity(0.1),
+                    backgroundColor: const Color(0xff032744).withValues(alpha: 0.1),
                     child: Text(
                       workerName.isNotEmpty ? workerName.substring(0, 1).toUpperCase() : 'W',
                       style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xff032744)),

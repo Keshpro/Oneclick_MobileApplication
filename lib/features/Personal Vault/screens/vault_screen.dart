@@ -9,82 +9,60 @@ import 'vault_settings_screen.dart';
 import 'dashboard.dart';
 import 'sharing_center_screen.dart';
 import 'share_record_screen.dart';
+import '../services/vault_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+
 class VaultScreen extends StatefulWidget {
   const VaultScreen({super.key});
   @override
   State<VaultScreen> createState() => _VaultScreenState();
 }
 class _VaultScreenState extends State<VaultScreen> {
+  final VaultService _vaultService = VaultService();
   static const background = Color(0xFFF8FAFC);
   static const purple = Color(0xFF4F46E5);
   static const ink = Color(0xFF0F172A);
   static const muted = Color(0xFF64748B);
-  String _query = '';
-  String _filter = 'All';
-  String? _folder;
-  String? _tag;
-  bool _ascending = true;
-  final List<_VaultItem> _items = [
-    _VaultItem(
-      title: 'US Passport',
-      type: 'Document',
-      details: 'Sample passport • Exp: 2030',
-      folder: 'Personal ID',
-      tags: ['travel'],
-      icon: Icons.badge_outlined,
-      favorite: true,
-    ),
-    _VaultItem(
-      title: 'Wi-Fi & Router',
-      type: 'Account',
-      details: 'Netgear 6E • Sample account',
-      folder: 'Home & Lease',
-      tags: ['home'],
-      icon: Icons.wifi,
-      favorite: true,
-    ),
-    _VaultItem(
-      title: 'Apartment Lease Agreement',
-      type: 'Document',
-      details: 'PDF • 2.4 MB • Sample document',
-      folder: 'Home & Lease',
-      tags: ['renewals', 'urgent'],
-      icon: Icons.description_outlined,
-      favorite: true,
-    ),
-    _VaultItem(
-      title: 'GitHub Personal Access',
-      type: 'Account',
-      details: 'user@example.com • Sample account',
-      folder: 'Digital Accounts',
-      tags: ['work'],
-      icon: Icons.key,
-    ),
-    _VaultItem(
-      title: 'Sony WH-1000XM5',
-      type: 'Receipt & Warranty',
-      details: 'Sample receipt • Warranty information',
-      folder: 'Receipts',
-      tags: ['warranty'],
-      icon: Icons.verified_outlined,
-    ),
-    _VaultItem(
-      title: 'Automobile Insurance Card',
-      type: 'Document',
-      details: 'Sample insurance document',
-      folder: 'Personal ID',
-      tags: ['renewals'],
-      icon: Icons.directions_car_outlined,
-    ),
-    _VaultItem(
-      title: 'Vanguard Retirement',
-      type: 'Account',
-      details: 'me@example.com • Sample account',
-      folder: 'Digital Accounts',
-      tags: ['work'],
-      icon: Icons.account_balance_outlined,
-    ),
-  ];
+String _query = '';
+String _filter = 'All';
+String? _folder;
+String? _tag;
+bool _ascending = true;
+
+List<_VaultItem> _items = [];
+
+@override
+void initState() {
+  super.initState();
+
+  if (FirebaseAuth.instance.currentUser != null) {
+    _loadRecords();
+  }
+}
+void _loadRecords() {
+  _vaultService.getRecords().listen((records) {
+    if (!mounted) return;
+
+    setState(() {
+      _items = records.map((record) {
+        return _VaultItem(
+          id: record.id,
+          title: record.title,
+          type: record.recordType,
+          details: record.fileName ?? record.notes,
+          folder: record.category,
+          tags: record.tags,
+          fileName: record.fileName,
+          filePath: record.filePath,
+          icon: Icons.description_outlined,
+          favorite: false,
+        );
+      }).toList();
+    });
+  });
+}
+
   List<_VaultItem> get _visibleItems {
     final query = _query.trim().toLowerCase();
     final results = _items.where((item) {
@@ -109,11 +87,7 @@ class _VaultScreenState extends State<VaultScreen> {
     });
     return results;
   }
-  void _comingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature will be connected next.')),
-    );
-  }
+
   void _shareRecord(_VaultItem item) {
   final shareItem = ShareRecordItem(
     title: item.title,
@@ -124,7 +98,7 @@ class _VaultScreenState extends State<VaultScreen> {
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.25),
+    barrierColor: Colors.black.withValues(alpha: 0.25),
     builder: (context) {
       return ShareRecordSheet(
         selectedRecord: shareItem,
@@ -132,47 +106,7 @@ class _VaultScreenState extends State<VaultScreen> {
     },
   );
 }
-  void _showDetails(_VaultItem item) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _VaultReferenceIcon(item.icon, color: purple, size: 36),
-              const SizedBox(height: 16),
-              Text(
-                item.title,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: ink,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(item.details),
-              const SizedBox(height: 8),
-              Text('Folder: ${item.folder}'),
-              const SizedBox(height: 8),
-              Text(item.tags.map((tag) => '#$tag').join('  ')),
-              const SizedBox(height: 20),
-              const Text(
-                'Demo record only. No file or credentials are stored.',
-                style: TextStyle(color: muted),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
   @override
   Widget build(BuildContext context) {
     final base = Theme.of(context);
@@ -609,6 +543,52 @@ class _VaultScreenState extends State<VaultScreen> {
       ),
     );
   }
+  Future<void> _deleteRecord(_VaultItem item) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Delete record?'),
+        content: Text(
+          'Are you sure you want to delete "${item.title}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) return;
+
+  try {
+    await _vaultService.deleteRecord(item.id);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Record deleted'),
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to delete record: $e'),
+      ),
+    );
+  }
+}
+
   Widget _recordCard(_VaultItem item) {
     return _surface(
       child: Builder(builder: (context) => Column(
@@ -665,18 +645,33 @@ class _VaultScreenState extends State<VaultScreen> {
                 ),
               ),
               IconButton(
+  tooltip: 'Delete',
+  onPressed: () {
+    _deleteRecord(item);
+  },
+  icon: const Icon(
+    Icons.delete_outline,
+    color: Colors.red,
+  ),
+),
+              IconButton(
                 tooltip: 'View details',
                 onPressed: () {
-                  if (item.title == 'Apartment Lease Agreement') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const RecordDetailsScreen(),
-                      ),
-                    );
-                  } else {
-                     _showDetails(item);
-                  }
+                  Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => RecordDetailsScreen(
+      recordId: item.id,
+      title: item.title,
+      category: item.folder,
+      type: item.type,
+      details: item.details,
+      tags: item.tags,
+      fileName: item.fileName,
+      filePath: item.filePath,
+    ),
+  ),
+);
                 },
                 icon: const _VaultReferenceIcon(
                   Icons.chevron_right,
@@ -694,16 +689,21 @@ class _VaultScreenState extends State<VaultScreen> {
       width: 172,
       child: GestureDetector(
         onTap: () {
-          if (item.title == 'Apartment Lease Agreement') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const RecordDetailsScreen(),
-              ),
-            );
-            } else {
-              _showDetails(item);
-              }
+          Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => RecordDetailsScreen(
+      recordId: item.id,
+      title: item.title,
+      category: item.folder,
+      type: item.type,
+      details: item.details,
+      tags: item.tags,
+      fileName: item.fileName,
+      filePath: item.filePath,
+    ),
+  ),
+);
             },
         child: _VaultGlassCard(interactive: true, padding: const EdgeInsets.all(16),
           child: Column(
@@ -828,19 +828,26 @@ class _VaultScreenState extends State<VaultScreen> {
   }
 }
 class _VaultItem {
+  final String id;
   final String title;
   final String type;
   final String details;
   final String folder;
   final List<String> tags;
+  final String? fileName;
+  final String? filePath;
   final IconData icon;
   bool favorite;
+
   _VaultItem({
+    required this.id,
     required this.title,
     required this.type,
     required this.details,
     required this.folder,
     required this.tags,
+    this.fileName,
+    this.filePath,
     required this.icon,
     this.favorite = false,
   });
@@ -915,72 +922,7 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
     );
   }
 }
-class _VaultActionContent extends StatelessWidget {
-  const _VaultActionContent({required this.icon, required this.title,
-    required this.subtitle, required this.accent});
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color accent;
-  @override
-  Widget build(BuildContext context) {
-    final hovered = _VaultGlassScope.hoveredOf(context);
-    final isAI = icon == Icons.auto_awesome;
-    final hoverColor = icon == Icons.document_scanner_outlined
-        ? const Color(0xFF6366F1) : accent;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 116),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (isAI) Positioned(right: -4, top: -4,
-            child: IgnorePointer(child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-              child: Container(width: 64, height: 64,
-                decoration: const BoxDecoration(color: Color(0x1A9333EA),
-                  shape: BoxShape.circle)),
-            )),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AnimatedScale(
-                scale: hovered ? 1.05 : 1,
-                duration: const Duration(milliseconds: 300),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: 44, height: 44, alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: hovered ? hoverColor : accent.withAlpha(15),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: accent.withAlpha(30)),
-                  ),
-                  child: _VaultReferenceIcon(icon, size: 20,
-                    color: hovered ? Colors.white : accent),
-                ),
-              ),
-              const SizedBox(height: 24),
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14, fontWeight: FontWeight.w700,
-                  letterSpacing: -0.35, height: 1.3,
-                  color: hovered ? accent : const Color(0xFF0F172A),
-                ),
-                child: Text(title),
-              ),
-              const SizedBox(height: 2),
-              Text(subtitle, style: GoogleFonts.plusJakartaSans(
-                fontSize: 11, fontWeight: FontWeight.w500,
-                height: 1.35, color: const Color(0xFF94A3B8),
-              )),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
+
 class _VaultSearchSurface extends StatefulWidget {
   const _VaultSearchSurface({required this.child, required this.padding});
   final Widget child;
@@ -1033,34 +975,17 @@ class _VaultRowFeedbackState extends State<_VaultRowFeedback> {
     child: widget.builder(context, _hovered),
   );
 }
-class _VaultRecordSubtitle extends StatelessWidget {
-  const _VaultRecordSubtitle({required this.text, required this.color});
-  final String text;
-  final Color color;
-  @override
-  Widget build(BuildContext context) {
-    final expiring = text.startsWith('Expires');
-    final urgent = expiring && color == Colors.red;
-    final textColor = urgent ? const Color(0xFFF43F5E) : color;
-    final label = Text(text, style: GoogleFonts.plusJakartaSans(
-      fontSize: 12, fontWeight: urgent ? FontWeight.w600 : FontWeight.w500,
-      color: textColor,
-    ));
-    if (!expiring) return label;
-    return Row(children: [
-      _VaultPulseDot(color: urgent ? textColor : const Color(0xFF94A3B8),
-        size: 6, animate: urgent),
-      const SizedBox(width: 6), Flexible(child: label),
-    ]);
-  }
-}
+
 class _VaultPulseDot extends StatefulWidget {
-  const _VaultPulseDot({required this.color, required this.size,
-    this.ping = false, this.animate = true});
+  const _VaultPulseDot({
+  required this.color,
+  required this.size,
+  this.ping = false,
+});
   final Color color;
   final double size;
   final bool ping;
-  final bool animate;
+
   @override
   State<_VaultPulseDot> createState() => _VaultPulseDotState();
 }
@@ -1070,9 +995,11 @@ class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProvide
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (widget.animate && !MediaQuery.disableAnimationsOf(context)) {
-      _controller.repeat(reverse: !widget.ping);
-    } else { _controller.stop(); }
+    if (!MediaQuery.disableAnimationsOf(context)) {
+  _controller.repeat(reverse: !widget.ping);
+} else {
+  _controller.stop();
+}
   }
   @override
   void dispose() { _controller.dispose(); super.dispose(); }
@@ -1085,22 +1012,32 @@ class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProvide
           child: Opacity(opacity: (1 - _controller.value) * 0.75,
             child: Container(decoration: BoxDecoration(
               color: widget.color, shape: BoxShape.circle)))),
-        Opacity(opacity: widget.ping || !widget.animate ? 1 : 1 - _controller.value * 0.5,
-          child: Container(decoration: BoxDecoration(
-            color: widget.color, shape: BoxShape.circle))),
-      ])),
+        Opacity(
+  opacity: widget.ping
+      ? 1
+      : 1 - _controller.value * 0.5,
+  child: Container(
+    decoration: BoxDecoration(
+      color: widget.color,
+      shape: BoxShape.circle,
+    ),
+  ),
+),
+      ]),
+    )
   );
 }
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon, {this.color});
+  const _VaultNavGlyph(this.icon);
   final IconData icon;
-  final Color? color;
+
   @override
   State<_VaultNavGlyph> createState() => _VaultNavGlyphState();
 }
 class _VaultNavGlyphState extends State<_VaultNavGlyph> {
   bool _hovered = false;
   bool _pressed = false;
+  
   @override
   Widget build(BuildContext context) => MouseRegion(
     cursor: SystemMouseCursors.click,
@@ -1113,8 +1050,9 @@ class _VaultNavGlyphState extends State<_VaultNavGlyph> {
       child: AnimatedScale(scale: _pressed ? 0.95 : 1,
         duration: const Duration(milliseconds: 200),
         child: _VaultReferenceIcon(widget.icon, size: 20,
-          color: widget.color ?? (_hovered ? const Color(0xFF1E293B)
-            : IconTheme.of(context).color ?? const Color(0xFF94A3B8))),
+          color: _hovered
+    ? const Color(0xFF1E293B)
+    : IconTheme.of(context).color ?? const Color(0xFF94A3B8),),
       ),
     ),
   );

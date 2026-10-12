@@ -33,6 +33,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   bool _expiryNotification = true;
   bool _showSampleFile = true;
   String? _selectedFileName;
+  PlatformFile? _selectedFile;
 
   final List<String> _tags = ['insurance', '2025', 'urgent'];
 
@@ -41,14 +42,6 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     _titleController.dispose();
     _notesController.dispose();
     super.dispose();
-  }
-
-  void _placeholder(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature is not connected yet.'),
-      ),
-    );
   }
 
   Future<void> _pickDate() async {
@@ -118,23 +111,24 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   }
 Future<void> _chooseFile() async {
   final result = await FilePicker.pickFiles(
-    type: FileType.custom,
-    allowedExtensions: [
-      'pdf',
-      'jpg',
-      'jpeg',
-      'png',
-    ],
-  );
+  type: FileType.custom,
+  allowedExtensions: [
+    'pdf',
+    'jpg',
+    'jpeg',
+    'png',
+  ],
+);
 
   if (result.isEmpty) return;
 
   final file = result.first;
 
-  setState(() {
-    _selectedFileName = file.name;
-    _showSampleFile = true;
-  });
+setState(() {
+  _selectedFile = file;
+  _selectedFileName = file.name;
+  _showSampleFile = true;
+});
 }
   @override
   Widget build(BuildContext context) {
@@ -297,7 +291,16 @@ Future<void> _chooseFile() async {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const SmartUploadReviewScreen(),
+                                  builder: (context) => SmartUploadReviewScreen(
+                                    title: _titleController.text.trim(),
+                                    recordType: _recordType,
+                                    category: _category,
+                                    renewalDate: _renewalDate,
+                                    expiryNotification: _expiryNotification,
+                                    notes: _notesController.text.trim(),
+                                    tags: List<String>.from(_tags),
+                                    selectedFile: _selectedFile,
+                                  ),
                                 ),
                               );
                             },

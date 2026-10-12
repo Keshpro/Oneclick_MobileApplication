@@ -1,8 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-// Mema imports oyage screens folder eke thiyena files walata galape.
-import 'activity_logs.dart';
+import 'activity_logs.dart' hide PendingAccounts;
 import 'database_management.dart';
 import 'doctor_audit.dart';
 import 'drunk_drive_audit.dart';
@@ -15,23 +14,15 @@ import 'pending_users_screen.dart';
 import 'settings.dart';
 import 'user_management_screen.dart';
 
-// ==================================================================
-// THEME TOKENS
-// ==================================================================
-
 class _C {
   static const bg = Color(0xFFF4F6FB);
-  static const primary = Color(0xff032744); // Updated to your primary color
+  static const primary = Color(0xff032744);
   static const primaryDark = Color(0xff021b30);
   static const text = Color(0xFF111827);
   static const muted = Color(0xFF6B7280);
   static const border = Color(0xFFE5E7EB);
   static const danger = Color(0xFFDC2626);
 }
-
-// ==================================================================
-// ADMIN DASHBOARD
-// ==================================================================
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -98,10 +89,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     ),
   ];
 
-  // ================================================================
-  // BUILD
-  // ================================================================
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -135,7 +122,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
             icon: const Icon(Icons.logout_rounded, color: _C.danger),
             tooltip: 'Logout',
             onPressed: () {
-              // Kelinma Logout screen ekata yanawa
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const LogoutScreen()),
@@ -192,10 +178,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
-
-  // ================================================================
-  // DRAWER
-  // ================================================================
 
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
@@ -284,7 +266,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      // Updated to call your updated UserManagementScreen
                       MaterialPageRoute(
                         builder: (_) => const UserManagementScreen(
                           title: 'User Management',
@@ -358,7 +339,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 tint: _C.danger.withValues(alpha: 0.08),
                 onTap: () {
                   Navigator.pop(context);
-                  // Kelinma Logout screen ekata yanawa
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const LogoutScreen()),
@@ -404,10 +384,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
-
-  // ================================================================
-  // WELCOME
-  // ================================================================
 
   Widget _buildWelcomeSection() {
     return Container(
@@ -465,60 +441,93 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  // ================================================================
-  // STATISTICS
-  // ================================================================
-
+  // Real-time Firestore statistics calculation
   Widget _buildStatisticsGrid() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final int crossAxisCount = constraints.maxWidth >= 1100
-            ? 4
-            : constraints.maxWidth >= 700
-            ? 4
-            : 2;
-        return GridView.count(
-          crossAxisCount: crossAxisCount,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.55,
-          children: const [
-            _StatCard(
-              title: 'Total Users',
-              value: '1,248',
-              icon: Icons.people,
-              color: Colors.blue,
-            ),
-            _StatCard(
-              title: 'Active Users',
-              value: '982',
-              icon: Icons.person,
-              color: Colors.green,
-            ),
-            _StatCard(
-              title: 'New Users',
-              value: '86',
-              icon: Icons.person_add,
-              color: Colors.purple,
-              subtitle: 'This month',
-            ),
-            _StatCard(
-              title: 'Pending Accounts',
-              value: '24',
-              icon: Icons.pending_actions,
-              color: Colors.orange,
-            ),
-          ],
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').snapshots(),
+      builder: (context, usersSnapshot) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('doctors')
+              .where('status', isEqualTo: 'pending')
+              .snapshots(),
+          builder: (context, pendingDoctorsSnapshot) {
+            return StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('drivers')
+                  .where('status', isEqualTo: 'pending')
+                  .snapshots(),
+              builder: (context, pendingDriversSnapshot) {
+                final totalUsers = usersSnapshot.hasData
+                    ? usersSnapshot.data!.docs.length
+                    : 0;
+
+                final activeUsers = usersSnapshot.hasData
+                    ? usersSnapshot.data!.docs.where((doc) {
+                        final data = doc.data() as Map<String, dynamic>?;
+                        return data?['status'] == 'active' ||
+                            data?['status'] == 'approved';
+                      }).length
+                    : 0;
+
+                final pendingDoctors = pendingDoctorsSnapshot.hasData
+                    ? pendingDoctorsSnapshot.data!.docs.length
+                    : 0;
+                final pendingDrivers = pendingDriversSnapshot.hasData
+                    ? pendingDriversSnapshot.data!.docs.length
+                    : 0;
+                final totalPending = pendingDoctors + pendingDrivers;
+
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final int crossAxisCount = constraints.maxWidth >= 1100
+                        ? 4
+                        : constraints.maxWidth >= 700
+                        ? 4
+                        : 2;
+                    return GridView.count(
+                      crossAxisCount: crossAxisCount,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.55,
+                      children: [
+                        _StatCard(
+                          title: 'Total Users',
+                          value: '$totalUsers',
+                          icon: Icons.people,
+                          color: Colors.blue,
+                        ),
+                        _StatCard(
+                          title: 'Active Users',
+                          value: '$activeUsers',
+                          icon: Icons.person,
+                          color: Colors.green,
+                        ),
+                        _StatCard(
+                          title: 'Doctors Pending',
+                          value: '$pendingDoctors',
+                          icon: Icons.medical_services,
+                          color: Colors.purple,
+                        ),
+                        _StatCard(
+                          title: 'Total Pending',
+                          value: '$totalPending',
+                          icon: Icons.pending_actions,
+                          color: Colors.orange,
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            );
+          },
         );
       },
     );
   }
-
-  // ================================================================
-  // QUICK ACTIONS
-  // ================================================================
 
   Widget _buildQuickActions() {
     return Column(
@@ -532,7 +541,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                // Updated to call your updated UserManagementScreen
                 builder: (_) =>
                     const UserManagementScreen(title: 'User Management'),
               ),
@@ -613,10 +621,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
-
-  // ================================================================
-  // CATEGORY AUDIT
-  // ================================================================
 
   Widget _buildCategoryAudit() {
     final current = _categories[_selectedCategory];
@@ -771,10 +775,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  // ================================================================
-  // RECENT ACTIVITIES
-  // ================================================================
-
   Widget _buildRecentActivities() {
     return _sectionCard(
       title: 'Recent Activities',
@@ -812,10 +812,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  // ================================================================
-  // IMPORTANT NOTIFICATIONS
-  // ================================================================
-
   Widget _buildImportantNotifications() {
     return _sectionCard(
       title: 'Important Notifications',
@@ -839,10 +835,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
-
-  // ================================================================
-  // SHARED WIDGETS
-  // ================================================================
 
   Widget _listItem({
     required IconData icon,
@@ -956,10 +948,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 }
 
-// ==================================================================
-// STAT CARD
-// ==================================================================
-
 class _StatCard extends StatelessWidget {
   final String title;
   final String value;
@@ -972,8 +960,7 @@ class _StatCard extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.color,
-    this.subtitle,
-  });
+  }) : subtitle = null;
 
   @override
   Widget build(BuildContext context) {
@@ -1027,10 +1014,6 @@ class _StatCard extends StatelessWidget {
     );
   }
 }
-
-// ==================================================================
-// MODELS
-// ==================================================================
 
 class _AuditCategory {
   final String name;

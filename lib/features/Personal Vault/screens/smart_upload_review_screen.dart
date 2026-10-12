@@ -1,8 +1,30 @@
 import 'package:flutter/material.dart';
 import 'vault_screen.dart';
+import 'package:file_picker/file_picker.dart';
+import '../services/vault_service.dart';
+import 'pdf_preview_screen.dart';
 
 class SmartUploadReviewScreen extends StatefulWidget {
-  const SmartUploadReviewScreen({super.key});
+  final String title;
+  final String recordType;
+  final String category;
+  final DateTime renewalDate;
+  final bool expiryNotification;
+  final String notes;
+  final List<String> tags;
+  final PlatformFile? selectedFile;
+
+  const SmartUploadReviewScreen({
+    super.key,
+    required this.title,
+    required this.recordType,
+    required this.category,
+    required this.renewalDate,
+    required this.expiryNotification,
+    required this.notes,
+    required this.tags,
+    this.selectedFile,
+  });
 
   @override
   State<SmartUploadReviewScreen> createState() =>
@@ -11,30 +33,40 @@ class SmartUploadReviewScreen extends StatefulWidget {
 
 class _SmartUploadReviewScreenState
     extends State<SmartUploadReviewScreen> {
+
+  final VaultService _vaultService = VaultService();
+  bool _isSaving = false;
+
   bool renewalReminder = true;
 
-  String selectedCategory = 'Legal & Property';
+late String selectedCategory;
+late TextEditingController titleController;
 
-  final TextEditingController titleController = TextEditingController(
-    text: 'Apartment Lease Agreement - 404 Elm St',
-  );
+final TextEditingController amountController = TextEditingController();
 
-  final TextEditingController amountController = TextEditingController(
-    text: '\$ 2,450.00',
-  );
-
-  final List<String> tags = [
-    '#lease',
-    '#property',
-    '#landlord',
-    '#rent',
-  ];
+late List<String> tags;
 
   static const Color backgroundColor = Color(0xFFF2F3F8);
   static const Color cardColor = Color(0xFFF7F8FC);
   static const Color primaryColor = Color(0xFF6667FF);
   static const Color textColor = Color(0xFF303244);
   static const Color secondaryText = Color(0xFF6F7180);
+
+@override
+void initState() {
+  super.initState();
+
+  selectedCategory = widget.category;
+  titleController = TextEditingController(
+    text: widget.title,
+  );
+
+  tags = widget.tags
+      .map((tag) => tag.startsWith('#') ? tag : '#$tag')
+      .toList();
+
+  renewalReminder = widget.expiryNotification;
+}
 
   @override
   void dispose() {
@@ -176,7 +208,7 @@ Widget _buildTopBar(BuildContext context) {
           color: const Color(0xFFF0F1F6),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 15,
               offset: const Offset(0, 6),
             ),
@@ -346,7 +378,36 @@ Widget _buildTopBar(BuildContext context) {
                 const SizedBox(height: 10),
 
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () {
+                    final file = widget.selectedFile;
+
+                    if (file == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('No PDF selected to preview.'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (file.extension?.toLowerCase() != 'pdf') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Preview is currently available for PDF files only.'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PdfPreviewScreen(
+                          file: file,
+                        ),
+                      ),
+                    );
+                  },
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -527,7 +588,7 @@ Widget _buildTopBar(BuildContext context) {
           borderRadius: BorderRadius.circular(25),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -946,7 +1007,7 @@ Widget _buildTopBar(BuildContext context) {
 
               Switch(
                 value: renewalReminder,
-                activeColor: primaryColor,
+                activeThumbColor: primaryColor,
                 onChanged: (value) {
                   setState(() {
                     renewalReminder = value;
@@ -997,21 +1058,66 @@ Widget _buildTopBar(BuildContext context) {
       width: double.infinity,
       height: 67,
       child: ElevatedButton.icon(
-        onPressed: () {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Document saved to Vault'),
-    ),
-  );
+        onPressed: _isSaving
+    ? null
+    : () async {
+        setState(() => _isSaving = true);
 
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const VaultScreen(),
-    ),
-    (route) => route.isFirst,
+        try {
+          String? filePath;
+
+if (widget.selectedFile != null) {
+  final bytes = await widget.selectedFile!.readAsBytes();
+
+  filePath = await _vaultService.uploadFile(
+    fileName: widget.selectedFile!.name,
+    bytes: bytes,
   );
-},
+}
+
+await _vaultService.addRecord(
+  title: titleController.text.trim(),
+  recordType: widget.recordType,
+  category: selectedCategory,
+  notes: widget.notes,
+  tags: tags
+      .map((tag) => tag.replaceFirst('#', ''))
+      .toList(),
+  renewalDate: widget.renewalDate,
+  expiryNotification: renewalReminder,
+  fileName: widget.selectedFile?.name,
+  filePath: filePath,
+);
+
+          if (!mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Document saved to Vault'),
+            ),
+          );
+
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const VaultScreen(),
+            ),
+            (route) => route.isFirst,
+          );
+        } catch (e) {
+          if (!mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to save document: $e'),
+            ),
+          );
+        } finally {
+          if (mounted) {
+            setState(() => _isSaving = false);
+          }
+        }
+      },
         icon: const Icon(
           Icons.shield_outlined,
           color: primaryColor,
@@ -1026,7 +1132,7 @@ Widget _buildTopBar(BuildContext context) {
         ),
         style: ElevatedButton.styleFrom(
           elevation: 8,
-          shadowColor: Colors.black.withOpacity(0.10),
+          shadowColor: Colors.black.withValues(alpha: 0.10),
           backgroundColor: const Color(0xFFF4F5F9),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(35),
@@ -1041,7 +1147,9 @@ Widget _buildTopBar(BuildContext context) {
       width: double.infinity,
       height: 52,
       child: ElevatedButton.icon(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.pop(context);
+        },
         icon: const Icon(
           Icons.sync,
           color: secondaryText,
@@ -1057,7 +1165,7 @@ Widget _buildTopBar(BuildContext context) {
         ),
         style: ElevatedButton.styleFrom(
           elevation: 4,
-          shadowColor: Colors.black.withOpacity(0.08),
+          shadowColor: Colors.black.withValues(alpha: 0.08),
           backgroundColor: const Color(0xFFF4F5F9),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
@@ -1082,7 +1190,7 @@ Widget _buildTopBar(BuildContext context) {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.07),
+            color: Colors.black.withValues(alpha: 0.07),
             blurRadius: 22,
             offset: const Offset(0, 10),
           ),

@@ -36,6 +36,10 @@ dependencies:
   file_picker: ^13.1.0
   google_fonts: 8.0.2
   flutter_svg: ^2.3.0
+  firebase_storage: ^13.6.0
+  syncfusion_flutter_pdfviewer: ^35.1.39
+  supabase_flutter: ^2.18.2
+  url_launcher: ^6.3.3
 
 # Packages used during development
 dev_dependencies:
@@ -51,10 +55,12 @@ flutter:
   # Enable Material icons
   uses-material-design: true
 
-  # Uncomment these after adding files inside the folders.
   assets:
+    - assets/images/groceries/
     - assets/images/food/dishes/
     - assets/images/food/restaurants/
+    - assets/images/food/
     - assets/icons/
+    - assets/animations/doctor_entry.mp4
 
   # Add a fonts section here if the app uses custom fonts.

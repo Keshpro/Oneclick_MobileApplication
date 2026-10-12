@@ -1,13 +1,19 @@
+import 'dart:ui';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
+import 'worker_registration_screen.dart'; // Worker Registration Screen import
 import 'workers_list_screen.dart';
 
 class _Service {
   final String name;
   final String tagline;
   final IconData icon;
-  final List<Color> gradient;
+  final Color primaryColor;
+  final Color softBgColor;
 
-  const _Service(this.name, this.tagline, this.icon, this.gradient);
+  const _Service(this.name, this.tagline, this.icon, this.primaryColor, this.softBgColor);
 }
 
 class HomeServicesScreen extends StatefulWidget {
@@ -18,60 +24,78 @@ class HomeServicesScreen extends StatefulWidget {
 }
 
 class _HomeServicesScreenState extends State<HomeServicesScreen> {
-  static const Color _navy = Color(0xff032744);
-  static const Color _navyLight = Color(0xff0B4F8A);
-  static const Color _bg = Color(0xFFF4F6FB);
-  static const Color _ink = Color(0xFF111827);
+  static const Color _mainNavy = Color(0xFF1E293B);
+  static const Color _bgCanvas = Color(0xFFF8FAFC);
+  static const Color _textDark = Color(0xFF0F172A);
+  static const Color _textMuted = Color(0xFF64748B);
 
   static const List<_Service> _services = [
-    _Service('Electrician', 'Wiring & repairs', Icons.electrical_services,
-        [Color(0xFFFFB347), Color(0xFFFF8008)]),
-    _Service('Plumber', 'Leaks & fittings', Icons.plumbing,
-        [Color(0xFF56CCF2), Color(0xFF2F80ED)]),
-    _Service('Carpenter', 'Furniture & woodwork', Icons.handyman,
-        [Color(0xFFA1887F), Color(0xFF6D4C41)]),
-    _Service('Painter', 'Interior & exterior', Icons.format_paint,
-        [Color(0xFFFF758C), Color(0xFFFF7EB3)]),
-    _Service('Cleaning', 'Home & office', Icons.cleaning_services,
-        [Color(0xFF43E3C1), Color(0xFF11998E)]),
-    _Service('AC Repair', 'Service & install', Icons.ac_unit,
-        [Color(0xFF74EBD5), Color(0xFF4A90E2)]),
+    _Service('Electrician', 'Wiring & repairs', Icons.electrical_services_rounded, Color(0xFFD97706), Color(0xFFFEF3C7)),
+    _Service('Plumber', 'Leaks & fittings', Icons.plumbing_rounded, Color(0xFF0284C7), Color(0xFFE0F2FE)),
+    _Service('Carpenter', 'Furniture & woodwork', Icons.handyman_rounded, Color(0xFF78350F), Color(0xFFFFEDD5)),
+    _Service('Painter', 'Interior & exterior', Icons.format_paint_rounded, Color(0xFFDB2777), Color(0xFFFCE7F3)),
+    _Service('Cleaning', 'Home & office', Icons.cleaning_services_rounded, Color(0xFF0D9488), Color(0xFFCCFBF1)),
+    _Service('AC Repair', 'Service & install', Icons.ac_unit_rounded, Color(0xFF2563EB), Color(0xFFDBEAFE)),
+    _Service('Appliances', 'Gadgets & devices', Icons.local_laundry_service_rounded, Color(0xFFDC2626), Color(0xFFFEE2E2)),
+    _Service('Gardening', 'Landscaping & lawns', Icons.grass_rounded, Color(0xFF16A34A), Color(0xFFDCFCE7)),
+    _Service('Locksmith', 'Key & lock issues', Icons.lock_open_rounded, Color(0xFF7C3AED), Color(0xFFEDE9FE)),
+    _Service('Masonry', 'Construction & brick', Icons.foundation_rounded, Color(0xFF475569), Color(0xFFF1F5F9)),
   ];
 
   String _query = '';
+  String _selectedCategory = 'All';
+
+  User? get _currentUser => FirebaseAuth.instance.currentUser;
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _services
-        .where((s) => s.name.toLowerCase().contains(_query.toLowerCase()))
-        .toList();
+    final filtered = _services.where((s) {
+      final matchesSearch = s.name.toLowerCase().contains(_query.toLowerCase());
+      if (_selectedCategory == 'All') return matchesSearch;
+      if (_selectedCategory == 'Interior' &&
+          (s.name == 'Painter' || s.name == 'Cleaning' || s.name == 'Carpenter' || s.name == 'Locksmith')) {
+        return matchesSearch;
+      }
+      if (_selectedCategory == 'Mechanical' &&
+          (s.name == 'Electrician' || s.name == 'Plumber' || s.name == 'AC Repair' || s.name == 'Appliances' || s.name == 'Masonry')) {
+        return matchesSearch;
+      }
+      if (_selectedCategory == 'Outdoor' && (s.name == 'Gardening' || s.name == 'Masonry')) {
+        return matchesSearch;
+      }
+      return false;
+    }).toList();
 
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: _bgCanvas,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverToBoxAdapter(child: _buildHeader(context)),
-          SliverToBoxAdapter(child: _buildTrustBanner()),
+          
+          // 1. WORKER PROMOTIONAL AD BANNER (EARN EXTRA SALARY)
+          SliverToBoxAdapter(child: _buildWorkerAdBanner(context)),
+
+          SliverToBoxAdapter(child: _buildCategoryChips()),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
             sliver: SliverToBoxAdapter(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Popular Services',
+                    'Available Services',
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: _ink,
+                      fontWeight: FontWeight.bold,
+                      color: _textDark,
                     ),
                   ),
                   Text(
-                    '${filtered.length} available',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
+                    '${filtered.length} categories',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: _textMuted,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -87,27 +111,14 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
               sliver: SliverGrid(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
                   childAspectRatio: 0.95,
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     final s = filtered[index];
-                    return TweenAnimationBuilder<double>(
-                      key: ValueKey(s.name),
-                      tween: Tween(begin: 0, end: 1),
-                      duration: Duration(milliseconds: 350 + index * 90),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, v, child) => Opacity(
-                        opacity: v,
-                        child: Transform.translate(
-                          offset: Offset(0, 24 * (1 - v)),
-                          child: child,
-                        ),
-                      ),
-                      child: _buildServiceCard(context, s),
-                    );
+                    return _buildServiceCard(context, s);
                   },
                   childCount: filtered.length,
                 ),
@@ -119,20 +130,18 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final uid = _currentUser?.uid;
+
     return Container(
       padding: EdgeInsets.fromLTRB(
         20,
         MediaQuery.of(context).padding.top + 12,
         20,
-        28,
+        24,
       ),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [_navy, _navyLight],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+        color: _mainNavy,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,7 +155,7 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.arrow_back_ios_new_rounded,
@@ -157,7 +166,7 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.notifications_none_rounded,
@@ -165,46 +174,53 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          const Text(
-            'Find a Professional',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              letterSpacing: -0.5,
-            ),
+          const SizedBox(height: 16),
+          
+          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: uid != null
+                ? FirebaseFirestore.instance.collection('users').doc(uid).snapshots()
+                : null,
+            builder: (context, snapshot) {
+              String displayName = 'User';
+              if (snapshot.hasData && snapshot.data!.exists) {
+                final data = snapshot.data!.data();
+                displayName = data?['name'] ?? _currentUser?.email?.split('@').first ?? 'User';
+              }
+
+              return Text(
+                'Hi, $displayName!',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              );
+            },
           ),
-          const SizedBox(height: 6),
+          
+          const SizedBox(height: 4),
           Text(
-            'What do you need help with today?',
+            'What service do you need today?',
             style: TextStyle(
-              fontSize: 14,
-              color: Colors.white.withOpacity(0.75),
+              fontSize: 13.5,
+              color: Colors.white.withValues(alpha: 0.75),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
+          
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.12),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+              borderRadius: BorderRadius.circular(14),
             ),
             child: TextField(
               onChanged: (v) => setState(() => _query = v),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'Search electrician, plumber...',
-                hintStyle: TextStyle(color: Colors.grey.shade500),
-                prefixIcon:
-                    Icon(Icons.search_rounded, color: Colors.grey.shade600),
+                hintStyle: TextStyle(color: _textMuted, fontSize: 13.5),
+                prefixIcon: Icon(Icons.search_rounded, color: _textMuted, size: 22),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                contentPadding: EdgeInsets.symmetric(vertical: 14),
               ),
             ),
           ),
@@ -213,21 +229,24 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
     );
   }
 
-  Widget _buildTrustBanner() {
+  // 📢 EARN EXTRA SALARY WORKER PROMOTIONAL BANNER
+  Widget _buildWorkerAdBanner(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFFFFB347), Color(0xFFFF8008)],
+            colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFFF8008).withOpacity(0.3),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -236,29 +255,65 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
+                color: const Color(0xFF22C55E).withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.verified_rounded,
-                  color: Colors.white, size: 28),
+              child: const Icon(
+                Icons.payments_rounded,
+                color: Color(0xFF22C55E),
+                size: 28,
+              ),
             ),
             const SizedBox(width: 14),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Verified Experts Nearby',
+                  const Text(
+                    'Earn an Extra Income!',
                     style: TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.bold,
                       fontSize: 15,
                     ),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
-                    'Trusted professionals, ready when you are.',
-                    style: TextStyle(color: Colors.white, fontSize: 12.5),
+                    'Register as a skilled worker on OneClick & offer your services.',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const WorkerRegistrationScreen(),
+                        ),
+                      );
+                    },
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Register as Worker',
+                          style: TextStyle(
+                            color: Color(0xFF38BDF8),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          color: Color(0xFF38BDF8),
+                          size: 14,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -269,21 +324,55 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
     );
   }
 
+  Widget _buildCategoryChips() {
+    final categories = ['All', 'Interior', 'Mechanical', 'Outdoor'];
+    return SizedBox(
+      height: 54,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        itemCount: categories.length,
+        itemBuilder: (context, idx) {
+          final cat = categories[idx];
+          final selected = _selectedCategory == cat;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text(
+                cat,
+                style: TextStyle(
+                  color: selected ? Colors.white : _textDark,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+              selected: selected,
+              selectedColor: _mainNavy,
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: selected ? _mainNavy : const Color(0xFFE2E8F0)),
+              ),
+              onSelected: (val) {
+                if (val) setState(() => _selectedCategory = cat);
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 40),
       child: Column(
         children: [
-          Icon(Icons.search_off_rounded,
-              size: 56, color: Colors.grey.shade400),
-          const SizedBox(height: 12),
+          Icon(Icons.search_off_rounded, size: 48, color: _textMuted),
+          SizedBox(height: 8),
           Text(
-            'No services found',
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w600,
-            ),
+            'No matching services found',
+            style: TextStyle(fontSize: 14, color: _textMuted, fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -291,12 +380,15 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
   }
 
   Widget _buildServiceCard(BuildContext context, _Service s) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(22),
+    return Card(
       elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      color: Colors.white,
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         onTap: () {
           Navigator.push(
             context,
@@ -305,72 +397,49 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
             ),
           );
         },
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.grey.shade200),
-            boxShadow: [
-              BoxShadow(
-                color: s.gradient.last.withOpacity(0.10),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: s.gradient,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: s.gradient.last.withOpacity(0.35),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+                  color: s.softBgColor,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(s.icon, color: Colors.white, size: 30),
+                child: Icon(s.icon, color: s.primaryColor, size: 22),
               ),
               const Spacer(),
               Text(
                 s.name,
                 style: const TextStyle(
-                  fontSize: 16.5,
-                  fontWeight: FontWeight.w800,
-                  color: _ink,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: _textDark,
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 2),
               Text(
                 s.tagline,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600),
+                style: const TextStyle(fontSize: 11.5, color: _textMuted),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Text(
-                    'Browse',
+                    'Explore',
                     style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: s.gradient.last,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: s.primaryColor,
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_rounded,
-                      size: 15, color: s.gradient.last),
+                  Icon(Icons.arrow_forward_rounded, size: 12, color: s.primaryColor),
                 ],
               ),
             ],

@@ -8,6 +8,9 @@ import 'ai_subscription_checkup_screen.dart';
 import 'dashboard.dart';
 import 'vault_screen.dart';
 import 'sharing_center_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/subscription_service.dart';
+
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
   @override
@@ -22,6 +25,234 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   static const Color purple = Color(0xFF4F46E5);
   static const Color purple2 = Color(0xFF9333EA);
   static const Color danger = Color(0xFFF43F5E);
+
+  final SubscriptionService _subscriptionService = SubscriptionService();
+
+  Future<void> _deleteSubscription(SubscriptionItem item) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Delete Subscription'),
+        content: Text(
+          'Are you sure you want to delete "${item.name}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, false);
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, true);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      );
+    },
+  );
+
+
+  if (confirmed != true) return;
+
+  try {
+    await _subscriptionService.deleteSubscription(item.id);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Subscription deleted'),
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to delete subscription: $e'),
+      ),
+    );
+  }
+  }
+  Future<void> _editSubscription(SubscriptionItem item) async {
+  final nameController = TextEditingController(text: item.name);
+  final subtitleController = TextEditingController(text: item.subtitle);
+  final priceController = TextEditingController(text: item.price);
+  final renewalController = TextEditingController(text: item.renewal);
+  final usageController = TextEditingController(text: item.usage);
+  final categoryController = TextEditingController(text: item.category);
+
+  String status = item.status;
+  bool priceHiked = item.priceHiked;
+
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Edit Subscription'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Name',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: subtitleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Subtitle',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: priceController,
+                    decoration: const InputDecoration(
+                      labelText: 'Price',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: renewalController,
+                    decoration: const InputDecoration(
+                      labelText: 'Renewal',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: usageController,
+                    decoration: const InputDecoration(
+                      labelText: 'Usage',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: categoryController,
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    initialValue: status,
+                    decoration: const InputDecoration(
+                      labelText: 'Status',
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'Active',
+                        child: Text('Active'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Free Trial',
+                        child: Text('Free Trial'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Cancelled',
+                        child: Text('Cancelled'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          status = value;
+                        });
+                      }
+                    },
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Price Hiked'),
+                    value: priceHiked,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        priceHiked = value;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext, false);
+                },
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext, true);
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+
+  if (result != true) {
+    nameController.dispose();
+    subtitleController.dispose();
+    priceController.dispose();
+    renewalController.dispose();
+    usageController.dispose();
+    categoryController.dispose();
+    return;
+  }
+
+  try {
+    await _subscriptionService.updateSubscription(
+      subscriptionId: item.id,
+      name: nameController.text.trim(),
+      subtitle: subtitleController.text.trim(),
+      price: priceController.text.trim(),
+      renewal: renewalController.text.trim(),
+      usage: usageController.text.trim(),
+      category: categoryController.text.trim(),
+      status: status,
+      priceHiked: priceHiked,
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Subscription updated'),
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to update subscription: $e'),
+      ),
+    );
+  } finally {
+    nameController.dispose();
+    subtitleController.dispose();
+    priceController.dispose();
+    renewalController.dispose();
+    usageController.dispose();
+    categoryController.dispose();
+  }
+}
+
+
+
+
   String selectedFilter = 'All';
   String selectedCurrency = 'USD';
   String searchQuery = '';
@@ -29,6 +260,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     final normalized = status.trim().toLowerCase();
     return normalized == 'free trials' ? 'free trial' : normalized;
   }
+
   bool _matchesStatus(SubscriptionItem item, String filter) =>
       filter == 'All' || _statusKey(item.status) == _statusKey(filter);
   int _countFor(String filter) =>
@@ -45,91 +277,39 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       return matchesSearch && _matchesStatus(item, selectedFilter);
     }).toList();
   }
-  final List<SubscriptionItem> subscriptions = const [
-    SubscriptionItem(
-      name: 'Adobe Creative Cloud',
-      subtitle: 'All Apps Individual • Monthly',
-      price: '\LKR 18.000',
-      renewal: 'Renews in 5 days',
-      usage: 'Often used',
-      icon: Icons.layers_outlined,
-      category: 'Productivity & AI',
-      priceHiked: true,
-    ),
-    SubscriptionItem(
-      name: 'ChatGPT Plus',
-      subtitle: 'OpenAI • Monthly',
-      price: '\LKR 6,500',
-      renewal: 'Renews Dec 01',
-      usage: 'Daily usage',
-      icon: Icons.psychology_outlined,
-      category: 'Productivity & AI',
-    ),
-    SubscriptionItem(
-      name: 'Claude Pro',
-      subtitle: 'Anthropic • Monthly',
-      price: '\LKR 6,500',
-      renewal: 'Renews Dec 04',
-      usage: 'Rarely used',
-      icon: Icons.memory_outlined,
-      category: 'Productivity & AI',
-    ),
-    SubscriptionItem(
-      name: 'Spotify Family',
-      subtitle: 'Premium 6 Accounts • Monthly',
-      price: '\LKR 6,200',
-      renewal: 'Renews Nov 24',
-      usage: 'Often used',
-      icon: Icons.music_note,
-      category: 'Entertainment & Media',
-    ),
-    SubscriptionItem(
-      name: 'Netflix Standard',
-      subtitle: '1080p 2-Screens • Monthly',
-      price: '\LKR 4,000',
-      renewal: 'Renews Nov 19',
-      usage: 'Unused this month',
-      icon: Icons.tv_outlined,
-      category: 'Entertainment & Media',
-    ),
-    SubscriptionItem(
-      name: 'iCloud+ 2TB',
-      subtitle: 'Apple Family Storage • Monthly',
-      price: '\LKR 3,000',
-      renewal: 'Renews Nov 28',
-      usage: '1.4 TB / 2 TB used',
-      icon: Icons.cloud_done_outlined,
-      category: 'Storage & Utilities',
-    ),
-    SubscriptionItem(
-      name: 'Figma Pro',
-      subtitle: 'Design workspace • Trial plan',
-      price: 'Free', renewal: 'Trial ends in 7 days', usage: 'Trial in progress',
-      icon: Icons.design_services_outlined, category: 'Productivity & AI',
-      status: 'Free Trial',
-    ),
-    SubscriptionItem(
-      name: 'HBO Max',
-      subtitle: 'Streaming • 7-day trial',
-      price: 'Free', renewal: 'Trial ends in 3 days', usage: 'Trial in progress',
-      icon: Icons.movie_outlined, category: 'Entertainment & Media',
-      status: 'Free Trial',
-    ),
-    SubscriptionItem(
-      name: 'YouTube Premium',
-      subtitle: 'Cancelled • No scheduled charge',
-      price: '—', renewal: 'Auto-renewal off', usage: 'Cancelled',
-      icon: Icons.play_circle_outline, category: 'Entertainment & Media',
-      status: 'Cancelled',
-    ),
-    SubscriptionItem(
-      name: 'Google One',
-      subtitle: 'Storage plan • No scheduled charge',
-      price: '—', renewal: 'Auto-renewal off', usage: 'Cancelled',
-      icon: Icons.cloud_outlined, category: 'Storage & Utilities',
-      status: 'Cancelled',
-    ),
-  ];
+  List<SubscriptionItem> subscriptions = [];
+  @override
+void initState() {
+  super.initState();
+
+  if (FirebaseAuth.instance.currentUser != null) {
+    _loadSubscriptions();
+  }
+}
+
+void _loadSubscriptions() {
+  _subscriptionService.getSubscriptions().listen((records) {
+    if (!mounted) return;
+
+    setState(() {
+      subscriptions = records.map((record) {
+        return SubscriptionItem(
+          id: record.id,
+          name: record.name,
+          subtitle: record.subtitle,
+          price: record.price,
+          renewal: record.renewal,
+          usage: record.usage,
+          icon: Icons.subscriptions_outlined,
+          category: record.category,
+          priceHiked: record.priceHiked,
+          status: record.status,
+        );
+      }).toList();
+    });
+  });
+}
+
 void _showSearch() {
   showModalBottomSheet(
     context: context,
@@ -157,16 +337,16 @@ void _showSearch() {
                 color: purple,
               ),
               suffixIcon: searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const _VaultReferenceIcon(Icons.close),
-                      onPressed: () {
-                        setState(() {
-                          searchQuery = '';
-                        });
-                        Navigator.pop(context);
-                      },
-                    )
-                  : null,
+    ? IconButton(
+        icon: const _VaultReferenceIcon(Icons.close),
+        onPressed: () {
+          setState(() {
+            searchQuery = '';
+          });
+          Navigator.pop(context);
+        },
+      )
+    : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(24),
                 borderSide: BorderSide.none,
@@ -357,7 +537,7 @@ void _showSearch() {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'PRODUCTIVITY & AI',
-                          total: '\LKR 30,000/mo',
+                          total: 'LKR 30,000/mo',
                           icon: Icons.terminal_outlined,
                           items: filteredSubscriptions
                               .where(
@@ -370,7 +550,7 @@ void _showSearch() {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'ENTERTAINMENT & MEDIA',
-                          total: '\LKR 11,000/mo',
+                          total: 'LKR 11,000/mo',
                           icon: Icons.play_circle_outline,
                           items: filteredSubscriptions
                               .where(
@@ -383,7 +563,7 @@ void _showSearch() {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'STORAGE & UTILITIES',
-                          total: '\LKR 3,000/mo',
+                          total: 'LKR 3,000/mo',
                           icon: Icons.cloud_outlined,
                           items: filteredSubscriptions
                               .where(
@@ -455,7 +635,7 @@ Widget _buildHeader() {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${_monthlyCost(subscriptions).toStringAsFixed(2)}',
+                _monthlyCost(subscriptions).toStringAsFixed(2),
                 style: TextStyle(
                   color: ink,
                   fontSize: 32,
@@ -516,7 +696,7 @@ Widget _buildHeader() {
                 ),
               ),
               Text(
-                '${(_monthlyCost(subscriptions) * 12).toStringAsFixed(2)}',
+                (_monthlyCost(subscriptions) * 12).toStringAsFixed(2),
                 style: TextStyle(
                   color: ink,
                   fontWeight: FontWeight.w700,
@@ -685,7 +865,7 @@ Widget _buildHeader() {
                                 'You can trim up to ',
                           ),
                           TextSpan(
-                            text: '\LKR 11,000/mo',
+                            text: 'LKR 11,000/mo',
                             style: TextStyle(
                               color: purple,
                               fontWeight: FontWeight.w700,
@@ -764,7 +944,7 @@ Widget _buildHeader() {
                 subtitle: 'Free 7-Day Trial',
                 badge: '3 days left',
                 description:
-                    'Converts to \LKR 5,000/mo on Nov 08 unless cancelled.',
+                    'Converts to LKR 5,000/mo on Nov 08 unless cancelled.',
                 icon: Icons.movie_outlined,
               ),
               const SizedBox(width: 16),
@@ -1096,12 +1276,26 @@ Widget _buildHeader() {
                   const SizedBox(height: 3),
                   Text(
                     _statusKey(item.status) == 'active' ? '/mo' : '',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Color(0xFF64748B),
                       fontSize: 12,
                     ),
                   ),
                 ],
+              ),
+
+              const SizedBox(width: 6),
+
+              IconButton(
+                tooltip: 'Edit',
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: () => _editSubscription(item),
+              ),
+
+              IconButton(
+                tooltip: 'Delete',
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () => _deleteSubscription(item),
               ),
             ],
           ),
@@ -1154,6 +1348,7 @@ Widget _buildHeader() {
     ),
   );
 }
+
   Widget _statusBadge(String status) {
     final trial = _statusKey(status) == 'free trial';
     final cancelled = _statusKey(status) == 'cancelled';
@@ -1438,66 +1633,12 @@ Widget _buildAddSubscriptionButton() {
       ),
     );
   }
-  void _showAddSubscriptionDialog() {
-    final nameController = TextEditingController();
-    final priceController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Add Subscription'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Subscription name',
-                  hintText: 'e.g. YouTube Premium',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: priceController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Monthly price',
-                  prefixText: '\LKR ',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                _message(
-                  'Subscription UI added. Backend connection comes next.',
-                );
-              },
-              child: const Text(
-                'Add',
-                style: TextStyle(
-                  color: purple,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }
 // ================================================================
 // SUBSCRIPTION MODEL
 // ================================================================
 class SubscriptionItem {
+  final String id;
   final String name;
   final String subtitle;
   final String price;
@@ -1508,6 +1649,7 @@ class SubscriptionItem {
   final bool priceHiked;
   final String status;
   const SubscriptionItem({
+    required this.id,
     required this.name,
     required this.subtitle,
     required this.price,
@@ -1618,72 +1760,7 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
     );
   }
 }
-class _VaultActionContent extends StatelessWidget {
-  const _VaultActionContent({required this.icon, required this.title,
-    required this.subtitle, required this.accent});
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color accent;
-  @override
-  Widget build(BuildContext context) {
-    final hovered = _VaultGlassScope.hoveredOf(context);
-    final isAI = icon == Icons.auto_awesome;
-    final hoverColor = icon == Icons.document_scanner_outlined
-        ? const Color(0xFF6366F1) : accent;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 116),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (isAI) Positioned(right: -4, top: -4,
-            child: IgnorePointer(child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-              child: Container(width: 64, height: 64,
-                decoration: const BoxDecoration(color: Color(0x1A9333EA),
-                  shape: BoxShape.circle)),
-            )),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AnimatedScale(
-                scale: hovered ? 1.05 : 1,
-                duration: const Duration(milliseconds: 300),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: 44, height: 44, alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: hovered ? hoverColor : accent.withAlpha(15),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: accent.withAlpha(30)),
-                  ),
-                  child: _VaultReferenceIcon(icon, size: 20,
-                    color: hovered ? Colors.white : accent),
-                ),
-              ),
-              const SizedBox(height: 24),
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14, fontWeight: FontWeight.w700,
-                  letterSpacing: -0.35, height: 1.3,
-                  color: hovered ? accent : const Color(0xFF0F172A),
-                ),
-                child: Text(title),
-              ),
-              const SizedBox(height: 2),
-              Text(subtitle, style: GoogleFonts.plusJakartaSans(
-                fontSize: 11, fontWeight: FontWeight.w500,
-                height: 1.35, color: const Color(0xFF94A3B8),
-              )),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
+
 class _VaultSearchSurface extends StatefulWidget {
   const _VaultSearchSurface({required this.child, required this.padding});
   final Widget child;
@@ -1736,48 +1813,35 @@ class _VaultRowFeedbackState extends State<_VaultRowFeedback> {
     child: widget.builder(context, _hovered),
   );
 }
-class _VaultRecordSubtitle extends StatelessWidget {
-  const _VaultRecordSubtitle({required this.text, required this.color});
-  final String text;
-  final Color color;
-  @override
-  Widget build(BuildContext context) {
-    final expiring = text.startsWith('Expires');
-    final urgent = expiring && color == Colors.red;
-    final textColor = urgent ? const Color(0xFFF43F5E) : color;
-    final label = Text(text, style: GoogleFonts.plusJakartaSans(
-      fontSize: 12, fontWeight: urgent ? FontWeight.w600 : FontWeight.w500,
-      color: textColor,
-    ));
-    if (!expiring) return label;
-    return Row(children: [
-      _VaultPulseDot(color: urgent ? textColor : const Color(0xFF94A3B8),
-        size: 6, animate: urgent),
-      const SizedBox(width: 6), Flexible(child: label),
-    ]);
-  }
-}
+
 class _VaultPulseDot extends StatefulWidget {
-  const _VaultPulseDot({required this.color, required this.size,
-    this.ping = false, this.animate = true});
+  const _VaultPulseDot({
+  required this.color,
+  required this.size,
+  this.ping = false,
+});
   final Color color;
   final double size;
   final bool ping;
-  final bool animate;
+
   @override
   State<_VaultPulseDot> createState() => _VaultPulseDotState();
 }
 class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this, duration: const Duration(milliseconds: 1400));
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (widget.animate && !MediaQuery.disableAnimationsOf(context)) {
-      _controller.repeat(reverse: !widget.ping);
-    } else { _controller.stop(); }
+@override
+void didChangeDependencies() {
+  super.didChangeDependencies();
+
+  if (!MediaQuery.disableAnimationsOf(context)) {
+    _controller.repeat(reverse: !widget.ping);
+  } else {
+    _controller.stop();
   }
-  @override
+}
+
+@override
   void dispose() { _controller.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -1788,16 +1852,16 @@ class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProvide
           child: Opacity(opacity: (1 - _controller.value) * 0.75,
             child: Container(decoration: BoxDecoration(
               color: widget.color, shape: BoxShape.circle)))),
-        Opacity(opacity: widget.ping || !widget.animate ? 1 : 1 - _controller.value * 0.5,
+        Opacity(opacity: widget.ping ? 1 : 1 - _controller.value * 0.5,
           child: Container(decoration: BoxDecoration(
             color: widget.color, shape: BoxShape.circle))),
       ])),
   );
 }
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon, {this.color});
+  const _VaultNavGlyph(this.icon);
   final IconData icon;
-  final Color? color;
+
   @override
   State<_VaultNavGlyph> createState() => _VaultNavGlyphState();
 }
@@ -1813,14 +1877,19 @@ class _VaultNavGlyphState extends State<_VaultNavGlyph> {
       onPointerDown: (_) => setState(() => _pressed = true),
       onPointerUp: (_) => setState(() => _pressed = false),
       onPointerCancel: (_) => setState(() => _pressed = false),
-      child: AnimatedScale(scale: _pressed ? 0.95 : 1,
-        duration: const Duration(milliseconds: 200),
-        child: _VaultReferenceIcon(widget.icon, size: 20,
-          color: widget.color ?? (_hovered ? const Color(0xFF1E293B)
-            : IconTheme.of(context).color ?? const Color(0xFF94A3B8))),
-      ),
-    ),
-  );
+child: AnimatedScale(
+  scale: _pressed ? 0.95 : 1,
+  duration: const Duration(milliseconds: 200),
+  child: _VaultReferenceIcon(
+    widget.icon,
+    size: 20,
+    color: _hovered
+        ? const Color(0xFF1E293B)
+        : IconTheme.of(context).color ?? const Color(0xFF94A3B8),
+  ),
+),
+),
+);
 }
 class _VaultReferenceIcon extends StatelessWidget {
   const _VaultReferenceIcon(this.icon, {this.size, this.color});
