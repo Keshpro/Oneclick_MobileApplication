@@ -26,8 +26,6 @@ class _VaultScreenState extends State<VaultScreen> {
   static const muted = Color(0xFF64748B);
 String _query = '';
 String _filter = 'All';
-String? _folder;
-String? _tag;
 bool _ascending = true;
 
 List<_VaultItem> _items = [];
@@ -56,11 +54,210 @@ void _loadRecords() {
           fileName: record.fileName,
           filePath: record.filePath,
           icon: Icons.description_outlined,
-          favorite: false,
+          favorite: record.isFavorite,
         );
       }).toList();
     });
   });
+}
+
+void _showSearchFilterPanel() {
+  final searchController = TextEditingController(
+    text: _query,
+  );
+
+  String tempFilter = _filter;
+  bool tempAscending = _ascending;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: const Color(0xFFF8FAFC),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(24),
+      ),
+    ),
+    builder: (sheetContext) {
+      return StatefulBuilder(
+        builder: (sheetContext, setModalState) {
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                22,
+                24,
+                MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Search & Filter',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: ink,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pop(sheetContext);
+                        },
+                        icon: const Icon(
+                          Icons.close,
+                          color: muted,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextField(
+                    controller: searchController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'Search Vault records...',
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: muted,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  const Text(
+                    'FILTER',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: muted,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      'All',
+                      'Documents',
+                      'Accounts',
+                      'Favorites',
+                    ].map((filter) {
+                      return ChoiceChip(
+                        label: Text(filter),
+                        selected: tempFilter == filter,
+                        onSelected: (_) {
+                          setModalState(() {
+                            tempFilter = filter;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.swap_vert,
+                      color: purple,
+                    ),
+                    title: const Text(
+                      'Sort records',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: ink,
+                      ),
+                    ),
+                    subtitle: Text(
+                      tempAscending ? 'A to Z' : 'Z to A',
+                    ),
+                    trailing: Switch(
+                      value: tempAscending,
+                      activeThumbColor: purple,
+                      onChanged: (value) {
+                        setModalState(() {
+                          tempAscending = value;
+                        });
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _query = searchController.text;
+                          _filter = tempFilter;
+                          _ascending = tempAscending;
+                        });
+
+                        Navigator.pop(sheetContext);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: purple,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'Apply',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _query = '';
+                          _filter = 'All';
+                          _ascending = true;
+                        });
+
+                        Navigator.pop(sheetContext);
+                      },
+                      child: const Text('Clear filters'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
 }
 
   List<_VaultItem> get _visibleItems {
@@ -76,10 +273,7 @@ void _loadRecords() {
           (_filter == 'Documents' && item.type != 'Account') ||
           (_filter == 'Accounts' && item.type == 'Account') ||
           (_filter == 'Favorites' && item.favorite);
-      return matchesQuery &&
-          matchesFilter &&
-          (_folder == null || item.folder == _folder) &&
-          (_tag == null || item.tags.contains(_tag));
+      return matchesQuery && matchesFilter;
     }).toList();
     results.sort((a, b) {
       final result = a.title.compareTo(b.title);
@@ -184,8 +378,7 @@ void _loadRecords() {
   Widget _buildVault(BuildContext context) {
     final visible = _visibleItems;
     final pinned = _items.where((item) => item.favorite).toList();
-    final folders = _items.map((item) => item.folder).toSet().toList();
-    final tags = _items.expand((item) => item.tags).toSet().toList();
+
     return Scaffold(
       extendBody: true,
       backgroundColor: Colors.transparent,
@@ -290,111 +483,49 @@ void _loadRecords() {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'My Vault',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: ink,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      _label(''),
-                    ],
+                  const Text(
+                    'My Vault',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: ink,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${_items.length} sample records',
+                    '${_items.length} ${_items.length == 1 ? 'record' : 'records'}',
                     style: const TextStyle(color: muted),
                   ),
                   const SizedBox(height: 24),
                   // Search and alphabetical sorting.
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _VaultSearchSurface(
-                          padding: EdgeInsets.zero,
-                          child: TextField(
-                            onChanged: (value) {
-                              setState(() => _query = value);
-                            },
-                            decoration: const InputDecoration(
-                              hintText: 'Search items, tags, folders...',
-                              prefixIcon: _VaultReferenceIcon(Icons.search, color: muted),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.all(16),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      _surface(
-                        padding: const EdgeInsets.all(4),
-                        child: IconButton(
-                          tooltip: _ascending
-                              ? 'Sort Z to A'
-                              : 'Sort A to Z',
-                          onPressed: () {
-                            setState(() => _ascending = !_ascending);
-                          },
-                          icon: const _VaultReferenceIcon(Icons.swap_vert, color: purple),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _horizontal(
-                    ['All', 'Documents', 'Accounts', 'Favorites']
-                        .map(
-                          (filter) => ChoiceChip(
-                            label: Text(filter),
-                            selected: _filter == filter,
-                            selectedColor: const Color(0xFFE0E7FE),
-                            onSelected: (_) {
-                              setState(() => _filter = filter);
-                            },
-                          ),
-                        )
-                        .toList(),
-                  ),
-                  const SizedBox(height: 24),
-                  _heading('FOLDERS & TAGS'),
-                  const SizedBox(height: 12),
-                  _horizontal(
-                    folders.map((folder) {
-                      final count = _items
-                          .where((item) => item.folder == folder)
-                          .length;
-                      return FilterChip(
-                        avatar: const _VaultReferenceIcon(
-                          Icons.folder_outlined,
-                          size: 18,
-                        ),
-                        label: Text('$folder  $count'),
-                        selected: _folder == folder,
-                        onSelected: (selected) {
-                          setState(() {
-                            _folder = selected ? folder : null;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 12),
-                  _horizontal(
-                    tags.map((tag) {
-                      return FilterChip(
-                        label: Text('#$tag'),
-                        selected: _tag == tag,
-                        onSelected: (selected) {
-                          setState(() => _tag = selected ? tag : null);
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 28),
+                  _VaultSearchSurface(
+  padding: EdgeInsets.zero,
+  child: TextField(
+    readOnly: true,
+    onTap: _showSearchFilterPanel,
+    decoration: InputDecoration(
+      hintText: _query.isEmpty
+          ? 'Search your Vault'
+          : _query,
+      prefixIcon: const _VaultReferenceIcon(
+        Icons.search,
+        color: muted,
+      ),
+      suffixIcon: IconButton(
+        tooltip: 'Search and filter',
+        onPressed: _showSearchFilterPanel,
+        icon: const _VaultReferenceIcon(
+          Icons.tune,
+          color: purple,
+        ),
+      ),
+      border: InputBorder.none,
+      contentPadding: const EdgeInsets.all(16),
+    ),
+  ),
+),
+
+const SizedBox(height: 28),
                   _heading(
                     'PINNED QUICK ACCESS',
                     trailing: '${pinned.length} items',
@@ -738,17 +869,41 @@ void _loadRecords() {
     );
   }
   Widget _star(_VaultItem item) {
-    return IconButton(
-      tooltip: item.favorite ? 'Unpin record' : 'Pin record',
-      onPressed: () {
-        setState(() => item.favorite = !item.favorite);
-      },
-      icon: _VaultReferenceIcon(
-        item.favorite ? Icons.star : Icons.star_border,
-        color: item.favorite ? Colors.orange : muted,
-      ),
-    );
-  }
+  return IconButton(
+    tooltip: item.favorite ? 'Unpin record' : 'Pin record',
+    onPressed: () async {
+      final newValue = !item.favorite;
+
+      setState(() {
+        item.favorite = newValue;
+      });
+
+      try {
+        await _vaultService.updateFavorite(
+          recordId: item.id,
+          isFavorite: newValue,
+        );
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          item.favorite = !newValue;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not update favorite.'),
+          ),
+        );
+      }
+    },
+    icon: _VaultReferenceIcon(
+      item.favorite ? Icons.star : Icons.star_border,
+      color: item.favorite ? Colors.orange : muted,
+    ),
+  );
+}
+
   Widget _badge(IconData icon) {
     final accent = _recordAccent(icon);
     return Builder(builder: (context) {
