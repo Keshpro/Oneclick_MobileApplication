@@ -3,6 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/vault_backup_service.dart';
+import '../services/recovery_kit_service.dart';
+import '../services/encrypted_vault_export_service.dart';
+
 class VaultSettingsScreen extends StatefulWidget {
   final bool openBackupSection;
 
@@ -17,6 +21,12 @@ class VaultSettingsScreen extends StatefulWidget {
 }
 class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
   final GlobalKey _backupSectionKey = GlobalKey();
+  final VaultBackupService _backupService =
+    VaultBackupService();
+  final RecoveryKitService _recoveryKitService =
+    RecoveryKitService();
+  final EncryptedVaultExportService _encryptedVaultExportService =
+    EncryptedVaultExportService();
 
   static const background = Color(0xFFE9EBF2);
   static const purple = Color(0xFF6961FF);
@@ -708,9 +718,7 @@ void _message(String text) {
                           text:
                               'Export Encrypted Vault (.oneclick)',
                           onTap: () {
-                            _message(
-                              'Secure Vault export will be connected later.',
-                            );
+                            _showEncryptedExportDialog();
                           },
                         ),
 
@@ -724,10 +732,27 @@ void _message(String text) {
                           subtitle:
                               'Create recovery information for your Vault',
                           trailing: 'Create PDF',
-                          onTap: () {
-                            _message(
-                              'Recovery Kit generation will be connected later.',
-                            );
+                          onTap: () async {
+                            try {
+                              _message(
+                                'Creating recovery kit PDF...',
+                              );
+
+                              await _recoveryKitService
+                                  .createRecoveryKitPdf();
+
+                              if (!mounted) return;
+
+                              _message(
+                                'Recovery kit PDF created successfully.',
+                              );
+                            } catch (_) {
+                              if (!mounted) return;
+
+                              _message(
+                                'Could not create recovery kit PDF.',
+                              );
+                            }
                           },
                         ),
 
@@ -908,6 +933,220 @@ void _message(String text) {
     );
   }
 
+  Future<void> _showEncryptedExportDialog() async {
+  final passwordController = TextEditingController();
+  final confirmController = TextEditingController();
+
+  bool obscurePassword = true;
+  bool obscureConfirm = true;
+  bool exporting = false;
+
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: !exporting,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          Future<void> export() async {
+            if (exporting) return;
+
+            final password =
+                passwordController.text.trim();
+
+            final confirmPassword =
+                confirmController.text.trim();
+
+            if (password.length < 8) {
+              _message(
+                'Password must contain at least 8 characters.',
+              );
+              return;
+            }
+
+            if (password != confirmPassword) {
+              _message(
+                'Passwords do not match.',
+              );
+              return;
+            }
+
+            setDialogState(() {
+              exporting = true;
+            });
+
+            try {
+              await _encryptedVaultExportService
+                  .exportEncryptedVault(
+                password: password,
+              );
+
+              if (!mounted) return;
+              if (!dialogContext.mounted) return;
+
+              Navigator.pop(dialogContext);
+
+              _message(
+                'Encrypted Vault export created successfully.',
+              );
+            } catch (_) {
+              if (!mounted) return;
+              if (!dialogContext.mounted) return;
+
+              setDialogState(() {
+                exporting = false;
+              });
+
+              _message(
+                'Could not create encrypted Vault export.',
+              );
+            }
+          }
+
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            title: const Text(
+              'Export Encrypted Vault',
+              style: TextStyle(
+                color: ink,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            content: SizedBox(
+              width: 420,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Create a password to protect this .oneclick export.',
+                    style: TextStyle(
+                      color: muted,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  TextField(
+                    controller: passwordController,
+                    obscureText: obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      hintText:
+                          'Minimum 8 characters',
+                      prefixIcon:
+                          const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        onPressed: () {
+                          setDialogState(() {
+                            obscurePassword =
+                                !obscurePassword;
+                          });
+                        },
+                        icon: Icon(
+                          obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons
+                                  .visibility_off_outlined,
+                        ),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  TextField(
+                    controller: confirmController,
+                    obscureText: obscureConfirm,
+                    decoration: InputDecoration(
+                      labelText: 'Confirm Password',
+                      prefixIcon: const Icon(
+                        Icons.lock_reset_outlined,
+                      ),
+                      suffixIcon: IconButton(
+                        onPressed: () {
+                          setDialogState(() {
+                            obscureConfirm =
+                                !obscureConfirm;
+                          });
+                        },
+                        icon: Icon(
+                          obscureConfirm
+                              ? Icons.visibility_outlined
+                              : Icons
+                                  .visibility_off_outlined,
+                        ),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  const Text(
+                    'Keep this password safe. It is not stored inside the export.',
+                    style: TextStyle(
+                      color: muted,
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: exporting
+                    ? null
+                    : () {
+                        Navigator.pop(
+                          dialogContext,
+                        );
+                      },
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton.icon(
+                onPressed:
+                    exporting ? null : export,
+                icon: exporting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child:
+                            CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.lock_outline,
+                      ),
+                label: Text(
+                  exporting
+                      ? 'Encrypting...'
+                      : 'Create Export',
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+
+  passwordController.dispose();
+  confirmController.dispose();
+}
+
   void _showBackupOptions() {
     showModalBottomSheet<void>(
       context: context,
@@ -1042,18 +1281,34 @@ void _message(String text) {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(sheetContext);
+                    onPressed: () async {
+  Navigator.pop(sheetContext);
 
-                      setState(() {
-                        _backupCreated = true;
-                        _lastBackup = 'Just now';
-                      });
+  try {
+    _message(
+      'Creating Vault backup...',
+    );
 
-                      _message(
-                        'Vault backup created successfully.',
-                      );
-                    },
+    await _backupService.createBackup();
+
+    if (!mounted) return;
+
+    setState(() {
+      _backupCreated = true;
+      _lastBackup = 'Just now';
+    });
+
+    _message(
+      'Vault backup created successfully.',
+    );
+  } catch (error) {
+    if (!mounted) return;
+
+    _message(
+      'Could not create Vault backup.',
+    );
+  }
+},
                     icon: const Icon(
                       Icons.cloud_upload_outlined,
                     ),
