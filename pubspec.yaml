@@ -40,8 +40,6 @@ dependencies:
   syncfusion_flutter_pdfviewer: ^35.1.39
   supabase_flutter: ^2.18.2
   url_launcher: ^6.3.3
-
-# Packages used during development
 dev_dependencies:
   # Flutter widget testing
   flutter_test:

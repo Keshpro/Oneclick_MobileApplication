@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -31,7 +32,12 @@ class _PersonalDashboardScreenState
   static const Color ink = Color(0xFF0F172A);
   static const Color muted = Color(0xFF64748B);
   final VaultService _vaultService = VaultService();
-final SubscriptionService _subscriptionService = SubscriptionService();
+  final SubscriptionService _subscriptionService = SubscriptionService();
+
+@override
+void dispose() {
+  super.dispose();
+}
 
 bool get _isLoggedIn =>
     FirebaseAuth.instance.currentUser != null;
@@ -461,7 +467,8 @@ StreamBuilder<List<VaultRecord>>(
   // MAIN BUILD
   // ============================================================
   @override
-  Widget build(BuildContext context) {
+  @override
+Widget build(BuildContext context) {
     final base = Theme.of(context);
     final typography = GoogleFonts.plusJakartaSansTextTheme(base.textTheme);
     return Theme(
@@ -490,7 +497,8 @@ StreamBuilder<List<VaultRecord>>(
           )),
         ),
       ),
-      child: Builder(builder: (themedContext) => DecoratedBox(
+child: Builder(
+  builder: (themedContext) => DecoratedBox(
         decoration: const BoxDecoration(color: background),
         child: Stack(
           children: [

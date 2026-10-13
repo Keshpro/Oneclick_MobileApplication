@@ -442,7 +442,8 @@ void _openService(String serviceTitle) {
       break;
 
     case 'Personal Vault':
-      screen = const personal_vault.PersonalDashboardScreen();
+      screen =
+          const personal_vault.PersonalDashboardScreen();
       break;
   }
 

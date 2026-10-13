@@ -21,8 +21,6 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
   static const muted = Color(0xFF686C7C);
   static const softPurple = Color(0xFFDCD9FF);
 
-  String _lockTimeout = '5 Min';
-
   bool _biometric = true;
   bool _failedAttemptProtection = true;
 
@@ -184,98 +182,6 @@ void _message(String text) {
                     child: Column(
                       crossAxisAlignment:
                           CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Automatic Lock Timeout',
-                          style: TextStyle(
-                            color: ink,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-
-                        const SizedBox(height: 5),
-
-                        const Text(
-                          'Locks the Vault interface after a period of inactivity',
-                          style: TextStyle(
-                            color: muted,
-                            fontSize: 13,
-                          ),
-                        ),
-
-                        const SizedBox(height: 18),
-
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            'Immediate',
-                            '1 Min',
-                            '5 Min',
-                            '15 Min',
-                          ].map((time) {
-                            return _choiceButton(
-                              text: time,
-                              selected:
-                                  _lockTimeout == time,
-                              onTap: () {
-                                setState(() {
-                                  _lockTimeout = time;
-                                });
-                              },
-                            );
-                          }).toList(),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        _settingSwitch(
-                          title: 'Biometric Unlock',
-                          subtitle:
-                              'Use supported device biometrics for quick access',
-                          icon: Icons.fingerprint,
-                          value: _biometric,
-                          onChanged: (value) {
-                            setState(() {
-                              _biometric = value;
-                            });
-                          },
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        _innerAction(
-                          icon: Icons.key_outlined,
-                          title: 'Master Passphrase',
-                          subtitle:
-                              'Last updated 42 days ago',
-                          trailing: 'Change',
-                          onTap: () {
-                            _message(
-                              'Master passphrase settings will be connected later.',
-                            );
-                          },
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        _settingSwitch(
-                          title:
-                              'Failed Attempt Protection',
-                          subtitle:
-                              'Protect Vault access after repeated failed attempts',
-                          icon: Icons.security_outlined,
-                          value:
-                              _failedAttemptProtection,
-                          onChanged: (value) {
-                            setState(() {
-                              _failedAttemptProtection =
-                                  value;
-                            });
-                          },
-                        ),
-                      ],
                     ),
                   ),
 
