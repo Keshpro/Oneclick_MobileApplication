@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class VaultSettingsScreen extends StatefulWidget {
   final bool openBackupSection;
@@ -21,8 +24,27 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
   static const muted = Color(0xFF686C7C);
   static const softPurple = Color(0xFFDCD9FF);
 
-  bool _biometric = true;
-  bool _failedAttemptProtection = true;
+final LocalAuthentication _localAuth =
+    LocalAuthentication();
+
+bool _biometric = false;
+bool _failedAttemptProtection = true;
+bool _biometricBusy = false;
+
+static const String _biometricKey =
+    'vault_biometric_enabled';
+
+  static const String _pushNotificationsKey =
+    'vault_push_notifications';
+
+static const String _emailNotificationsKey =
+    'vault_email_notifications';
+
+static const String _expiryWarningsKey =
+    'vault_expiry_warnings';
+
+static const String _renewalWarningKey =
+    'vault_renewal_warning';
 
   bool _pushNotifications = true;
   bool _emailNotifications = false;
@@ -47,6 +69,10 @@ String _lastBackup = 'Not created';
 void initState() {
   super.initState();
 
+  _loadBiometricPreference();
+
+  _loadReminderPreferences();
+
   if (widget.openBackupSection) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final backupContext = _backupSectionKey.currentContext;
@@ -60,6 +86,189 @@ void initState() {
         );
       }
     });
+  }
+}
+
+Future<void> _loadBiometricPreference() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  final enabled =
+      prefs.getBool(_biometricKey) ?? false;
+
+  if (!mounted) return;
+
+  setState(() {
+    _biometric = enabled;
+  });
+}
+
+Future<void> _saveBiometricPreference(
+  bool value,
+) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await prefs.setBool(
+    _biometricKey,
+    value,
+  );
+}
+
+Future<void> _loadReminderPreferences() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  final pushNotifications =
+      prefs.getBool(_pushNotificationsKey) ?? true;
+
+  final emailNotifications =
+      prefs.getBool(_emailNotificationsKey) ?? false;
+
+  final expiryWarnings =
+      prefs.getStringList(_expiryWarningsKey) ??
+          ['30 days', '14 days', '7 days'];
+
+  final renewalWarning =
+      prefs.getString(_renewalWarningKey) ??
+          '3 days prior';
+
+  if (!mounted) return;
+
+  setState(() {
+    _pushNotifications = pushNotifications;
+    _emailNotifications = emailNotifications;
+
+    _expiryWarnings
+      ..clear()
+      ..addAll(expiryWarnings);
+
+    _renewalWarning = renewalWarning;
+  });
+}
+
+Future<void> _savePushNotifications(
+  bool value,
+) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await prefs.setBool(
+    _pushNotificationsKey,
+    value,
+  );
+}
+
+Future<void> _saveEmailNotifications(
+  bool value,
+) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await prefs.setBool(
+    _emailNotificationsKey,
+    value,
+  );
+}
+
+Future<void> _saveExpiryWarnings() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await prefs.setStringList(
+    _expiryWarningsKey,
+    _expiryWarnings.toList(),
+  );
+}
+
+Future<void> _saveRenewalWarning(
+  String value,
+) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await prefs.setString(
+    _renewalWarningKey,
+    value,
+  );
+}
+
+Future<void> _toggleBiometric(bool value) async {
+  if (_biometricBusy) return;
+
+if (!value) {
+  await _saveBiometricPreference(false);
+
+  if (!mounted) return;
+
+  setState(() {
+    _biometric = false;
+  });
+
+  _message('Biometric authentication disabled.');
+  return;
+}
+
+  if (kIsWeb) {
+    _message(
+      'Biometric authentication is not available on web.',
+    );
+    return;
+  }
+
+  setState(() {
+    _biometricBusy = true;
+  });
+
+  try {
+    final canCheckBiometrics =
+        await _localAuth.canCheckBiometrics;
+
+    final availableBiometrics =
+        await _localAuth.getAvailableBiometrics();
+
+    if (!canCheckBiometrics ||
+        availableBiometrics.isEmpty) {
+      if (!mounted) return;
+
+      _message(
+        'No fingerprint or face authentication is set up on this device.',
+      );
+
+      return;
+    }
+
+    final authenticated =
+        await _localAuth.authenticate(
+      localizedReason:
+          'Authenticate to enable biometric protection for Personal Vault',
+      biometricOnly: true,
+    );
+
+    if (!mounted) return;
+
+if (authenticated) {
+  await _saveBiometricPreference(true);
+
+  if (!mounted) return;
+
+  setState(() {
+    _biometric = true;
+  });
+
+  _message(
+    'Biometric authentication enabled.',
+  );
+} else {
+      _message(
+        'Biometric authentication was not completed.',
+      );
+    }
+  } catch (_) {
+    if (!mounted) return;
+
+    _message(
+      'Biometric authentication is not available on this device.',
+    );
+  } finally {
+    if (mounted) {
+      setState(() {
+        _biometricBusy = false;
+      });
+    }
   }
 }
 
@@ -179,11 +388,40 @@ void _message(String text) {
                   const SizedBox(height: 14),
 
                   _surface(
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                    ),
-                  ),
+  child: Column(
+    crossAxisAlignment:
+        CrossAxisAlignment.start,
+    children: [
+      _settingSwitch(
+  title: 'Biometric Authentication',
+  subtitle:
+      'Use fingerprint or face authentication to protect Personal Vault',
+  icon: Icons.fingerprint,
+  value: _biometric,
+  onChanged: (value) {
+    if (_biometricBusy) return;
+
+    _toggleBiometric(value);
+  },
+),
+
+      const SizedBox(height: 12),
+
+      _settingSwitch(
+        title: 'Failed Attempt Protection',
+        subtitle:
+            'Protect the Vault after repeated failed authentication attempts',
+        icon: Icons.security_outlined,
+        value: _failedAttemptProtection,
+        onChanged: (value) {
+          setState(() {
+            _failedAttemptProtection = value;
+          });
+        },
+      ),
+    ],
+  ),
+),
 
                   const SizedBox(height: 32),
 
@@ -234,10 +472,14 @@ void _message(String text) {
                               tooltip:
                                   'Device notifications',
                               onTap: () {
+                                final newValue =
+                                    !_pushNotifications;
+
                                 setState(() {
-                                  _pushNotifications =
-                                      !_pushNotifications;
+                                  _pushNotifications = newValue;
                                 });
+
+                                _savePushNotifications(newValue);
                               },
                             ),
 
@@ -250,10 +492,14 @@ void _message(String text) {
                               tooltip:
                                   'Email reminders',
                               onTap: () {
+                                final newValue =
+                                    !_emailNotifications;
+
                                 setState(() {
-                                  _emailNotifications =
-                                      !_emailNotifications;
+                                  _emailNotifications = newValue;
                                 });
+
+                                _saveEmailNotifications(newValue);
                               },
                             ),
                           ],
@@ -307,6 +553,7 @@ void _message(String text) {
                                         .add(warning);
                                   }
                                 });
+                                _saveExpiryWarnings();
                               },
                             );
                           }).toList(),
@@ -606,6 +853,8 @@ void _message(String text) {
                       setState(() {
                         _renewalWarning = option;
                       });
+
+                      _saveRenewalWarning(option);
 
                       Navigator.pop(context);
                     },

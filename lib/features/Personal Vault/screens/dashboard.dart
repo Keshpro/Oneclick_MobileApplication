@@ -17,6 +17,9 @@ import '../services/vault_service.dart';
 import '../services/subscription_service.dart';
 import 'record_details_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 class PersonalDashboardScreen extends StatefulWidget {
@@ -34,13 +37,121 @@ class _PersonalDashboardScreenState
   final VaultService _vaultService = VaultService();
   final SubscriptionService _subscriptionService = SubscriptionService();
 
+  final LocalAuthentication _localAuth =
+    LocalAuthentication();
+
+static const String _biometricKey =
+    'vault_biometric_enabled';
+
+bool _checkingBiometric = true;
+bool _biometricAccessGranted = false;
+
 @override
-void dispose() {
-  super.dispose();
+void initState() {
+  super.initState();
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _checkBiometricAccess();
+  });
 }
 
 bool get _isLoggedIn =>
     FirebaseAuth.instance.currentUser != null;
+
+    Future<void> _checkBiometricAccess() async {
+  if (!_isLoggedIn) {
+    if (!mounted) return;
+
+    setState(() {
+      _checkingBiometric = false;
+      _biometricAccessGranted = true;
+    });
+
+    return;
+  }
+
+  final prefs = await SharedPreferences.getInstance();
+
+  final biometricEnabled =
+      prefs.getBool(_biometricKey) ?? false;
+
+  if (!biometricEnabled) {
+    if (!mounted) return;
+
+    setState(() {
+      _checkingBiometric = false;
+      _biometricAccessGranted = true;
+    });
+
+    return;
+  }
+
+  if (kIsWeb) {
+    if (!mounted) return;
+
+    setState(() {
+      _checkingBiometric = false;
+      _biometricAccessGranted = true;
+    });
+
+    return;
+  }
+
+  try {
+    final canCheck =
+        await _localAuth.canCheckBiometrics;
+
+    final available =
+        await _localAuth.getAvailableBiometrics();
+
+    if (!canCheck || available.isEmpty) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Biometric authentication is not available on this device.',
+          ),
+        ),
+      );
+
+      Navigator.pop(context);
+      return;
+    }
+
+    final authenticated =
+        await _localAuth.authenticate(
+      localizedReason:
+          'Authenticate to open Personal Vault',
+      biometricOnly: true,
+    );
+
+    if (!mounted) return;
+
+    if (authenticated) {
+      setState(() {
+        _checkingBiometric = false;
+        _biometricAccessGranted = true;
+      });
+
+      return;
+    }
+
+    Navigator.pop(context);
+  } catch (_) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Biometric authentication could not be completed.',
+        ),
+      ),
+    );
+
+    Navigator.pop(context);
+  }
+}
 
 Stream<List<VaultRecord>> get _vaultRecordsStream {
   if (!_isLoggedIn) {
@@ -466,9 +577,21 @@ StreamBuilder<List<VaultRecord>>(
   // ============================================================
   // MAIN BUILD
   // ============================================================
-  @override
+  
   @override
 Widget build(BuildContext context) {
+  if (_checkingBiometric) {
+  return const Scaffold(
+    backgroundColor: Color(0xFFF8FAFC),
+    body: Center(
+      child: CircularProgressIndicator(),
+    ),
+  );
+}
+
+if (!_biometricAccessGranted) {
+  return const SizedBox.shrink();
+}
     final base = Theme.of(context);
     final typography = GoogleFonts.plusJakartaSansTextTheme(base.textTheme);
     return Theme(
