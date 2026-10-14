@@ -16,6 +16,9 @@ class VaultRecord {
   final String? filePath;
   final DateTime createdAt;
   final DateTime? lastOpenedAt;
+  final String? merchant;
+  final DateTime? purchaseDate;
+  final String? amount;
 
   const VaultRecord({
     required this.id,
@@ -33,6 +36,9 @@ class VaultRecord {
     this.filePath,
     required this.createdAt,
     this.lastOpenedAt,
+    this.merchant,
+    this.purchaseDate,
+    this.amount,
   });
 
   Map<String, dynamic> toMap() {
@@ -52,6 +58,10 @@ class VaultRecord {
       'isFavorite': isFavorite,
       'lastOpenedAt':
       lastOpenedAt != null ? Timestamp.fromDate(lastOpenedAt!) : null,
+      'merchant': merchant,
+      'purchaseDate':
+          purchaseDate != null ? Timestamp.fromDate(purchaseDate!) : null,
+      'amount': amount,
     };
   }
 
@@ -78,6 +88,10 @@ class VaultRecord {
           (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       lastOpenedAt:
           (map['lastOpenedAt'] as Timestamp?)?.toDate(),
+      merchant: map['merchant'],
+      purchaseDate:
+          (map['purchaseDate'] as Timestamp?)?.toDate(),
+      amount: map['amount'],
     );
   }
 }

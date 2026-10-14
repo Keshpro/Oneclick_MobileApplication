@@ -37,35 +37,41 @@ class VaultService {
     );
   }
 
-  Future<void> addRecord({
-    required String title,
-    required String recordType,
-    required String category,
-    required String notes,
-    required List<String> tags,
-    required DateTime renewalDate,
-    required bool expiryNotification,
-    String? fileName,
-    String? fileUrl,
-    String? filePath,
-    }) async {
+Future<void> addRecord({
+  required String title,
+  required String recordType,
+  required String category,
+  required String notes,
+  required List<String> tags,
+  required DateTime renewalDate,
+  required bool expiryNotification,
+  String? fileName,
+  String? fileUrl,
+  String? filePath,
+  String? merchant,
+  DateTime? purchaseDate,
+  String? amount,
+}) async {
     final doc = _recordsCollection.doc();
 
-    final record = VaultRecord(
-      id: doc.id,
-      userId: _userId,
-      title: title,
-      recordType: recordType,
-      category: category,
-      notes: notes,
-      tags: tags,
-      renewalDate: renewalDate,
-      expiryNotification: expiryNotification,
-      fileName: fileName,
-      fileUrl: fileUrl,
-      filePath: filePath,
-      createdAt: DateTime.now(),
-    );
+final record = VaultRecord(
+  id: doc.id,
+  userId: _userId,
+  title: title,
+  recordType: recordType,
+  category: category,
+  notes: notes,
+  tags: tags,
+  renewalDate: renewalDate,
+  expiryNotification: expiryNotification,
+  fileName: fileName,
+  fileUrl: fileUrl,
+  filePath: filePath,
+  merchant: merchant,
+  purchaseDate: purchaseDate,
+  amount: amount,
+  createdAt: DateTime.now(),
+);
 
     await doc.set(record.toMap());
   }
