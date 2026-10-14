@@ -5,13 +5,24 @@ class SubscriptionRecord {
   final String userId;
   final String name;
   final String subtitle;
+
+  // Old display fields kept for backward compatibility.
   final String price;
   final String renewal;
   final String usage;
+
   final String category;
   final String status;
   final bool priceHiked;
   final DateTime createdAt;
+
+  // Structured fields used by the real subscription calculations.
+  final double? amount;
+  final String currency;
+  final String billingCycle;
+  final DateTime? renewalDate;
+  final DateTime? cancelledAt;
+  final DateTime? renewalActionHandledFor;
 
   const SubscriptionRecord({
     required this.id,
@@ -25,6 +36,12 @@ class SubscriptionRecord {
     required this.status,
     required this.priceHiked,
     required this.createdAt,
+    this.amount,
+    this.currency = 'LKR',
+    this.billingCycle = 'Monthly',
+    this.renewalDate,
+    this.cancelledAt,
+    this.renewalActionHandledFor,
   });
 
   Map<String, dynamic> toMap() {
@@ -39,6 +56,24 @@ class SubscriptionRecord {
       'status': status,
       'priceHiked': priceHiked,
       'createdAt': Timestamp.fromDate(createdAt),
+
+      // New structured fields.
+      'amount': amount,
+      'currency': currency,
+      'billingCycle': billingCycle,
+      'renewalDate':
+          renewalDate == null
+              ? null
+              : Timestamp.fromDate(renewalDate!),
+      'cancelledAt':
+          cancelledAt == null
+              ? null
+              : Timestamp.fromDate(cancelledAt!),
+      'renewalActionHandledFor':
+          renewalActionHandledFor == null
+              ? null
+              : Timestamp.fromDate(
+                  renewalActionHandledFor!,),
     };
   }
 
@@ -46,19 +81,78 @@ class SubscriptionRecord {
     String id,
     Map<String, dynamic> map,
   ) {
+    final String oldPrice =
+        map['price']?.toString() ?? '';
+
+    final double? storedAmount =
+        map['amount'] is num
+            ? (map['amount'] as num).toDouble()
+            : null;
+
+    final double? fallbackAmount =
+        double.tryParse(
+          oldPrice.replaceAll(
+            RegExp(r'[^0-9.]'),
+            '',
+          ),
+        );
+
+    final String storedCurrency =
+        map['currency']?.toString() ?? '';
+
+    final String fallbackCurrency =
+        oldPrice.trim().toUpperCase().startsWith('USD') ||
+                oldPrice.trim().startsWith(r'$')
+            ? 'USD'
+            : 'LKR';
+
+    final String subtitle =
+        map['subtitle']?.toString() ?? '';
+
+    final String storedBillingCycle =
+        map['billingCycle']?.toString() ?? '';
+
+    final String fallbackBillingCycle =
+        subtitle.toLowerCase().contains('annual')
+            ? 'Annual'
+            : 'Monthly';
+
     return SubscriptionRecord(
       id: id,
       userId: map['userId'] ?? '',
       name: map['name'] ?? '',
-      subtitle: map['subtitle'] ?? '',
-      price: map['price'] ?? '',
+      subtitle: subtitle,
+      price: oldPrice,
       renewal: map['renewal'] ?? '',
       usage: map['usage'] ?? '',
       category: map['category'] ?? '',
       status: map['status'] ?? 'Active',
       priceHiked: map['priceHiked'] ?? false,
       createdAt:
-          (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          (map['createdAt'] as Timestamp?)
+                  ?.toDate() ??
+              DateTime.now(),
+
+      // New fields with fallbacks for old Firestore records.
+      amount: storedAmount ?? fallbackAmount,
+      currency:
+          storedCurrency.isEmpty
+              ? fallbackCurrency
+              : storedCurrency,
+      billingCycle:
+          storedBillingCycle.isEmpty
+              ? fallbackBillingCycle
+              : storedBillingCycle,
+      renewalDate:
+          (map['renewalDate'] as Timestamp?)
+              ?.toDate(),
+      cancelledAt:
+          (map['cancelledAt'] as Timestamp?)
+              ?.toDate(),
+      renewalActionHandledFor:
+          (map['renewalActionHandledFor']
+                  as Timestamp?)
+              ?.toDate(),
     );
   }
 }
