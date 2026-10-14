@@ -12,8 +12,7 @@ class ProviderRegisterScreen extends StatefulWidget {
   const ProviderRegisterScreen({super.key, required this.role});
 
   @override
-  State<ProviderRegisterScreen> createState() =>
-      _ProviderRegisterScreenState();
+  State<ProviderRegisterScreen> createState() => _ProviderRegisterScreenState();
 }
 
 class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
@@ -56,6 +55,15 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
 
   String? _selectedCategory;
 
+  // Food services selected by the restaurant
+  final Set<String> _selectedFoodServices = {};
+
+  final List<String> _availableFoodServices = [
+    'Food Saver',
+    'Mystery Bites',
+    'SweetCraft',
+  ];
+
   // Driver
   final _licenseController = TextEditingController();
   final _licenseExpiryController = TextEditingController();
@@ -66,6 +74,21 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  bool get _isExistingFoodSellerApplicant =>
+      _isFoodSeller && _auth.currentUser != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (_isExistingFoodSellerApplicant) {
+      final user = _auth.currentUser!;
+
+      _nameController.text = user.displayName ?? '';
+      _emailController.text = user.email ?? '';
+    }
+  }
 
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -134,10 +157,22 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
       return;
     }
 
+    if (_isFoodSeller && _selectedFoodServices.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select at least one food service.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if ((_isDoctor || _isWorker) && _selectedCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please select a ${_isDoctor ? "doctor" : "worker skill"} category'),
+          content: Text(
+            'Please select a ${_isDoctor ? "doctor" : "worker skill"} category',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -151,27 +186,68 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
     });
 
     UserCredential? credential;
+    bool createdNewAccount = false;
 
     try {
-      // 1. Create user in Firebase Authentication
-      credential = await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      User? user;
 
-      final user = credential.user;
+      if (_isExistingFoodSellerApplicant) {
+        // Use the currently logged-in customer's account.
+        user = _auth.currentUser;
+      } else {
+        // Create a new account for a new provider.
+        credential = await _auth.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
 
-      if (user == null) {
-        throw Exception('Unable to create provider account.');
+        user = credential.user;
+        createdNewAccount = true;
       }
 
-      await user.updateDisplayName(_nameController.text.trim());
+      if (user == null) {
+        throw Exception('Unable to access the user account.');
+      }
+
+      if (_isExistingFoodSellerApplicant) {
+        final existingApplication = await _firestore
+            .collection('food_sellers')
+            .doc(user.uid)
+            .get();
+
+        if (existingApplication.exists) {
+          final status = existingApplication
+              .data()?['status']
+              ?.toString()
+              .toLowerCase();
+
+          if (status == 'pending' || status == 'active') {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    status == 'pending'
+                        ? 'Your Food Seller application is already pending.'
+                        : 'You are already an approved Food Seller.',
+                  ),
+                ),
+              );
+            }
+            return;
+          }
+        }
+      }
+
+      if (createdNewAccount) {
+        await user.updateDisplayName(_nameController.text.trim());
+      }
 
       // 2. Determine target collection (Worker data directed to 'workers' collection)
       String targetCollection = 'users';
       if (_isDoctor) targetCollection = 'doctors';
       if (_isDriver) targetCollection = 'drivers';
-      if (_isWorker) targetCollection = 'workers'; // Saved in 'workers' collection
+      if (_isWorker)
+        targetCollection = 'workers'; // Saved in 'workers' collection
       if (_isFoodSeller) targetCollection = 'food_sellers';
 
       // 3. Prepare details based on role
@@ -197,6 +273,7 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
       } else if (_isFoodSeller) {
         providerDetails = {
           'restaurantName': _restaurantNameController.text.trim(),
+          'foodServices': _selectedFoodServices.toList(),
         };
       }
 
@@ -218,18 +295,23 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
       });
 
       // Also save user profile in main 'users' collection
-      await _firestore.collection('users').doc(user.uid).set({
-        'uid': user.uid,
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim().toLowerCase(),
-        'role': widget.role.name,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+
+      if (createdNewAccount) {
+        // Create the main user profile only for a new account.
+        await _firestore.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim().toLowerCase(),
+          'role': widget.role.name,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       // 5. Add to Activity Logs for Admin Dashboard
       await _firestore.collection('activity_logs').add({
         'action': 'New $_roleName Application',
-        'details': '${_nameController.text.trim()} applied as $_roleName${_selectedCategory != null ? " ($_selectedCategory)" : ""}.',
+        'details':
+            '${_nameController.text.trim()} applied as $_roleName${_selectedCategory != null ? " ($_selectedCategory)" : ""}.',
         'performedBy': 'System',
         'timestamp': FieldValue.serverTimestamp(),
       });
@@ -264,7 +346,7 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
         );
       }
     } catch (e) {
-      if (credential?.user != null) {
+      if (createdNewAccount && credential?.user != null) {
         try {
           await credential!.user!.delete();
         } catch (_) {}
@@ -462,70 +544,118 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                     label: 'Restaurant / Business Name',
                     icon: Icons.storefront_outlined,
                   ),
+
+                  const SizedBox(height: 20),
+
+                  _sectionTitle('Food Services Offered'),
+
+                  const SizedBox(height: 8),
+
+                  const Text(
+                    'Select all the services your business wants to provide.',
+                    style: TextStyle(color: Color(0xFF747187), fontSize: 13),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  ..._availableFoodServices.map((service) {
+                    return CheckboxListTile(
+                      value: _selectedFoodServices.contains(service),
+                      onChanged: (selected) {
+                        setState(() {
+                          if (selected == true) {
+                            _selectedFoodServices.add(service);
+                          } else {
+                            _selectedFoodServices.remove(service);
+                          }
+                        });
+                      },
+                      title: Text(
+                        service,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      activeColor: const Color(0xFF5B4DFF),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    );
+                  }),
+
+                  if (_selectedFoodServices.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Please select at least one food service.',
+                        style: TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
                 ],
 
-                const SizedBox(height: 28),
-                _sectionTitle('Account Security'),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: _decoration(
-                    label: 'Password',
-                    icon: Icons.lock_outline_rounded,
-                    suffix: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
+                if (!_isExistingFoodSellerApplicant) ...[
+                  const SizedBox(height: 28),
+                  _sectionTitle('Account Security'),
+                  const SizedBox(height: 14),
+
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: _decoration(
+                      label: 'Password',
+                      icon: Icons.lock_outline_rounded,
+                      suffix: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                        ),
                       ),
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a password';
+                      }
+                      if (value.length < 6) {
+                        return 'Password must contain at least 6 characters';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must contain at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: _obscureConfirmPassword,
-                  decoration: _decoration(
-                    label: 'Confirm Password',
-                    icon: Icons.lock_outline_rounded,
-                    suffix: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
-                      icon: Icon(
-                        _obscureConfirmPassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
+
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirmPassword,
+                    decoration: _decoration(
+                      label: 'Confirm Password',
+                      icon: Icons.lock_outline_rounded,
+                      suffix: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
+                          });
+                        },
+                        icon: Icon(
+                          _obscureConfirmPassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                        ),
                       ),
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please confirm your password';
+                      }
+                      if (value != _passwordController.text) {
+                        return 'Passwords do not match';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please confirm your password';
-                    }
-                    if (value != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
-                    return null;
-                  },
-                ),
+                ],
                 const SizedBox(height: 28),
                 Container(
                   padding: const EdgeInsets.all(16),

@@ -6,22 +6,21 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'firebase_options.dart';
-
 import 'features/auth/screens/splash_screen.dart';
 import 'features/auth/screens/home_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/register_screen.dart';
+import 'features/food/screens/food_home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  const supabasePublishableKey =
-      String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
+  const supabasePublishableKey = String.fromEnvironment(
+    'SUPABASE_PUBLISHABLE_KEY',
+  );
 
   await Supabase.initialize(
     url: supabaseUrl,
@@ -52,9 +51,7 @@ Widget build(BuildContext context) {
 
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF5B4DFF),
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF5B4DFF)),
       ),
 
       initialRoute: '/',
@@ -68,15 +65,14 @@ Widget build(BuildContext context) {
 
         // Login Screen
         '/login': (context) => const LoginScreen(),
+        '/food-test': (context) => const FoodHomeScreen(),
       },
 
       onGenerateRoute: (settings) {
         // Normal User Registration
         if (settings.name == '/register') {
           return MaterialPageRoute(
-            builder: (context) => RegisterScreen(
-              role: UserRole.user,
-            ),
+            builder: (context) => RegisterScreen(role: UserRole.user),
           );
         }
 
@@ -86,9 +82,7 @@ Widget build(BuildContext context) {
       onUnknownRoute: (settings) {
         debugPrint('UNKNOWN ROUTE: ${settings.name}');
 
-        return MaterialPageRoute(
-          builder: (context) => const HomeScreen(),
-        );
+        return MaterialPageRoute(builder: (context) => const HomeScreen());
       },
     );
   }
