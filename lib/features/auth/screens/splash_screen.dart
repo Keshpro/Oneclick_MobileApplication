@@ -7,6 +7,7 @@ import 'home_screen.dart';
 import 'pending_approval_screen.dart';
 import 'package:oneclick/admin/screens/admin_dashboard.dart';
 import 'package:oneclick/features/doctor/doctor/screens/doctor_dashboard.dart';
+import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -144,122 +145,134 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
+  // ==============================================================
+  // UI ONLY (Fresh Teal). Everything above this line is unchanged.
+  // ==============================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0B1220),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Top Background Decoration
-            Positioned(
-              top: -100,
-              right: -80,
-              child: Container(
-                width: 250,
-                height: 250,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF2563EB).withValues(alpha: 0.12),
-                ),
-              ),
-            ),
-
-            // Bottom Background Decoration
-            Positioned(
-              bottom: -120,
-              left: -80,
-              child: Container(
-                width: 280,
-                height: 280,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF14B8A6).withValues(alpha: 0.08),
-                ),
-              ),
-            ),
-
-            // Center Content
-            Center(
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 105,
-                        height: 105,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 30,
-                              offset: const Offset(0, 15),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.grid_view_rounded,
-                          size: 52,
-                          color: Color(0xFF2563EB),
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      const Text(
-                        'OneClick',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 34,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -1,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Everything you need. One click away.',
-                        style: TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppColors.primaryLight, AppColors.primary],
+          ),
+        ),
+        child: SafeArea(
+          child: Stack(
+            children: [
+              // Top Background Decoration
+              Positioned(
+                top: -96,
+                right: -80,
+                child: Container(
+                  width: 256,
+                  height: 256,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.10),
                   ),
                 ),
               ),
-            ),
 
-            // Loading Indicator
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 55,
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
+              // Bottom Background Decoration
+              Positioned(
+                bottom: -120,
+                left: -80,
+                child: Container(
+                  width: 280,
+                  height: 280,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
+                ),
+              ),
+
+              // Center Content
+              Center(
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 104,
+                          height: 104,
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(32),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.textDark
+                                    .withValues(alpha: 0.20),
+                                blurRadius: 32,
+                                offset: const Offset(0, 16),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.grid_view_rounded,
+                            size: 52,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.lg + AppSpacing.xs),
+                        const Text(
+                          'OneClick',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'Everything you need. One click away.',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  SizedBox(height: 12),
-                  Text(
-                    'Loading...',
-                    style: TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+
+              // Loading Indicator
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 56,
+                child: Column(
+                  children: [
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md - AppSpacing.xs),
+                    Text(
+                      'Loading...',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.75),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

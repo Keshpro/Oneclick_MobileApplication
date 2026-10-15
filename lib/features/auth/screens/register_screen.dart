@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/services/auth_service.dart';
 import '../../../shared/models/user_model.dart';
 import 'pending_approval_screen.dart';
 import 'provider_rules_screen.dart';
+import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
 
 class RegisterScreen extends StatefulWidget {
   final UserRole role;
@@ -108,24 +110,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  // ==============================================================
+  // UI ONLY (Fresh Teal). Everything above this line is unchanged.
+  // ==============================================================
   @override
   Widget build(BuildContext context) {
     final roleName = widget.role.name.toUpperCase();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FC),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F7FC),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
         title: Text(
           'Register as $roleName',
-          style: const TextStyle(fontWeight: FontWeight.w800),
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
           child: Form(
             key: _formKey,
             child: Column(
@@ -135,8 +142,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   'Create your account',
                   style: TextStyle(
                     fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF17152A),
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textDark,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -145,12 +152,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ? 'Your account will be reviewed by an administrator before access is granted.'
                       : 'Join OneClick and access all your services from one place.',
                   style: const TextStyle(
-                    color: Color(0xFF747187),
+                    color: AppColors.textSecondary,
                     fontSize: 14,
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 32),
                 TextFormField(
                   controller: _nameController,
                   textInputAction: TextInputAction.next,
@@ -206,6 +213,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         _obscurePassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -242,6 +250,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         _obscureConfirmPassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -257,29 +266,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
-                  height: 54,
+                  height: 56,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _register,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF5B4DFF),
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(AppRadius.button),
                       ),
                     ),
                     child: _isLoading
                         ? const SizedBox(
-                            width: 22,
-                            height: 22,
+                            width: 24,
+                            height: 24,
                             child: CircularProgressIndicator(
-                              strokeWidth: 2,
+                              strokeWidth: 2.5,
                               color: Colors.white,
                             ),
                           )
                         : const Text(
                             'CREATE ACCOUNT',
-                            style: TextStyle(fontWeight: FontWeight.w800),
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                           ),
                   ),
                 ),
@@ -290,73 +299,69 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     children: [
                       Icon(
                         Icons.verified_user_outlined,
-                        size: 18,
-                        color: Color(0xFF747187),
+                        size: 20,
+                        color: AppColors.textSecondary,
                       ),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Provider accounts require administrator verification.',
                           style: TextStyle(
-                            color: Color(0xFF747187),
-                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ],
-                const SizedBox(height: 38),
+                const SizedBox(height: 40),
                 const Row(
                   children: [
-                    Expanded(child: Divider(color: Color(0xFFE4E2EC))),
+                    Expanded(child: Divider(color: _lineColor)),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 12),
                       child: Text(
                         'OR',
                         style: TextStyle(
-                          color: Color(0xFF8B879A),
+                          color: AppColors.textSecondary,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-                    Expanded(child: Divider(color: Color(0xFFE4E2EC))),
+                    Expanded(child: Divider(color: _lineColor)),
                   ],
                 ),
                 const SizedBox(height: 24),
                 Material(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.card),
                   child: InkWell(
                     onTap: _openEarnWithOneClick,
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(AppRadius.card),
                     child: Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: const Color(0xFFE4E2EC)),
+                        borderRadius: BorderRadius.circular(AppRadius.card),
+                        border: Border.all(color: _lineColor),
                       ),
                       child: Row(
                         children: [
                           Container(
-                            width: 54,
-                            height: 54,
+                            width: 48,
+                            height: 48,
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Color(0xFF5B4DFF), Color(0xFF2E1FA6)],
-                              ),
-                              borderRadius: BorderRadius.circular(17),
+                              color: AppColors.primary.withValues(alpha: .12),
+                              borderRadius: BorderRadius.circular(AppRadius.button),
                             ),
                             child: const Icon(
                               Icons.work_outline_rounded,
-                              color: Colors.white,
-                              size: 27,
+                              color: AppColors.primary,
+                              size: 24,
                             ),
                           ),
-                          const SizedBox(width: 15),
+                          const SizedBox(width: 16),
                           const Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,28 +369,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 Text(
                                   'Earn with OneClick',
                                   style: TextStyle(
-                                    color: Color(0xFF17152A),
+                                    color: AppColors.textDark,
                                     fontSize: 16,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                SizedBox(height: 5),
+                                SizedBox(height: 4),
                                 Text(
                                   'Join as a service provider and earn through OneClick.',
                                   style: TextStyle(
-                                    color: Color(0xFF747187),
-                                    fontSize: 12.5,
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12,
                                     height: 1.4,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           const Icon(
                             Icons.arrow_forward_ios_rounded,
-                            size: 17,
-                            color: Color(0xFF5B4DFF),
+                            size: 16,
+                            color: AppColors.primary,
                           ),
                         ],
                       ),
@@ -396,7 +401,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const Text(
                   'Provider applications are reviewed before activation.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFF8B879A), fontSize: 11.5),
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                 ),
               ],
             ),
@@ -406,29 +411,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  static const Color _lineColor = Color(0xFFD9ECEA);
+
   InputDecoration _inputDecoration({
     required String label,
     required IconData icon,
     Widget? suffix,
   }) {
+    OutlineInputBorder outline(Color color, [double width = 1]) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.button),
+          borderSide: BorderSide(color: color, width: width),
+        );
+
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: const Color(0xFF5B4DFF)),
+      labelStyle: const TextStyle(color: AppColors.textSecondary),
+      floatingLabelStyle: const TextStyle(color: AppColors.primary),
+      prefixIcon: Icon(icon, color: AppColors.primary),
       suffixIcon: suffix,
       filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xFFE4E2EC)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xFFE4E2EC)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xFF5B4DFF), width: 1.5),
-      ),
+      fillColor: AppColors.surface,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: outline(_lineColor),
+      enabledBorder: outline(_lineColor),
+      focusedBorder: outline(AppColors.primary, 1.5),
+      errorBorder: outline(Colors.red),
+      focusedErrorBorder: outline(Colors.red, 1.5),
     );
   }
 }
