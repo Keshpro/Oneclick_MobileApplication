@@ -4,10 +4,12 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   cloud_firestore
+  file_saver
   firebase_app_check
   firebase_auth
   firebase_core
   firebase_storage
+  printing
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
