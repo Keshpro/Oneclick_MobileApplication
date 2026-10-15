@@ -58,6 +58,8 @@ flutter:
     - assets/images/food/dishes/
     - assets/images/food/restaurants/
     - assets/images/food/
+    - assets/images/food/dishes/
+    - assets/images/food/restaurants/
     - assets/icons/
     - assets/animations/doctor_entry.mp4
 
