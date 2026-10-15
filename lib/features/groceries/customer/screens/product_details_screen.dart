@@ -16,26 +16,37 @@ class ProductDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Product Details'),
-      ),
+      appBar: AppBar(title: const Text('Product Details')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Product image placeholder
+
+            // Product image
             Container(
               height: 250,
               width: double.infinity,
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Icon(
-                Icons.shopping_basket_outlined,
-                size: 100,
-              ),
+              child: product.imageUrl.isNotEmpty
+                  ? Image.asset(
+                      product.imageUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: 250,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.broken_image_outlined,
+                          size: 100,
+                        );
+                      },
+                    )
+                  : const Icon(Icons.shopping_basket_outlined, size: 100),
             ),
 
             const SizedBox(height: 24),
@@ -43,10 +54,7 @@ class ProductDetailsScreen extends StatelessWidget {
             // Category
             Text(
               product.category,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
             ),
 
             const SizedBox(height: 5),
@@ -54,10 +62,7 @@ class ProductDetailsScreen extends StatelessWidget {
             // Product name
             Text(
               product.name,
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 12),
@@ -96,20 +101,14 @@ class ProductDetailsScreen extends StatelessWidget {
 
             const Text(
               'Description',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 8),
 
             Text(
               product.description,
-              style: const TextStyle(
-                fontSize: 16,
-                height: 1.5,
-              ),
+              style: const TextStyle(fontSize: 16, height: 1.5),
             ),
 
             const SizedBox(height: 20),
@@ -120,9 +119,7 @@ class ProductDetailsScreen extends StatelessWidget {
                   : 'Out of Stock',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: product.isAvailable
-                    ? Colors.green
-                    : Colors.red,
+                color: product.isAvailable ? Colors.green : Colors.red,
               ),
             ),
 
@@ -139,21 +136,15 @@ class ProductDetailsScreen extends StatelessWidget {
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(
-                              '${product.name} added to cart',
-                            ),
+                            content: Text('${product.name} added to cart'),
                             duration: const Duration(seconds: 1),
                           ),
                         );
                       }
                     : null,
-                icon: const Icon(
-                  Icons.add_shopping_cart,
-                ),
+                icon: const Icon(Icons.add_shopping_cart),
                 label: Text(
-                  product.isAvailable
-                      ? 'Add to Cart'
-                      : 'Out of Stock',
+                  product.isAvailable ? 'Add to Cart' : 'Out of Stock',
                 ),
               ),
             ),
