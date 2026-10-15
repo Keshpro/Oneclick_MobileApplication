@@ -526,13 +526,27 @@ COMMUNICATION STYLE:
           if (_messages.length <= 2)
             Container(
               height: 47,
-              padding: const EdgeInsets.only(bottom: 7),
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 13),
-                scrollDirection: Axis.horizontal,
-                itemCount: _quickQuestions.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
+              padding:
+                  const EdgeInsets.only(
+                bottom: 7,
+              ),
+              child:
+                  ListView.separated(
+                padding:
+                    const EdgeInsets.symmetric(
+                  horizontal: 13,
+                ),
+                scrollDirection:
+                    Axis.horizontal,
+                itemCount:
+                    _quickQuestions.length,
+                separatorBuilder:
+                    (_, _) =>
+                        const SizedBox(
+                  width: 8,
+                ),
+                itemBuilder:
+                    (context, index) {
                   return ActionChip(
                     onPressed: () => _sendMessage(_quickQuestions[index]),
                     backgroundColor: Colors.white,

@@ -1,96 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'worker_profile_screen.dart'; // Import Worker Profile Screen
+import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
 
 class WorkersListScreen extends StatelessWidget {
   final String categoryName;
 
   const WorkersListScreen({super.key, required this.categoryName});
 
-  static const Color _navy = Color(0xFF1E293B);
+  void _navigateToWorkerProfile(
+      BuildContext context, Map<String, dynamic> workerData, String workerDocId) {
+    final Map<String, dynamic> fullData = Map.from(workerData);
+    fullData['id'] = workerDocId;
+    fullData['category'] = categoryName;
 
-  void _showBookingDialog(BuildContext context, Map<String, dynamic> workerData, String workerDocId) {
-    final addressController = TextEditingController();
-    final issueController = TextEditingController();
-    final currentUser = FirebaseAuth.instance.currentUser;
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Book ${workerData['name'] ?? 'Worker'}'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: issueController,
-                decoration: const InputDecoration(
-                  labelText: 'Describe the Issue',
-                  hintText: 'e.g., Water leakage in kitchen pipe',
-                  prefixIcon: Icon(Icons.build_circle_outlined),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: addressController,
-                decoration: const InputDecoration(
-                  labelText: 'Your Address',
-                  hintText: 'e.g., No 12, Main St, Colombo',
-                  prefixIcon: Icon(Icons.location_on_outlined),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final issue = issueController.text.trim();
-              final address = addressController.text.trim();
-
-              if (issue.isNotEmpty && address.isNotEmpty) {
-                try {
-                  // Save Quick Fix Booking Request to 'work_appointments' collection
-                  await FirebaseFirestore.instance.collection('work_appointments').add({
-                    'category': categoryName,
-                    'workerId': workerDocId,
-                    'workerName': workerData['name'] ?? 'Technician',
-                    'customerId': currentUser?.uid ?? '',
-                    'customerEmail': currentUser?.email ?? 'Customer',
-                    'issue': issue,
-                    'address': address,
-                    'status': 'Pending',
-                    'createdAt': FieldValue.serverTimestamp(),
-                  });
-
-                  if (!dialogContext.mounted) return;
-                  Navigator.pop(dialogContext);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Quick Fix Request Sent Successfully!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } catch (e) {
-                  if (!dialogContext.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to book: $e'), backgroundColor: Colors.red),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _navy,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Confirm Booking'),
-          ),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WorkerProfileScreen(worker: fullData),
       ),
     );
   }
@@ -98,12 +26,14 @@ class WorkersListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('$categoryName Experts'),
-        backgroundColor: _navy,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
+        centerTitle: true,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         // Fetch Workers from 'workers' collection matching selected Category
@@ -113,87 +43,111 @@ class WorkersListScreen extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            );
           }
 
           final docs = snapshot.data?.docs ?? [];
 
           if (docs.isEmpty) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.person_off_outlined, size: 60, color: Colors.grey.shade400),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No $categoryName experts available right now.',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.person_off_outlined,
+                        size: 64,
+                        color: AppColors.textSecondary.withValues(alpha: 0.6)),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No $categoryName experts available right now.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: AppColors.textSecondary, fontSize: 14),
+                    ),
+                  ],
+                ),
               ),
             );
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             itemCount: docs.length,
             itemBuilder: (context, index) {
               final workerDoc = docs[index];
               final worker = workerDoc.data();
               final name = worker['name'] ?? 'Expert Technician';
-              final providerDetails = worker['providerDetails'] as Map<String, dynamic>? ?? {};
-              final experience = providerDetails['experienceYears'] ?? '3+ Years';
-              final hourlyRate = providerDetails['hourlyRate'] ?? '1500';
+              final providerDetails =
+                  worker['providerDetails'] as Map<String, dynamic>? ?? {};
+              final experience =
+                  providerDetails['experienceYears'] ?? '3+';
+              final hourlyRate =
+                  providerDetails['hourlyRate'] ?? worker['hourlyRate'] ?? '1500';
 
-              return Card(
-                elevation: 0,
-                margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: _navy.withValues(alpha: 0.1),
-                        child: const Icon(Icons.handyman_rounded, color: _navy, size: 28),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Exp: $experience yrs • LKR $hourlyRate/hr',
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                            ),
-                          ],
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => _showBookingDialog(context, worker, workerDoc.id),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _navy,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Material(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(AppRadius.card),
+                    onTap: () => _navigateToWorkerProfile(
+                        context, worker, workerDoc.id),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(AppRadius.card),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.textDark.withValues(alpha: 0.06),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
-                        child: const Text('Book'),
+                        ],
                       ),
-                    ],
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 28,
+                            backgroundColor:
+                                AppColors.primary.withValues(alpha: 0.12),
+                            child: const Icon(Icons.handyman_rounded,
+                                color: AppColors.primary, size: 28),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Exp: $experience yrs • LKR $hourlyRate/hr',
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               );

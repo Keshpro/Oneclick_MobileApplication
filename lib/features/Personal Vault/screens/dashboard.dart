@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
 import 'vault_screen.dart';
 import 'subscriptions_screen.dart';
 import 'sharing_center_screen.dart';
@@ -11,16 +13,6 @@ import 'document_pack_requirements_screen.dart';
 import 'scan_upload_screen.dart';
 import 'add_account_screen.dart';
 import 'vault_settings_screen.dart';
-import '../models/vault_record.dart';
-import '../models/subscription_record.dart';
-import '../services/vault_service.dart';
-import '../services/subscription_service.dart';
-import 'record_details_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
-import 'package:local_auth/local_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 
 class PersonalDashboardScreen extends StatefulWidget {
   const PersonalDashboardScreen({super.key});
@@ -28,147 +20,20 @@ class PersonalDashboardScreen extends StatefulWidget {
   State<PersonalDashboardScreen> createState() =>
       _PersonalDashboardScreenState();
 }
-class _PersonalDashboardScreenState
-    extends State<PersonalDashboardScreen> {
+
+class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
   static const Color background = Color(0xFFF8FAFC);
   static const Color purple = Color(0xFF4F46E5);
   static const Color ink = Color(0xFF0F172A);
   static const Color muted = Color(0xFF64748B);
-  final VaultService _vaultService = VaultService();
-  final SubscriptionService _subscriptionService = SubscriptionService();
-
-  final LocalAuthentication _localAuth =
-    LocalAuthentication();
-
-static const String _biometricKey =
-    'vault_biometric_enabled';
-
-bool _checkingBiometric = true;
-bool _biometricAccessGranted = false;
-
-@override
-void initState() {
-  super.initState();
-
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    _checkBiometricAccess();
-  });
-}
-
-bool get _isLoggedIn =>
-    FirebaseAuth.instance.currentUser != null;
-
-    Future<void> _checkBiometricAccess() async {
-  if (!_isLoggedIn) {
-    if (!mounted) return;
-
-    setState(() {
-      _checkingBiometric = false;
-      _biometricAccessGranted = true;
-    });
-
-    return;
-  }
-
-  final prefs = await SharedPreferences.getInstance();
-
-  final biometricEnabled =
-      prefs.getBool(_biometricKey) ?? false;
-
-  if (!biometricEnabled) {
-    if (!mounted) return;
-
-    setState(() {
-      _checkingBiometric = false;
-      _biometricAccessGranted = true;
-    });
-
-    return;
-  }
-
-  if (kIsWeb) {
-    if (!mounted) return;
-
-    setState(() {
-      _checkingBiometric = false;
-      _biometricAccessGranted = true;
-    });
-
-    return;
-  }
-
-  try {
-    final canCheck =
-        await _localAuth.canCheckBiometrics;
-
-    final available =
-        await _localAuth.getAvailableBiometrics();
-
-    if (!canCheck || available.isEmpty) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Biometric authentication is not available on this device.',
-          ),
-        ),
-      );
-
-      Navigator.pop(context);
-      return;
-    }
-
-    final authenticated =
-        await _localAuth.authenticate(
-      localizedReason:
-          'Authenticate to open Personal Vault',
-      biometricOnly: true,
-    );
-
-    if (!mounted) return;
-
-    if (authenticated) {
-      setState(() {
-        _checkingBiometric = false;
-        _biometricAccessGranted = true;
-      });
-
-      return;
-    }
-
-    Navigator.pop(context);
-  } catch (_) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Biometric authentication could not be completed.',
-        ),
-      ),
-    );
-
-    Navigator.pop(context);
-  }
-}
-
-Stream<List<VaultRecord>> get _vaultRecordsStream {
-  if (!_isLoggedIn) {
-    return Stream.value(<VaultRecord>[]);
-  }
-
-  return _vaultService.getRecords();
-}
-
-Stream<List<SubscriptionRecord>> get _subscriptionRecordsStream {
-  if (!_isLoggedIn) {
-    return Stream.value(<SubscriptionRecord>[]);
-  }
-
-  return _subscriptionService.getSubscriptions();
-}
-
+  final Map<String, bool> _favorites = {
+    'Passport': true,
+    'Wi-Fi Account': true,
+    'Car Records': true,
+    'Health Insurance': false,
+    'Apartment Lease': false,
+    'Google Account': false,
+  };
   // ============================================================
   // PLACEHOLDER MESSAGE
   // ============================================================
@@ -181,399 +46,250 @@ Stream<List<SubscriptionRecord>> get _subscriptionRecordsStream {
     );
   }
 
-  bool _requireLogin(BuildContext context) {
-  if (_isLoggedIn) {
-    return true;
-  }
-
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: const Color(0xFFF8FAFC),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(24),
+  void _showSearchPanel(BuildContext context) {
+    final TextEditingController searchController = TextEditingController();
+    final List<Map<String, dynamic>> items = [
+      {'title': 'Passport', 'type': 'Document', 'icon': Icons.badge_outlined},
+      {
+        'title': 'Apartment Lease Agreement',
+        'type': 'Document',
+        'icon': Icons.picture_as_pdf_outlined,
+      },
+      {
+        'title': 'Health Insurance Card',
+        'type': 'Document',
+        'icon': Icons.health_and_safety_outlined,
+      },
+      {
+        'title': 'Google Account',
+        'type': 'Account Access',
+        'icon': Icons.account_circle_outlined,
+      },
+      {
+        'title': 'Netflix Premium',
+        'type': 'Subscription',
+        'icon': Icons.movie_outlined,
+      },
+      {
+        'title': 'Figma Workspace',
+        'type': 'Subscription',
+        'icon': Icons.design_services_outlined,
+      },
+    ];
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFFF8FAFC),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
-    ),
-    builder: (sheetContext) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.lock_outline_rounded,
-                size: 42,
-                color: purple,
+      builder: (context) {
+        List<Map<String, dynamic>> filteredItems = items;
+        String selectedFilter = 'All';
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            void applyFilters() {
+              setModalState(() {
+                final query = searchController.text.trim().toLowerCase();
+                filteredItems = items.where((item) {
+                  final title = item['title'].toString().toLowerCase();
+                  final type = item['type'].toString().toLowerCase();
+                  final matchesSearch =
+                      title.contains(query) || type.contains(query);
+                  final matchesFilter =
+                      selectedFilter == 'All' ||
+                      type == selectedFilter.toLowerCase();
+                  return matchesSearch && matchesFilter;
+                }).toList();
+              });
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 12,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Login Required',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: ink,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Please login first to use Personal Vault features.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: muted,
-                ),
-              ),
-              const SizedBox(height: 22),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(sheetContext);
-                    Navigator.pushNamed(
-                      context,
-                      '/login',
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: purple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 15,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Small top handle
+                  Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: muted.withAlpha(70),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: const Text(
-                    'Login',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(sheetContext);
-                },
-                child: const Text('Not now'),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-
-  return false;
-}
-
-Future<void> _showSearchPanel(BuildContext context) async {
-  if (!_requireLogin(context)) return;
-
-  final TextEditingController searchController =
-      TextEditingController();
-  final vaultRecords = await _vaultService.getRecords().first;
-  final subscriptions = await _subscriptionService.getSubscriptions().first;
-
-  if (!context.mounted) return;
-
-final List<Map<String, dynamic>> items = [
-  ...vaultRecords.map(
-    (VaultRecord record) => {
-      'id': record.id,
-      'title': record.title,
-      'type': 'Document',
-      'category': record.category,
-      'recordType': record.recordType,
-      'tags': record.tags,
-      'icon': Icons.description_outlined,
-      'source': 'vault',
-      'record': record,
-    },
-  ),
-  ...subscriptions.map(
-    (SubscriptionRecord subscription) => {
-      'id': subscription.id,
-      'title': subscription.name,
-      'type': 'Subscription',
-      'category': subscription.category,
-      'subtitle': subscription.subtitle,
-      'status': subscription.status,
-      'icon': Icons.subscriptions_outlined,
-      'source': 'subscription',
-      'record': subscription,
-    },
-  ),
-];
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: const Color(0xFFF8FAFC),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(26),
-      ),
-    ),
-    builder: (context) {
-      List<Map<String, dynamic>> filteredItems = items;
-      String selectedFilter = 'All';
-      return StatefulBuilder(
-        builder: (context, setModalState) {
-          void applyFilters() {
-  setModalState(() {
-    final query =
-        searchController.text.trim().toLowerCase();
-    filteredItems = items.where((item) {
-      final title =
-          item['title'].toString().toLowerCase();
-      final type =
-          item['type'].toString().toLowerCase();
-      final matchesSearch =
-          title.contains(query) ||
-          type.contains(query);
-      final matchesFilter =
-          selectedFilter == 'All' ||
-          type == selectedFilter.toLowerCase();
-      return matchesSearch && matchesFilter;
-    }).toList();
-  });
-}
-          return Padding(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              top: 12,
-              bottom:
-                  MediaQuery.of(context).viewInsets.bottom + 24,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Small top handle
-                Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: muted.withAlpha(70),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                const Row(
-                  children: [
-                    _VaultReferenceIcon(
-                      Icons.search,
-                      color: purple,
-                    ),
-                    SizedBox(width: 10),
-                    Text(
-                      'Search Personal Vault',
-                      style: TextStyle(
-                        color: ink,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
+                  const SizedBox(height: 18),
+                  const Row(
+                    children: [
+                      _VaultReferenceIcon(Icons.search, color: purple),
+                      SizedBox(width: 10),
+                      Text(
+                        'Search Personal Vault',
+                        style: TextStyle(
+                          color: ink,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: searchController,
-                  autofocus: true,
-                  onChanged: (_) {
-                    applyFilters();
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: searchController,
+                    autofocus: true,
+                    onChanged: (_) {
+                      applyFilters();
                     },
-                  decoration: InputDecoration(
-                    hintText: 'Search documents, accounts...',
-                    hintStyle: const TextStyle(
-                      color: muted,
-                      fontSize: 13,
-                    ),
-                    prefixIcon: const _VaultReferenceIcon(
-                      Icons.search,
-                      color: muted,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white.withAlpha(235),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                  textInputAction: TextInputAction.search,
-                  onSubmitted: (_) {
-                    FocusScope.of(context).unfocus();
-                  },
-                ),
-                const SizedBox(height: 14),
-StreamBuilder<List<VaultRecord>>(
-  stream: _vaultRecordsStream,
-  builder: (context, snapshot) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (snapshot.hasError) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          'Could not load favorites.',
-          style: TextStyle(
-            color: muted,
-            fontSize: 13,
-          ),
-        ),
-      );
-    }
-
-    final favorites = (snapshot.data ?? [])
-        .where((record) => record.isFavorite)
-        .toList();
-
-    if (favorites.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          'No favorite records yet.',
-          style: TextStyle(
-            color: muted,
-            fontSize: 13,
-          ),
-        ),
-      );
-    }
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (final record in favorites) ...[
-            _favorite(
-              context,
-              Icons.description_outlined,
-              record,
-            ),
-            const SizedBox(width: 12),
-          ],
-        ],
-      ),
-    );
-  },
-),
-                const SizedBox(height: 16),
-                if (searchController.text.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 20,
-                    ),
-                    child: Text(
-                      'Start typing to search your Personal Vault',
-                      style: TextStyle(
+                    decoration: InputDecoration(
+                      hintText: 'Search documents, accounts...',
+                      hintStyle: const TextStyle(color: muted, fontSize: 13),
+                      prefixIcon: const _VaultReferenceIcon(
+                        Icons.search,
                         color: muted,
-                        fontSize: 13,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withAlpha(235),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide.none,
                       ),
                     ),
-                  )
-                else if (filteredItems.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 24,
-                    ),
-                    child: Column(
-                      children: [
-                        _VaultReferenceIcon(
-                          Icons.search_off,
-                          color: muted,
-                          size: 35,
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'No matching records found',
-                          style: TextStyle(
-                            color: muted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxHeight: 280,
-                    ),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: filteredItems.length,
-                      separatorBuilder: (_, _) =>
-                          const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final item = filteredItems[index];
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: purple.withAlpha(18),
-                              borderRadius:
-                                  BorderRadius.circular(13),
-                            ),
-                            child: _VaultReferenceIcon(
-                              item['icon'] as IconData,
-                              color: purple,
-                              size: 21,
-                            ),
-                          ),
-                          title: Text(
-                            item['title'].toString(),
-                            style: const TextStyle(
-                              color: ink,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          subtitle: Text(
-                            item['type'].toString(),
-                            style: const TextStyle(
-                              color: muted,
-                              fontSize: 12,
-                            ),
-                          ),
-                          trailing: const _VaultReferenceIcon(
-                            Icons.chevron_right,
-                            color: muted,
-                          ),
-                          onTap: () {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context)
-                                .showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  '${item['title']} selected',
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (_) {
+                      FocusScope.of(context).unfocus();
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children:
+                          [
+                            'All',
+                            'Document',
+                            'Account Access',
+                            'Subscription',
+                          ].map((filter) {
+                            final selected = selectedFilter == filter;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Text(filter),
+                                selected: selected,
+                                selectedColor: purple.withAlpha(35),
+                                backgroundColor: Colors.white,
+                                side: BorderSide.none,
+                                labelStyle: TextStyle(
+                                  color: selected ? purple : muted,
+                                  fontWeight: selected
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
                                 ),
+                                onSelected: (_) {
+                                  selectedFilter = filter;
+                                  applyFilters();
+                                },
                               ),
                             );
-                          },
-                        );
-                      },
+                          }).toList(),
                     ),
                   ),
-              ],
-            ),
-          );
-        },
-      );
-    },
-  );
-}
+                  const SizedBox(height: 16),
+                  if (searchController.text.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        'Start typing to search your Personal Vault',
+                        style: TextStyle(color: muted, fontSize: 13),
+                      ),
+                    )
+                  else if (filteredItems.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Column(
+                        children: [
+                          _VaultReferenceIcon(
+                            Icons.search_off,
+                            color: muted,
+                            size: 35,
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'No matching records found',
+                            style: TextStyle(color: muted),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 280),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: filteredItems.length,
+                        separatorBuilder: (_, _) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final item = filteredItems[index];
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: purple.withAlpha(18),
+                                borderRadius: BorderRadius.circular(13),
+                              ),
+                              child: _VaultReferenceIcon(
+                                item['icon'] as IconData,
+                                color: purple,
+                                size: 21,
+                              ),
+                            ),
+                            title: Text(
+                              item['title'].toString(),
+                              style: const TextStyle(
+                                color: ink,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            subtitle: Text(
+                              item['type'].toString(),
+                              style: const TextStyle(
+                                color: muted,
+                                fontSize: 12,
+                              ),
+                            ),
+                            trailing: const _VaultReferenceIcon(
+                              Icons.chevron_right,
+                              color: muted,
+                            ),
+                            onTap: () {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('${item['title']} selected'),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // ============================================================
   // MAIN BUILD
   // ============================================================
@@ -593,68 +309,93 @@ if (!_biometricAccessGranted) {
   return const SizedBox.shrink();
 }
     final base = Theme.of(context);
-    final typography = GoogleFonts.plusJakartaSansTextTheme(base.textTheme);
     return Theme(
       data: base.copyWith(
-        textTheme: typography,
-        primaryTextTheme: GoogleFonts.plusJakartaSansTextTheme(base.primaryTextTheme),
+        textTheme: base.textTheme.apply(
+          fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
+        ),
         colorScheme: base.colorScheme.copyWith(
-          primary: purple, onPrimary: Colors.white,
+          primary: purple,
+          onPrimary: Colors.white,
           secondary: const Color(0xFF0891B2),
-          surface: background, onSurface: ink,
+          surface: background,
+          onSurface: ink,
         ),
         dividerColor: const Color(0xFFEFF2F7),
         navigationBarTheme: NavigationBarThemeData(
-          labelTextStyle: WidgetStateProperty.resolveWith((states) =>
-            GoogleFonts.plusJakartaSans(
+          labelTextStyle: WidgetStateProperty.resolveWith(
+            (states) => GoogleFonts.plusJakartaSans(
               fontSize: 11,
               fontWeight: states.contains(WidgetState.selected)
-                  ? FontWeight.w800 : FontWeight.w600,
+                  ? FontWeight.w800
+                  : FontWeight.w600,
               color: states.contains(WidgetState.selected)
-                  ? purple : const Color(0xFF94A3B8),
-            )),
-          iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
-            size: 21,
-            color: states.contains(WidgetState.selected)
-                ? purple : const Color(0xFF94A3B8),
-          )),
+                  ? purple
+                  : const Color(0xFF94A3B8),
+            ),
+          ),
+          iconTheme: WidgetStateProperty.resolveWith(
+            (states) => IconThemeData(
+              size: 21,
+              color: states.contains(WidgetState.selected)
+                  ? purple
+                  : const Color(0xFF94A3B8),
+            ),
+          ),
         ),
       ),
-child: Builder(
-  builder: (themedContext) => DecoratedBox(
-        decoration: const BoxDecoration(color: background),
-        child: Stack(
-          children: [
-            Positioned.fill(child: IgnorePointer(child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(-0.8, -1), radius: 1.4,
-                  colors: [Color(0xB0E0E7FF), Color(0x00E0E7FF)],
+      child: Builder(
+        builder: (themedContext) => DecoratedBox(
+          decoration: const BoxDecoration(color: background),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment(-0.8, -1),
+                        radius: 1.4,
+                        colors: [Color(0xB0E0E7FF), Color(0x00E0E7FF)],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ))),
-            Positioned.fill(child: IgnorePointer(child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(1, -0.5), radius: 0.9,
-                  colors: [Color(0x73F3E8FF), Color(0x00F3E8FF)],
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment(1, -0.5),
+                        radius: 0.9,
+                        colors: [Color(0x73F3E8FF), Color(0x00F3E8FF)],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ))),
-            Positioned.fill(child: IgnorePointer(child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(0, 1), radius: 1,
-                  colors: [Color(0x66E0F2FE), Color(0x00E0F2FE)],
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment(0, 1),
+                        radius: 1,
+                        colors: [Color(0x66E0F2FE), Color(0x00E0F2FE)],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ))),
-            _buildDashboard(themedContext),
-          ],
+              _buildDashboard(themedContext),
+            ],
+          ),
         ),
-      )),
+      ),
     );
   }
+
   Widget _buildDashboard(BuildContext context) {
     return Scaffold(
       extendBody: true,
@@ -698,18 +439,24 @@ child: Builder(
                   colors: [purple, Color(0xFF6366F1)],
                 ),
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: const [BoxShadow(
-                  color: Color(0x306366F1), blurRadius: 14,
-                  offset: Offset(0, 4),
-                )],
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x306366F1),
+                    blurRadius: 14,
+                    offset: Offset(0, 4),
+                  ),
+                ],
               ),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white.withAlpha(235),
                   borderRadius: BorderRadius.circular(14.5),
                 ),
-                child: const _VaultReferenceIcon(Icons.verified_user_outlined,
-                  size: 22, color: purple),
+                child: const _VaultReferenceIcon(
+                  Icons.verified_user_outlined,
+                  size: 22,
+                  color: purple,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -717,26 +464,42 @@ child: Builder(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('OneClick', style: TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5, color: ink,
-                  )),
-                  const SizedBox(height: 4),
-                  Row(children: [
-                    const _VaultPulseDot(color: purple, size: 8, ping: true),
-                    const SizedBox(width: 7),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0F3FF),
-                        border: Border.all(color: const Color(0xFFE0E7FE)),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text('PERSONAL', style: TextStyle(
-                        fontSize: 10, letterSpacing: 1.2,
-                        fontWeight: FontWeight.w800, color: Color(0xFF4338CA))),
+                  const Text(
+                    'OneClick',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      color: ink,
                     ),
-                  ]),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const _VaultPulseDot(color: purple, size: 8, ping: true),
+                      const SizedBox(width: 7),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0F3FF),
+                          border: Border.all(color: const Color(0xFFE0E7FE)),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'PERSONAL',
+                          style: TextStyle(
+                            fontSize: 10,
+                            letterSpacing: 1.2,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF4338CA),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -749,17 +512,10 @@ child: Builder(
       body: SafeArea(
         top: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            24,
-            6,
-            24,
-            120,
-          ),
+          padding: const EdgeInsets.fromLTRB(24, 6, 24, 120),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 430,
-              ),
+              constraints: const BoxConstraints(maxWidth: 430),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -767,9 +523,7 @@ child: Builder(
                   // SEARCH
                   // =================================================
                   _VaultSearchSurface(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: TextField(
                       readOnly: true,
                       onTap: () {
@@ -782,15 +536,12 @@ child: Builder(
                           color: muted,
                         ),
                         hintText: 'Search your personal space',
-                        hintStyle: const TextStyle(
-                          color: muted,
-                          fontSize: 13,
-                        ),
+                        hintStyle: const TextStyle(color: muted, fontSize: 13),
                         suffixIcon: IconButton(
                           tooltip: 'Filter records',
                           onPressed: () {
-  _showSearchPanel(context);
-},
+                            _showNextStep(context, 'Filters');
+                          },
                           icon: const _VaultReferenceIcon(
                             Icons.tune,
                             color: purple,
@@ -805,12 +556,8 @@ child: Builder(
                   // =================================================
                   _heading('INSTANT ACTIONS'),
                   LayoutBuilder(
-                    builder: (
-                      context,
-                      constraints,
-                    ) {
-                      final double width =
-                          (constraints.maxWidth - 14) / 2;
+                    builder: (context, constraints) {
+                      final double width = (constraints.maxWidth - 14) / 2;
                       return Wrap(
                         spacing: 14,
                         runSpacing: 14,
@@ -862,7 +609,7 @@ child: Builder(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                  const AskAIVaultScreen(),
+                                      const AskAIVaultScreen(),
                                 ),
                               );
                             },
@@ -880,11 +627,11 @@ child: Builder(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                  const DocumentPackRequirementsScreen(),
+                                      const DocumentPackRequirementsScreen(),
                                 ),
                               );
                             },
-                         ),
+                          ),
                         ],
                       );
                     },
@@ -893,167 +640,46 @@ child: Builder(
                   // =================================================
                   // EXPIRING SOON
                   // =================================================
-                  StreamBuilder<List<VaultRecord>>(
-  stream: _vaultRecordsStream,
-  builder: (context, snapshot) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _heading(
-            'EXPIRING SOON',
-            trailing: '...',
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Center(
-              child: CircularProgressIndicator(),
-            ),
-          ),
-        ],
-      );
-    }
-
-    if (snapshot.hasError) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _heading(
-            'EXPIRING SOON',
-            trailing: '0 items',
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              'Could not load expiring records.',
-              style: TextStyle(
-                color: muted,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    final now = DateTime.now();
-    final today = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    );
-
-    final cutoff = today.add(
-      const Duration(days: 60),
-    );
-
-    final expiringRecords = (snapshot.data ?? [])
-        .where((record) {
-          final renewal = DateTime(
-            record.renewalDate.year,
-            record.renewalDate.month,
-            record.renewalDate.day,
-          );
-
-          return !renewal.isBefore(today) &&
-              !renewal.isAfter(cutoff);
-        })
-        .toList()
-      ..sort(
-        (a, b) => a.renewalDate.compareTo(
-          b.renewalDate,
-        ),
-      );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _heading(
-          'EXPIRING SOON',
-          trailing:
-              '${expiringRecords.length} ${expiringRecords.length == 1 ? 'item' : 'items'}',
-        ),
-
-        if (expiringRecords.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              'No records expiring in the next 60 days.',
-              style: TextStyle(
-                color: muted,
-                fontSize: 13,
-              ),
-            ),
-          )
-        else
-          _surface(
-            child: Column(
-              children: [
-                for (int i = 0;
-                    i < expiringRecords.length;
-                    i++) ...[
-                  Builder(
-                    builder: (context) {
-                      final record = expiringRecords[i];
-
-                      final renewal = DateTime(
-                        record.renewalDate.year,
-                        record.renewalDate.month,
-                        record.renewalDate.day,
-                      );
-
-                      final days =
-                          renewal.difference(today).inDays;
-
-                      final status = days == 0
-                          ? 'Expires today'
-                          : days == 1
-                              ? 'Expires tomorrow'
-                              : 'Expires in $days days';
-
-                      return _record(
-                        context,
-                        icon: Icons.description_outlined,
-                        title: record.title,
-                        subtitle: status,
-                        subtitleColor:
-                            days <= 14 ? Colors.red : muted,
-                        onTap: () {
-                          if (!_requireLogin(context)) return;
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  RecordDetailsScreen(
-                                recordId: record.id,
-                                title: record.title,
-                                category: record.category,
-                                type: record.recordType,
-                                details: record.notes,
-                                tags: record.tags,
-                                fileName: record.fileName,
-                                filePath: record.filePath,
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-
-                  if (i != expiringRecords.length - 1)
-                    const Divider(
-                      height: 24,
+                  _heading('EXPIRING SOON', trailing: '2 items'),
+                  _surface(
+                    child: Column(
+                      children: [
+                        _record(
+                          context,
+                          icon: Icons.laptop_mac,
+                          title: 'MacBook Pro M2 Warranty',
+                          subtitle: 'Expires in 14 days',
+                          subtitleColor: Colors.red,
+                          onTap: () {
+                            _showExpiringDetails(
+                              context,
+                              icon: Icons.laptop_mac,
+                              title: 'MacBook Pro M2 Warranty',
+                              status: 'Expires in 14 days',
+                              details: 'Warranty document for MacBook Pro M2.',
+                            );
+                          },
+                        ),
+                        const Divider(height: 24),
+                        _record(
+                          context,
+                          icon: Icons.badge_outlined,
+                          title: 'Passport Renewal',
+                          subtitle: 'Expires in 45 days',
+                          onTap: () {
+                            _showExpiringDetails(
+                              context,
+                              icon: Icons.badge_outlined,
+                              title: 'Passport Renewal',
+                              status: 'Expires in 45 days',
+                              details: 'Passport renewal reminder and document information.',
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                ],
-              ],
-            ),
-          ),
-      ],
-    );
-  },
-),
+                  ),
+                  const SizedBox(height: 24),
                   // =================================================
                   // UPCOMING RENEWALS
                   // =================================================
@@ -1249,26 +875,54 @@ child: Builder(
 
                       return _record(
                         context,
-                        icon: Icons.subscriptions_outlined,
-                        title: subscription.name,
-                        subtitle: subtitle,
-                        endText: subscription.price,
-                        iconColor:
-                            days <= 3 ? Colors.red : purple,
+                        MaterialPageRoute(
+                          builder: (context) => const SubscriptionsScreen(),
+                        ),
                       );
                     },
                   ),
-
-                  if (i != upcoming.length - 1)
-                    const SizedBox(height: 18),
-                ],
-            ],
-          ),
-        ),
-      ],
-    );
-  },
-),
+                  _surface(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Due in the next 7 days',
+                          style: TextStyle(color: muted, fontSize: 13),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'LKR 4,700',
+                          style: TextStyle(
+                            fontSize: 25,
+                            fontWeight: FontWeight.bold,
+                            color: ink,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          '2 renewals · Sample amounts',
+                          style: TextStyle(color: muted, fontSize: 12),
+                        ),
+                        const SizedBox(height: 18),
+                        _record(
+                          context,
+                          icon: Icons.movie_outlined,
+                          title: 'Netflix Premium',
+                          subtitle: 'Renews in 3 days',
+                          endText: 'LKR 3,500',
+                          iconColor: Colors.red,
+                        ),
+                        const SizedBox(height: 18),
+                        _record(
+                          context,
+                          icon: Icons.design_services_outlined,
+                          title: 'Figma Workspace',
+                          subtitle: 'Renews in 6 days',
+                          endText: 'LKR 1,200',
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   // =================================================
                   // FAVORITES
@@ -1280,224 +934,163 @@ child: Builder(
                       _showManageFavorites(context);
                     },
                   ),
-                  StreamBuilder<List<VaultRecord>>(
-  stream: _vaultRecordsStream,
-  builder: (context, snapshot) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (snapshot.hasError) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          'Could not load favorites.',
-          style: TextStyle(
-            color: muted,
-            fontSize: 13,
-          ),
-        ),
-      );
-    }
-
-    final favorites = (snapshot.data ?? [])
-        .where((record) => record.isFavorite)
-        .toList();
-
-    if (favorites.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          'No favorite records yet.',
-          style: TextStyle(
-            color: muted,
-            fontSize: 13,
-          ),
-        ),
-      );
-    }
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (final record in favorites) ...[
-            _favorite(
-              context,
-              Icons.description_outlined,
-              record,
-            ),
-            const SizedBox(width: 12),
-          ],
-        ],
-      ),
-    );
-  },
-),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        if (_favorites['Passport'] == true) ...[
+                          _favorite(context, Icons.badge_outlined, 'Passport'),
+                          const SizedBox(width: 12),
+                        ],
+                        if (_favorites['Wi-Fi Account'] == true) ...[
+                          _favorite(context, Icons.wifi, 'Wi-Fi Account'),
+                          const SizedBox(width: 12),
+                        ],
+                        if (_favorites['Car Records'] == true) ...[
+                          _favorite(
+                            context,
+                            Icons.directions_car,
+                            'Car Records',
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        if (_favorites['Health Insurance'] == true) ...[
+                          _favorite(
+                            context,
+                            Icons.health_and_safety_outlined,
+                            'Health Insurance',
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        if (_favorites['Apartment Lease'] == true) ...[
+                          _favorite(
+                            context,
+                            Icons.home_outlined,
+                            'Apartment Lease',
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        if (_favorites['Google Account'] == true)
+                          _favorite(
+                            context,
+                            Icons.account_circle_outlined,
+                            'Google Account',
+                          ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   // =================================================
                   // BACKUPS
                   // =================================================
                   // =================================================
-// BACKUPS
-// =================================================
-_surface(
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _heading(
-        'BACKUPS',
-        trailing: 'Manage',
-        onTap: () {
-          if (!_requireLogin(context)) return;
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  const VaultSettingsScreen(),
-            ),
-          );
-        },
-      ),
-      GestureDetector(
-        onTap: () {
-          if (!_requireLogin(context)) return;
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  const VaultSettingsScreen(),
-            ),
-          );
-        },
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: purple.withAlpha(15),
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: const Column(
-            children: [
-              _VaultReferenceIcon(
-                Icons.cloud_sync_outlined,
-                size: 44,
-                color: purple,
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Vault Backup',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: ink,
-                ),
-              ),
-              SizedBox(height: 6),
-              Text(
-                'Create or restore a secure backup of your Personal Vault.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: muted,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Tap to manage backups',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: purple,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ],
-  ),
-),
-const SizedBox(height: 24),
-// =================================================
-// RECENTLY OPENED
-// =================================================
-                   _heading(
-  'RECENTLY OPENED',
-  trailing: 'History',
-  onTap: () {
-    if (!_requireLogin(context)) return;
-    _showRecentHistory(context);
-  },
-),
-                 StreamBuilder<List<VaultRecord>>(
-  stream: _vaultRecordsStream,
-  builder: (context, snapshot) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (snapshot.hasError) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          'Could not load recent history.',
-          style: TextStyle(
-            color: muted,
-            fontSize: 13,
-          ),
-        ),
-      );
-    }
-
-    final recentRecords = (snapshot.data ?? [])
-        .where((record) => record.lastOpenedAt != null)
-        .toList()
-      ..sort(
-        (a, b) => b.lastOpenedAt!.compareTo(a.lastOpenedAt!),
-      );
-
-    final visibleRecords = recentRecords.take(3).toList();
-
-    if (visibleRecords.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          'No recently opened records yet.',
-          style: TextStyle(
-            color: muted,
-            fontSize: 13,
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        for (int i = 0; i < visibleRecords.length; i++) ...[
-          _recent(
-            context,
-            visibleRecords[i],
-            '${visibleRecords[i].recordType} · ${_formatRelativeTime(visibleRecords[i].lastOpenedAt!)}',
-          ),
-          if (i != visibleRecords.length - 1)
-            const SizedBox(height: 14),
-        ],
-      ],
-    );
-  },
-),
+                  // BACKUPS
+                  // =================================================
+                  _surface(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _heading(
+                          'BACKUPS',
+                          trailing: 'Manage',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const VaultSettingsScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const VaultSettingsScreen(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: purple.withAlpha(15),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: const Column(
+                              children: [
+                                _VaultReferenceIcon(
+                                  Icons.cloud_sync_outlined,
+                                  size: 44,
+                                  color: purple,
+                                ),
+                                SizedBox(height: 10),
+                                Text(
+                                  'Vault Backup',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: ink,
+                                  ),
+                                ),
+                                SizedBox(height: 6),
+                                Text(
+                                  'Create or restore a secure backup of your Personal Vault.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 12, color: muted),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Tap to manage backups',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: purple,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // =================================================
+                  // RECENTLY OPENED
+                  // =================================================
+                  _heading(
+                    'RECENTLY OPENED',
+                    trailing: 'History',
+                    onTap: () {
+                      _showRecentHistory(context);
+                    },
+                  ),
+                  _recent(
+                    context,
+                    Icons.picture_as_pdf_outlined,
+                    'Apartment Lease Agreement',
+                    'PDF · 2.4 MB · 2 hours ago',
+                    Colors.red,
+                  ),
+                  const SizedBox(height: 14),
+                  _recent(
+                    context,
+                    Icons.image_outlined,
+                    'Health Insurance Card',
+                    'Image · Yesterday',
+                    purple,
+                  ),
+                  const SizedBox(height: 14),
+                  _recent(
+                    context,
+                    Icons.password,
+                    'Shopping Account',
+                    'Account · 3 days ago',
+                    purple,
+                  ),
                 ],
               ),
             ),
@@ -1518,10 +1111,13 @@ const SizedBox(height: 24),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(color: Colors.white.withAlpha(240)),
-                boxShadow: const [BoxShadow(
-                  color: Color(0x140F172A), blurRadius: 24,
-                  offset: Offset(0, -4),
-                )],
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x140F172A),
+                    blurRadius: 24,
+                    offset: Offset(0, -4),
+                  ),
+                ],
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(28),
@@ -1530,100 +1126,87 @@ const SizedBox(height: 24),
                   child: ColoredBox(
                     color: Colors.white.withAlpha(235),
                     child: NavigationBar(
-        backgroundColor: Colors.transparent,
-        indicatorColor: const Color(0xFFF0F3FF),
-        indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        height: 68,
-        elevation: 0,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        selectedIndex: 0,
-        onDestinationSelected: (index) {
-          // HOME
-          if (index == 0) {
-            return;
-          }
-          // VAULT
-          if (index == 1) {
-            if (!_requireLogin(context)) return;
-
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    const VaultScreen(),
-              ),
-            );
-            return;
-          }
-          // SUBSCRIPTIONS
-          if (index == 2) {
-            if (!_requireLogin(context)) return;
-
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    const SubscriptionsScreen(),
-              ),
-            );
-            return;
-          }
-          // SHARING
-          if (index == 3) {
-            if (!_requireLogin(context)) return;
-
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SharingCenterScreen(),
-              ),
-            );
-            return;
-          }
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: _VaultNavGlyph(
-              Icons.home_outlined,
-            ),
-            selectedIcon: _VaultNavGlyph(
-              Icons.home,
-              color: purple,
-            ),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: _VaultNavGlyph(
-              Icons.folder_special_outlined,
-            ),
-            selectedIcon: _VaultNavGlyph(
-              Icons.folder_special,
-              color: purple,
-            ),
-            label: 'Vault',
-          ),
-          NavigationDestination(
-            icon: _VaultNavGlyph(
-              Icons.credit_card_outlined,
-            ),
-            selectedIcon: _VaultNavGlyph(
-              Icons.credit_card,
-              color: purple,
-            ),
-            label: 'Subs',
-          ),
-          NavigationDestination(
-            icon: _VaultNavGlyph(
-              Icons.share_outlined,
-            ),
-            selectedIcon: _VaultNavGlyph(
-              Icons.share,
-              color: purple,
-            ),
-            label: 'Sharing',
-          ),
-        ],
-      ),
+                      backgroundColor: Colors.transparent,
+                      indicatorColor: const Color(0xFFF0F3FF),
+                      indicatorShape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      height: 68,
+                      elevation: 0,
+                      labelBehavior:
+                          NavigationDestinationLabelBehavior.alwaysShow,
+                      selectedIndex: 0,
+                      onDestinationSelected: (index) {
+                        // HOME
+                        if (index == 0) {
+                          return;
+                        }
+                        // VAULT
+                        if (index == 1) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const VaultScreen(),
+                            ),
+                          );
+                          return;
+                        }
+                        // SUBSCRIPTIONS
+                        if (index == 2) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SubscriptionsScreen(),
+                            ),
+                          );
+                          return;
+                        }
+                        // SHARING
+                        if (index == 3) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SharingCenterScreen(),
+                            ),
+                          );
+                          return;
+                        }
+                      },
+                      destinations: const [
+                        NavigationDestination(
+                          icon: _VaultNavGlyph(Icons.home_outlined),
+                          selectedIcon: _VaultNavGlyph(
+                            Icons.home,
+                            color: purple,
+                          ),
+                          label: 'Home',
+                        ),
+                        NavigationDestination(
+                          icon: _VaultNavGlyph(Icons.folder_special_outlined),
+                          selectedIcon: _VaultNavGlyph(
+                            Icons.folder_special,
+                            color: purple,
+                          ),
+                          label: 'Vault',
+                        ),
+                        NavigationDestination(
+                          icon: _VaultNavGlyph(Icons.credit_card_outlined),
+                          selectedIcon: _VaultNavGlyph(
+                            Icons.credit_card,
+                            color: purple,
+                          ),
+                          label: 'Subs',
+                        ),
+                        NavigationDestination(
+                          icon: _VaultNavGlyph(Icons.share_outlined),
+                          selectedIcon: _VaultNavGlyph(
+                            Icons.share,
+                            color: purple,
+                          ),
+                          label: 'Sharing',
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1633,6 +1216,7 @@ const SizedBox(height: 24),
       ),
     );
   }
+
   // ============================================================
   // SURFACE
   // ============================================================
@@ -1642,18 +1226,13 @@ const SizedBox(height: 24),
   }) {
     return _VaultGlassCard(padding: padding, child: child);
   }
+
   // ============================================================
   // HEADING
   // ============================================================
-  Widget _heading(
-    String title, {
-    String? trailing,
-    VoidCallback? onTap,
-  }) {
+  Widget _heading(String title, {String? trailing, VoidCallback? onTap}) {
     return Padding(
-      padding: const EdgeInsets.only(
-        bottom: 14,
-      ),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         children: [
           Expanded(
@@ -1673,35 +1252,36 @@ const SizedBox(height: 24),
                 onPressed: onTap,
                 style: TextButton.styleFrom(
                   foregroundColor: purple,
-                  padding:
-                      const EdgeInsets.symmetric(
-                    horizontal: 8,
-                  ),
-                  minimumSize:
-                      const Size(48, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(48, 40),
                 ),
-                child: Text(
-                  trailing,
-                ),
+                child: Text(trailing),
               )
             else
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: title == 'EXPIRING SOON'
-                      ? const Color(0xFFFEF3C7) : const Color(0xFFF0F3FF),
+                      ? const Color(0xFFFEF3C7)
+                      : const Color(0xFFF0F3FF),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(trailing, style: TextStyle(
-                  color: title == 'EXPIRING SOON'
-                      ? const Color(0xFFB45309) : purple,
-                  fontSize: 11, fontWeight: FontWeight.w700,
-                )),
+                child: Text(
+                  trailing,
+                  style: TextStyle(
+                    color: title == 'EXPIRING SOON'
+                        ? const Color(0xFFB45309)
+                        : purple,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
         ],
       ),
     );
   }
+
   // ============================================================
   // ACTION CARD
   // ============================================================
@@ -1712,43 +1292,47 @@ const SizedBox(height: 24),
     String title,
     String subtitle, {
     VoidCallback? onTap,
-    }) {
+  }) {
     final Color accent = icon == Icons.shield_outlined
         ? const Color(0xFF2563EB)
         : icon == Icons.auto_awesome
-            ? const Color(0xFF9333EA)
-            : icon == Icons.folder_copy_outlined
-                ? const Color(0xFF0891B2)
-                : purple;
+        ? const Color(0xFF9333EA)
+        : icon == Icons.folder_copy_outlined
+        ? const Color(0xFF0891B2)
+        : purple;
     return SizedBox(
       width: width,
       child: Semantics(
         button: true,
         label: title,
         child: GestureDetector(
-          onTap: onTap ??
-    () {
-      _showNextStep(
-        context,
-        title,
-      );
-    },
-          child: _VaultGlassCard(interactive: true,
+          onTap:
+              onTap ??
+              () {
+                _showNextStep(context, title);
+              },
+          child: _VaultGlassCard(
+            interactive: true,
             padding: const EdgeInsets.all(16),
             child: _VaultActionContent(
-              icon: icon, title: title, subtitle: subtitle, accent: accent,
+              icon: icon,
+              title: title,
+              subtitle: subtitle,
+              accent: accent,
             ),
           ),
         ),
       ),
     );
   }
+
   // ============================================================
   // ICON BADGE
   // ============================================================
   Widget _iconBadge(IconData icon, Color color) {
     return Container(
-      width: 44, height: 44,
+      width: 44,
+      height: 44,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: color.withAlpha(18),
@@ -1758,19 +1342,20 @@ const SizedBox(height: 24),
       child: _VaultReferenceIcon(icon, size: 22, color: color),
     );
   }
+
   // ============================================================
   // RECORD
   // ============================================================
-Widget _record(
-  BuildContext context, {
-  required IconData icon,
-  required String title,
-  required String subtitle,
-  Color subtitleColor = muted,
-  Color iconColor = purple,
-  String? endText,
-  VoidCallback? onTap,
-}) {
+  Widget _record(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    Color subtitleColor = muted,
+    Color iconColor = purple,
+    String? endText,
+    VoidCallback? onTap,
+  }) {
     return _VaultRowFeedback(
       builder: (context, hovered) => AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -1779,702 +1364,591 @@ Widget _record(
           borderRadius: BorderRadius.circular(16),
         ),
         child: InkWell(
-      onTap: onTap,
-      borderRadius:
-          BorderRadius.circular(12),
-      child: Padding(
-        padding:
-            const EdgeInsets.symmetric(
-          vertical: 4,
-        ),
-        child: Row(
-          children: [
-            AnimatedScale(
-              scale: hovered ? 1.05 : 1,
-              duration: const Duration(milliseconds: 200),
-              child: _iconBadge(icon, iconColor),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight:
-                          FontWeight.w700,
-                      color: ink,
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                AnimatedScale(
+                  scale: hovered ? 1.05 : 1,
+                  duration: const Duration(milliseconds: 200),
+                  child: _iconBadge(icon, iconColor),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: ink,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      _VaultRecordSubtitle(
+                        text: subtitle,
+                        color: subtitleColor,
+                      ),
+                    ],
+                  ),
+                ),
+                if (onTap != null && endText == null) ...[
+                  const SizedBox(width: 8),
+                  AnimatedSlide(
+                    offset: hovered ? const Offset(0.125, 0) : Offset.zero,
+                    duration: const Duration(milliseconds: 200),
+                    child: _VaultReferenceIcon(
+                      Icons.chevron_right,
+                      size: 16,
+                      color: hovered ? muted : const Color(0xFFCBD5E1),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  _VaultRecordSubtitle(text: subtitle, color: subtitleColor),
                 ],
-              ),
+                if (endText != null) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    endText,
+                    style: const TextStyle(
+                      color: ink,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
             ),
-            if (onTap != null && endText == null) ...[
-              const SizedBox(width: 8),
-              AnimatedSlide(
-                offset: hovered ? const Offset(0.125, 0) : Offset.zero,
-                duration: const Duration(milliseconds: 200),
-                child: _VaultReferenceIcon(Icons.chevron_right, size: 16,
-                  color: hovered ? muted : const Color(0xFFCBD5E1)),
-              ),
-            ],
-            if (endText != null) ...[
-              const SizedBox(width: 8),
-              Text(
-                endText,
-                style: const TextStyle(
-                  color: ink,
-                  fontWeight:
-                      FontWeight.w700,
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
-    ) ,
+    );
+  }
+
+  void _showExpiringDetails(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String status,
+    required String details,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFFF8FAFC),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _iconBadge(icon, purple),
+                const SizedBox(height: 18),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: ink,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  status,
+                  style: const TextStyle(
+                    color: purple,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  details,
+                  style: const TextStyle(
+                    color: muted,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Close'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
   // ============================================================
   // FAVORITE
   // ============================================================
-Widget _favorite(
-  BuildContext context,
-  IconData icon,
-  VaultRecord record,
-) {
-  return ActionChip(
-    onPressed: () {
-      if (!_requireLogin(context)) return;
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => RecordDetailsScreen(
-            recordId: record.id,
-            title: record.title,
-            category: record.category,
-            type: record.recordType,
-            details: record.notes,
-            tags: record.tags,
-            fileName: record.fileName,
-            filePath: record.filePath,
-          ),
-        ),
-      );
-    },
-      avatar: _VaultReferenceIcon(
-        icon,
-        size: 19,
-        color: purple,
-      ),
-      label: Text(record.title),
+  Widget _favorite(BuildContext context, IconData icon, String label) {
+    return ActionChip(
+      onPressed: () {
+        _showNextStep(context, label);
+      },
+      avatar: _VaultReferenceIcon(icon, size: 19, color: purple),
+      label: Text(label),
       backgroundColor: const Color(0xFFF8FAFC),
       side: BorderSide.none,
-      padding:
-          const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 8,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+    );
+  }
+
+  void _showManageFavorites(BuildContext context) {
+    final Map<String, bool> tempFavorites = Map<String, bool>.from(_favorites);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFFF8FAFC),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Manage Favorites',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: ink,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          icon: const _VaultReferenceIcon(
+                            Icons.close,
+                            color: muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Choose the records you want quick access to.',
+                      style: TextStyle(fontSize: 13, color: muted),
+                    ),
+                    const SizedBox(height: 20),
+                    ...tempFavorites.entries.map((entry) {
+                      return CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        activeColor: purple,
+                        controlAffinity: ListTileControlAffinity.trailing,
+                        title: Text(
+                          entry.key,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: ink,
+                          ),
+                        ),
+                        value: entry.value,
+                        onChanged: (value) {
+                          setModalState(() {
+                            tempFavorites[entry.key] = value ?? false;
+                          });
+                        },
+                      );
+                    }),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _favorites
+                              ..clear()
+                              ..addAll(tempFavorites);
+                          });
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Favorites updated')),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: purple,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          'Save Favorites',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // RECENT
+  // ============================================================
+  Widget _recent(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String subtitle,
+    Color color,
+  ) {
+    return _surface(
+      child: Row(
+        children: [
+          Expanded(
+            child: _record(
+              context,
+              icon: icon,
+              title: title,
+              subtitle: subtitle,
+              iconColor: color,
+              // Opens this recently viewed item
+              onTap: () {
+                _showRecentDetails(
+                  context,
+                  icon: icon,
+                  title: title,
+                  subtitle: subtitle,
+                  color: color,
+                );
+              },
+            ),
+          ),
+          IconButton(
+            tooltip: 'Record options',
+            onPressed: () {
+              _showRecentOptions(context, title);
+            },
+            icon: const _VaultReferenceIcon(Icons.more_vert, color: muted),
+          ),
+        ],
       ),
     );
   }
 
-Future<void> _showManageFavorites(BuildContext context) async {
-  if (!_requireLogin(context)) return;
-
-  final records = await _vaultService.getRecords().first;
-
-  if (!context.mounted) return;
-
-  final Map<String, bool> tempFavorites = {
-    for (final record in records)
-      record.id: record.isFavorite,
-  };
-
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: const Color(0xFFF8FAFC),
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(24),
+  void _showRecentDetails(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFFF8FAFC),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-    ),
-    builder: (sheetContext) {
-      return StatefulBuilder(
-        builder: (sheetContext, setModalState) {
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                24,
-                22,
-                24,
-                24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Manage Favorites',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: ink,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          Navigator.pop(sheetContext);
-                        },
-                        icon: const _VaultReferenceIcon(
-                          Icons.close,
-                          color: muted,
-                        ),
-                      ),
-                    ],
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _iconBadge(icon, color),
+                const SizedBox(height: 18),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: ink,
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Choose the records you want quick access to.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: muted,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 13, color: muted),
+                ),
+                const SizedBox(height: 22),
+                const Text(
+                  'Recently opened from your Personal Vault.',
+                  style: TextStyle(fontSize: 14, color: muted, height: 1.5),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: purple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'Close',
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
-                  if (records.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 20),
+  void _showRecentHistory(BuildContext context) {
+    final recentItems = [
+      {
+        'icon': Icons.picture_as_pdf_outlined,
+        'title': 'Apartment Lease Agreement',
+        'subtitle': 'PDF · 2.4 MB · 2 hours ago',
+        'color': Colors.red,
+      },
+      {
+        'icon': Icons.image_outlined,
+        'title': 'Health Insurance Card',
+        'subtitle': 'Image · Yesterday',
+        'color': purple,
+      },
+      {
+        'icon': Icons.password,
+        'title': 'Shopping Account',
+        'subtitle': 'Account · 3 days ago',
+        'color': purple,
+      },
+    ];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFFF8FAFC),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
                       child: Text(
-                        'No Vault records available.',
+                        'Recently Opened',
                         style: TextStyle(
-                          color: muted,
-                          fontSize: 13,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: ink,
                         ),
                       ),
-                    )
-                  else
-                    Flexible(
-                      child: ListView(
-                        shrinkWrap: true,
-                        children: records.map((record) {
-                          return CheckboxListTile(
-                            contentPadding: EdgeInsets.zero,
-                            activeColor: purple,
-                            controlAffinity:
-                                ListTileControlAffinity.trailing,
-                            title: Text(
-                              record.title,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: ink,
-                              ),
-                            ),
-                            subtitle: Text(
-                              record.category,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: muted,
-                              ),
-                            ),
-                            value:
-                                tempFavorites[record.id] ?? false,
-                            onChanged: (value) {
-                              setModalState(() {
-                                tempFavorites[record.id] =
-                                    value ?? false;
-                              });
-                            },
-                          );
-                        }).toList(),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        Navigator.pop(sheetContext);
+                      },
+                      icon: const _VaultReferenceIcon(
+                        Icons.close,
+                        color: muted,
                       ),
                     ),
-
-                  const SizedBox(height: 14),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        for (final record in records) {
-                          final newValue =
-                              tempFavorites[record.id] ?? false;
-
-                          if (newValue != record.isFavorite) {
-                            await _vaultService.updateFavorite(
-                              recordId: record.id,
-                              isFavorite: newValue,
-                            );
-                          }
-                        }
-
-                        if (!sheetContext.mounted) return;
-
+                  ],
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Your recently opened Vault records.',
+                  style: TextStyle(fontSize: 13, color: muted),
+                ),
+                const SizedBox(height: 20),
+                ...recentItems.map((item) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () {
                         Navigator.pop(sheetContext);
-
-                        if (!context.mounted) return;
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Favorites updated',
-                            ),
-                          ),
+                        _showRecentDetails(
+                          context,
+                          icon: item['icon'] as IconData,
+                          title: item['title'] as String,
+                          subtitle: item['subtitle'] as String,
+                          color: item['color'] as Color,
                         );
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: purple,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 15,
-                        ),
-                        shape: RoundedRectangleBorder(
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
                         ),
-                      ),
-                      child: const Text(
-                        'Save Favorites',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
-// ============================================================
-// RECENT
-// ============================================================
-
-DateTime? _parseSubscriptionRenewal(String renewal) {
-  final cleaned = renewal.replaceFirst('Renews ', '').trim();
-
-  final match = RegExp(
-    r'^([A-Za-z]{3})\s+(\d{1,2}),\s+(\d{4})$',
-  ).firstMatch(cleaned);
-
-  if (match == null) return null;
-
-  const months = {
-    'Jan': 1,
-    'Feb': 2,
-    'Mar': 3,
-    'Apr': 4,
-    'May': 5,
-    'Jun': 6,
-    'Jul': 7,
-    'Aug': 8,
-    'Sep': 9,
-    'Oct': 10,
-    'Nov': 11,
-    'Dec': 12,
-  };
-
-  final month = months[match.group(1)];
-  final day = int.tryParse(match.group(2)!);
-  final year = int.tryParse(match.group(3)!);
-
-  if (month == null || day == null || year == null) {
-    return null;
-  }
-
-  return DateTime(year, month, day);
-}
-
-String _formatRelativeTime(DateTime dateTime) {
-  final difference = DateTime.now().difference(dateTime);
-
-  if (difference.inMinutes < 1) {
-    return 'Just now';
-  }
-
-  if (difference.inMinutes < 60) {
-    return '${difference.inMinutes} min ago';
-  }
-
-  if (difference.inHours < 24) {
-    return '${difference.inHours} hr ago';
-  }
-
-  if (difference.inDays == 1) {
-    return 'Yesterday';
-  }
-
-  if (difference.inDays < 7) {
-    return '${difference.inDays} days ago';
-  }
-
-  return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
-}
-
-Widget _recent(
-  BuildContext context,
-  VaultRecord record,
-  String subtitle,
-) {
-  return _surface(
-    child: Row(
-      children: [
-        Expanded(
-          child: _record(
-            context,
-            icon: Icons.description_outlined,
-            title: record.title,
-            subtitle: subtitle,
-            iconColor: purple,
-            onTap: () {
-              if (!_requireLogin(context)) return;
-
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => RecordDetailsScreen(
-                    recordId: record.id,
-                    title: record.title,
-                    category: record.category,
-                    type: record.recordType,
-                    details: record.notes,
-                    tags: record.tags,
-                    fileName: record.fileName,
-                    filePath: record.filePath,
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        IconButton(
-          tooltip: 'Record options',
-          onPressed: () {
-            _showRecentOptions(
-              context,
-              record.title,
-            );
-          },
-          icon: const _VaultReferenceIcon(
-            Icons.more_vert,
-            color: muted,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-void _showRecentHistory(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: const Color(0xFFF8FAFC),
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(24),
-      ),
-    ),
-    builder: (sheetContext) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            24,
-            22,
-            24,
-            24,
-          ),
-          child: StreamBuilder<List<VaultRecord>>(
-            stream: _vaultRecordsStream,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState ==
-                  ConnectionState.waiting) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
-
-              if (snapshot.hasError) {
-                return const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    'Could not load history.',
-                    style: TextStyle(
-                      color: muted,
-                      fontSize: 13,
-                    ),
-                  ),
-                );
-              }
-
-              final recentRecords = (snapshot.data ?? [])
-                  .where((record) => record.lastOpenedAt != null)
-                  .toList()
-                ..sort(
-                  (a, b) =>
-                      b.lastOpenedAt!.compareTo(a.lastOpenedAt!),
-                );
-
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Recently Opened',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: ink,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          Navigator.pop(sheetContext);
-                        },
-                        icon: const _VaultReferenceIcon(
-                          Icons.close,
-                          color: muted,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Your recently opened Vault records.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: muted,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  if (recentRecords.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 20,
-                      ),
-                      child: Text(
-                        'No history yet.',
-                        style: TextStyle(
-                          color: muted,
-                          fontSize: 13,
-                        ),
-                      ),
-                    )
-                  else
-                    Flexible(
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: recentRecords.length,
-                        itemBuilder: (context, index) {
-                          final record = recentRecords[index];
-
-                          return Padding(
-                            padding: const EdgeInsets.only(
-                              bottom: 12,
+                        child: Row(
+                          children: [
+                            _iconBadge(
+                              item['icon'] as IconData,
+                              item['color'] as Color,
                             ),
-                            child: InkWell(
-                              borderRadius:
-                                  BorderRadius.circular(14),
-                              onTap: () {
-                                Navigator.pop(sheetContext);
-
-                                if (!_requireLogin(context)) return;
-
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        RecordDetailsScreen(
-                                      recordId: record.id,
-                                      title: record.title,
-                                      category: record.category,
-                                      type: record.recordType,
-                                      details: record.notes,
-                                      tags: record.tags,
-                                      fileName: record.fileName,
-                                      filePath: record.filePath,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item['title'] as String,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: ink,
                                     ),
                                   ),
-                                );
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius:
-                                      BorderRadius.circular(14),
-                                ),
-                                child: Row(
-                                  children: [
-                                    _iconBadge(
-                                      Icons.description_outlined,
-                                      purple,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            record.title,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight:
-                                                  FontWeight.w600,
-                                              color: ink,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            '${record.recordType} · ${_formatRelativeTime(record.lastOpenedAt!)}',
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: muted,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const _VaultReferenceIcon(
-                                      Icons.chevron_right,
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item['subtitle'] as String,
+                                    style: const TextStyle(
+                                      fontSize: 12,
                                       color: muted,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-        ),
-      );
-    },
-  );
-}
-void _showRecentOptions(
-  BuildContext context,
-  String title,
-) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: const Color(0xFFF8FAFC),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(24),
-      ),
-    ),
-    builder: (sheetContext) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const _VaultReferenceIcon(
-                  Icons.open_in_new,
-                  color: purple,
-                ),
-                title: const Text('Open'),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                },
-              ),
-              ListTile(
-                leading: const _VaultReferenceIcon(
-                  Icons.star_border,
-                  color: purple,
-                ),
-                title: const Text('Add to Favorites'),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        '$title added to Favorites',
+                            const _VaultReferenceIcon(
+                              Icons.chevron_right,
+                              color: muted,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
-                },
-              ),
-              ListTile(
-                leading: const _VaultReferenceIcon(
-                  Icons.history_toggle_off,
-                  color: muted,
-                ),
-                title: const Text(
-                  'Remove from Recent',
-                ),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        '$title removed from recent history',
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
+                }),
+              ],
+            ),
           ),
-        ),
-      );
-    },
-  );
-}
-    }
+        );
+      },
+    );
+  }
 
+  void _showRecentOptions(BuildContext context, String title) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFFF8FAFC),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const _VaultReferenceIcon(
+                    Icons.open_in_new,
+                    color: purple,
+                  ),
+                  title: const Text('Open'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                  },
+                ),
+                ListTile(
+                  leading: const _VaultReferenceIcon(
+                    Icons.star_border,
+                    color: purple,
+                  ),
+                  title: const Text('Add to Favorites'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('$title added to Favorites')),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const _VaultReferenceIcon(
+                    Icons.history_toggle_off,
+                    color: muted,
+                  ),
+                  title: const Text('Remove from Recent'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('$title removed from recent history'),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
 
 class _VaultGlassScope extends InheritedWidget {
   const _VaultGlassScope({required this.hovered, required super.child});
   final bool hovered;
   static bool hoveredOf(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<_VaultGlassScope>()?.hovered ?? false;
+      context.dependOnInheritedWidgetOfExactType<_VaultGlassScope>()?.hovered ??
+      false;
   @override
-  bool updateShouldNotify(_VaultGlassScope oldWidget) => hovered != oldWidget.hovered;
+  bool updateShouldNotify(_VaultGlassScope oldWidget) =>
+      hovered != oldWidget.hovered;
 }
+
 class _VaultGlassCard extends StatefulWidget {
-  const _VaultGlassCard({required this.child, required this.padding, this.interactive = false});
+  const _VaultGlassCard({
+    required this.child,
+    required this.padding,
+    this.interactive = false,
+  });
   final Widget child;
   final EdgeInsetsGeometry padding;
   final bool interactive;
   @override
   State<_VaultGlassCard> createState() => _VaultGlassCardState();
 }
+
 class _VaultGlassCardState extends State<_VaultGlassCard> {
   bool _hovered = false;
   bool _pressed = false;
@@ -2483,11 +1957,20 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
     return MouseRegion(
       cursor: widget.interactive ? SystemMouseCursors.click : MouseCursor.defer,
       onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() { _hovered = false; _pressed = false; }),
+      onExit: (_) => setState(() {
+        _hovered = false;
+        _pressed = false;
+      }),
       child: Listener(
-        onPointerDown: (_) { if (widget.interactive) setState(() => _pressed = true); },
-        onPointerUp: (_) { if (_pressed) setState(() => _pressed = false); },
-        onPointerCancel: (_) { if (_pressed) setState(() => _pressed = false); },
+        onPointerDown: (_) {
+          if (widget.interactive) setState(() => _pressed = true);
+        },
+        onPointerUp: (_) {
+          if (_pressed) setState(() => _pressed = false);
+        },
+        onPointerCancel: (_) {
+          if (_pressed) setState(() => _pressed = false);
+        },
         child: AnimatedScale(
           scale: _pressed ? 0.98 : 1,
           duration: const Duration(milliseconds: 150),
@@ -2498,12 +1981,19 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: _hovered ? const Color(0x1F6366F1) : const Color(0x1464748B),
+                  color: _hovered
+                      ? const Color(0x1F6366F1)
+                      : const Color(0x1464748B),
                   offset: Offset(0, _hovered ? 20 : 10),
-                  blurRadius: _hovered ? 35 : 30, spreadRadius: _hovered ? -8 : -4,
+                  blurRadius: _hovered ? 35 : 30,
+                  spreadRadius: _hovered ? -8 : -4,
                 ),
-                const BoxShadow(color: Color(0x0864748B),
-                  offset: Offset(0, 4), blurRadius: 12, spreadRadius: -2),
+                const BoxShadow(
+                  color: Color(0x0864748B),
+                  offset: Offset(0, 4),
+                  blurRadius: 12,
+                  spreadRadius: -2,
+                ),
               ],
             ),
             child: ClipRRect(
@@ -2518,7 +2008,10 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: Colors.white.withAlpha(217)),
                   ),
-                  child: _VaultGlassScope(hovered: _hovered, child: widget.child),
+                  child: _VaultGlassScope(
+                    hovered: _hovered,
+                    child: widget.child,
+                  ),
                 ),
               ),
             ),
@@ -2528,9 +2021,14 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
     );
   }
 }
+
 class _VaultActionContent extends StatelessWidget {
-  const _VaultActionContent({required this.icon, required this.title,
-    required this.subtitle, required this.accent});
+  const _VaultActionContent({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.accent,
+  });
   final IconData icon;
   final String title;
   final String subtitle;
@@ -2540,20 +2038,31 @@ class _VaultActionContent extends StatelessWidget {
     final hovered = _VaultGlassScope.hoveredOf(context);
     final isAI = icon == Icons.auto_awesome;
     final hoverColor = icon == Icons.document_scanner_outlined
-        ? const Color(0xFF6366F1) : accent;
+        ? const Color(0xFF6366F1)
+        : accent;
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 116),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          if (isAI) Positioned(right: -4, top: -4,
-            child: IgnorePointer(child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-              child: Container(width: 64, height: 64,
-                decoration: const BoxDecoration(color: Color(0x1A9333EA),
-                  shape: BoxShape.circle)),
-            )),
-          ),
+          if (isAI)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: IgnorePointer(
+                child: ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    decoration: const BoxDecoration(
+                      color: Color(0x1A9333EA),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2562,31 +2071,43 @@ class _VaultActionContent extends StatelessWidget {
                 duration: const Duration(milliseconds: 300),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  width: 44, height: 44, alignment: Alignment.center,
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: hovered ? hoverColor : accent.withAlpha(15),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: accent.withAlpha(30)),
                   ),
-                  child: _VaultReferenceIcon(icon, size: 20,
-                    color: hovered ? Colors.white : accent),
+                  child: _VaultReferenceIcon(
+                    icon,
+                    size: 20,
+                    color: hovered ? Colors.white : accent,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 200),
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14, fontWeight: FontWeight.w700,
-                  letterSpacing: -0.35, height: 1.3,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.35,
+                  height: 1.3,
                   color: hovered ? accent : const Color(0xFF0F172A),
                 ),
                 child: Text(title),
               ),
               const SizedBox(height: 2),
-              Text(subtitle, style: GoogleFonts.plusJakartaSans(
-                fontSize: 11, fontWeight: FontWeight.w500,
-                height: 1.35, color: const Color(0xFF94A3B8),
-              )),
+              Text(
+                subtitle,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  height: 1.35,
+                  color: const Color(0xFF94A3B8),
+                ),
+              ),
             ],
           ),
         ],
@@ -2594,6 +2115,7 @@ class _VaultActionContent extends StatelessWidget {
     );
   }
 }
+
 class _VaultSearchSurface extends StatefulWidget {
   const _VaultSearchSurface({required this.child, required this.padding});
   final Widget child;
@@ -2601,6 +2123,7 @@ class _VaultSearchSurface extends StatefulWidget {
   @override
   State<_VaultSearchSurface> createState() => _VaultSearchSurfaceState();
 }
+
 class _VaultSearchSurfaceState extends State<_VaultSearchSurface> {
   bool _focused = false;
   @override
@@ -2618,11 +2141,18 @@ class _VaultSearchSurfaceState extends State<_VaultSearchSurface> {
               color: Colors.white.withAlpha(179),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: _focused ? const Color(0x666366F1) : Colors.white.withAlpha(204),
+                color: _focused
+                    ? const Color(0x666366F1)
+                    : Colors.white.withAlpha(204),
                 width: _focused ? 2 : 1,
               ),
-              boxShadow: const [BoxShadow(color: Color(0x080F172A),
-                offset: Offset(0, 2), blurRadius: 4)],
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x080F172A),
+                  offset: Offset(0, 2),
+                  blurRadius: 4,
+                ),
+              ],
             ),
             child: widget.child,
           ),
@@ -2631,12 +2161,14 @@ class _VaultSearchSurfaceState extends State<_VaultSearchSurface> {
     );
   }
 }
+
 class _VaultRowFeedback extends StatefulWidget {
   const _VaultRowFeedback({required this.builder});
   final Widget Function(BuildContext, bool) builder;
   @override
   State<_VaultRowFeedback> createState() => _VaultRowFeedbackState();
 }
+
 class _VaultRowFeedbackState extends State<_VaultRowFeedback> {
   bool _hovered = false;
   @override
@@ -2646,6 +2178,7 @@ class _VaultRowFeedbackState extends State<_VaultRowFeedback> {
     child: widget.builder(context, _hovered),
   );
 }
+
 class _VaultRecordSubtitle extends StatelessWidget {
   const _VaultRecordSubtitle({required this.text, required this.color});
   final String text;
@@ -2655,21 +2188,36 @@ class _VaultRecordSubtitle extends StatelessWidget {
     final expiring = text.startsWith('Expires');
     final urgent = expiring && color == Colors.red;
     final textColor = urgent ? const Color(0xFFF43F5E) : color;
-    final label = Text(text, style: GoogleFonts.plusJakartaSans(
-      fontSize: 12, fontWeight: urgent ? FontWeight.w600 : FontWeight.w500,
-      color: textColor,
-    ));
+    final label = Text(
+      text,
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 12,
+        fontWeight: urgent ? FontWeight.w600 : FontWeight.w500,
+        color: textColor,
+      ),
+    );
     if (!expiring) return label;
-    return Row(children: [
-      _VaultPulseDot(color: urgent ? textColor : const Color(0xFF94A3B8),
-        size: 6, animate: urgent),
-      const SizedBox(width: 6), Flexible(child: label),
-    ]);
+    return Row(
+      children: [
+        _VaultPulseDot(
+          color: urgent ? textColor : const Color(0xFF94A3B8),
+          size: 6,
+          animate: urgent,
+        ),
+        const SizedBox(width: 6),
+        Flexible(child: label),
+      ],
+    );
   }
 }
+
 class _VaultPulseDot extends StatefulWidget {
-  const _VaultPulseDot({required this.color, required this.size,
-    this.ping = false, this.animate = true});
+  const _VaultPulseDot({
+    required this.color,
+    required this.size,
+    this.ping = false,
+    this.animate = true,
+  });
   final Color color;
   final double size;
   final bool ping;
@@ -2677,33 +2225,69 @@ class _VaultPulseDot extends StatefulWidget {
   @override
   State<_VaultPulseDot> createState() => _VaultPulseDotState();
 }
-class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProviderStateMixin {
+
+class _VaultPulseDotState extends State<_VaultPulseDot>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
-    vsync: this, duration: const Duration(milliseconds: 1400));
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  );
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (widget.animate && !MediaQuery.disableAnimationsOf(context)) {
       _controller.repeat(reverse: !widget.ping);
-    } else { _controller.stop(); }
+    } else {
+      _controller.stop();
+    }
   }
+
   @override
-  void dispose() { _controller.dispose(); super.dispose(); }
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _controller,
-    builder: (context, child) => SizedBox(width: widget.size, height: widget.size,
-      child: Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
-        if (widget.ping) Transform.scale(scale: 1 + _controller.value,
-          child: Opacity(opacity: (1 - _controller.value) * 0.75,
-            child: Container(decoration: BoxDecoration(
-              color: widget.color, shape: BoxShape.circle)))),
-        Opacity(opacity: widget.ping || !widget.animate ? 1 : 1 - _controller.value * 0.5,
-          child: Container(decoration: BoxDecoration(
-            color: widget.color, shape: BoxShape.circle))),
-      ])),
+    builder: (context, child) => SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          if (widget.ping)
+            Transform.scale(
+              scale: 1 + _controller.value,
+              child: Opacity(
+                opacity: (1 - _controller.value) * 0.75,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: widget.color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+          Opacity(
+            opacity: widget.ping || !widget.animate
+                ? 1
+                : 1 - _controller.value * 0.5,
+            child: Container(
+              decoration: BoxDecoration(
+                color: widget.color,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
   );
 }
+
 class _VaultNavGlyph extends StatefulWidget {
   const _VaultNavGlyph(this.icon, {this.color});
   final IconData icon;
@@ -2711,6 +2295,7 @@ class _VaultNavGlyph extends StatefulWidget {
   @override
   State<_VaultNavGlyph> createState() => _VaultNavGlyphState();
 }
+
 class _VaultNavGlyphState extends State<_VaultNavGlyph> {
   bool _hovered = false;
   bool _pressed = false;
@@ -2718,20 +2303,31 @@ class _VaultNavGlyphState extends State<_VaultNavGlyph> {
   Widget build(BuildContext context) => MouseRegion(
     cursor: SystemMouseCursors.click,
     onEnter: (_) => setState(() => _hovered = true),
-    onExit: (_) => setState(() { _hovered = false; _pressed = false; }),
+    onExit: (_) => setState(() {
+      _hovered = false;
+      _pressed = false;
+    }),
     child: Listener(
       onPointerDown: (_) => setState(() => _pressed = true),
       onPointerUp: (_) => setState(() => _pressed = false),
       onPointerCancel: (_) => setState(() => _pressed = false),
-      child: AnimatedScale(scale: _pressed ? 0.95 : 1,
+      child: AnimatedScale(
+        scale: _pressed ? 0.95 : 1,
         duration: const Duration(milliseconds: 200),
-        child: _VaultReferenceIcon(widget.icon, size: 20,
-          color: widget.color ?? (_hovered ? const Color(0xFF1E293B)
-            : IconTheme.of(context).color ?? const Color(0xFF94A3B8))),
+        child: _VaultReferenceIcon(
+          widget.icon,
+          size: 20,
+          color:
+              widget.color ??
+              (_hovered
+                  ? const Color(0xFF1E293B)
+                  : IconTheme.of(context).color ?? const Color(0xFF94A3B8)),
+        ),
       ),
     ),
   );
 }
+
 class _VaultReferenceIcon extends StatelessWidget {
   const _VaultReferenceIcon(this.icon, {this.size, this.color});
   final IconData icon;
@@ -2832,8 +2428,13 @@ class _VaultReferenceIcon extends StatelessWidget {
     final theme = IconTheme.of(context);
     final resolvedColor = color ?? theme.color ?? const Color(0xFF64748B);
     final resolvedSize = size ?? theme.size ?? 24;
-    if (svg == null) return Icon(icon, size: resolvedSize, color: resolvedColor);
-    return SvgPicture.string(svg, width: resolvedSize, height: resolvedSize,
-      colorFilter: ColorFilter.mode(resolvedColor, BlendMode.srcIn));
+    if (svg == null)
+      return Icon(icon, size: resolvedSize, color: resolvedColor);
+    return SvgPicture.string(
+      svg,
+      width: resolvedSize,
+      height: resolvedSize,
+      colorFilter: ColorFilter.mode(resolvedColor, BlendMode.srcIn),
+    );
   }
 }
