@@ -1,131 +1,105 @@
 import 'package:flutter/material.dart';
-import 'job_booking_screen.dart';
-import '../../worker/screens/worker_main_screen.dart';
+import 'package:flutter/services.dart';
+import 'job_booking_screen.dart'; // Corrected import for booking screen
+import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
 
 class WorkerProfileScreen extends StatelessWidget {
   final Map<String, dynamic> worker;
 
-  const WorkerProfileScreen({
-    super.key,
-    required this.worker,
-  });
+  const WorkerProfileScreen({super.key, required this.worker});
 
   @override
   Widget build(BuildContext context) {
+    // Extract dynamic profile details safely from Firestore structure
     final name = worker['name']?.toString() ?? 'Worker';
-    final isAvailable = worker['isAvailable'] == true;
+    final isAvailable = worker['isAvailable'] == true ||
+        worker['status'] == 'active' ||
+        worker['status'] == 'approved';
+    final category = worker['category']?.toString() ?? 'Technician';
+
+    // Safely extract providerDetails sub-map if present
+    final providerDetails =
+        worker['providerDetails'] as Map<String, dynamic>? ?? {};
+    final hourlyRate = providerDetails['hourlyRate']?.toString() ??
+        worker['hourlyRate']?.toString() ??
+        worker['rate']?.toString() ??
+        '1500';
+    final experience = providerDetails['experienceYears']?.toString() ??
+        worker['experience']?.toString() ??
+        '3+';
+    final rating = worker['rating']?.toString() ?? '5.0';
+    final jobsDone = worker['jobsDone']?.toString() ?? '25+';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
-
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Professional Profile'),
-        backgroundColor: const Color(0xff032744),
+        title: Text('$category Profile'),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
+        centerTitle: true,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
-
-      // =========================================================
-      // BOTTOM BUTTONS
-      // =========================================================
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+              color: AppColors.textDark.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
         child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
             children: [
-              // =================================================
-              // BOOK WORKER BUTTON
-              // =================================================
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Hourly Rate',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  ),
+                  Text(
+                    'LKR $hourlyRate/hr',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
               SizedBox(
-                width: double.infinity,
                 height: 48,
-                child: ElevatedButton.icon(
+                width: 160,
+                child: ElevatedButton(
                   onPressed: isAvailable
                       ? () {
+                          // Correctly navigates to JobBookingScreen with worker data
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  JobBookingScreen(
-                                worker: worker,
-                              ),
+                              builder: (_) => JobBookingScreen(worker: worker),
                             ),
                           );
                         }
                       : null,
-                  icon: const Icon(
-                    Icons.calendar_month,
-                  ),
-                  label: const Text(
-                    'Book Worker',
-                    style: TextStyle(
-                      fontSize: 16,
-                    ),
-                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        const Color(0xff032744),
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor:
-                        Colors.grey.shade300,
-                    disabledForegroundColor:
-                        Colors.grey.shade600,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.button),
                     ),
                   ),
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // =================================================
-              // WORKER DASHBOARD BUTTON
-              // =================================================
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            const WorkerMainScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(
-                    Icons.dashboard,
-                  ),
-                  label: const Text(
-                    'Worker Dashboard',
-                    style: TextStyle(
-                      fontSize: 16,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor:
-                        const Color(0xff032744),
-                    side: const BorderSide(
-                      color: Color(0xff032744),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(12),
-                    ),
+                  child: const Text(
+                    'Book Now',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -133,212 +107,143 @@ class WorkerProfileScreen extends StatelessWidget {
           ),
         ),
       ),
-
-      // =========================================================
-      // PROFILE BODY
-      // =========================================================
       body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ===================================================
-            // PROFILE HEADER
-            // ===================================================
-            Container(
-              width: double.infinity,
-              color: Colors.white,
-              padding: const EdgeInsets.all(20),
+            // Header Profile Card
+            _card(
               child: Column(
                 children: [
                   CircleAvatar(
-                    radius: 45,
-                    backgroundColor:
-                        const Color(0xff032744)
-                            .withValues(alpha: 0.1),
+                    radius: 44,
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.12),
                     child: Text(
-                      name.isNotEmpty
-                          ? name
-                              .substring(0, 1)
-                              .toUpperCase()
-                          : 'W',
+                      name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'W',
                       style: const TextStyle(
-                        fontSize: 35,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xff032744),
+                        fontSize: 36,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 12),
-
                   Text(
                     name,
                     style: const TextStyle(
                       fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF111827),
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
                     ),
                   ),
-
-                  const SizedBox(height: 8),
-
-                  // Availability
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+                  const SizedBox(height: 4),
+                  Text(
+                    category,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: isAvailable
-                          ? Colors.green
-                              .withValues(alpha: 0.1)
-                          : Colors.red
-                              .withValues(alpha: 0.1),
-                      borderRadius:
-                          BorderRadius.circular(20),
+                          ? AppColors.success.withValues(alpha: 0.12)
+                          : Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(
-                      isAvailable
-                          ? 'Available for work'
-                          : 'Currently Busy',
+                      isAvailable ? 'Available for work' : 'Currently Busy',
                       style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: isAvailable
-                            ? Colors.green
-                            : Colors.red,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isAvailable ? AppColors.success : Colors.red,
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
-                  const Divider(),
-
-                  const SizedBox(height: 10),
-
-                  // =================================================
-                  // STATS
-                  // =================================================
+                  const Divider(color: _lineColor),
+                  const SizedBox(height: 12),
                   Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceEvenly,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _buildStatItem(
-                        Icons.star,
-                        '${worker['rating'] ?? 0}',
-                        'Rating',
-                        Colors.amber,
-                      ),
-
-                      _buildStatItem(
-                        Icons.task_alt,
-                        '45+',
-                        'Jobs Done',
-                        Colors.blue,
-                      ),
-
-                      _buildStatItem(
-                        Icons.access_time,
-                        '5 Yrs',
-                        'Experience',
-                        Colors.purple,
-                      ),
+                          Icons.star_rounded, rating, 'Rating', Colors.amber),
+                      _buildStatItem(Icons.task_alt_rounded, jobsDone,
+                          'Jobs Done', AppColors.primary),
+                      _buildStatItem(Icons.work_history_rounded,
+                          '$experience Yrs', 'Experience', AppColors.success),
                     ],
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            // ===================================================
-            // ABOUT
-            // ===================================================
-            Container(
-              width: double.infinity,
-              color: Colors.white,
-              padding: const EdgeInsets.all(20),
+            // About Section
+            _card(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'About',
+                    'About Professional',
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
                     ),
                   ),
-
-                  const SizedBox(height: 10),
-
+                  const SizedBox(height: 12),
                   Text(
-                    'I am a highly skilled professional '
-                    'with over 5 years of experience in '
-                    'providing top-notch services. I ensure '
-                    'quality work, timely completion, and '
-                    'complete customer satisfaction. Feel '
-                    'free to book my service for any urgent '
-                    'repairs or installations.',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      height: 1.5,
-                    ),
+                    'Verified $category with over $experience years of field experience on OneClick. Specialized in quick response, quality maintenance, and guaranteed work satisfaction for home and business needs.',
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, height: 1.5, fontSize: 14),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            // ===================================================
-            // RECENT WORK
-            // ===================================================
-            Container(
-              width: double.infinity,
-              color: Colors.white,
-              padding: const EdgeInsets.all(20),
+            // Portfolio / Recent Work Preview
+            _card(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Recent Work',
+                    'Recent Work Portfolio',
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
                     ),
                   ),
-
-                  const SizedBox(height: 15),
-
+                  const SizedBox(height: 16),
                   GridView.builder(
                     shrinkWrap: true,
-                    physics:
-                        const NeverScrollableScrollPhysics(),
+                    physics: const NeverScrollableScrollPhysics(),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
                     ),
                     itemCount: 3,
-                    itemBuilder:
-                        (context, index) {
+                    itemBuilder: (context, index) {
                       return Container(
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius:
-                              BorderRadius.circular(10),
+                          color: AppColors.primary.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(AppRadius.button),
+                          border: Border.all(color: _lineColor),
                         ),
-                        child: Icon(
-                          Icons.image,
-                          color: Colors.grey.shade400,
-                          size: 40,
-                        ),
+                        child: Icon(Icons.handyman_outlined,
+                            color: AppColors.primary.withValues(alpha: 0.5),
+                            size: 32),
                       );
                     },
                   ),
@@ -346,169 +251,136 @@ class WorkerProfileScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            // ===================================================
-            // REVIEWS
-            // ===================================================
-            Container(
-              width: double.infinity,
-              color: Colors.white,
-              padding: const EdgeInsets.all(20),
+            // Reviews Section
+            _card(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Reviews',
+                        'Customer Reviews',
                         style: TextStyle(
                           fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark,
                         ),
                       ),
-
                       Text(
-                        'View All (${worker['reviews'] ?? 0})',
+                        'Rating: $rating / 5.0',
                         style: const TextStyle(
-                          color: Color(0xff032744),
-                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
                         ),
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 15),
-
+                  const SizedBox(height: 16),
                   _buildReviewItem(
-                    'Sunil Shantha',
-                    'Great service! Arrived on time '
-                        'and fixed the issue quickly.',
+                    'Kasun Fernando',
+                    'Very efficient and professional service! Fixed the issue cleanly in short time.',
                     5,
                   ),
-
-                  const Divider(height: 30),
-
+                  const Divider(height: 32, color: _lineColor),
                   _buildReviewItem(
-                    'Amal Perera',
-                    'Very professional and clean work. '
-                        'Highly recommended.',
-                    4,
+                    'Nimali Silva',
+                    'Punctual and polite. Solved our home problem without any hassle.',
+                    5,
                   ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
-  // =============================================================
-  // STAT ITEM
-  // =============================================================
+  static const Color _lineColor = Color(0xFFD9ECEA);
+
+  // White Fresh Teal card (radius 16, soft shadow)
+  Widget _card({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textDark.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
 
   Widget _buildStatItem(
-    IconData icon,
-    String value,
-    String label,
-    Color iconColor,
-  ) {
+      IconData icon, String value, String label, Color iconColor) {
     return Column(
       children: [
-        Icon(
-          icon,
-          color: iconColor,
-          size: 28,
-        ),
-
+        Icon(icon, color: iconColor, size: 24),
         const SizedBox(height: 8),
-
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
-        ),
+        Text(value,
+            style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark)),
+        const SizedBox(height: 4),
+        Text(label,
+            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
       ],
     );
   }
 
-  // =============================================================
-  // REVIEW ITEM
-  // =============================================================
-
-  Widget _buildReviewItem(
-    String name,
-    String comment,
-    int stars,
-  ) {
+  Widget _buildReviewItem(String name, String comment, int stars) {
     return Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             CircleAvatar(
               radius: 16,
-              backgroundColor:
-                  Colors.grey.shade300,
-              child: const Icon(
-                Icons.person,
-                size: 20,
-                color: Colors.white,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+              child: Text(
+                name.isNotEmpty ? name[0] : 'U',
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                    fontSize: 12),
               ),
             ),
-
-            const SizedBox(width: 10),
-
-            Text(
-              name,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
+            const SizedBox(width: 8),
+            Text(name,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: AppColors.textDark)),
             const Spacer(),
-
             Row(
               children: List.generate(
                 5,
                 (index) => Icon(
-                  Icons.star,
+                  Icons.star_rounded,
                   size: 16,
-                  color: index < stars
-                      ? Colors.amber
-                      : Colors.grey.shade300,
+                  color: index < stars ? Colors.amber : _lineColor,
                 ),
               ),
             ),
           ],
         ),
-
         const SizedBox(height: 8),
-
         Text(
           comment,
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 13,
-            height: 1.4,
-          ),
+          style: const TextStyle(
+              color: AppColors.textSecondary, fontSize: 12, height: 1.4),
         ),
       ],
     );

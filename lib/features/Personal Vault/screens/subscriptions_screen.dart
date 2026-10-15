@@ -1,22 +1,26 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
 import 'add_subscription_screen.dart';
 import 'subscription_details_screen.dart';
 import 'ai_subscription_checkup_screen.dart';
 import 'dashboard.dart';
 import 'vault_screen.dart';
 import 'sharing_center_screen.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../services/subscription_service.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
   @override
-  State<SubscriptionsScreen> createState() =>
-      _SubscriptionsScreenState();
+  State<SubscriptionsScreen> createState() => _SubscriptionsScreenState();
 }
+
 class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   static const Color bg = Color(0xFFF8FAFC);
   static const Color surface = Color(0xFFFFFFFF);
@@ -29,229 +33,200 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   final SubscriptionService _subscriptionService = SubscriptionService();
 
   Future<void> _deleteSubscription(SubscriptionItem item) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) {
-      return AlertDialog(
-        title: const Text('Delete Subscription'),
-        content: Text(
-          'Are you sure you want to delete "${item.name}"?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext, false);
-            },
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dialogContext, true);
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      );
-    },
-  );
-
-
-  if (confirmed != true) return;
-
-  try {
-    await _subscriptionService.deleteSubscription(item.id);
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Subscription deleted'),
-      ),
-    );
-  } catch (e) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Failed to delete subscription: $e'),
-      ),
-    );
-  }
-  }
-  Future<void> _editSubscription(SubscriptionItem item) async {
-  final nameController = TextEditingController(text: item.name);
-  final subtitleController = TextEditingController(text: item.subtitle);
-  final priceController = TextEditingController(text: item.price);
-  final renewalController = TextEditingController(text: item.renewal);
-  final usageController = TextEditingController(text: item.usage);
-  final categoryController = TextEditingController(text: item.category);
-
-  String status = item.status;
-  bool priceHiked = item.priceHiked;
-
-  final result = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) {
-      return StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: const Text('Edit Subscription'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Name',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: subtitleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Subtitle',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: priceController,
-                    decoration: const InputDecoration(
-                      labelText: 'Price',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: renewalController,
-                    decoration: const InputDecoration(
-                      labelText: 'Renewal',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: usageController,
-                    decoration: const InputDecoration(
-                      labelText: 'Usage',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: categoryController,
-                    decoration: const InputDecoration(
-                      labelText: 'Category',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<String>(
-                    initialValue: status,
-                    decoration: const InputDecoration(
-                      labelText: 'Status',
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'Active',
-                        child: Text('Active'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Free Trial',
-                        child: Text('Free Trial'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Cancelled',
-                        child: Text('Cancelled'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() {
-                          status = value;
-                        });
-                      }
-                    },
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Price Hiked'),
-                    value: priceHiked,
-                    onChanged: (value) {
-                      setDialogState(() {
-                        priceHiked = value;
-                      });
-                    },
-                  ),
-                ],
-              ),
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete Subscription'),
+          content: Text('Are you sure you want to delete "${item.name}"?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Cancel'),
             ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(dialogContext, false);
-                },
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogContext, true);
-                },
-                child: const Text('Save'),
-              ),
-            ],
-          );
-        },
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _subscriptionService.deleteSubscription(item.id);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Subscription deleted')));
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete subscription: $e')),
       );
-    },
-  );
-
-  if (result != true) {
-    nameController.dispose();
-    subtitleController.dispose();
-    priceController.dispose();
-    renewalController.dispose();
-    usageController.dispose();
-    categoryController.dispose();
-    return;
+    }
   }
 
-  try {
-    await _subscriptionService.updateSubscription(
-      subscriptionId: item.id,
-      name: nameController.text.trim(),
-      subtitle: subtitleController.text.trim(),
-      price: priceController.text.trim(),
-      renewal: renewalController.text.trim(),
-      usage: usageController.text.trim(),
-      category: categoryController.text.trim(),
-      status: status,
-      priceHiked: priceHiked,
+  Future<void> _editSubscription(SubscriptionItem item) async {
+    final nameController = TextEditingController(text: item.name);
+    final subtitleController = TextEditingController(text: item.subtitle);
+    final priceController = TextEditingController(text: item.price);
+    final renewalController = TextEditingController(text: item.renewal);
+    final usageController = TextEditingController(text: item.usage);
+    final categoryController = TextEditingController(text: item.category);
+
+    String status = item.status;
+    bool priceHiked = item.priceHiked;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Edit Subscription'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'Name'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: subtitleController,
+                      decoration: const InputDecoration(labelText: 'Subtitle'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: priceController,
+                      decoration: const InputDecoration(labelText: 'Price'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: renewalController,
+                      decoration: const InputDecoration(labelText: 'Renewal'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: usageController,
+                      decoration: const InputDecoration(labelText: 'Usage'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: categoryController,
+                      decoration: const InputDecoration(labelText: 'Category'),
+                    ),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      initialValue: status,
+                      decoration: const InputDecoration(labelText: 'Status'),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Active',
+                          child: Text('Active'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Free Trial',
+                          child: Text('Free Trial'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Cancelled',
+                          child: Text('Cancelled'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setDialogState(() {
+                            status = value;
+                          });
+                        }
+                      },
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Price Hiked'),
+                      value: priceHiked,
+                      onChanged: (value) {
+                        setDialogState(() {
+                          priceHiked = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext, false);
+                  },
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext, true);
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
 
-    if (!mounted) return;
+    if (result != true) {
+      nameController.dispose();
+      subtitleController.dispose();
+      priceController.dispose();
+      renewalController.dispose();
+      usageController.dispose();
+      categoryController.dispose();
+      return;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Subscription updated'),
-      ),
-    );
-  } catch (e) {
-    if (!mounted) return;
+    try {
+      await _subscriptionService.updateSubscription(
+        subscriptionId: item.id,
+        name: nameController.text.trim(),
+        subtitle: subtitleController.text.trim(),
+        price: priceController.text.trim(),
+        renewal: renewalController.text.trim(),
+        usage: usageController.text.trim(),
+        category: categoryController.text.trim(),
+        status: status,
+        priceHiked: priceHiked,
+      );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Failed to update subscription: $e'),
-      ),
-    );
-  } finally {
-    nameController.dispose();
-    subtitleController.dispose();
-    priceController.dispose();
-    renewalController.dispose();
-    usageController.dispose();
-    categoryController.dispose();
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Subscription updated')));
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update subscription: $e')),
+      );
+    } finally {
+      nameController.dispose();
+      subtitleController.dispose();
+      priceController.dispose();
+      renewalController.dispose();
+      usageController.dispose();
+      categoryController.dispose();
+    }
   }
-}
-
-
-
 
   String selectedFilter = 'All';
   String selectedCurrency = 'USD';
@@ -267,171 +242,204 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       subscriptions.where((item) => _matchesStatus(item, filter)).length;
   double _monthlyCost(Iterable<SubscriptionItem> items) => items
       .where((item) => _statusKey(item.status) == 'active')
-      .fold<double>(0, (sum, item) => sum +
-          (double.tryParse(item.price.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0));
+      .fold<double>(
+        0,
+        (sum, item) =>
+            sum +
+            (double.tryParse(item.price.replaceAll(RegExp(r'[^0-9.]'), '')) ??
+                0),
+      );
   List<SubscriptionItem> get filteredSubscriptions {
     final query = searchQuery.trim().toLowerCase();
     return subscriptions.where((item) {
-      final matchesSearch = item.name.toLowerCase().contains(query) ||
+      final matchesSearch =
+          item.name.toLowerCase().contains(query) ||
           item.subtitle.toLowerCase().contains(query);
       return matchesSearch && _matchesStatus(item, selectedFilter);
     }).toList();
   }
+
   List<SubscriptionItem> subscriptions = [];
   @override
-void initState() {
-  super.initState();
+  void initState() {
+    super.initState();
 
-  if (FirebaseAuth.instance.currentUser != null) {
-    _loadSubscriptions();
+    if (FirebaseAuth.instance.currentUser != null) {
+      _loadSubscriptions();
+    }
   }
-}
 
-void _loadSubscriptions() {
-  _subscriptionService.getSubscriptions().listen((records) {
-    if (!mounted) return;
+  void _loadSubscriptions() {
+    _subscriptionService.getSubscriptions().listen((records) {
+      if (!mounted) return;
 
-    setState(() {
-      subscriptions = records.map((record) {
-        return SubscriptionItem(
-          id: record.id,
-          name: record.name,
-          subtitle: record.subtitle,
-          price: record.price,
-          renewal: record.renewal,
-          usage: record.usage,
-          icon: Icons.subscriptions_outlined,
-          category: record.category,
-          priceHiked: record.priceHiked,
-          status: record.status,
-        );
-      }).toList();
+      setState(() {
+        subscriptions = records.map((record) {
+          return SubscriptionItem(
+            id: record.id,
+            name: record.name,
+            subtitle: record.subtitle,
+            price: record.price,
+            renewal: record.renewal,
+            usage: record.usage,
+            icon: Icons.subscriptions_outlined,
+            category: record.category,
+            priceHiked: record.priceHiked,
+            status: record.status,
+          );
+        }).toList();
+      });
     });
-  });
-}
+  }
 
-void _showSearch() {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(22),
-          decoration: const BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(30),
+  void _showSearch() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(22),
+            decoration: const BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+            ),
+            child: TextField(
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Search subscriptions...',
+                prefixIcon: const _VaultReferenceIcon(
+                  Icons.search,
+                  color: purple,
+                ),
+                suffixIcon: searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const _VaultReferenceIcon(Icons.close),
+                        onPressed: () {
+                          setState(() {
+                            searchQuery = '';
+                          });
+                          Navigator.pop(context);
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: surface,
+              ),
+              onChanged: (value) {
+                setState(() {
+                  searchQuery = value;
+                });
+              },
+              onSubmitted: (_) {
+                Navigator.pop(context);
+              },
             ),
           ),
-          child: TextField(
-            autofocus: true,
-            decoration: InputDecoration(
-              hintText: 'Search subscriptions...',
-              prefixIcon: const _VaultReferenceIcon(
-                Icons.search,
-                color: purple,
-              ),
-              suffixIcon: searchQuery.isNotEmpty
-    ? IconButton(
-        icon: const _VaultReferenceIcon(Icons.close),
-        onPressed: () {
-          setState(() {
-            searchQuery = '';
-          });
-          Navigator.pop(context);
-        },
-      )
-    : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(24),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: surface,
-            ),
-            onChanged: (value) {
-              setState(() {
-                searchQuery = value;
-              });
-            },
-            onSubmitted: (_) {
-              Navigator.pop(context);
-            },
-          ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final base = Theme.of(context);
-    final typography = GoogleFonts.plusJakartaSansTextTheme(base.textTheme);
+    final typography = GoogleFonts.plusJakartaSansTextTheme();
     return Theme(
       data: base.copyWith(
-        textTheme: typography,
-        primaryTextTheme: GoogleFonts.plusJakartaSansTextTheme(base.primaryTextTheme),
+        textTheme: typography as TextTheme?,
+        primaryTextTheme:
+          GoogleFonts.plusJakartaSansTextTheme() as TextTheme?,
         colorScheme: base.colorScheme.copyWith(
-          primary: purple, onPrimary: Colors.white,
+          primary: purple,
+          onPrimary: Colors.white,
           secondary: const Color(0xFF0891B2),
-          surface: bg, onSurface: ink,
+          surface: bg,
+          onSurface: ink,
         ),
         dividerColor: const Color(0xFFEFF2F7),
         navigationBarTheme: NavigationBarThemeData(
-          labelTextStyle: WidgetStateProperty.resolveWith((states) =>
-            GoogleFonts.plusJakartaSans(
+          labelTextStyle: WidgetStateProperty.resolveWith(
+            (states) => GoogleFonts.plusJakartaSans(
               fontSize: 11,
               fontWeight: states.contains(WidgetState.selected)
-                  ? FontWeight.w800 : FontWeight.w600,
+                  ? FontWeight.w800
+                  : FontWeight.w600,
               color: states.contains(WidgetState.selected)
-                  ? purple : const Color(0xFF94A3B8),
-            )),
-          iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
-            size: 21,
-            color: states.contains(WidgetState.selected)
-                ? purple : const Color(0xFF94A3B8),
-          )),
+                  ? purple
+                  : const Color(0xFF94A3B8),
+            ),
+          ),
+          iconTheme: WidgetStateProperty.resolveWith(
+            (states) => IconThemeData(
+              size: 21,
+              color: states.contains(WidgetState.selected)
+                  ? purple
+                  : const Color(0xFF94A3B8),
+            ),
+          ),
         ),
       ),
-      child: Builder(builder: (themedContext) => DecoratedBox(
-        decoration: const BoxDecoration(color: bg),
-        child: Stack(
-          children: [
-            Positioned.fill(child: IgnorePointer(child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(-0.8, -1), radius: 1.4,
-                  colors: [Color(0xB0E0E7FF), Color(0x00E0E7FF)],
+      child: Builder(
+        builder: (themedContext) => DecoratedBox(
+          decoration: const BoxDecoration(color: bg),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment(-0.8, -1),
+                        radius: 1.4,
+                        colors: [Color(0xB0E0E7FF), Color(0x00E0E7FF)],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ))),
-            Positioned.fill(child: IgnorePointer(child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(1, -0.5), radius: 0.9,
-                  colors: [Color(0x73F3E8FF), Color(0x00F3E8FF)],
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment(1, -0.5),
+                        radius: 0.9,
+                        colors: [Color(0x73F3E8FF), Color(0x00F3E8FF)],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ))),
-            Positioned.fill(child: IgnorePointer(child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(0, 1), radius: 1,
-                  colors: [Color(0x66E0F2FE), Color(0x00E0F2FE)],
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment(0, 1),
+                        radius: 1,
+                        colors: [Color(0x66E0F2FE), Color(0x00E0F2FE)],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ))),
-            _buildSubscriptions(themedContext),
-          ],
+              _buildSubscriptions(themedContext),
+            ],
+          ),
         ),
-      )),
+      ),
     );
   }
+
   Widget _buildSubscriptions(BuildContext context) {
     return Scaffold(
       extendBody: true,
@@ -457,18 +465,24 @@ void _showSearch() {
                   colors: [purple, Color(0xFF6366F1)],
                 ),
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: const [BoxShadow(
-                  color: Color(0x306366F1), blurRadius: 14,
-                  offset: Offset(0, 4),
-                )],
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x306366F1),
+                    blurRadius: 14,
+                    offset: Offset(0, 4),
+                  ),
+                ],
               ),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white.withAlpha(235),
                   borderRadius: BorderRadius.circular(14.5),
                 ),
-                child: const _VaultReferenceIcon(Icons.verified_user_outlined,
-                  size: 22, color: purple),
+                child: const _VaultReferenceIcon(
+                  Icons.verified_user_outlined,
+                  size: 22,
+                  color: purple,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -476,34 +490,52 @@ void _showSearch() {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('OneClick', style: TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5, color: ink,
-                  )),
-                  const SizedBox(height: 4),
-                  Row(children: [
-                    const _VaultPulseDot(color: purple, size: 8, ping: true),
-                    const SizedBox(width: 7),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0F3FF),
-                        border: Border.all(color: const Color(0xFFE0E7FE)),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text('PERSONAL', style: TextStyle(
-                        fontSize: 10, letterSpacing: 1.2,
-                        fontWeight: FontWeight.w800, color: Color(0xFF4338CA))),
+                  const Text(
+                    'OneClick',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      color: ink,
                     ),
-                  ]),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const _VaultPulseDot(color: purple, size: 8, ping: true),
+                      const SizedBox(width: 7),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0F3FF),
+                          border: Border.all(color: const Color(0xFFE0E7FE)),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'PERSONAL',
+                          style: TextStyle(
+                            fontSize: 10,
+                            letterSpacing: 1.2,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF4338CA),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
           ],
         ),
-              actions: [
-          Padding(padding: const EdgeInsets.only(right: 24),
-            child: _headerButton(Icons.search, _showSearch)),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 24),
+            child: _headerButton(Icons.search, _showSearch),
+          ),
         ],
       ),
       body: SafeArea(
@@ -528,8 +560,10 @@ void _showSearch() {
                         const SizedBox(height: 30),
                         _buildFilters(),
                         const SizedBox(height: 14),
-                        Text('${filteredSubscriptions.length} subscriptions shown',
-                          style: const TextStyle(color: muted, fontSize: 12)),
+                        Text(
+                          '${filteredSubscriptions.length} subscriptions shown',
+                          style: const TextStyle(color: muted, fontSize: 12),
+                        ),
                         if (filteredSubscriptions.isEmpty) ...[
                           const SizedBox(height: 20),
                           _buildEmptySubscriptions(),
@@ -541,9 +575,7 @@ void _showSearch() {
                           icon: Icons.terminal_outlined,
                           items: filteredSubscriptions
                               .where(
-                                (item) =>
-                                    item.category ==
-                                    'Productivity & AI',
+                                (item) => item.category == 'Productivity & AI',
                               )
                               .toList(),
                         ),
@@ -555,8 +587,7 @@ void _showSearch() {
                           items: filteredSubscriptions
                               .where(
                                 (item) =>
-                                    item.category ==
-                                    'Entertainment & Media',
+                                    item.category == 'Entertainment & Media',
                               )
                               .toList(),
                         ),
@@ -568,8 +599,7 @@ void _showSearch() {
                           items: filteredSubscriptions
                               .where(
                                 (item) =>
-                                    item.category ==
-                                    'Storage & Utilities',
+                                    item.category == 'Storage & Utilities',
                               )
                               .toList(),
                         ),
@@ -582,25 +612,33 @@ void _showSearch() {
                 ),
               ),
             ),
-
           ],
         ),
       ),
-          bottomNavigationBar: _buildBottomNavigation(),
+      bottomNavigationBar: _buildBottomNavigation(),
     );
   }
+
   // ============================================================
   // HEADER
   // ============================================================
-Widget _buildHeader() {
-  return const Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text('My Subscriptions', style: TextStyle(
-        color: ink, fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.6)),
-    ],
-  );
-}
+  Widget _buildHeader() {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'My Subscriptions',
+          style: TextStyle(
+            color: ink,
+            fontSize: 26,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.6,
+          ),
+        ),
+      ],
+    );
+  }
+
   // ============================================================
   // FORECAST
   // ============================================================
@@ -615,15 +653,13 @@ Widget _buildHeader() {
                 'SPENDING FORECAST',
                 style: TextStyle(
                   color: Color(0xFF94A3B8),
-                  fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1.6,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  letterSpacing: 1.6,
                 ),
               ),
               const SizedBox(width: 8),
-              const _VaultReferenceIcon(
-                Icons.circle,
-                color: purple,
-                size: 8,
-              ),
+              const _VaultReferenceIcon(Icons.circle, color: purple, size: 8),
               const Spacer(),
               _currencyButton('USD'),
               const SizedBox(width: 6),
@@ -648,10 +684,7 @@ Widget _buildHeader() {
                 padding: EdgeInsets.only(bottom: 7),
                 child: Text(
                   '/mo',
-                  style: TextStyle(
-                    color: Color(0xFF64748B),
-                    fontSize: 18,
-                  ),
+                  style: TextStyle(color: Color(0xFF64748B), fontSize: 18),
                 ),
               ),
               const Spacer(),
@@ -690,10 +723,7 @@ Widget _buildHeader() {
             children: [
               const Text(
                 'Projected ',
-                style: TextStyle(
-                  color: muted,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: muted, fontSize: 14),
               ),
               Text(
                 (_monthlyCost(subscriptions) * 12).toStringAsFixed(2),
@@ -703,13 +733,7 @@ Widget _buildHeader() {
                   fontSize: 14,
                 ),
               ),
-              const Text(
-                '/year',
-                style: TextStyle(
-                  color: muted,
-                  fontSize: 14,
-                ),
-              ),
+              const Text('/year', style: TextStyle(color: muted, fontSize: 14)),
               const Spacer(),
               Text(
                 'vs last month',
@@ -741,7 +765,14 @@ Widget _buildHeader() {
               const SizedBox(width: 14),
               Expanded(
                 child: _statCard(
-                  number: subscriptions.where((item) => item.priceHiked && _statusKey(item.status) == 'active').length.toString(),
+                  number: subscriptions
+                      .where(
+                        (item) =>
+                            item.priceHiked &&
+                            _statusKey(item.status) == 'active',
+                      )
+                      .length
+                      .toString(),
                   label: 'Price Hike',
                   color: danger,
                 ),
@@ -752,6 +783,7 @@ Widget _buildHeader() {
       ),
     );
   }
+
   Widget _currencyButton(String currency) {
     final selected = selectedCurrency == currency;
     return GestureDetector(
@@ -761,36 +793,32 @@ Widget _buildHeader() {
         });
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 8,
-          vertical: 8,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
           color: const Color(0xFFF0F3FF),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: selected ? const Color(0xFFE0E7FE) : Colors.white),
+          border: Border.all(
+            color: selected ? const Color(0xFFE0E7FE) : Colors.white,
+          ),
         ),
         child: Text(
           currency == 'USD' ? 'USD ' : 'LKR ',
           style: TextStyle(
             color: selected ? purple : ink,
-            fontWeight:
-                selected ? FontWeight.w600 : FontWeight.w400,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
       ),
     );
   }
+
   Widget _statCard({
     required String number,
     required String label,
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        vertical: 16,
-        horizontal: 5,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 5),
       decoration: BoxDecoration(
         color: const Color(0xFFF0F3FF),
         borderRadius: BorderRadius.circular(24),
@@ -810,15 +838,13 @@ Widget _buildHeader() {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF64748B),
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
           ),
         ],
       ),
     );
   }
+
   // ============================================================
   // AI CHECKUP
   // ============================================================
@@ -861,7 +887,8 @@ Widget _buildHeader() {
                         ),
                         children: [
                           TextSpan(
-                            text: '3 optimizations found. '
+                            text:
+                                '3 optimizations found. '
                                 'You can trim up to ',
                           ),
                           TextSpan(
@@ -872,8 +899,7 @@ Widget _buildHeader() {
                             ),
                           ),
                           TextSpan(
-                            text:
-                                ' in duplicate streaming & dormant tiers.',
+                            text: ' in duplicate streaming & dormant tiers.',
                           ),
                         ],
                       ),
@@ -894,8 +920,7 @@ Widget _buildHeader() {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                    const AISubscriptionCheckupScreen(),
+                    builder: (context) => const AISubscriptionCheckupScreen(),
                   ),
                 );
               },
@@ -905,6 +930,7 @@ Widget _buildHeader() {
       ),
     );
   }
+
   // ============================================================
   // ACTION REQUIRED
   // ============================================================
@@ -919,7 +945,9 @@ Widget _buildHeader() {
                 'ACTION REQUIRED & RENEWALS',
                 style: TextStyle(
                   color: Color(0xFF94A3B8),
-                  fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1.6,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  letterSpacing: 1.6,
                 ),
               ),
             ),
@@ -952,8 +980,7 @@ Widget _buildHeader() {
                 title: 'Figma Pro',
                 subtitle: 'Annual Billing',
                 badge: '7 days',
-                description:
-                    'Auto-charge amount will renew automatically.',
+                description: 'Auto-charge amount will renew automatically.',
                 icon: Icons.brush_outlined,
                 urgent: false,
               ),
@@ -963,6 +990,7 @@ Widget _buildHeader() {
       ],
     );
   }
+
   Widget _renewalCard({
     required String title,
     required String subtitle,
@@ -973,108 +1001,104 @@ Widget _buildHeader() {
   }) {
     return SizedBox(
       width: 340,
-      child: _VaultGlassCard(padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _circleIcon(
-                icon,
-                color: purple,
-                size: 45,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: ink,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
+      child: _VaultGlassCard(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _circleIcon(icon, color: purple, size: 45),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: ink,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
                       ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: purple,
-                        fontSize: 13,
+                      Text(
+                        subtitle,
+                        style: const TextStyle(color: purple, fontSize: 13),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 11,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: urgent
-                      ? const Color(0xFFFF7087)
-                      : const Color(0xFFF1F0FF),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Text(
-                  badge,
-                  style: TextStyle(
-                    color: urgent ? Colors.white : purple,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            description,
-            style: const TextStyle(
-              color: Color(0xFF64748B),
-              fontSize: 13,
-              height: 1.4,
-            ),
-          ),
-          const Spacer(),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () {
-                    _message('$title cancellation selected.');
-                  },
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: urgent
+                        ? const Color(0xFFFF7087)
+                        : const Color(0xFFF1F0FF),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
                   child: Text(
-                    'Cancel',
+                    badge,
                     style: TextStyle(
-                      color: urgent ? danger : muted,
-                      fontWeight: FontWeight.w600,
+                      color: urgent ? Colors.white : purple,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              description,
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 13,
+                height: 1.4,
               ),
-              Expanded(
-                child: TextButton(
-                  onPressed: () {
-                    _message('$title kept.');
-                  },
-                  child: const Text(
-                    'Keep Plan',
-                    style: TextStyle(
-                      color: purple,
-                      fontWeight: FontWeight.w600,
+            ),
+            const Spacer(),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      _message('$title cancellation selected.');
+                    },
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: urgent ? danger : muted,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      _message('$title kept.');
+                    },
+                    child: const Text(
+                      'Keep Plan',
+                      style: TextStyle(
+                        color: purple,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-    ));
+    );
   }
+
   // ============================================================
   // FILTERS
   // ============================================================
@@ -1094,6 +1118,7 @@ Widget _buildHeader() {
       ),
     );
   }
+
   Widget _filter(String title, String count) {
     final selected = selectedFilter == title;
     return GestureDetector(
@@ -1103,12 +1128,11 @@ Widget _buildHeader() {
         });
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 17,
-          vertical: 10,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFE0E7FE) : Colors.white.withAlpha(220),
+          color: selected
+              ? const Color(0xFFE0E7FE)
+              : Colors.white.withAlpha(220),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: const Color(0xFFE0E7FE)),
         ),
@@ -1117,13 +1141,13 @@ Widget _buildHeader() {
           style: TextStyle(
             color: selected ? purple : const Color(0xFF64748B),
             fontSize: 13,
-            fontWeight:
-                selected ? FontWeight.w600 : FontWeight.w400,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
       ),
     );
   }
+
   // ============================================================
   // CATEGORY
   // ============================================================
@@ -1138,24 +1162,22 @@ Widget _buildHeader() {
     final categoryLabel = _statusKey(selectedFilter) == 'cancelled'
         ? 'No renewals'
         : _statusKey(selectedFilter) == 'free trial'
-            ? '${items.length} trials'
-            : '\$${categoryAmount.toStringAsFixed(2)}/mo';
+        ? '${items.length} trials'
+        : '\$${categoryAmount.toStringAsFixed(2)}/mo';
     return Column(
       children: [
         Row(
           children: [
-            _VaultReferenceIcon(
-              icon,
-              color: purple,
-              size: 19,
-            ),
+            _VaultReferenceIcon(icon, color: purple, size: 19),
             const SizedBox(width: 9),
             Expanded(
               child: Text(
                 title,
                 style: const TextStyle(
                   color: Color(0xFF94A3B8),
-                  fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1.6,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.6,
                 ),
               ),
             ),
@@ -1179,103 +1201,168 @@ Widget _buildHeader() {
       ],
     );
   }
+
   Widget _subscriptionCard(SubscriptionItem item) {
-  return InkWell(
-    borderRadius: BorderRadius.circular(24),
-    onTap: () {
-      if (item.name == 'Adobe Creative Cloud') {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const SubscriptionDetailsScreen(),
-          ),
-        );
-      } else {
-        _message('${item.name} details will be added soon.');
-      }
-    },
-    child: _VaultGlassCard(interactive: true,
-      accent: _statusKey(item.status) == 'free trial'
-          ? const Color(0xFF9333EA)
-          : _statusKey(item.status) == 'cancelled'
-              ? const Color(0xFF94A3B8) : purple,
-      padding: const EdgeInsets.all(19),
-      child: Builder(builder: (context) => Column(
-        children: [
-          Row(
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: () {
+        if (item.name == 'Adobe Creative Cloud') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const SubscriptionDetailsScreen(),
+            ),
+          );
+        } else {
+          _message('${item.name} details will be added soon.');
+        }
+      },
+      child: _VaultGlassCard(
+        interactive: true,
+        accent: _statusKey(item.status) == 'free trial'
+            ? const Color(0xFF9333EA)
+            : _statusKey(item.status) == 'cancelled'
+            ? const Color(0xFF94A3B8)
+            : purple,
+        padding: const EdgeInsets.all(19),
+        child: Builder(
+          builder: (context) => Column(
             children: [
-              _circleIcon(
-                item.icon,
-                color: purple,
-                size: 44,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                children: [
+                  _circleIcon(item.icon, color: purple, size: 44),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Flexible(
-                          child: Text(
-                            item.name,
-                            style: TextStyle(
-                              color: _VaultGlassScope.hoveredOf(context) ? purple : ink,
-                              fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: -0.35,
-                            ),
-                          ),
-                        ),
-                        if (item.priceHiked) ...[
-                          const SizedBox(width: 7),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFF7188),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'Price Hiked',
-                              style: TextStyle(
-                                color: Color(0xFF7D0921),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                item.name,
+                                style: TextStyle(
+                                  color: _VaultGlassScope.hoveredOf(context)
+                                      ? purple
+                                      : ink,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.35,
+                                ),
                               ),
                             ),
+                            if (item.priceHiked) ...[
+                              const SizedBox(width: 7),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF7188),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text(
+                                  'Price Hiked',
+                                  style: TextStyle(
+                                    color: Color(0xFF7D0921),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.subtitle,
+                          style: const TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 13,
                           ),
-                        ],
+                        ),
+                        const SizedBox(height: 7),
+                        _statusBadge(item.status),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.subtitle,
-                      style: const TextStyle(
-                        color: Color(0xFF64748B),
-                        fontSize: 13,
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        item.price,
+                        style: const TextStyle(
+                          color: ink,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 7),
-                    _statusBadge(item.status),
-                  ],
-                ),
+                      const SizedBox(height: 3),
+                      Text(
+                        _statusKey(item.status) == 'active' ? '/mo' : '',
+                        style: const TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(width: 6),
+
+                  IconButton(
+                    tooltip: 'Edit',
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => _editSubscription(item),
+                  ),
+
+                  IconButton(
+                    tooltip: 'Delete',
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () => _deleteSubscription(item),
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              const SizedBox(height: 18),
+              Row(
                 children: [
-                  Text(
-                    item.price,
-                    style: const TextStyle(
-                      color: ink,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F3FF),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        _VaultReferenceIcon(
+                          Icons.circle,
+                          size: 7,
+                          color:
+                              item.usage.contains('Rarely') ||
+                                  item.usage.contains('Unused')
+                              ? muted
+                              : purple,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          item.usage,
+                          style: const TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const Spacer(),
                   Text(
-                    _statusKey(item.status) == 'active' ? '/mo' : '',
+                    item.renewal,
                     style: const TextStyle(
                       color: Color(0xFF64748B),
                       fontSize: 12,
@@ -1283,297 +1370,261 @@ Widget _buildHeader() {
                   ),
                 ],
               ),
-
-              const SizedBox(width: 6),
-
-              IconButton(
-                tooltip: 'Edit',
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () => _editSubscription(item),
-              ),
-
-              IconButton(
-                tooltip: 'Delete',
-                icon: const Icon(Icons.delete_outline),
-                onPressed: () => _deleteSubscription(item),
-              ),
             ],
           ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F3FF),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    _VaultReferenceIcon(
-                      Icons.circle,
-                      size: 7,
-                      color: item.usage.contains('Rarely') ||
-                              item.usage.contains('Unused')
-                          ? muted
-                          : purple,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      item.usage,
-                      style: const TextStyle(
-                        color: Color(0xFF64748B),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              Text(
-                item.renewal,
-                style: const TextStyle(
-                  color: Color(0xFF64748B),
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ],
-      )),
-    ),
-  );
-}
+        ),
+      ),
+    );
+  }
 
   Widget _statusBadge(String status) {
     final trial = _statusKey(status) == 'free trial';
     final cancelled = _statusKey(status) == 'cancelled';
-    final color = trial ? const Color(0xFF9333EA)
-        : cancelled ? const Color(0xFF64748B) : const Color(0xFF059669);
+    final color = trial
+        ? const Color(0xFF9333EA)
+        : cancelled
+        ? const Color(0xFF64748B)
+        : const Color(0xFF059669);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: color.withAlpha(16),
-        borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withAlpha(30))),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 5, height: 5,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 5),
-        Text(trial ? 'Free Trial' : status, style: TextStyle(
-          fontSize: 10, fontWeight: FontWeight.w700, color: color)),
-      ]),
+      decoration: BoxDecoration(
+        color: color.withAlpha(16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withAlpha(30)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 5,
+            height: 5,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            trial ? 'Free Trial' : status,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
+
   Widget _buildEmptySubscriptions() {
-    return _card(child: Column(children: [
-      _circleIcon(Icons.search, color: purple, size: 44),
-      const SizedBox(height: 16),
-      const Text('No subscriptions found', style: TextStyle(
-        fontSize: 16, fontWeight: FontWeight.w700, color: ink)),
-      const SizedBox(height: 6),
-      const Text('Try another filter or clear your search.',
-        textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: muted)),
-    ]));
+    return _card(
+      child: Column(
+        children: [
+          _circleIcon(Icons.search, color: purple, size: 44),
+          const SizedBox(height: 16),
+          const Text(
+            'No subscriptions found',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: ink,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Try another filter or clear your search.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: muted),
+          ),
+        ],
+      ),
+    );
   }
+
   // ============================================================
   // ADD SUBSCRIPTION
   // ============================================================
-Widget _buildAddSubscriptionButton() {
-  return Center(
-    child: _pillButton(
-      icon: Icons.add_circle,
-      text: 'Add Subscription',
-      color: purple,
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const AddSubscriptionScreen(),
-          ),
-        );
-      },
-    ),
-  );
-}
+  Widget _buildAddSubscriptionButton() {
+    return Center(
+      child: _pillButton(
+        icon: Icons.add_circle,
+        text: 'Add Subscription',
+        color: purple,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AddSubscriptionScreen(),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   // ============================================================
   // BOTTOM NAVIGATION
   // ============================================================
   Widget _buildBottomNavigation() {
     return SafeArea(
-        top: false,
-        minimum: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-        child: Center(
-          heightFactor: 1,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 430),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.white.withAlpha(240)),
-                boxShadow: const [BoxShadow(
-                  color: Color(0x140F172A), blurRadius: 24,
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 430),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: Colors.white.withAlpha(240)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x140F172A),
+                  blurRadius: 24,
                   offset: Offset(0, -4),
-                )],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(28),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: ColoredBox(
-                    color: Colors.white.withAlpha(235),
-                    child: Padding(padding: const EdgeInsets.all(8), child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _navItem(
-              Icons.home_outlined,
-              'Home',
-              false,
+                ),
+              ],
             ),
-            _navItem(
-              Icons.folder_special_outlined,
-              'Vault',
-              false,
-            ),
-            _navItem(
-              Icons.credit_card,
-              'Subs',
-              true,
-            ),
-            _navItem(
-              Icons.share_outlined,
-              'Sharing',
-              false,
-            ),
-          ],
-        )),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: ColoredBox(
+                  color: Colors.white.withAlpha(235),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _navItem(Icons.home_outlined, 'Home', false),
+                        _navItem(Icons.folder_special_outlined, 'Vault', false),
+                        _navItem(Icons.credit_card, 'Subs', true),
+                        _navItem(Icons.share_outlined, 'Sharing', false),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
         ),
-      );
+      ),
+    );
   }
-  Widget _navItem(
-    IconData icon,
-    String label,
-    bool selected,
-  ) {
+
+  Widget _navItem(IconData icon, String label, bool selected) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
-  if (selected) return;
-  if (label == 'Home') {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            const PersonalDashboardScreen(),
-      ),
-    );
-  } else if (label == 'Vault') {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            const VaultScreen(),
-      ),
-    );
-  } else if (label == 'Sharing') {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            const SharingCenterScreen(),
-      ),
-    );
-  }
-},
-      child: _VaultPressFeedback(child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 8,
-        ),
-        decoration: selected
-            ? BoxDecoration(
-                color: const Color(0xFFF0F3FF),
-                borderRadius: BorderRadius.circular(16),
-                
-              )
-            : null,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _VaultReferenceIcon(
-              icon,
-              color: selected ? purple : muted,
-              size: 20,
+        if (selected) return;
+        if (label == 'Home') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const PersonalDashboardScreen(),
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
+          );
+        } else if (label == 'Vault') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const VaultScreen()),
+          );
+        } else if (label == 'Sharing') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const SharingCenterScreen(),
+            ),
+          );
+        }
+      },
+      child: _VaultPressFeedback(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: selected
+              ? BoxDecoration(
+                  color: const Color(0xFFF0F3FF),
+                  borderRadius: BorderRadius.circular(16),
+                )
+              : null,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _VaultReferenceIcon(
+                icon,
                 color: selected ? purple : muted,
-                fontSize: 11,
-                fontWeight:
-                    selected ? FontWeight.w800 : FontWeight.w600,
+                size: 20,
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: selected ? purple : muted,
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ));
+    );
   }
+
   // ============================================================
   // REUSABLE
   // ============================================================
-  Widget _card({required Widget child,
-  EdgeInsetsGeometry padding = const EdgeInsets.all(20)}) {
-  return SizedBox(width: double.infinity,
-    child: _VaultGlassCard(padding: padding, child: child));
-}
-  Widget _circleIcon(IconData icon, {required Color color, double size = 44}) {
-  final accent = icon == Icons.music_note || icon == Icons.cloud_done_outlined
-      ? const Color(0xFF059669)
-      : icon == Icons.tv_outlined || icon == Icons.movie_outlined
-          ? const Color(0xFFF43F5E)
-          : icon == Icons.psychology_outlined || icon == Icons.memory_outlined
-              ? purple2 : color;
-  return Builder(builder: (context) {
-    final hovered = _VaultGlassScope.hoveredOf(context);
-    return AnimatedScale(scale: hovered ? 1.05 : 1,
-      duration: const Duration(milliseconds: 300),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        width: size, height: size, alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: hovered ? accent : accent.withAlpha(18),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: accent.withAlpha(30)),
-        ),
-        child: _VaultReferenceIcon(icon,
-          color: hovered ? Colors.white : accent, size: size * .46),
-      ),
+  Widget _card({
+    required Widget child,
+    EdgeInsetsGeometry padding = const EdgeInsets.all(20),
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: _VaultGlassCard(padding: padding, child: child),
     );
-  });
-}
-  Widget _headerButton(
-    IconData icon,
-    VoidCallback onTap,
-  ) {
+  }
+
+  Widget _circleIcon(IconData icon, {required Color color, double size = 44}) {
+    final accent = icon == Icons.music_note || icon == Icons.cloud_done_outlined
+        ? const Color(0xFF059669)
+        : icon == Icons.tv_outlined || icon == Icons.movie_outlined
+        ? const Color(0xFFF43F5E)
+        : icon == Icons.psychology_outlined || icon == Icons.memory_outlined
+        ? purple2
+        : color;
+    return Builder(
+      builder: (context) {
+        final hovered = _VaultGlassScope.hoveredOf(context);
+        return AnimatedScale(
+          scale: hovered ? 1.05 : 1,
+          duration: const Duration(milliseconds: 300),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            width: size,
+            height: size,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: hovered ? accent : accent.withAlpha(18),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: accent.withAlpha(30)),
+            ),
+            child: _VaultReferenceIcon(
+              icon,
+              color: hovered ? Colors.white : accent,
+              size: size * .46,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _headerButton(IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(50),
-      child: _circleIcon(
-        icon,
-        color: muted,
-        size: 46,
-      ),
+      child: _circleIcon(icon, color: muted, size: 46),
     );
   }
+
   Widget _pillButton({
     required IconData icon,
     required String text,
@@ -1584,10 +1635,7 @@ Widget _buildAddSubscriptionButton() {
       onTap: onTap,
       borderRadius: BorderRadius.circular(24),
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 22,
-          vertical: 14,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
         decoration: BoxDecoration(
           color: const Color(0xFFF0F3FF),
           borderRadius: BorderRadius.circular(24),
@@ -1596,11 +1644,7 @@ Widget _buildAddSubscriptionButton() {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _VaultReferenceIcon(
-              icon,
-              color: color,
-              size: 20,
-            ),
+            _VaultReferenceIcon(icon, color: color, size: 20),
             const SizedBox(width: 9),
             Text(
               text,
@@ -1615,24 +1659,31 @@ Widget _buildAddSubscriptionButton() {
       ),
     );
   }
+
   List<BoxShadow> _shadow() {
     return const [
-      BoxShadow(color: Color(0x1464748B), offset: Offset(0, 10),
-        blurRadius: 30, spreadRadius: -4),
-      BoxShadow(color: Color(0x0864748B), offset: Offset(0, 4),
-        blurRadius: 12, spreadRadius: -2),
+      BoxShadow(
+        color: Color(0x1464748B),
+        offset: Offset(0, 10),
+        blurRadius: 30,
+        spreadRadius: -4,
+      ),
+      BoxShadow(
+        color: Color(0x0864748B),
+        offset: Offset(0, 4),
+        blurRadius: 12,
+        spreadRadius: -2,
+      ),
     ];
   }
+
   // ============================================================
   // DIALOGS / ACTIONS
   // ============================================================
   void _message(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(text),
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
+
   void _showAddSubscriptionDialog() {
     final nameController = TextEditingController();
     final priceController = TextEditingController();
@@ -1676,12 +1727,7 @@ Widget _buildAddSubscriptionButton() {
                   'Subscription UI added. Backend connection comes next.',
                 );
               },
-              child: const Text(
-                'Add',
-                style: TextStyle(
-                  color: purple,
-                ),
-              ),
+              child: const Text('Add', style: TextStyle(color: purple)),
             ),
           ],
         );
@@ -1689,6 +1735,7 @@ Widget _buildAddSubscriptionButton() {
     );
   }
 }
+
 // ================================================================
 // SUBSCRIPTION MODEL
 // ================================================================
@@ -1716,6 +1763,7 @@ class SubscriptionItem {
     this.status = 'Active',
   });
 }
+
 // ================================================================
 // NEW BADGE
 // ================================================================
@@ -1724,10 +1772,7 @@ class _NewBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 7,
-        vertical: 4,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
         color: const Color(0xFF823AFF),
         borderRadius: BorderRadius.circular(7),
@@ -1748,12 +1793,20 @@ class _VaultGlassScope extends InheritedWidget {
   const _VaultGlassScope({required this.hovered, required super.child});
   final bool hovered;
   static bool hoveredOf(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<_VaultGlassScope>()?.hovered ?? false;
+      context.dependOnInheritedWidgetOfExactType<_VaultGlassScope>()?.hovered ??
+      false;
   @override
-  bool updateShouldNotify(_VaultGlassScope oldWidget) => hovered != oldWidget.hovered;
+  bool updateShouldNotify(_VaultGlassScope oldWidget) =>
+      hovered != oldWidget.hovered;
 }
+
 class _VaultGlassCard extends StatefulWidget {
-  const _VaultGlassCard({required this.child, required this.padding, this.interactive = false, this.accent});
+  const _VaultGlassCard({
+    required this.child,
+    required this.padding,
+    this.interactive = false,
+    this.accent,
+  });
   final Widget child;
   final EdgeInsetsGeometry padding;
   final bool interactive;
@@ -1761,6 +1814,7 @@ class _VaultGlassCard extends StatefulWidget {
   @override
   State<_VaultGlassCard> createState() => _VaultGlassCardState();
 }
+
 class _VaultGlassCardState extends State<_VaultGlassCard> {
   bool _hovered = false;
   bool _pressed = false;
@@ -1769,11 +1823,20 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
     return MouseRegion(
       cursor: widget.interactive ? SystemMouseCursors.click : MouseCursor.defer,
       onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() { _hovered = false; _pressed = false; }),
+      onExit: (_) => setState(() {
+        _hovered = false;
+        _pressed = false;
+      }),
       child: Listener(
-        onPointerDown: (_) { if (widget.interactive) setState(() => _pressed = true); },
-        onPointerUp: (_) { if (_pressed) setState(() => _pressed = false); },
-        onPointerCancel: (_) { if (_pressed) setState(() => _pressed = false); },
+        onPointerDown: (_) {
+          if (widget.interactive) setState(() => _pressed = true);
+        },
+        onPointerUp: (_) {
+          if (_pressed) setState(() => _pressed = false);
+        },
+        onPointerCancel: (_) {
+          if (_pressed) setState(() => _pressed = false);
+        },
         child: AnimatedScale(
           scale: _pressed ? 0.98 : 1,
           duration: const Duration(milliseconds: 150),
@@ -1784,12 +1847,19 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: _hovered ? const Color(0x1F6366F1) : const Color(0x1464748B),
+                  color: _hovered
+                      ? const Color(0x1F6366F1)
+                      : const Color(0x1464748B),
                   offset: Offset(0, _hovered ? 20 : 10),
-                  blurRadius: _hovered ? 35 : 30, spreadRadius: _hovered ? -8 : -4,
+                  blurRadius: _hovered ? 35 : 30,
+                  spreadRadius: _hovered ? -8 : -4,
                 ),
-                const BoxShadow(color: Color(0x0864748B),
-                  offset: Offset(0, 4), blurRadius: 12, spreadRadius: -2),
+                const BoxShadow(
+                  color: Color(0x0864748B),
+                  offset: Offset(0, 4),
+                  blurRadius: 12,
+                  spreadRadius: -2,
+                ),
               ],
             ),
             child: ClipRRect(
@@ -1802,10 +1872,16 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha(_hovered ? 255 : 204),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: widget.accent?.withAlpha(_hovered ? 65 : 30)
-                      ?? Colors.white.withAlpha(217)),
+                    border: Border.all(
+                      color:
+                          widget.accent?.withAlpha(_hovered ? 65 : 30) ??
+                          Colors.white.withAlpha(217),
+                    ),
                   ),
-                  child: _VaultGlassScope(hovered: _hovered, child: widget.child),
+                  child: _VaultGlassScope(
+                    hovered: _hovered,
+                    child: widget.child,
+                  ),
                 ),
               ),
             ),
@@ -1815,9 +1891,14 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
     );
   }
 }
+
 class _VaultActionContent extends StatelessWidget {
-  const _VaultActionContent({required this.icon, required this.title,
-    required this.subtitle, required this.accent});
+  const _VaultActionContent({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.accent,
+  });
   final IconData icon;
   final String title;
   final String subtitle;
@@ -1827,20 +1908,31 @@ class _VaultActionContent extends StatelessWidget {
     final hovered = _VaultGlassScope.hoveredOf(context);
     final isAI = icon == Icons.auto_awesome;
     final hoverColor = icon == Icons.document_scanner_outlined
-        ? const Color(0xFF6366F1) : accent;
+        ? const Color(0xFF6366F1)
+        : accent;
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 116),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          if (isAI) Positioned(right: -4, top: -4,
-            child: IgnorePointer(child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-              child: Container(width: 64, height: 64,
-                decoration: const BoxDecoration(color: Color(0x1A9333EA),
-                  shape: BoxShape.circle)),
-            )),
-          ),
+          if (isAI)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: IgnorePointer(
+                child: ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    decoration: const BoxDecoration(
+                      color: Color(0x1A9333EA),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1849,31 +1941,43 @@ class _VaultActionContent extends StatelessWidget {
                 duration: const Duration(milliseconds: 300),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  width: 44, height: 44, alignment: Alignment.center,
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: hovered ? hoverColor : accent.withAlpha(15),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: accent.withAlpha(30)),
                   ),
-                  child: _VaultReferenceIcon(icon, size: 20,
-                    color: hovered ? Colors.white : accent),
+                  child: _VaultReferenceIcon(
+                    icon,
+                    size: 20,
+                    color: hovered ? Colors.white : accent,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 200),
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14, fontWeight: FontWeight.w700,
-                  letterSpacing: -0.35, height: 1.3,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.35,
+                  height: 1.3,
                   color: hovered ? accent : const Color(0xFF0F172A),
                 ),
                 child: Text(title),
               ),
               const SizedBox(height: 2),
-              Text(subtitle, style: GoogleFonts.plusJakartaSans(
-                fontSize: 11, fontWeight: FontWeight.w500,
-                height: 1.35, color: const Color(0xFF94A3B8),
-              )),
+              Text(
+                subtitle,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  height: 1.35,
+                  color: const Color(0xFF94A3B8),
+                ),
+              ),
             ],
           ),
         ],
@@ -1881,6 +1985,7 @@ class _VaultActionContent extends StatelessWidget {
     );
   }
 }
+
 class _VaultSearchSurface extends StatefulWidget {
   const _VaultSearchSurface({required this.child, required this.padding});
   final Widget child;
@@ -1888,6 +1993,7 @@ class _VaultSearchSurface extends StatefulWidget {
   @override
   State<_VaultSearchSurface> createState() => _VaultSearchSurfaceState();
 }
+
 class _VaultSearchSurfaceState extends State<_VaultSearchSurface> {
   bool _focused = false;
   @override
@@ -1905,11 +2011,18 @@ class _VaultSearchSurfaceState extends State<_VaultSearchSurface> {
               color: Colors.white.withAlpha(179),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: _focused ? const Color(0x666366F1) : Colors.white.withAlpha(204),
+                color: _focused
+                    ? const Color(0x666366F1)
+                    : Colors.white.withAlpha(204),
                 width: _focused ? 2 : 1,
               ),
-              boxShadow: const [BoxShadow(color: Color(0x080F172A),
-                offset: Offset(0, 2), blurRadius: 4)],
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x080F172A),
+                  offset: Offset(0, 2),
+                  blurRadius: 4,
+                ),
+              ],
             ),
             child: widget.child,
           ),
@@ -1918,12 +2031,14 @@ class _VaultSearchSurfaceState extends State<_VaultSearchSurface> {
     );
   }
 }
+
 class _VaultRowFeedback extends StatefulWidget {
   const _VaultRowFeedback({required this.builder});
   final Widget Function(BuildContext, bool) builder;
   @override
   State<_VaultRowFeedback> createState() => _VaultRowFeedbackState();
 }
+
 class _VaultRowFeedbackState extends State<_VaultRowFeedback> {
   bool _hovered = false;
   @override
@@ -1933,6 +2048,7 @@ class _VaultRowFeedbackState extends State<_VaultRowFeedback> {
     child: widget.builder(context, _hovered),
   );
 }
+
 class _VaultRecordSubtitle extends StatelessWidget {
   const _VaultRecordSubtitle({required this.text, required this.color});
   final String text;
@@ -1942,21 +2058,36 @@ class _VaultRecordSubtitle extends StatelessWidget {
     final expiring = text.startsWith('Expires');
     final urgent = expiring && color == Colors.red;
     final textColor = urgent ? const Color(0xFFF43F5E) : color;
-    final label = Text(text, style: GoogleFonts.plusJakartaSans(
-      fontSize: 12, fontWeight: urgent ? FontWeight.w600 : FontWeight.w500,
-      color: textColor,
-    ));
+    final label = Text(
+      text,
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 12,
+        fontWeight: urgent ? FontWeight.w600 : FontWeight.w500,
+        color: textColor,
+      ),
+    );
     if (!expiring) return label;
-    return Row(children: [
-      _VaultPulseDot(color: urgent ? textColor : const Color(0xFF94A3B8),
-        size: 6, animate: urgent),
-      const SizedBox(width: 6), Flexible(child: label),
-    ]);
+    return Row(
+      children: [
+        _VaultPulseDot(
+          color: urgent ? textColor : const Color(0xFF94A3B8),
+          size: 6,
+          animate: urgent,
+        ),
+        const SizedBox(width: 6),
+        Flexible(child: label),
+      ],
+    );
   }
 }
+
 class _VaultPulseDot extends StatefulWidget {
-  const _VaultPulseDot({required this.color, required this.size,
-    this.ping = false, this.animate = true});
+  const _VaultPulseDot({
+    required this.color,
+    required this.size,
+    this.ping = false,
+    this.animate = true,
+  });
   final Color color;
   final double size;
   final bool ping;
@@ -1964,33 +2095,69 @@ class _VaultPulseDot extends StatefulWidget {
   @override
   State<_VaultPulseDot> createState() => _VaultPulseDotState();
 }
-class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProviderStateMixin {
+
+class _VaultPulseDotState extends State<_VaultPulseDot>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
-    vsync: this, duration: const Duration(milliseconds: 1400));
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  );
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (widget.animate && !MediaQuery.disableAnimationsOf(context)) {
       _controller.repeat(reverse: !widget.ping);
-    } else { _controller.stop(); }
+    } else {
+      _controller.stop();
+    }
   }
+
   @override
-  void dispose() { _controller.dispose(); super.dispose(); }
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _controller,
-    builder: (context, child) => SizedBox(width: widget.size, height: widget.size,
-      child: Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
-        if (widget.ping) Transform.scale(scale: 1 + _controller.value,
-          child: Opacity(opacity: (1 - _controller.value) * 0.75,
-            child: Container(decoration: BoxDecoration(
-              color: widget.color, shape: BoxShape.circle)))),
-        Opacity(opacity: widget.ping || !widget.animate ? 1 : 1 - _controller.value * 0.5,
-          child: Container(decoration: BoxDecoration(
-            color: widget.color, shape: BoxShape.circle))),
-      ])),
+    builder: (context, child) => SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          if (widget.ping)
+            Transform.scale(
+              scale: 1 + _controller.value,
+              child: Opacity(
+                opacity: (1 - _controller.value) * 0.75,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: widget.color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+          Opacity(
+            opacity: widget.ping || !widget.animate
+                ? 1
+                : 1 - _controller.value * 0.5,
+            child: Container(
+              decoration: BoxDecoration(
+                color: widget.color,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
   );
 }
+
 class _VaultNavGlyph extends StatefulWidget {
   const _VaultNavGlyph(this.icon) : color = null;
   final IconData icon;
@@ -1998,6 +2165,7 @@ class _VaultNavGlyph extends StatefulWidget {
   @override
   State<_VaultNavGlyph> createState() => _VaultNavGlyphState();
 }
+
 class _VaultNavGlyphState extends State<_VaultNavGlyph> {
   bool _hovered = false;
   bool _pressed = false;
@@ -2005,20 +2173,31 @@ class _VaultNavGlyphState extends State<_VaultNavGlyph> {
   Widget build(BuildContext context) => MouseRegion(
     cursor: SystemMouseCursors.click,
     onEnter: (_) => setState(() => _hovered = true),
-    onExit: (_) => setState(() { _hovered = false; _pressed = false; }),
+    onExit: (_) => setState(() {
+      _hovered = false;
+      _pressed = false;
+    }),
     child: Listener(
       onPointerDown: (_) => setState(() => _pressed = true),
       onPointerUp: (_) => setState(() => _pressed = false),
       onPointerCancel: (_) => setState(() => _pressed = false),
-      child: AnimatedScale(scale: _pressed ? 0.95 : 1,
+      child: AnimatedScale(
+        scale: _pressed ? 0.95 : 1,
         duration: const Duration(milliseconds: 200),
-        child: _VaultReferenceIcon(widget.icon, size: 20,
-          color: widget.color ?? (_hovered ? const Color(0xFF1E293B)
-            : IconTheme.of(context).color ?? const Color(0xFF94A3B8))),
+        child: _VaultReferenceIcon(
+          widget.icon,
+          size: 20,
+          color:
+              widget.color ??
+              (_hovered
+                  ? const Color(0xFF1E293B)
+                  : IconTheme.of(context).color ?? const Color(0xFF94A3B8)),
+        ),
       ),
     ),
   );
 }
+
 class _VaultReferenceIcon extends StatelessWidget {
   const _VaultReferenceIcon(this.icon, {this.size, this.color});
   final IconData icon;
@@ -2119,9 +2298,14 @@ class _VaultReferenceIcon extends StatelessWidget {
     final theme = IconTheme.of(context);
     final resolvedColor = color ?? theme.color ?? const Color(0xFF64748B);
     final resolvedSize = size ?? theme.size ?? 24;
-    if (svg == null) return Icon(icon, size: resolvedSize, color: resolvedColor);
-    return SvgPicture.string(svg, width: resolvedSize, height: resolvedSize,
-      colorFilter: ColorFilter.mode(resolvedColor, BlendMode.srcIn));
+    if (svg == null)
+      return Icon(icon, size: resolvedSize, color: resolvedColor);
+    return SvgPicture.string(
+      svg,
+      width: resolvedSize,
+      height: resolvedSize,
+      colorFilter: ColorFilter.mode(resolvedColor, BlendMode.srcIn),
+    );
   }
 }
 
@@ -2131,6 +2315,7 @@ class _VaultPressFeedback extends StatefulWidget {
   @override
   State<_VaultPressFeedback> createState() => _VaultPressFeedbackState();
 }
+
 class _VaultPressFeedbackState extends State<_VaultPressFeedback> {
   bool _pressed = false;
   @override
@@ -2140,8 +2325,11 @@ class _VaultPressFeedbackState extends State<_VaultPressFeedback> {
       onPointerDown: (_) => setState(() => _pressed = true),
       onPointerUp: (_) => setState(() => _pressed = false),
       onPointerCancel: (_) => setState(() => _pressed = false),
-      child: AnimatedScale(scale: _pressed ? .95 : 1,
-        duration: const Duration(milliseconds: 150), child: widget.child),
+      child: AnimatedScale(
+        scale: _pressed ? .95 : 1,
+        duration: const Duration(milliseconds: 150),
+        child: widget.child,
+      ),
     ),
   );
 }

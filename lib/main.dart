@@ -5,15 +5,10 @@ import 'package:oneclick/shared/models/user_model.dart';
 
 import 'firebase_options.dart';
 
-// Auth Screens
 import 'features/auth/screens/splash_screen.dart';
 import 'features/auth/screens/home_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/register_screen.dart';
-
-// Worker Screens
-import 'features/quickfix/worker/screens/worker_login_screen.dart';
-import 'features/quickfix/worker/screens/worker_register_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,12 +34,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-
       title: 'OneClick',
-
-      // --------------------------------------------------
-      // THEME
-      // --------------------------------------------------
 
       theme: ThemeData(
         useMaterial3: true,
@@ -53,15 +43,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
 
-      // --------------------------------------------------
-      // INITIAL ROUTE
-      // --------------------------------------------------
-
       initialRoute: '/',
-
-      // --------------------------------------------------
-      // ROUTES
-      // --------------------------------------------------
 
       routes: {
         // Splash Screen
@@ -70,21 +52,9 @@ class MyApp extends StatelessWidget {
         // Guest Home Screen
         '/home': (context) => const HomeScreen(),
 
-        // Normal User Login
+        // Login Screen
         '/login': (context) => const LoginScreen(),
-
-        // Worker Login
-        '/worker-login': (context) =>
-            const WorkerLoginScreen(),
-
-        // Worker Register
-        '/worker-register': (context) =>
-            const WorkerRegisterScreen(),
       },
-
-      // --------------------------------------------------
-      // DYNAMIC ROUTES
-      // --------------------------------------------------
 
       onGenerateRoute: (settings) {
         // Normal User Registration
@@ -99,14 +69,8 @@ class MyApp extends StatelessWidget {
         return null;
       },
 
-      // --------------------------------------------------
-      // UNKNOWN ROUTE
-      // --------------------------------------------------
-
       onUnknownRoute: (settings) {
-        debugPrint(
-          'UNKNOWN ROUTE: ${settings.name}',
-        );
+        debugPrint('UNKNOWN ROUTE: ${settings.name}');
 
         return MaterialPageRoute(
           builder: (context) => const HomeScreen(),

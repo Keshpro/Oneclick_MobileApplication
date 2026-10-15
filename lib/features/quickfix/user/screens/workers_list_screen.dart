@@ -1,235 +1,159 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'worker_profile_screen.dart'; // Profile screen eka import karanna
-import 'job_booking_screen.dart';    // Booking screen eka import karanna
+import 'package:flutter/services.dart';
+import 'worker_profile_screen.dart'; // Import Worker Profile Screen
+import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
 
 class WorkersListScreen extends StatelessWidget {
   final String categoryName;
 
   const WorkersListScreen({super.key, required this.categoryName});
 
-  @override
-  Widget build(BuildContext context) {
-    // Danata UI eka check karanna dapu dummy workers data
-    final List<Map<String, dynamic>> workers = [
-      {
-        'name': 'Kamal Perera',
-        'rating': 4.8,
-        'reviews': 124,
-        'distance': '2.5 km',
-        'rate': 'Rs. 1500/hr',
-        'isAvailable': true,
-      },
-      {
-        'name': 'Nimal Silva',
-        'rating': 4.5,
-        'reviews': 89,
-        'distance': '3.2 km',
-        'rate': 'Rs. 1200/hr',
-        'isAvailable': true,
-      },
-      {
-        'name': 'Saman Kumara',
-        'rating': 4.9,
-        'reviews': 210,
-        'distance': '5.0 km',
-        'rate': 'Rs. 1800/hr',
-        'isAvailable': false, // Meka false nisa hire button eka disable wenawa
-      },
-    ];
+  void _navigateToWorkerProfile(
+      BuildContext context, Map<String, dynamic> workerData, String workerDocId) {
+    final Map<String, dynamic> fullData = Map.from(workerData);
+    fullData['id'] = workerDocId;
+    fullData['category'] = categoryName;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
-      appBar: AppBar(
-        title: Text('$categoryName Professionals'),
-        backgroundColor: const Color(0xff032744),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          // Filter & Sort Section
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            color: Colors.white,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${workers.length} providers found nearby',
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF111827)),
-                ),
-                Icon(Icons.filter_list, color: Colors.grey.shade700),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // Workers List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: workers.length,
-              itemBuilder: (context, index) {
-                final worker = workers[index];
-                return _buildWorkerCard(context, worker);
-              },
-            ),
-          ),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WorkerProfileScreen(worker: fullData),
       ),
     );
   }
 
-  Widget _buildWorkerCard(BuildContext context, Map<String, dynamic> worker) {
-    final bool isAvailable = worker['isAvailable'] == true;
-
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: Text('$categoryName Experts'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Worker Avatar
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: const Color(0xff032744).withValues(alpha: 0.1),
-                  child: Text(
-                    worker['name'].substring(0, 1),
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xff032744),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                
-                // Worker Details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            worker['name'],
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF111827),
-                            ),
-                          ),
-                          Text(
-                            worker['rate'],
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xff032744),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${worker['rating']} (${worker['reviews']} reviews)',
-                            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on, color: Colors.grey.shade500, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            worker['distance'],
-                            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            // Actions
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isAvailable ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    isAvailable ? 'Available Now' : 'Busy',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: isAvailable ? Colors.green : Colors.red,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                
-                // View Profile Button
-                OutlinedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => WorkerProfileScreen(worker: worker),
-                      ),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xff032744),
-                    side: const BorderSide(color: Color(0xff032744)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('View Profile'),
-                ),
-                const SizedBox(width: 8),
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        // Fetch Workers from 'workers' collection matching selected Category
+        stream: FirebaseFirestore.instance
+            .collection('workers')
+            .where('category', isEqualTo: categoryName)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            );
+          }
 
-                // Hire Button
-                ElevatedButton(
-                  onPressed: isAvailable 
-                      ? () {
-                          // Kelinma Job Booking Screen ekata yanawa
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => JobBookingScreen(worker: worker),
-                            ),
-                          );
-                        } 
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xff032744),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Hire'),
+          final docs = snapshot.data?.docs ?? [];
+
+          if (docs.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.person_off_outlined,
+                        size: 64,
+                        color: AppColors.textSecondary.withValues(alpha: 0.6)),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No $categoryName experts available right now.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: AppColors.textSecondary, fontSize: 14),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final workerDoc = docs[index];
+              final worker = workerDoc.data();
+              final name = worker['name'] ?? 'Expert Technician';
+              final providerDetails =
+                  worker['providerDetails'] as Map<String, dynamic>? ?? {};
+              final experience =
+                  providerDetails['experienceYears'] ?? '3+';
+              final hourlyRate =
+                  providerDetails['hourlyRate'] ?? worker['hourlyRate'] ?? '1500';
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Material(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(AppRadius.card),
+                    onTap: () => _navigateToWorkerProfile(
+                        context, worker, workerDoc.id),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(AppRadius.card),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.textDark.withValues(alpha: 0.06),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 28,
+                            backgroundColor:
+                                AppColors.primary.withValues(alpha: 0.12),
+                            child: const Icon(Icons.handyman_rounded,
+                                color: AppColors.primary, size: 28),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Exp: $experience yrs • LKR $hourlyRate/hr',
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }
