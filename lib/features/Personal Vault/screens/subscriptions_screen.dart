@@ -10,6 +10,7 @@ import 'vault_screen.dart';
 import 'sharing_center_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/subscription_service.dart';
+import '../services/exchange_rate_service.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
@@ -27,6 +28,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   static const Color danger = Color(0xFFF43F5E);
 
   final SubscriptionService _subscriptionService = SubscriptionService();
+  final ExchangeRateService _exchangeRateService =
+    ExchangeRateService();
+
+  double? _usdToLkrRate;
+  bool _loadingExchangeRate = true;
 
   Future<void> _deleteSubscription(SubscriptionItem item) async {
   final confirmed = await showDialog<bool>(
@@ -265,10 +271,220 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       filter == 'All' || _statusKey(item.status) == _statusKey(filter);
   int _countFor(String filter) =>
       subscriptions.where((item) => _matchesStatus(item, filter)).length;
-  double _monthlyCost(Iterable<SubscriptionItem> items) => items
-      .where((item) => _statusKey(item.status) == 'active')
-      .fold<double>(0, (sum, item) => sum +
-          (double.tryParse(item.price.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0));
+  double _priceAmount(String price) {
+  return double.tryParse(
+        price.replaceAll(
+          RegExp(r'[^0-9.]'),
+          '',
+        ),
+      ) ??
+      0;
+}
+
+String _priceCurrency(String price) {
+  final normalized =
+      price.trim().toUpperCase();
+
+  if (normalized.startsWith('USD') ||
+      normalized.startsWith(r'$')) {
+    return 'USD';
+  }
+
+  return 'LKR';
+}
+
+double _convertPrice(
+  SubscriptionItem item,
+  String targetCurrency,
+) {
+  final amount = _priceAmount(item.price);
+  final sourceCurrency =
+      _priceCurrency(item.price);
+
+  if (sourceCurrency == targetCurrency) {
+    return amount;
+  }
+
+  final rate = _usdToLkrRate;
+
+  if (rate == null || rate <= 0) {
+    return 0;
+  }
+
+  if (sourceCurrency == 'USD' &&
+      targetCurrency == 'LKR') {
+    return amount * rate;
+  }
+
+  if (sourceCurrency == 'LKR' &&
+      targetCurrency == 'USD') {
+    return amount / rate;
+  }
+
+  return amount;
+}
+
+double _monthlyEquivalent(
+  SubscriptionItem item,
+  String currency,
+) {
+  final converted =
+      _convertPrice(item, currency);
+
+  if (item.billingCycle
+      .trim()
+      .toLowerCase()
+      .contains('annual')) {
+    return converted / 12;
+  }
+
+  return converted;
+}
+
+double _monthlyCostInCurrency(
+  Iterable<SubscriptionItem> items,
+  String currency,
+) {
+  return items
+      .where(
+        (item) =>
+            _statusKey(item.status) == 'active',
+      )
+      .fold<double>(
+        0,
+        (sum, item) =>
+            sum +
+            _monthlyEquivalent(
+              item,
+              currency,
+            ),
+      );
+}
+
+double _monthlyCost(
+  Iterable<SubscriptionItem> items,
+) {
+  return _monthlyCostInCurrency(
+    items,
+    selectedCurrency,
+  );
+}
+
+double _lastMonthCost() {
+  final now = DateTime.now();
+
+  final startOfThisMonth =
+      DateTime(now.year, now.month, 1);
+
+  final startOfLastMonth =
+      DateTime(
+    now.year,
+    now.month - 1,
+    1,
+  );
+
+  final endOfLastMonth =
+      startOfThisMonth.subtract(
+    const Duration(milliseconds: 1),
+  );
+
+  final lastMonthItems =
+      subscriptions.where((item) {
+    final createdAt = item.createdAt;
+
+    if (createdAt == null) {
+      return false;
+    }
+
+    final existedLastMonth =
+        !createdAt.isAfter(endOfLastMonth);
+
+    if (!existedLastMonth) {
+      return false;
+    }
+
+    final cancelledAt = item.cancelledAt;
+
+    if (cancelledAt != null &&
+        cancelledAt.isBefore(
+          startOfLastMonth,
+        )) {
+      return false;
+    }
+
+    // Old cancelled records without a cancellation
+    // timestamp cannot be reconstructed reliably.
+    if (_statusKey(item.status) ==
+            'cancelled' &&
+        cancelledAt == null) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return lastMonthItems.fold<double>(
+    0,
+    (sum, item) =>
+        sum +
+        _monthlyEquivalent(
+          item,
+          selectedCurrency,
+        ),
+  );
+}
+
+double? _monthlyChangePercent() {
+  final lastMonth =
+      _lastMonthCost();
+
+  if (lastMonth <= 0) {
+    return null;
+  }
+
+  final currentMonth =
+      _monthlyCost(subscriptions);
+
+  return ((currentMonth - lastMonth) /
+          lastMonth) *
+      100;
+}
+
+String _formatAmount(double amount) {
+  final parts =
+      amount.toStringAsFixed(2).split('.');
+
+  final whole = parts[0];
+  final decimal = parts[1];
+
+  final isNegative =
+      whole.startsWith('-');
+
+  final digits =
+      isNegative
+          ? whole.substring(1)
+          : whole;
+
+  final buffer = StringBuffer();
+
+  for (int i = 0; i < digits.length; i++) {
+    if (i > 0 &&
+        (digits.length - i) % 3 == 0) {
+      buffer.write(',');
+    }
+
+    buffer.write(digits[i]);
+  }
+
+  return '${isNegative ? '-' : ''}'
+      '${buffer.toString()}.$decimal';
+}
+
+String _formattedMoney(double amount) {
+  return '$selectedCurrency '
+      '${_formatAmount(amount)}';
+}
+
   List<SubscriptionItem> get filteredSubscriptions {
     final query = searchQuery.trim().toLowerCase();
     return subscriptions.where((item) {
@@ -278,12 +494,35 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     }).toList();
   }
   List<SubscriptionItem> subscriptions = [];
-  @override
+
+@override
 void initState() {
   super.initState();
 
+  _loadExchangeRate();
+
   if (FirebaseAuth.instance.currentUser != null) {
     _loadSubscriptions();
+  }
+}
+
+Future<void> _loadExchangeRate() async {
+  try {
+    final rate =
+        await _exchangeRateService.getUsdToLkrRate();
+
+    if (!mounted) return;
+
+    setState(() {
+      _usdToLkrRate = rate;
+      _loadingExchangeRate = false;
+    });
+  } catch (_) {
+    if (!mounted) return;
+
+    setState(() {
+      _loadingExchangeRate = false;
+    });
   }
 }
 
@@ -304,6 +543,14 @@ void _loadSubscriptions() {
           category: record.category,
           priceHiked: record.priceHiked,
           status: record.status,
+          amount: record.amount,
+          currency: record.currency,
+          billingCycle: record.billingCycle,
+          renewalDate: record.renewalDate,
+          cancelledAt: record.cancelledAt,
+          renewalActionHandledFor:
+              record.renewalActionHandledFor,
+          createdAt: record.createdAt,
         );
       }).toList();
     });
@@ -537,7 +784,6 @@ void _showSearch() {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'PRODUCTIVITY & AI',
-                          total: 'LKR 30,000/mo',
                           icon: Icons.terminal_outlined,
                           items: filteredSubscriptions
                               .where(
@@ -550,7 +796,6 @@ void _showSearch() {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'ENTERTAINMENT & MEDIA',
-                          total: 'LKR 11,000/mo',
                           icon: Icons.play_circle_outline,
                           items: filteredSubscriptions
                               .where(
@@ -563,7 +808,6 @@ void _showSearch() {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'STORAGE & UTILITIES',
-                          total: 'LKR 3,000/mo',
                           icon: Icons.cloud_outlined,
                           items: filteredSubscriptions
                               .where(
@@ -574,8 +818,6 @@ void _showSearch() {
                               .toList(),
                         ),
                         const SizedBox(height: 38),
-                        _buildAddSubscriptionButton(),
-                        const SizedBox(height: 35),
                       ],
                     ),
                   ),
@@ -586,7 +828,12 @@ void _showSearch() {
           ],
         ),
       ),
-          bottomNavigationBar: _buildBottomNavigation(),
+          floatingActionButton:
+    _buildAddSubscriptionButton(),
+floatingActionButtonLocation:
+    FloatingActionButtonLocation.centerFloat,
+bottomNavigationBar:
+    _buildBottomNavigation(),
     );
   }
   // ============================================================
@@ -635,8 +882,12 @@ Widget _buildHeader() {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                _monthlyCost(subscriptions).toStringAsFixed(2),
-                style: TextStyle(
+                _loadingExchangeRate
+                    ? 'Loading...'
+                    : _formattedMoney(
+                        _monthlyCost(subscriptions),
+                      ),
+                style: const TextStyle(
                   color: ink,
                   fontSize: 32,
                   fontWeight: FontWeight.w700,
@@ -655,34 +906,66 @@ Widget _buildHeader() {
                 ),
               ),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8FB),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: _shadow(),
-                ),
-                child: const Row(
-                  children: [
-                    _VaultReferenceIcon(
-                      Icons.trending_up,
-                      color: danger,
-                      size: 17,
-                    ),
-                    SizedBox(width: 5),
-                    Text(
-                      '+4.2%',
-                      style: TextStyle(
-                        color: danger,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              Builder(
+  builder: (context) {
+    final change = _monthlyChangePercent();
+
+    final bool hasData = change != null;
+    final bool increased =
+        hasData && change > 0;
+    final bool decreased =
+        hasData && change < 0;
+
+    final String label = !hasData
+        ? 'No history'
+        : '${change >= 0 ? '+' : ''}${change.toStringAsFixed(1)}%';
+
+    final Color changeColor =
+        increased
+            ? danger
+            : decreased
+                ? const Color(0xFF16A34A)
+                : muted;
+
+    final IconData changeIcon =
+        increased
+            ? Icons.trending_up
+            : decreased
+                ? Icons.trending_down
+                : Icons.trending_flat;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 7,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8FB),
+        borderRadius:
+            BorderRadius.circular(20),
+        boxShadow: _shadow(),
+      ),
+      child: Row(
+        children: [
+          _VaultReferenceIcon(
+            changeIcon,
+            color: changeColor,
+            size: 17,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: changeColor,
+              fontWeight:
+                  FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  },
+),
             ],
           ),
           const SizedBox(height: 2),
@@ -696,7 +979,9 @@ Widget _buildHeader() {
                 ),
               ),
               Text(
-                (_monthlyCost(subscriptions) * 12).toStringAsFixed(2),
+                _formattedMoney(
+                  _monthlyCost(subscriptions) * 12,
+                ),
                 style: TextStyle(
                   color: ink,
                   fontWeight: FontWeight.w700,
@@ -908,7 +1193,98 @@ Widget _buildHeader() {
   // ============================================================
   // ACTION REQUIRED
   // ============================================================
-  Widget _buildRenewals() {
+  
+  bool _sameDate(
+  DateTime first,
+  DateTime second,
+) {
+  return first.year == second.year &&
+      first.month == second.month &&
+      first.day == second.day;
+}
+
+int _daysUntilRenewal(
+  DateTime renewalDate,
+) {
+  final today = DateTime.now();
+
+  final todayOnly =
+      DateTime(
+    today.year,
+    today.month,
+    today.day,
+  );
+
+  final renewalOnly =
+      DateTime(
+    renewalDate.year,
+    renewalDate.month,
+    renewalDate.day,
+  );
+
+  return renewalOnly
+      .difference(todayOnly)
+      .inDays;
+}
+
+List<SubscriptionItem>
+    get _actionableRenewals {
+  final items = subscriptions.where(
+    (item) {
+      final status =
+          _statusKey(item.status);
+
+      if (status != 'active' &&
+          status != 'free trial') {
+        return false;
+      }
+
+      final renewalDate =
+          item.renewalDate;
+
+      if (renewalDate == null) {
+        return false;
+      }
+
+      final days =
+          _daysUntilRenewal(
+        renewalDate,
+      );
+
+      // Show renewals due within the next 7 days.
+      if (days < 0 || days > 7) {
+        return false;
+      }
+
+      final handledFor =
+          item.renewalActionHandledFor;
+
+      if (handledFor != null &&
+          _sameDate(
+            handledFor,
+            renewalDate,
+          )) {
+        return false;
+      }
+
+      return true;
+    },
+  ).toList();
+
+  items.sort(
+    (a, b) => a.renewalDate!
+        .compareTo(
+      b.renewalDate!,
+    ),
+  );
+
+  return items;
+}
+  
+Widget _buildRenewals() {
+  final renewals = _actionableRenewals;
+
+  if (renewals.isEmpty) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -919,12 +1295,14 @@ Widget _buildHeader() {
                 'ACTION REQUIRED & RENEWALS',
                 style: TextStyle(
                   color: Color(0xFF94A3B8),
-                  fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1.6,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  letterSpacing: 1.6,
                 ),
               ),
             ),
             Text(
-              '2 Urgent',
+              '0 Urgent',
               style: TextStyle(
                 color: purple,
                 fontWeight: FontWeight.w600,
@@ -933,37 +1311,90 @@ Widget _buildHeader() {
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 195,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _renewalCard(
-                title: 'HBO Max',
-                subtitle: 'Free 7-Day Trial',
-                badge: '3 days left',
-                description:
-                    'Converts to LKR 5,000/mo on Nov 08 unless cancelled.',
-                icon: Icons.movie_outlined,
-              ),
-              const SizedBox(width: 16),
-              _renewalCard(
-                title: 'Figma Pro',
-                subtitle: 'Annual Billing',
-                badge: '7 days',
-                description:
-                    'Auto-charge amount will renew automatically.',
-                icon: Icons.brush_outlined,
-                urgent: false,
-              ),
-            ],
+        const SizedBox(height: 14),
+        const Text(
+          'No renewals need attention right now.',
+          style: TextStyle(
+            color: muted,
+            fontSize: 13,
           ),
         ),
       ],
     );
   }
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'ACTION REQUIRED & RENEWALS',
+              style: TextStyle(
+                color: Color(0xFF94A3B8),
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+                letterSpacing: 1.6,
+              ),
+            ),
+          ),
+          Text(
+            '${renewals.length} Urgent',
+            style: const TextStyle(
+              color: purple,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      SizedBox(
+        height: 195,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: renewals.length,
+          separatorBuilder: (_, _) =>
+            const SizedBox(width: 16),
+          itemBuilder: (context, index) {
+            final item = renewals[index];
+            final renewalDate = item.renewalDate!;
+            final days =
+                _daysUntilRenewal(renewalDate);
+
+            final String badge =
+                days == 0
+                    ? 'Today'
+                    : days == 1
+                        ? '1 day left'
+                        : '$days days left';
+
+            final String description =
+            '${item.billingCycle} renewal • '
+            '${item.currency} '
+            '${_formatAmount(
+              item.amount ??
+                  _priceAmount(item.price),
+            )}';
+
+            return _renewalCard(
+              item: item,
+              title: item.name,
+              subtitle: item.subtitle,
+              badge: badge,
+              description: description,
+              icon: item.icon,
+              urgent: days <= 3,
+            );
+          },
+        ),
+      ),
+    ],
+  );
+}
   Widget _renewalCard({
+    required SubscriptionItem item,
     required String title,
     required String subtitle,
     required String badge,
@@ -1043,8 +1474,24 @@ Widget _buildHeader() {
             children: [
               Expanded(
                 child: TextButton(
-                  onPressed: () {
-                    _message('$title cancellation selected.');
+                  onPressed: () async {
+                    try {
+                      await _subscriptionService.cancelSubscription(
+                        item.id,
+                      );
+
+                      if (!mounted) return;
+
+                      _message(
+                        '$title marked as cancelled.',
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+
+                      _message(
+                        'Failed to cancel $title.',
+                      );
+                    }
                   },
                   child: Text(
                     'Cancel',
@@ -1057,9 +1504,36 @@ Widget _buildHeader() {
               ),
               Expanded(
                 child: TextButton(
-                  onPressed: () {
-                    _message('$title kept.');
-                  },
+                  onPressed: () async {
+  final renewalDate = item.renewalDate;
+
+  if (renewalDate == null) {
+    _message(
+      'Renewal date is unavailable.',
+    );
+    return;
+  }
+
+  try {
+    await _subscriptionService
+        .keepSubscriptionRenewal(
+      subscriptionId: item.id,
+      renewalDate: renewalDate,
+    );
+
+    if (!mounted) return;
+
+    _message(
+      '$title kept for this renewal.',
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    _message(
+      'Failed to keep $title.',
+    );
+  }
+},
                   child: const Text(
                     'Keep Plan',
                     style: TextStyle(
@@ -1127,19 +1601,31 @@ Widget _buildHeader() {
   // ============================================================
   // CATEGORY
   // ============================================================
-  Widget _buildCategory({
-    required String title,
-    required String total,
-    required IconData icon,
-    required List<SubscriptionItem> items,
-  }) {
+Widget _buildCategory({
+  required String title,
+  required IconData icon,
+  required List<SubscriptionItem> items,
+}) {
     if (items.isEmpty) return const SizedBox.shrink();
-    final categoryAmount = _monthlyCost(items);
-    final categoryLabel = _statusKey(selectedFilter) == 'cancelled'
+    final categoryCurrency =
+    title == 'PRODUCTIVITY & AI'
+        ? 'LKR'
+        : selectedCurrency;
+
+final categoryAmount =
+    _monthlyCostInCurrency(
+  items,
+  categoryCurrency,
+);
+
+final categoryLabel =
+    _statusKey(selectedFilter) == 'cancelled'
         ? 'No renewals'
         : _statusKey(selectedFilter) == 'free trial'
             ? '${items.length} trials'
-            : '\$${categoryAmount.toStringAsFixed(2)}/mo';
+            : categoryCurrency == 'LKR'
+                ? 'LKR ${_formatAmount(categoryAmount)}/mo'
+                : 'USD ${_formatAmount(categoryAmount)}/mo';
     return Column(
       children: [
         Row(
@@ -1183,17 +1669,42 @@ Widget _buildHeader() {
   return InkWell(
     borderRadius: BorderRadius.circular(24),
     onTap: () {
-      if (item.name == 'Adobe Creative Cloud') {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const SubscriptionDetailsScreen(),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(
+        alpha: 0.28,
+      ),
+      builder: (sheetContext) {
+        return FractionallySizedBox(
+          heightFactor: 0.92,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(30),
+            ),
+            child: SubscriptionDetailsScreen(
+              subscriptionId: item.id,
+              name: item.name,
+              subtitle: item.subtitle,
+              price:
+                  '${item.currency} '
+                  '${_formatAmount(
+                    item.amount ??
+                        _priceAmount(item.price),
+                  )}',
+              status: item.status,
+              billingCycle: item.billingCycle,
+              renewalDate: item.renewalDate,
+              onEdit: () => _editSubscription(item),
+            ),
           ),
         );
-      } else {
-        _message('${item.name} details will be added soon.');
-      }
-    },
+      },
+    );
+  },
+
     child: _VaultGlassCard(interactive: true,
       accent: _statusKey(item.status) == 'free trial'
           ? const Color(0xFF9333EA)
@@ -1266,7 +1777,11 @@ Widget _buildHeader() {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    item.price,
+                    '${item.currency} '
+                    '${_formatAmount(
+                      item.amount ??
+                          _priceAmount(item.price),
+                    )}',
                     style: const TextStyle(
                       color: ink,
                       fontSize: 14,
@@ -1382,20 +1897,19 @@ Widget _buildHeader() {
   // ADD SUBSCRIPTION
   // ============================================================
 Widget _buildAddSubscriptionButton() {
-  return Center(
-    child: _pillButton(
-      icon: Icons.add_circle,
-      text: 'Add Subscription',
-      color: purple,
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const AddSubscriptionScreen(),
-          ),
-        );
-      },
-    ),
+  return _pillButton(
+    icon: Icons.add_circle,
+    text: 'Add Subscription',
+    color: purple,
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              const AddSubscriptionScreen(),
+        ),
+      );
+    },
   );
 }
   // ============================================================
@@ -1648,6 +2162,16 @@ class SubscriptionItem {
   final String category;
   final bool priceHiked;
   final String status;
+
+  // Structured subscription data.
+  final double? amount;
+  final String currency;
+  final String billingCycle;
+  final DateTime? renewalDate;
+  final DateTime? cancelledAt;
+  final DateTime? renewalActionHandledFor;
+  final DateTime? createdAt;
+
   const SubscriptionItem({
     required this.id,
     required this.name,
@@ -1659,6 +2183,13 @@ class SubscriptionItem {
     required this.category,
     this.priceHiked = false,
     this.status = 'Active',
+    this.amount,
+    this.currency = 'LKR',
+    this.billingCycle = 'Monthly',
+    this.renewalDate,
+    this.cancelledAt,
+    this.renewalActionHandledFor,
+    this.createdAt,
   });
 }
 // ================================================================

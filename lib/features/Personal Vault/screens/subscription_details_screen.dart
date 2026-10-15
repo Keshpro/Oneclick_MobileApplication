@@ -1,7 +1,27 @@
 import 'package:flutter/material.dart';
+import '../services/subscription_service.dart';
 
 class SubscriptionDetailsScreen extends StatefulWidget {
-  const SubscriptionDetailsScreen({super.key});
+  final String subscriptionId;
+  final String name;
+  final String subtitle;
+  final String price;
+  final String status;
+  final String billingCycle;
+  final DateTime? renewalDate;
+  final VoidCallback onEdit;
+
+  const SubscriptionDetailsScreen({
+    super.key,
+    required this.subscriptionId,
+    required this.name,
+    required this.subtitle,
+    required this.price,
+    required this.status,
+    required this.billingCycle,
+    required this.renewalDate,
+    required this.onEdit,
+  });
 
   @override
   State<SubscriptionDetailsScreen> createState() =>
@@ -19,7 +39,57 @@ class _SubscriptionDetailsScreenState
   static const Color danger = Color(0xFFCE334B);
 
   bool renewalReminders = true;
-  bool passphraseVisible = false;
+
+  final SubscriptionService _subscriptionService =
+    SubscriptionService();
+
+  bool _markingEnded = false;
+
+  Future<void> _markSubscriptionEnded() async {
+  if (_markingEnded) {
+    return;
+  }
+
+  setState(() {
+    _markingEnded = true;
+  });
+
+  try {
+    await _subscriptionService.cancelSubscription(
+      widget.subscriptionId,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.pop(context);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${widget.name} marked as cancelled.',
+        ),
+      ),
+    );
+  } catch (error) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _markingEnded = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Could not update subscription: $error',
+        ),
+      ),
+    );
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +184,127 @@ class _SubscriptionDetailsScreenState
   // SUBSCRIPTION SUMMARY
   // ============================================================
 
+String _renewalLabel() {
+  final date = widget.renewalDate;
+
+  if (date == null) {
+    return 'No renewal date';
+  }
+
+  final today = DateTime.now();
+  final todayOnly = DateTime(
+    today.year,
+    today.month,
+    today.day,
+  );
+
+  final renewalOnly = DateTime(
+    date.year,
+    date.month,
+    date.day,
+  );
+
+  final days = renewalOnly
+      .difference(todayOnly)
+      .inDays;
+
+  if (days < 0) {
+    return 'Renewal passed';
+  }
+
+  if (days == 0) {
+    return 'Renews today';
+  }
+
+  if (days == 1) {
+    return 'Renews tomorrow';
+  }
+
+  return 'Renews in $days days';
+}
+
+double _detailsPriceAmount() {
+  return double.tryParse(
+        widget.price.replaceAll(
+          RegExp(r'[^0-9.]'),
+          '',
+        ),
+      ) ??
+      0;
+}
+
+String _detailsCurrency() {
+  final normalized =
+      widget.price.trim().toUpperCase();
+
+  return normalized.startsWith('USD') ||
+          normalized.startsWith(r'$')
+      ? 'USD'
+      : 'LKR';
+}
+
+String _formatAmount(double amount) {
+  final parts =
+      amount.toStringAsFixed(2).split('.');
+
+  final whole = parts[0];
+  final decimal = parts[1];
+
+  final buffer = StringBuffer();
+
+  for (int i = 0; i < whole.length; i++) {
+    if (i > 0 &&
+        (whole.length - i) % 3 == 0) {
+      buffer.write(',');
+    }
+
+    buffer.write(whole[i]);
+  }
+
+  return '${buffer.toString()}.$decimal';
+}
+
+String _annualSpendLabel() {
+  final amount = _detailsPriceAmount();
+
+  final annualAmount =
+      widget.billingCycle
+              .toLowerCase()
+              .contains('annual')
+          ? amount
+          : amount * 12;
+
+  return '${_detailsCurrency()} '
+      '${_formatAmount(annualAmount)} '
+      'estimated annual spend';
+}
+
+String _formattedRenewalDate() {
+  final date = widget.renewalDate;
+
+  if (date == null) {
+    return 'Not set';
+  }
+
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  return '${months[date.month - 1]} '
+      '${date.day}, ${date.year}';
+}
+
   Widget _buildSubscriptionSummary() {
     return _card(
       padding: const EdgeInsets.all(22),
@@ -129,36 +320,40 @@ class _SubscriptionDetailsScreenState
 
               const SizedBox(width: 15),
 
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Adobe Creative Cloud',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: ink,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'All Apps Individual',
-                      style: TextStyle(
-                        color: muted,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(width: 15),
 
-              _badge(
-                '●  Renews in 11d',
-                purple,
-              ),
+Expanded(
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        widget.name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: ink,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        widget.subtitle,
+        style: const TextStyle(
+          color: muted,
+          fontSize: 13,
+        ),
+      ),
+    ],
+  ),
+),
+
+_badge(
+  widget.renewalDate == null
+      ? widget.status
+      : '${widget.status} • ${_renewalLabel()}',
+  purple,
+),
             ],
           ),
 
@@ -170,7 +365,7 @@ class _SubscriptionDetailsScreenState
             decoration: _softDecoration(radius: 28),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -178,7 +373,7 @@ class _SubscriptionDetailsScreenState
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            '\$54.99',
+                            widget.price,
                             style: TextStyle(
                               color: ink,
                               fontSize: 34,
@@ -191,7 +386,11 @@ class _SubscriptionDetailsScreenState
                               bottom: 5,
                             ),
                             child: Text(
-                              '/ month',
+                              widget.billingCycle
+                                      .toLowerCase()
+                                      .contains('annual')
+                                  ? '/ year'
+                                  : '/ month',
                               style: TextStyle(
                                 color: muted,
                                 fontSize: 14,
@@ -202,7 +401,7 @@ class _SubscriptionDetailsScreenState
                       ),
                       SizedBox(height: 3),
                       Text(
-                        '\$659.88 estimated annual spend',
+                        _annualSpendLabel(),
                         style: TextStyle(
                           color: muted,
                           fontSize: 12,
@@ -227,25 +426,14 @@ class _SubscriptionDetailsScreenState
             children: [
               Expanded(
                 child: _actionButton(
-                  icon: Icons.open_in_new,
-                  text: 'Cancel URL',
-                  color: purple,
-                  onTap: () => _message(
-                    'Cancellation portal will open here.',
-                  ),
-                ),
-              ),
-
-              const SizedBox(width: 10),
-
-              Expanded(
-                child: _actionButton(
                   icon: Icons.check_circle_outline,
-                  text: 'Mark Ended',
+                  text: _markingEnded
+                      ? 'Updating...'
+                      : 'Mark Ended',
                   color: ink,
-                  onTap: () => _message(
-                    'Subscription marked as ended.',
-                  ),
+                  onTap: _markingEnded
+                      ? () {}
+                      : _markSubscriptionEnded,
                 ),
               ),
 
@@ -256,9 +444,15 @@ class _SubscriptionDetailsScreenState
                   icon: Icons.edit_outlined,
                   text: 'Edit',
                   color: ink,
-                  onTap: () => _message(
-                    'Edit subscription selected.',
-                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+
+                    WidgetsBinding.instance.addPostFrameCallback(
+                      (_) {
+                        widget.onEdit();
+                      },
+                    );
+                  },
                 ),
               ),
             ],
@@ -300,7 +494,7 @@ class _SubscriptionDetailsScreenState
               ),
 
               _badge(
-                'Auto-Renew On',
+                widget.billingCycle,
                 purple,
               ),
             ],
@@ -359,75 +553,27 @@ class _SubscriptionDetailsScreenState
                 child: _infoBox(
                   icon: Icons.calendar_today_outlined,
                   label: 'Next Bill',
-                  title: 'Nov 24, 2025',
-                  subtitle: 'In 11 days',
+                  title: _formattedRenewalDate(),
+                  subtitle: widget.renewalDate == null
+                      ? 'No renewal date'
+                      : _renewalLabel(),
                 ),
               ),
 
               const SizedBox(width: 14),
 
               Expanded(
-                child: _infoBox(
-                  icon: Icons.credit_card_outlined,
-                  label: 'Payment',
-                  title: 'Chase Sapphire',
-                  subtitle: '•••• 4291',
-                  trailing: Icons.swap_horiz,
-                ),
+              child: _infoBox(
+                icon: Icons.credit_card_outlined,
+                label: 'Payment',
+                title: 'Not linked',
+                subtitle: 'No payment method stored',
               ),
+            ),
             ],
           ),
 
           const SizedBox(height: 20),
-
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 17,
-              vertical: 15,
-            ),
-            decoration: _softDecoration(radius: 28),
-            child: Row(
-              children: [
-                _circleIcon(
-                  Icons.donut_large,
-                  color: purple2,
-                  size: 42,
-                ),
-
-                const SizedBox(width: 13),
-
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '\$18.33 / session',
-                        style: TextStyle(
-                          color: ink,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      SizedBox(height: 3),
-                      Text(
-                        '3 opens / mo · Above avg (\$6.40)',
-                        style: TextStyle(
-                          color: muted,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                _badge(
-                  'MODERATE',
-                  muted,
-                ),
-              ],
-            ),
-          ),
 
           const SizedBox(height: 23),
 
@@ -486,378 +632,154 @@ class _SubscriptionDetailsScreenState
   // ============================================================
 
   Widget _buildVaultAndLegal() {
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  return _card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.lock_outline,
+              color: purple,
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'VAULT & LEGAL',
+                style: TextStyle(
+                  color: Color(0xFF55576E),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: .4,
+                ),
+              ),
+            ),
+            _badge(
+              'SECURE',
+              muted,
+            ),
+          ],
+        ),
+        const SizedBox(height: 22),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(17),
+          decoration: _softDecoration(
+            radius: 26,
+          ),
+          child: const Row(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.lock_outline,
+              Icon(
+                Icons.shield_outlined,
                 color: purple,
                 size: 22,
               ),
-
-              const SizedBox(width: 10),
-
-              const Expanded(
+              SizedBox(width: 12),
+              Expanded(
                 child: Text(
-                  'VAULT & LEGAL',
+                  'No account credentials, passwords, or legal documents are linked to this subscription.',
                   style: TextStyle(
-                    color: Color(0xFF55576E),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: .4,
+                    color: muted,
+                    fontSize: 13,
+                    height: 1.45,
                   ),
                 ),
-              ),
-
-              _badge(
-                'ENCRYPTED',
-                muted,
               ),
             ],
           ),
-
-          const SizedBox(height: 22),
-
-          Container(
-            padding: const EdgeInsets.all(17),
-            decoration: _softDecoration(radius: 26),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Primary Account ID',
-                            style: TextStyle(
-                              color: muted,
-                              fontSize: 11,
-                            ),
-                          ),
-                          SizedBox(height: 5),
-                          Text(
-                            'alex.miller@design.studio',
-                            style: TextStyle(
-                              color: ink,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    _smallButton(
-                      icon: Icons.key_outlined,
-                      text: 'Copy',
-                      onTap: () => _message(
-                        'Account ID copied.',
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                InkWell(
-                  borderRadius: BorderRadius.circular(25),
-                  onTap: () {
-                    setState(() {
-                      passphraseVisible = !passphraseVisible;
-                    });
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 13,
-                    ),
-                    decoration: _softDecoration(radius: 25),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          passphraseVisible
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          color: muted,
-                          size: 19,
-                        ),
-
-                        const SizedBox(width: 8),
-
-                        Text(
-                          passphraseVisible
-                              ? 'VaultPass#2025'
-                              : 'Reveal Passphrase',
-                          style: const TextStyle(
-                            color: ink,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-
-                        const SizedBox(width: 16),
-
-                        const Icon(
-                          Icons.shield_outlined,
-                          color: muted,
-                          size: 18,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 18),
-
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: _softDecoration(radius: 25),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.picture_as_pdf_outlined,
-                      color: danger,
-                      size: 23,
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'adobe_annual_terms_2024.pdf',
-                            style: TextStyle(
-                              color: ink,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          SizedBox(height: 3),
-                          Text(
-                            'Signed Nov 2024 · 1.4 MB',
-                            style: TextStyle(
-                              color: muted,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    _circleButton(
-                      icon: Icons.download_outlined,
-                      size: 42,
-                      onTap: () => _message(
-                        'Terms document download selected.',
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                InkWell(
-                  borderRadius: BorderRadius.circular(25),
-                  onTap: () => _message(
-                    'AI terms explanation selected.',
-                  ),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 13,
-                    ),
-                    decoration: _softDecoration(radius: 25),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.psychology_outlined,
-                          color: purple2,
-                          size: 20,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Explain Terms with AI',
-                          style: TextStyle(
-                            color: purple2,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   // ============================================================
   // CANCELLATION PROTOCOL
   // ============================================================
 
   Widget _buildCancellationProtocol() {
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(
-                Icons.help_outline,
-                color: purple,
-                size: 21,
-              ),
-
-              SizedBox(width: 10),
-
-              Expanded(
-                child: Text(
-                  'CANCELLATION PROTOCOL',
-                  style: TextStyle(
-                    color: Color(0xFF55576E),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: .3,
-                  ),
-                ),
-              ),
-
-              Text(
-                '3 Steps',
+  return _card(
+    child: Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        const Row(
+          children: [
+            Icon(
+              Icons.help_outline,
+              color: purple,
+              size: 21,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'CANCELLATION GUIDE',
                 style: TextStyle(
-                  color: muted,
-                  fontSize: 12,
+                  color: Color(0xFF55576E),
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
+                  letterSpacing: .3,
                 ),
               ),
-            ],
-          ),
-
-          const SizedBox(height: 22),
-
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: _softDecoration(radius: 27),
-            child: const Column(
-              children: [
-                _CancellationStep(
-                  number: '1',
-                  children: [
-                    TextSpan(
-                      text: 'Navigate to ',
-                    ),
-                    TextSpan(
-                      text: 'account.adobe.com/plans',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    TextSpan(
-                      text: ' and log in.',
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: 17),
-
-                _CancellationStep(
-                  number: '2',
-                  children: [
-                    TextSpan(
-                      text: 'Choose ',
-                    ),
-                    TextSpan(
-                      text: 'Manage Plan',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    TextSpan(
-                      text: ', then click ',
-                    ),
-                    TextSpan(
-                      text: 'Cancel your plan.',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: 17),
-
-                _CancellationStep(
-                  number: '3',
-                  children: [
-                    TextSpan(
-                      text:
-                          'Review fee penalty warning on step 3. Decline retention discounts.',
-                    ),
-                  ],
-                ),
-              ],
             ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: _softDecoration(
+            radius: 27,
           ),
-
-          const SizedBox(height: 22),
-
-          InkWell(
-            borderRadius: BorderRadius.circular(28),
-            onTap: () => _message(
-              'Opening direct cancellation portal.',
-            ),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                vertical: 16,
-              ),
-              decoration: _softDecoration(radius: 28),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+          child: const Column(
+            children: [
+              _CancellationStep(
+                number: '1',
                 children: [
-                  Text(
-                    'Open Direct Cancellation Portal',
-                    style: TextStyle(
-                      color: purple,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-
-                  SizedBox(width: 9),
-
-                  Icon(
-                    Icons.north_east,
-                    color: purple,
-                    size: 17,
+                  TextSpan(
+                    text:
+                        'Open the subscription provider\'s official app or website.',
                   ),
                 ],
               ),
-            ),
+              SizedBox(height: 17),
+              _CancellationStep(
+                number: '2',
+                children: [
+                  TextSpan(
+                    text:
+                        'Open your plan, billing, or subscription settings.',
+                  ),
+                ],
+              ),
+              SizedBox(height: 17),
+              _CancellationStep(
+                number: '3',
+                children: [
+                  TextSpan(
+                    text:
+                        'Cancel the plan with the provider, then mark it as cancelled in OneClick.',
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'OneClick tracks your subscription status but does not cancel external provider accounts directly.',
+          style: TextStyle(
+            color: muted,
+            fontSize: 12,
+            height: 1.45,
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   // ============================================================
   // CANCELLATION EVIDENCE
@@ -1147,45 +1069,6 @@ class _SubscriptionDetailsScreenState
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _smallButton({
-    required IconData icon,
-    required String text,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 13,
-          vertical: 10,
-        ),
-        decoration: _softDecoration(radius: 22),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: purple,
-              size: 17,
-            ),
-
-            const SizedBox(width: 6),
-
-            Text(
-              text,
-              style: const TextStyle(
-                color: purple,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
               ),
             ),
           ],
