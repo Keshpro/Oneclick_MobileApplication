@@ -26,8 +26,6 @@ class _VaultScreenState extends State<VaultScreen> {
   static const muted = Color(0xFF64748B);
 String _query = '';
 String _filter = 'All';
-String? _folder;
-String? _tag;
 bool _ascending = true;
 
 List<_VaultItem> _items = [];
@@ -53,12 +51,213 @@ void _loadRecords() {
           details: record.fileName ?? record.notes,
           folder: record.category,
           tags: record.tags,
+          fileName: record.fileName,
+          filePath: record.filePath,
           icon: Icons.description_outlined,
-          favorite: false,
+          favorite: record.isFavorite,
         );
       }).toList();
     });
   });
+}
+
+void _showSearchFilterPanel() {
+  final searchController = TextEditingController(
+    text: _query,
+  );
+
+  String tempFilter = _filter;
+  bool tempAscending = _ascending;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: const Color(0xFFF8FAFC),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(24),
+      ),
+    ),
+    builder: (sheetContext) {
+      return StatefulBuilder(
+        builder: (sheetContext, setModalState) {
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                22,
+                24,
+                MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Search & Filter',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: ink,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pop(sheetContext);
+                        },
+                        icon: const Icon(
+                          Icons.close,
+                          color: muted,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextField(
+                    controller: searchController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'Search Vault records...',
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: muted,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  const Text(
+                    'FILTER',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: muted,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      'All',
+                      'Documents',
+                      'Accounts',
+                      'Favorites',
+                    ].map((filter) {
+                      return ChoiceChip(
+                        label: Text(filter),
+                        selected: tempFilter == filter,
+                        onSelected: (_) {
+                          setModalState(() {
+                            tempFilter = filter;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.swap_vert,
+                      color: purple,
+                    ),
+                    title: const Text(
+                      'Sort records',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: ink,
+                      ),
+                    ),
+                    subtitle: Text(
+                      tempAscending ? 'A to Z' : 'Z to A',
+                    ),
+                    trailing: Switch(
+                      value: tempAscending,
+                      activeThumbColor: purple,
+                      onChanged: (value) {
+                        setModalState(() {
+                          tempAscending = value;
+                        });
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _query = searchController.text;
+                          _filter = tempFilter;
+                          _ascending = tempAscending;
+                        });
+
+                        Navigator.pop(sheetContext);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: purple,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'Apply',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _query = '';
+                          _filter = 'All';
+                          _ascending = true;
+                        });
+
+                        Navigator.pop(sheetContext);
+                      },
+                      child: const Text('Clear filters'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
 }
 
   List<_VaultItem> get _visibleItems {
@@ -74,10 +273,7 @@ void _loadRecords() {
           (_filter == 'Documents' && item.type != 'Account') ||
           (_filter == 'Accounts' && item.type == 'Account') ||
           (_filter == 'Favorites' && item.favorite);
-      return matchesQuery &&
-          matchesFilter &&
-          (_folder == null || item.folder == _folder) &&
-          (_tag == null || item.tags.contains(_tag));
+      return matchesQuery && matchesFilter;
     }).toList();
     results.sort((a, b) {
       final result = a.title.compareTo(b.title);
@@ -85,11 +281,7 @@ void _loadRecords() {
     });
     return results;
   }
-  void _comingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature will be connected next.')),
-    );
-  }
+
   void _shareRecord(_VaultItem item) {
   final shareItem = ShareRecordItem(
     title: item.title,
@@ -108,47 +300,7 @@ void _loadRecords() {
     },
   );
 }
-  void _showDetails(_VaultItem item) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _VaultReferenceIcon(item.icon, color: purple, size: 36),
-              const SizedBox(height: 16),
-              Text(
-                item.title,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: ink,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(item.details),
-              const SizedBox(height: 8),
-              Text('Folder: ${item.folder}'),
-              const SizedBox(height: 8),
-              Text(item.tags.map((tag) => '#$tag').join('  ')),
-              const SizedBox(height: 20),
-              const Text(
-                'Demo record only. No file or credentials are stored.',
-                style: TextStyle(color: muted),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
   @override
   Widget build(BuildContext context) {
     final base = Theme.of(context);
@@ -226,8 +378,7 @@ void _loadRecords() {
   Widget _buildVault(BuildContext context) {
     final visible = _visibleItems;
     final pinned = _items.where((item) => item.favorite).toList();
-    final folders = _items.map((item) => item.folder).toSet().toList();
-    final tags = _items.expand((item) => item.tags).toSet().toList();
+
     return Scaffold(
       extendBody: true,
       backgroundColor: Colors.transparent,
@@ -332,111 +483,49 @@ void _loadRecords() {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'My Vault',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: ink,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      _label(''),
-                    ],
+                  const Text(
+                    'My Vault',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: ink,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${_items.length} sample records',
+                    '${_items.length} ${_items.length == 1 ? 'record' : 'records'}',
                     style: const TextStyle(color: muted),
                   ),
                   const SizedBox(height: 24),
                   // Search and alphabetical sorting.
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _VaultSearchSurface(
-                          padding: EdgeInsets.zero,
-                          child: TextField(
-                            onChanged: (value) {
-                              setState(() => _query = value);
-                            },
-                            decoration: const InputDecoration(
-                              hintText: 'Search items, tags, folders...',
-                              prefixIcon: _VaultReferenceIcon(Icons.search, color: muted),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.all(16),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      _surface(
-                        padding: const EdgeInsets.all(4),
-                        child: IconButton(
-                          tooltip: _ascending
-                              ? 'Sort Z to A'
-                              : 'Sort A to Z',
-                          onPressed: () {
-                            setState(() => _ascending = !_ascending);
-                          },
-                          icon: const _VaultReferenceIcon(Icons.swap_vert, color: purple),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _horizontal(
-                    ['All', 'Documents', 'Accounts', 'Favorites']
-                        .map(
-                          (filter) => ChoiceChip(
-                            label: Text(filter),
-                            selected: _filter == filter,
-                            selectedColor: const Color(0xFFE0E7FE),
-                            onSelected: (_) {
-                              setState(() => _filter = filter);
-                            },
-                          ),
-                        )
-                        .toList(),
-                  ),
-                  const SizedBox(height: 24),
-                  _heading('FOLDERS & TAGS'),
-                  const SizedBox(height: 12),
-                  _horizontal(
-                    folders.map((folder) {
-                      final count = _items
-                          .where((item) => item.folder == folder)
-                          .length;
-                      return FilterChip(
-                        avatar: const _VaultReferenceIcon(
-                          Icons.folder_outlined,
-                          size: 18,
-                        ),
-                        label: Text('$folder  $count'),
-                        selected: _folder == folder,
-                        onSelected: (selected) {
-                          setState(() {
-                            _folder = selected ? folder : null;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 12),
-                  _horizontal(
-                    tags.map((tag) {
-                      return FilterChip(
-                        label: Text('#$tag'),
-                        selected: _tag == tag,
-                        onSelected: (selected) {
-                          setState(() => _tag = selected ? tag : null);
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 28),
+                  _VaultSearchSurface(
+  padding: EdgeInsets.zero,
+  child: TextField(
+    readOnly: true,
+    onTap: _showSearchFilterPanel,
+    decoration: InputDecoration(
+      hintText: _query.isEmpty
+          ? 'Search your Vault'
+          : _query,
+      prefixIcon: const _VaultReferenceIcon(
+        Icons.search,
+        color: muted,
+      ),
+      suffixIcon: IconButton(
+        tooltip: 'Search and filter',
+        onPressed: _showSearchFilterPanel,
+        icon: const _VaultReferenceIcon(
+          Icons.tune,
+          color: purple,
+        ),
+      ),
+      border: InputBorder.none,
+      contentPadding: const EdgeInsets.all(16),
+    ),
+  ),
+),
+
+const SizedBox(height: 28),
                   _heading(
                     'PINNED QUICK ACCESS',
                     trailing: '${pinned.length} items',
@@ -709,6 +798,8 @@ void _loadRecords() {
       type: item.type,
       details: item.details,
       tags: item.tags,
+      fileName: item.fileName,
+      filePath: item.filePath,
     ),
   ),
 );
@@ -739,6 +830,8 @@ void _loadRecords() {
       type: item.type,
       details: item.details,
       tags: item.tags,
+      fileName: item.fileName,
+      filePath: item.filePath,
     ),
   ),
 );
@@ -776,17 +869,41 @@ void _loadRecords() {
     );
   }
   Widget _star(_VaultItem item) {
-    return IconButton(
-      tooltip: item.favorite ? 'Unpin record' : 'Pin record',
-      onPressed: () {
-        setState(() => item.favorite = !item.favorite);
-      },
-      icon: _VaultReferenceIcon(
-        item.favorite ? Icons.star : Icons.star_border,
-        color: item.favorite ? Colors.orange : muted,
-      ),
-    );
-  }
+  return IconButton(
+    tooltip: item.favorite ? 'Unpin record' : 'Pin record',
+    onPressed: () async {
+      final newValue = !item.favorite;
+
+      setState(() {
+        item.favorite = newValue;
+      });
+
+      try {
+        await _vaultService.updateFavorite(
+          recordId: item.id,
+          isFavorite: newValue,
+        );
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          item.favorite = !newValue;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not update favorite.'),
+          ),
+        );
+      }
+    },
+    icon: _VaultReferenceIcon(
+      item.favorite ? Icons.star : Icons.star_border,
+      color: item.favorite ? Colors.orange : muted,
+    ),
+  );
+}
+
   Widget _badge(IconData icon) {
     final accent = _recordAccent(icon);
     return Builder(builder: (context) {
@@ -872,8 +989,11 @@ class _VaultItem {
   final String details;
   final String folder;
   final List<String> tags;
+  final String? fileName;
+  final String? filePath;
   final IconData icon;
   bool favorite;
+
   _VaultItem({
     required this.id,
     required this.title,
@@ -881,6 +1001,8 @@ class _VaultItem {
     required this.details,
     required this.folder,
     required this.tags,
+    this.fileName,
+    this.filePath,
     required this.icon,
     this.favorite = false,
   });
@@ -955,72 +1077,7 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
     );
   }
 }
-class _VaultActionContent extends StatelessWidget {
-  const _VaultActionContent({required this.icon, required this.title,
-    required this.subtitle, required this.accent});
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color accent;
-  @override
-  Widget build(BuildContext context) {
-    final hovered = _VaultGlassScope.hoveredOf(context);
-    final isAI = icon == Icons.auto_awesome;
-    final hoverColor = icon == Icons.document_scanner_outlined
-        ? const Color(0xFF6366F1) : accent;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 116),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (isAI) Positioned(right: -4, top: -4,
-            child: IgnorePointer(child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-              child: Container(width: 64, height: 64,
-                decoration: const BoxDecoration(color: Color(0x1A9333EA),
-                  shape: BoxShape.circle)),
-            )),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AnimatedScale(
-                scale: hovered ? 1.05 : 1,
-                duration: const Duration(milliseconds: 300),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: 44, height: 44, alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: hovered ? hoverColor : accent.withAlpha(15),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: accent.withAlpha(30)),
-                  ),
-                  child: _VaultReferenceIcon(icon, size: 20,
-                    color: hovered ? Colors.white : accent),
-                ),
-              ),
-              const SizedBox(height: 24),
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14, fontWeight: FontWeight.w700,
-                  letterSpacing: -0.35, height: 1.3,
-                  color: hovered ? accent : const Color(0xFF0F172A),
-                ),
-                child: Text(title),
-              ),
-              const SizedBox(height: 2),
-              Text(subtitle, style: GoogleFonts.plusJakartaSans(
-                fontSize: 11, fontWeight: FontWeight.w500,
-                height: 1.35, color: const Color(0xFF94A3B8),
-              )),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
+
 class _VaultSearchSurface extends StatefulWidget {
   const _VaultSearchSurface({required this.child, required this.padding});
   final Widget child;
@@ -1073,34 +1130,17 @@ class _VaultRowFeedbackState extends State<_VaultRowFeedback> {
     child: widget.builder(context, _hovered),
   );
 }
-class _VaultRecordSubtitle extends StatelessWidget {
-  const _VaultRecordSubtitle({required this.text, required this.color});
-  final String text;
-  final Color color;
-  @override
-  Widget build(BuildContext context) {
-    final expiring = text.startsWith('Expires');
-    final urgent = expiring && color == Colors.red;
-    final textColor = urgent ? const Color(0xFFF43F5E) : color;
-    final label = Text(text, style: GoogleFonts.plusJakartaSans(
-      fontSize: 12, fontWeight: urgent ? FontWeight.w600 : FontWeight.w500,
-      color: textColor,
-    ));
-    if (!expiring) return label;
-    return Row(children: [
-      _VaultPulseDot(color: urgent ? textColor : const Color(0xFF94A3B8),
-        size: 6, animate: urgent),
-      const SizedBox(width: 6), Flexible(child: label),
-    ]);
-  }
-}
+
 class _VaultPulseDot extends StatefulWidget {
-  const _VaultPulseDot({required this.color, required this.size,
-    this.ping = false, this.animate = true});
+  const _VaultPulseDot({
+  required this.color,
+  required this.size,
+  this.ping = false,
+});
   final Color color;
   final double size;
   final bool ping;
-  final bool animate;
+
   @override
   State<_VaultPulseDot> createState() => _VaultPulseDotState();
 }
@@ -1110,9 +1150,11 @@ class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProvide
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (widget.animate && !MediaQuery.disableAnimationsOf(context)) {
-      _controller.repeat(reverse: !widget.ping);
-    } else { _controller.stop(); }
+    if (!MediaQuery.disableAnimationsOf(context)) {
+  _controller.repeat(reverse: !widget.ping);
+} else {
+  _controller.stop();
+}
   }
   @override
   void dispose() { _controller.dispose(); super.dispose(); }
@@ -1125,22 +1167,32 @@ class _VaultPulseDotState extends State<_VaultPulseDot> with SingleTickerProvide
           child: Opacity(opacity: (1 - _controller.value) * 0.75,
             child: Container(decoration: BoxDecoration(
               color: widget.color, shape: BoxShape.circle)))),
-        Opacity(opacity: widget.ping || !widget.animate ? 1 : 1 - _controller.value * 0.5,
-          child: Container(decoration: BoxDecoration(
-            color: widget.color, shape: BoxShape.circle))),
-      ])),
+        Opacity(
+  opacity: widget.ping
+      ? 1
+      : 1 - _controller.value * 0.5,
+  child: Container(
+    decoration: BoxDecoration(
+      color: widget.color,
+      shape: BoxShape.circle,
+    ),
+  ),
+),
+      ]),
+    )
   );
 }
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon) : color = null;
+  const _VaultNavGlyph(this.icon);
   final IconData icon;
-  final Color? color;
+
   @override
   State<_VaultNavGlyph> createState() => _VaultNavGlyphState();
 }
 class _VaultNavGlyphState extends State<_VaultNavGlyph> {
   bool _hovered = false;
   bool _pressed = false;
+  
   @override
   Widget build(BuildContext context) => MouseRegion(
     cursor: SystemMouseCursors.click,
@@ -1153,8 +1205,9 @@ class _VaultNavGlyphState extends State<_VaultNavGlyph> {
       child: AnimatedScale(scale: _pressed ? 0.95 : 1,
         duration: const Duration(milliseconds: 200),
         child: _VaultReferenceIcon(widget.icon, size: 20,
-          color: widget.color ?? (_hovered ? const Color(0xFF1E293B)
-            : IconTheme.of(context).color ?? const Color(0xFF94A3B8))),
+          color: _hovered
+    ? const Color(0xFF1E293B)
+    : IconTheme.of(context).color ?? const Color(0xFF94A3B8),),
       ),
     ),
   );

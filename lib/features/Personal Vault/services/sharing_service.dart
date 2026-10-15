@@ -50,6 +50,7 @@ class SharingService {
     final sharedRecord = SharedRecord(
       id: doc.id,
       ownerId: _userId,
+      ownerEmail: _userEmail,
       recordTitle: recordTitle,
       recipientName: recipientName,
       recipientEmail: recipientEmail,
@@ -60,8 +61,6 @@ class SharingService {
     );
 
     final data = sharedRecord.toMap();
-
-    data['ownerEmail'] = _userEmail;
 
     final batch = _firestore.batch();
 

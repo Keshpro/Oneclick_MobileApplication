@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../../auth/screens/provider_rules_screen.dart';
+import '../../auth/screens/provider_register_screen.dart';
 
 import 'food_seller_application_screen.dart';
 import 'food_saver_screen.dart';
@@ -236,7 +241,7 @@ class FoodHomeScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const FoodSellerApplicationScreen(),
+                            builder: (_) => const ProviderRulesScreen(),
                           ),
                         );
                       },

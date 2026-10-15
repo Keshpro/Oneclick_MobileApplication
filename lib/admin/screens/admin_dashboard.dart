@@ -40,8 +40,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
       icon: Icons.medical_services_outlined,
       description: 'Audit doctors, patients and activities related to the medical service.',
       stats: [
-        _AuditStat(title: 'Doctors', value: '145', icon: Icons.medical_services),
-        _AuditStat(title: 'Patients', value: '628', icon: Icons.personal_injury),
+        _AuditStat(
+          title: 'Doctors',
+          value: '145',
+          icon: Icons.medical_services,
+        ),
+        _AuditStat(
+          title: 'Patients',
+          value: '628',
+          icon: Icons.personal_injury,
+        ),
         _AuditStat(title: 'Pending', value: '12', icon: Icons.pending_actions),
         _AuditStat(title: 'Activities', value: '1,240', icon: Icons.history),
       ],
@@ -104,14 +112,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
             icon: const Icon(Icons.notifications_none_rounded),
             tooltip: 'Notifications',
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationScreen()),
+              );
             },
           ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: _C.danger),
             tooltip: 'Logout',
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const LogoutScreen()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LogoutScreen()),
+              );
             },
           ),
           const SizedBox(width: 4),
@@ -186,15 +200,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
-                  child: Icon(Icons.admin_panel_settings, size: 32, color: _C.primary),
+                  child: Icon(
+                    Icons.admin_panel_settings,
+                    size: 32,
+                    color: _C.primary,
+                  ),
                 ),
                 SizedBox(height: 14),
                 Text(
                   'Admin Panel',
-                  style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 21,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 SizedBox(height: 4),
-                Text('Application Administrator', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                Text(
+                  'Application Administrator',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
               ],
             ),
           ),
@@ -213,7 +238,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   title: 'Pending Accounts',
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const PendingAccounts()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PendingAccounts(),
+                      ),
+                    );
                   },
                 ),
                 _drawerItem(
@@ -221,9 +251,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   title: 'Pending Users',
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const PendingUsersScreen()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PendingUsersScreen(),
+                      ),
+                    );
                   },
                 ),
+
                 _drawerItem(
                   icon: Icons.people_alt_rounded,
                   title: 'User Management',
@@ -244,7 +280,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   title: 'Database Management',
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const DatabaseManagement()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const DatabaseManagement(),
+                      ),
+                    );
                   },
                 ),
                 _drawerItem(
@@ -252,7 +293,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   title: 'Activity Logs',
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityLogs()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ActivityLogs()),
+                    );
                   },
                 ),
                 _drawerItem(
@@ -260,7 +304,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   title: 'Notifications',
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationScreen(),
+                      ),
+                    );
                   },
                 ),
                 const Divider(height: 30, indent: 20, endIndent: 20),
@@ -269,7 +318,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   title: 'Settings',
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
                   },
                 ),
               ],
@@ -288,7 +340,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 tint: _C.danger.withValues(alpha: 0.08),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const LogoutScreen()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LogoutScreen()),
+                  );
                 },
               ),
             ),
@@ -314,7 +369,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
-        leading: Icon(icon, color: iconColor ?? (selected ? _C.primary : _C.muted)),
+        leading: Icon(
+          icon,
+          color: iconColor ?? (selected ? _C.primary : _C.muted),
+        ),
         title: Text(
           title,
           style: TextStyle(
@@ -340,7 +398,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: _C.primary.withValues(alpha: 0.25), blurRadius: 18, offset: const Offset(0, 8)),
+          BoxShadow(
+            color: _C.primary.withValues(alpha: 0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: Row(
@@ -349,14 +411,32 @@ class _AdminDashboardState extends State<AdminDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Welcome back, Admin 👋', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                Text(
+                  'Welcome back, Admin 👋',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 SizedBox(height: 8),
-                Text('Monitor users, accounts and activities across the application.', style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5)),
+                Text(
+                  'Monitor users, accounts and activities across the application.',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
               ],
             ),
           ),
           const SizedBox(width: 12),
-          Icon(Icons.insights_rounded, size: 54, color: Colors.white.withValues(alpha: 0.35)),
+          Icon(
+            Icons.insights_rounded,
+            size: 54,
+            color: Colors.white.withValues(alpha: 0.35),
+          ),
         ],
       ),
     );
@@ -368,27 +448,44 @@ class _AdminDashboardState extends State<AdminDashboard> {
       stream: FirebaseFirestore.instance.collection('users').snapshots(),
       builder: (context, usersSnapshot) {
         return StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('doctors').where('status', isEqualTo: 'pending').snapshots(),
+          stream: FirebaseFirestore.instance
+              .collection('doctors')
+              .where('status', isEqualTo: 'pending')
+              .snapshots(),
           builder: (context, pendingDoctorsSnapshot) {
             return StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('drivers').where('status', isEqualTo: 'pending').snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('drivers')
+                  .where('status', isEqualTo: 'pending')
+                  .snapshots(),
               builder: (context, pendingDriversSnapshot) {
-                final totalUsers = usersSnapshot.hasData ? usersSnapshot.data!.docs.length : 0;
-                
+                final totalUsers = usersSnapshot.hasData
+                    ? usersSnapshot.data!.docs.length
+                    : 0;
+
                 final activeUsers = usersSnapshot.hasData
                     ? usersSnapshot.data!.docs.where((doc) {
                         final data = doc.data() as Map<String, dynamic>?;
-                        return data?['status'] == 'active' || data?['status'] == 'approved';
+                        return data?['status'] == 'active' ||
+                            data?['status'] == 'approved';
                       }).length
                     : 0;
 
-                final pendingDoctors = pendingDoctorsSnapshot.hasData ? pendingDoctorsSnapshot.data!.docs.length : 0;
-                final pendingDrivers = pendingDriversSnapshot.hasData ? pendingDriversSnapshot.data!.docs.length : 0;
+                final pendingDoctors = pendingDoctorsSnapshot.hasData
+                    ? pendingDoctorsSnapshot.data!.docs.length
+                    : 0;
+                final pendingDrivers = pendingDriversSnapshot.hasData
+                    ? pendingDriversSnapshot.data!.docs.length
+                    : 0;
                 final totalPending = pendingDoctors + pendingDrivers;
 
                 return LayoutBuilder(
                   builder: (context, constraints) {
-                    final int crossAxisCount = constraints.maxWidth >= 1100 ? 4 : constraints.maxWidth >= 700 ? 4 : 2;
+                    final int crossAxisCount = constraints.maxWidth >= 1100
+                        ? 4
+                        : constraints.maxWidth >= 700
+                        ? 4
+                        : 2;
                     return GridView.count(
                       crossAxisCount: crossAxisCount,
                       shrinkWrap: true,
@@ -397,10 +494,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       mainAxisSpacing: 12,
                       childAspectRatio: 1.55,
                       children: [
-                        _StatCard(title: 'Total Users', value: '$totalUsers', icon: Icons.people, color: Colors.blue),
-                        _StatCard(title: 'Active Users', value: '$activeUsers', icon: Icons.person, color: Colors.green),
-                        _StatCard(title: 'Doctors Pending', value: '$pendingDoctors', icon: Icons.medical_services, color: Colors.purple),
-                        _StatCard(title: 'Total Pending', value: '$totalPending', icon: Icons.pending_actions, color: Colors.orange),
+                        _StatCard(
+                          title: 'Total Users',
+                          value: '$totalUsers',
+                          icon: Icons.people,
+                          color: Colors.blue,
+                        ),
+                        _StatCard(
+                          title: 'Active Users',
+                          value: '$activeUsers',
+                          icon: Icons.person,
+                          color: Colors.green,
+                        ),
+                        _StatCard(
+                          title: 'Doctors Pending',
+                          value: '$pendingDoctors',
+                          icon: Icons.medical_services,
+                          color: Colors.purple,
+                        ),
+                        _StatCard(
+                          title: 'Total Pending',
+                          value: '$totalPending',
+                          icon: Icons.pending_actions,
+                          color: Colors.orange,
+                        ),
                       ],
                     );
                   },
@@ -425,7 +542,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const UserManagementScreen(title: 'User Management'),
+                builder: (_) =>
+                    const UserManagementScreen(title: 'User Management'),
               ),
             );
           },
@@ -437,7 +555,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
           title: 'Database Management',
           subtitle: 'Manage and backup application data',
           onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const DatabaseManagement()));
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DatabaseManagement()),
+            );
           },
         ),
       ],
@@ -467,7 +588,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Icon(icon, color: color, size: 26),
               ),
               const SizedBox(width: 14),
@@ -475,9 +599,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: _C.text)),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: _C.text,
+                      ),
+                    ),
                     const SizedBox(height: 3),
-                    Text(subtitle, style: const TextStyle(fontSize: 12, color: _C.muted)),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 12, color: _C.muted),
+                    ),
                   ],
                 ),
               ),
@@ -508,7 +642,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
-                    avatar: Icon(c.icon, size: 18, color: selected ? Colors.white : _C.muted),
+                    avatar: Icon(
+                      c.icon,
+                      size: 18,
+                      color: selected ? Colors.white : _C.muted,
+                    ),
                     label: Text(c.name),
                     selected: selected,
                     showCheckmark: false,
@@ -541,22 +679,38 @@ class _AdminDashboardState extends State<AdminDashboard> {
       key: ValueKey(c.name),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('${c.name} Category', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _C.text)),
+        Text(
+          '${c.name} Category',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: _C.text,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(c.description, style: const TextStyle(fontSize: 12, color: _C.muted, height: 1.4)),
+        Text(
+          c.description,
+          style: const TextStyle(fontSize: 12, color: _C.muted, height: 1.4),
+        ),
         const SizedBox(height: 14),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 2.4,
+            crossAxisCount: 2,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 2.4,
           ),
           itemCount: c.stats.length,
           itemBuilder: (context, index) {
             final s = c.stats[index];
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(color: _C.bg, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: _C.bg,
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Row(
                 children: [
                   Icon(s.icon, size: 20, color: _C.primary),
@@ -566,8 +720,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(s.value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        Text(s.title, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: _C.muted)),
+                        Text(
+                          s.value,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          s.title,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11, color: _C.muted),
+                        ),
                       ],
                     ),
                   ),
@@ -593,13 +757,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
               } else {
                 return;
               }
-              Navigator.push(context, MaterialPageRoute(builder: (_) => nextScreen));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => nextScreen),
+              );
             },
             icon: const Icon(Icons.fact_check_outlined, size: 18),
             label: const Text('Open Audit'),
             style: FilledButton.styleFrom(
               backgroundColor: _C.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ),
@@ -613,13 +782,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
       icon: Icons.history,
       child: Column(
         children: [
-          _listItem(icon: Icons.person_add, color: Colors.green, title: 'New user registered', description: 'John Doe created a new account', time: '5 minutes ago'),
-          _listItem(icon: Icons.check_circle, color: Colors.blue, title: 'Account approved', description: 'Dr. Sarah Wilson was approved', time: '25 minutes ago'),
+          _listItem(
+            icon: Icons.person_add,
+            color: Colors.green,
+            title: 'New user registered',
+            description: 'John Doe created a new account',
+            time: '5 minutes ago',
+          ),
+          _listItem(
+            icon: Icons.check_circle,
+            color: Colors.blue,
+            title: 'Account approved',
+            description: 'Dr. Sarah Wilson was approved',
+            time: '25 minutes ago',
+          ),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityLogs()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ActivityLogs()),
+                );
               },
               child: const Text('View All Activities'),
             ),
@@ -635,14 +819,32 @@ class _AdminDashboardState extends State<AdminDashboard> {
       icon: Icons.notifications_active_outlined,
       child: Column(
         children: [
-          _listItem(icon: Icons.warning_amber_rounded, color: Colors.orange, title: 'Pending approvals', description: '24 accounts are waiting for approval.'),
-          _listItem(icon: Icons.system_update, color: Colors.green, title: 'System update', description: 'Application data was successfully synchronized.', showDivider: false),
+          _listItem(
+            icon: Icons.warning_amber_rounded,
+            color: Colors.orange,
+            title: 'Pending approvals',
+            description: '24 accounts are waiting for approval.',
+          ),
+          _listItem(
+            icon: Icons.system_update,
+            color: Colors.green,
+            title: 'System update',
+            description: 'Application data was successfully synchronized.',
+            showDivider: false,
+          ),
         ],
       ),
     );
   }
 
-  Widget _listItem({required IconData icon, required Color color, required String title, required String description, String? time, bool showDivider = true}) {
+  Widget _listItem({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String description,
+    String? time,
+    bool showDivider = true,
+  }) {
     return Column(
       children: [
         Padding(
@@ -652,7 +854,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
             children: [
               Container(
                 padding: const EdgeInsets.all(9),
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.10), shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
                 child: Icon(icon, color: color, size: 20),
               ),
               const SizedBox(width: 14),
@@ -660,10 +865,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _C.text)),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _C.text,
+                      ),
+                    ),
                     const SizedBox(height: 3),
-                    Text(description, style: const TextStyle(fontSize: 12, color: _C.muted)),
-                    if (time != null) ...[const SizedBox(height: 4), Text(time, style: TextStyle(fontSize: 11, color: Colors.grey.shade500))],
+                    Text(
+                      description,
+                      style: const TextStyle(fontSize: 12, color: _C.muted),
+                    ),
+                    if (time != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        time,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -675,7 +899,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _sectionCard({required String title, required IconData icon, required Widget child}) {
+  Widget _sectionCard({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -687,7 +915,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
             children: [
               Icon(icon, size: 21, color: _C.primary),
               const SizedBox(width: 9),
-              Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: _C.text)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: _C.text,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -704,7 +939,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
       borderRadius: BorderRadius.circular(18),
       border: Border.all(color: _C.border),
       boxShadow: [
-        BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.03),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
       ],
     );
   }
@@ -717,7 +956,12 @@ class _StatCard extends StatelessWidget {
   final Color color;
   final String? subtitle;
 
-  const _StatCard({required this.title, required this.value, required this.icon, required this.color}) : subtitle = null;
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  }) : subtitle = null;
 
   @override
   Widget build(BuildContext context) {
@@ -727,7 +971,13 @@ class _StatCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: _C.border),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -735,14 +985,29 @@ class _StatCard extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Icon(icon, color: color, size: 20),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _C.text)),
-              Text(subtitle == null ? title : '$title · $subtitle', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: _C.muted)),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: _C.text,
+                ),
+              ),
+              Text(
+                subtitle == null ? title : '$title · $subtitle',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: _C.muted),
+              ),
             ],
           ),
         ],
@@ -756,12 +1021,21 @@ class _AuditCategory {
   final IconData icon;
   final String description;
   final List<_AuditStat> stats;
-  const _AuditCategory({required this.name, required this.icon, required this.description, required this.stats});
+  const _AuditCategory({
+    required this.name,
+    required this.icon,
+    required this.description,
+    required this.stats,
+  });
 }
 
 class _AuditStat {
   final String title;
   final String value;
   final IconData icon;
-  const _AuditStat({required this.title, required this.value, required this.icon});
+  const _AuditStat({
+    required this.title,
+    required this.value,
+    required this.icon,
+  });
 }

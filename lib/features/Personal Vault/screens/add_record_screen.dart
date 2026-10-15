@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
 import 'smart_upload_review_screen.dart';
+import 'add_account_screen.dart';
 
 class AddRecordScreen extends StatefulWidget {
   const AddRecordScreen({super.key});
@@ -17,39 +18,30 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   static const ink = Color(0xFF303344);
   static const muted = Color(0xFF686C7C);
 
-  final _titleController = TextEditingController(
-    text: 'Health Insurance Policy 2025',
-  );
+  final _titleController = TextEditingController();
 
-  final _notesController = TextEditingController(
-    text: 'Annual deductible \$500 already satisfied.\n'
-        'Emergency line: 1-800-442-9011. Pre-'
-        'authorization required for specialists.',
-  );
+  final _notesController = TextEditingController();
+  final _merchantController = TextEditingController();
+  final _amountController = TextEditingController();
+
+  DateTime _purchaseDate = DateTime.now();
 
   String _recordType = 'Document';
   String _category = 'Health & Medical';
   DateTime _renewalDate = DateTime(2025, 12, 31);
   bool _expiryNotification = true;
-  bool _showSampleFile = true;
+  bool _showSampleFile = false;
   String? _selectedFileName;
   PlatformFile? _selectedFile;
 
-  final List<String> _tags = ['insurance', '2025', 'urgent'];
 
   @override
   void dispose() {
     _titleController.dispose();
     _notesController.dispose();
+    _merchantController.dispose();
+    _amountController.dispose();
     super.dispose();
-  }
-
-  void _placeholder(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature is not connected yet.'),
-      ),
-    );
   }
 
   Future<void> _pickDate() async {
@@ -65,47 +57,20 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     setState(() => _renewalDate = date);
   }
 
-  Future<void> _addTag() async {
-    String value = '';
+  Future<void> _pickPurchaseDate() async {
+  final date = await showDatePicker(
+    context: context,
+    initialDate: _purchaseDate,
+    firstDate: DateTime(2000),
+    lastDate: DateTime.now(),
+  );
 
-    final result = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: bg,
-          title: const Text('Add Tag'),
-          content: TextField(
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'Enter a tag',
-            ),
-            onChanged: (text) => value = text,
-            onSubmitted: (text) {
-              Navigator.pop(dialogContext, text);
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, value),
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
+  if (!mounted || date == null) return;
 
-    if (!mounted || result == null) return;
-
-    final tag = result.trim().replaceFirst(RegExp(r'^#'), '');
-
-    if (tag.isNotEmpty && !_tags.contains(tag)) {
-      setState(() => _tags.add(tag));
-    }
-  }
+  setState(() {
+    _purchaseDate = date;
+  });
+}
 
   String get _formattedDate {
     const months = [
@@ -117,6 +82,18 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
         '${months[_renewalDate.month - 1]} '
         '${_renewalDate.year}';
   }
+
+  String get _formattedPurchaseDate {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  return '${_purchaseDate.day} '
+      '${months[_purchaseDate.month - 1]} '
+      '${_purchaseDate.year}';
+}
+
 Future<void> _chooseFile() async {
   final result = await FilePicker.pickFiles(
   type: FileType.custom,
@@ -182,7 +159,7 @@ setState(() {
                             Expanded(
                               child: _typeCard(
                                 'Receipt',
-                                'Warranty, tags',
+                                'Purchase, warranty',
                                 Icons.receipt_long_outlined,
                               ),
                             ),
@@ -190,7 +167,7 @@ setState(() {
                         ),
 
                         const SizedBox(height: 34),
-                        _label('DOCUMENT TITLE'),
+                        _label(_titleLabel),
                         const SizedBox(height: 12),
                         _inputSurface(
                           child: TextField(
@@ -209,6 +186,102 @@ setState(() {
                             ),
                           ),
                         ),
+
+                        if (_recordType == 'Receipt') ...[
+  const SizedBox(height: 28),
+
+  _label('MERCHANT / STORE'),
+  const SizedBox(height: 12),
+
+  _inputSurface(
+    child: TextField(
+      controller: _merchantController,
+      decoration: const InputDecoration(
+        hintText: 'Enter merchant or store name',
+        border: InputBorder.none,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
+      ),
+    ),
+  ),
+
+  const SizedBox(height: 28),
+
+  Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label('PURCHASE DATE'),
+            const SizedBox(height: 12),
+            _inputSurface(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(30),
+                onTap: _pickPurchaseDate,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _formattedPurchaseDate,
+                          style: const TextStyle(
+                            color: ink,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      const Icon(
+                        Icons.calendar_month_outlined,
+                        color: purple,
+                        size: 22,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      const SizedBox(width: 16),
+
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label('AMOUNT'),
+            const SizedBox(height: 12),
+            _inputSurface(
+              child: TextField(
+                controller: _amountController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  hintText: '0.00',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 18,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+],
 
                         const SizedBox(height: 32),
                         Row(
@@ -236,24 +309,6 @@ setState(() {
                         const SizedBox(height: 26),
                         _notificationCard(),
 
-                        const SizedBox(height: 30),
-                        _label('VAULT TAGS'),
-                        const SizedBox(height: 14),
-                        Wrap(
-                          spacing: 14,
-                          runSpacing: 14,
-                          children: [
-                            ..._tags.map(_tagChip),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        _smallButton(
-                          label: 'Add Tag',
-                          icon: Icons.add,
-                          color: muted,
-                          onTap: _addTag,
-                        ),
-
                         const SizedBox(height: 32),
                         _label('CONFIDENTIAL NOTES'),
                         const SizedBox(height: 12),
@@ -269,14 +324,13 @@ setState(() {
                               color: ink,
                             ),
                             decoration: const InputDecoration(
+                              hintText: 'Type a note here...',
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.all(20),
                             ),
                           ),
                         ),
 
-                        const SizedBox(height: 34),
-                        _emergencyCard(),
                         const SizedBox(height: 40),
 
                         _surface(
@@ -289,7 +343,7 @@ setState(() {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
-                                      'Please enter a document title.',
+                                      'Please enter a record title.',
                                     ),
                                   ),
                                 );
@@ -306,7 +360,7 @@ setState(() {
                                     renewalDate: _renewalDate,
                                     expiryNotification: _expiryNotification,
                                     notes: _notesController.text.trim(),
-                                    tags: List<String>.from(_tags),
+                                    tags: const [],
                                     selectedFile: _selectedFile,
                                   ),
                                 ),
@@ -401,64 +455,28 @@ Widget _header() {
 }
 
   Widget _intro() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final heading = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _label('STEP 1 OF 2'),
-            const SizedBox(height: 8),
-            const Text(
-              'Add New Record',
-              style: TextStyle(
-                fontSize: 27,
-                color: ink,
-                fontWeight: FontWeight.w600,
-              ),
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final heading = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _label('STEP 1 OF 2'),
+          const SizedBox(height: 8),
+          const Text(
+            'Add New Record',
+            style: TextStyle(
+              fontSize: 27,
+              color: ink,
+              fontWeight: FontWeight.w600,
             ),
-          ],
-        );
-
-        final badge = _surface(
-          radius: 24,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
           ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.shield, color: purple, size: 17),
-              SizedBox(width: 6),
-              Text(
-                'Zero-Knowledge',
-                style: TextStyle(color: purple, fontSize: 14),
-              ),
-            ],
-          ),
-        );
+        ],
+      );
 
-        if (constraints.maxWidth < 440) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              heading,
-              const SizedBox(height: 14),
-              badge,
-            ],
-          );
-        }
-
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: heading),
-            badge,
-          ],
-        );
-      },
-    );
-  }
+      return heading;
+    },
+  );
+}
 
   Widget _typeCard(String title, String subtitle, IconData icon) {
     final selected = _recordType == title;
@@ -468,7 +486,22 @@ Widget _header() {
       padding: EdgeInsets.zero,
       child: InkWell(
         borderRadius: BorderRadius.circular(30),
-        onTap: () => setState(() => _recordType = title),
+        onTap: () {
+          if (title == 'Account') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const AddAccountScreen(),
+              ),
+            );
+            return;
+          }
+
+          setState(() {
+            _recordType = title;
+            _category = _categoriesForRecordType.first;
+          });
+        },
         child: Stack(
           children: [
             Padding(
@@ -552,7 +585,7 @@ Widget _header() {
           ),
           const SizedBox(height: 5),
           const Text(
-            'Camera OCR extracts policy ID, terms & expiry',
+            'Upload a PDF, JPG or PNG file',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 15, color: muted),
           ),
@@ -605,7 +638,7 @@ Widget _header() {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _selectedFileName ?? 'policy_schedule_v4.pdf',
+                            _selectedFileName ?? 'No file selected',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -616,7 +649,9 @@ Widget _header() {
                           ),
                           SizedBox(height: 3),
                           Text(
-                            '2.4 MB • Auto-classified',
+                            _selectedFile != null
+                              ? 'Selected file'
+                              : 'No file selected',
                             style: TextStyle(
                               color: muted,
                               fontSize: 12,
@@ -626,9 +661,13 @@ Widget _header() {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Remove sample file',
+                      tooltip: 'Remove file',
                       onPressed: () {
-                        setState(() => _showSampleFile = false);
+                        setState(() {
+                          _showSampleFile = false;
+                          _selectedFile = null;
+                          _selectedFileName = null;
+                        });
                       },
                       icon: const Icon(Icons.close, color: muted),
                     ),
@@ -641,6 +680,66 @@ Widget _header() {
       ),
     );
   }
+
+List<String> get _categoriesForRecordType {
+  switch (_recordType) {
+    case 'Account':
+      return [
+        'Email',
+        'Banking',
+        'Social Media',
+        'Cloud Storage',
+        'Work',
+        'Other',
+      ];
+
+    case 'Receipt':
+      return [
+        'Electronics',
+        'Home',
+        'Vehicle',
+        'Clothing',
+        'Health',
+        'Other',
+      ];
+
+    case 'Document':
+    default:
+      return [
+        'Personal ID',
+        'Health & Medical',
+        'Insurance',
+        'Home & Lease',
+        'Education',
+        'Legal',
+        'Other',
+      ];
+  }
+}
+
+String get _titleLabel {
+  switch (_recordType) {
+    case 'Account':
+      return 'SERVICE / ACCOUNT NAME';
+    case 'Receipt':
+      return 'ITEM / PURCHASE TITLE';
+    case 'Document':
+    default:
+      return 'DOCUMENT TITLE';
+  }
+}
+
+String get _dateLabel {
+  switch (_recordType) {
+    case 'Receipt':
+      return 'WARRANTY / EXPIRY DATE';
+    case 'Account':
+      return 'REVIEW / RENEWAL DATE';
+    case 'Document':
+    default:
+      return 'RENEWAL / EXPIRY DATE';
+  }
+}
 
   Widget _categoryField() {
     return Column(
@@ -658,13 +757,7 @@ Widget _header() {
                 dropdownColor: bg,
                 icon: const Icon(Icons.expand_more, color: muted),
                 style: const TextStyle(color: ink, fontSize: 16),
-                items: [
-                  'Health & Medical',
-                  'Personal ID',
-                  'Home & Lease',
-                  'Digital Accounts',
-                  'Receipts',
-                ].map((category) {
+                items: _categoriesForRecordType.map((category) {
                   return DropdownMenuItem(
                     value: category,
                     child: Text(
@@ -690,7 +783,7 @@ Widget _header() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label('RENEWAL DATE'),
+        _label(_dateLabel),
         const SizedBox(height: 12),
         _inputSurface(
           child: InkWell(
@@ -770,78 +863,6 @@ Widget _header() {
     );
   }
 
-  Widget _tagChip(String tag) {
-    final color = tag == 'urgent' ? violet : purple;
-
-    return _surface(
-      radius: 24,
-      padding: const EdgeInsets.fromLTRB(14, 7, 5, 7),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '#$tag',
-            style: TextStyle(
-              color: color,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          SizedBox(
-            height: 25,
-            width: 28,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              tooltip: 'Remove $tag',
-              icon: Icon(Icons.close, color: color, size: 17),
-              onPressed: () {
-                setState(() => _tags.remove(tag));
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _emergencyCard() {
-    return _surface(
-      radius: 28,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _iconDisc(Icons.shield, color: purple, size: 44),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Auto-Sync with Emergency Vault',
-                  style: TextStyle(
-                    color: ink,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                  ),
-                ),
-                SizedBox(height: 5),
-                Text(
-                  'When enabled, verified health documents and '
-                  'recovery keys are securely encrypted for next-of-kin '
-                  'recovery protocols.',
-                  style: TextStyle(
-                    color: muted,
-                    fontSize: 14,
-                    height: 1.6,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _aiBadge() {
     return Container(

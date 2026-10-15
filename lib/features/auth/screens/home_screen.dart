@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import '../../../admin/screens/admin_dashboard.dart';
 import '../../drunk_drive/passenger/screens/drunk_drive_home_screen.dart';
 import '../../Personal Vault/screens/dashboard.dart' as personal_vault;
 import '../../food/screens/food_home_screen.dart';
+import '../../food/screens/food_seller_dashboard_screen.dart';
 import '../../quickfix/user/screens/home_services_screen.dart';
 import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
 import 'package:oneclick/core/widgets/teal_header.dart'; // UI only: shared wave header
@@ -63,7 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
     },
     {
       'title': 'Food',
-      'description': 'Discover great food, save money and explore local food services.',
+      'description':
+          'Discover great food, save money and explore local food services.',
       'icon': Icons.restaurant_rounded,
       'gradient': const [Color(0xFFFF8A65), Color(0xFFE85D04)],
     },
@@ -75,13 +78,15 @@ class _HomeScreenState extends State<HomeScreen> {
     },
     {
       'title': 'Quick Fix',
-      'description': 'Find local professionals for all your home and repair needs.',
+      'description':
+          'Find local professionals for all your home and repair needs.',
       'icon': Icons.build_rounded,
       'gradient': const [Color(0xFFF87171), Color(0xFFDC2626)],
     },
     {
       'title': 'Personal Vault',
-      'description': 'Keep your personal documents and important information secure.',
+      'description':
+          'Keep your personal documents and important information secure.',
       'icon': Icons.shield_rounded,
       'gradient': const [Color(0xFF38BDF8), Color(0xFF0369A1)],
     },
@@ -113,12 +118,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       // 1. Check if user is a Doctor
-      final docSnapshot = await _firestore.collection('doctors').doc(user.uid).get();
+      final docSnapshot = await _firestore
+          .collection('doctors')
+          .doc(user.uid)
+          .get();
       if (docSnapshot.exists) {
         final data = docSnapshot.data();
         if (mounted) {
           setState(() {
-            _userName = data?['name']?.toString() ?? user.displayName ?? 'Doctor';
+            _userName =
+                data?['name']?.toString() ?? user.displayName ?? 'Doctor';
             _userEmail = data?['email']?.toString() ?? user.email ?? '';
             _userRole = 'doctor';
             _isLoadingUser = false;
@@ -135,7 +144,9 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _userName = data?['name']?.toString().trim().isNotEmpty == true
             ? data!['name'].toString()
-            : (user.displayName?.trim().isNotEmpty == true ? user.displayName! : 'User');
+            : (user.displayName?.trim().isNotEmpty == true
+                  ? user.displayName!
+                  : 'User');
         _userEmail = data?['email']?.toString() ?? user.email ?? '';
         _userRole = data?['role']?.toString().toLowerCase() ?? 'user';
         _isLoadingUser = false;
@@ -143,7 +154,9 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _userName = user.displayName?.trim().isNotEmpty == true ? user.displayName! : 'User';
+        _userName = user.displayName?.trim().isNotEmpty == true
+            ? user.displayName!
+            : 'User';
         _userEmail = user.email ?? '';
         _userRole = 'user';
         _isLoadingUser = false;
@@ -415,7 +428,10 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () => Navigator.pushNamed(context, '/login'),
               child: const Text(
                 'Already have an account? Login',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -426,22 +442,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _openService(String serviceTitle) {
     Widget? screen;
+
     switch (serviceTitle) {
       case 'Doctor':
         screen = const DoctorEntryScreen();
         break;
+
       case 'Drunk & Drive':
         screen = const DrunkDriveHomeScreen();
         break;
+
       case 'Food':
         screen = const FoodHomeScreen();
         break;
+
       case 'Groceries':
         screen = const GroceryHomeScreen();
         break;
+
       case 'Quick Fix':
         screen = const HomeServicesScreen();
         break;
+
       case 'Personal Vault':
         screen = const personal_vault.PersonalDashboardScreen();
         break;
@@ -462,7 +484,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (index == 1) {
       setState(() => _selectedIndex = 1);
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const ServicesScreen())).then((_) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ServicesScreen()),
+      ).then((_) {
         if (mounted) setState(() => _selectedIndex = 0);
       });
       return;
@@ -470,7 +495,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (index == 2) {
       setState(() => _selectedIndex = 2);
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const ExploreScreen())).then((_) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ExploreScreen()),
+      ).then((_) {
         if (mounted) setState(() => _selectedIndex = 0);
       });
       return;
@@ -497,7 +525,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: _Palette.primary,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.lock_outline_rounded, color: Colors.white, size: 30),
+              child: const Icon(
+                Icons.lock_outline_rounded,
+                color: Colors.white,
+                size: 30,
+              ),
             ),
             const SizedBox(height: 16),
             Text(
@@ -509,7 +541,11 @@ class _HomeScreenState extends State<HomeScreen> {
             const Text(
               'Login or create an account to continue using this service.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: _Palette.inkSoft, fontSize: 14, height: 1.5),
+              style: TextStyle(
+                color: _Palette.inkSoft,
+                fontSize: 14,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -533,7 +569,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
                 child: const Text(
                   'Create a new account',
-                  style: TextStyle(fontWeight: FontWeight.w700, color: _Palette.primary),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: _Palette.primary,
+                  ),
                 ),
               ),
             ),
@@ -543,6 +582,63 @@ class _HomeScreenState extends State<HomeScreen> {
     ).whenComplete(() {
       if (mounted && _selectedIndex != 0) setState(() => _selectedIndex = 0);
     });
+  }
+
+  // Check Food Seller approval status
+  Future<String?> _getFoodSellerStatus() async {
+    final user = _auth.currentUser;
+
+    if (user == null) return null;
+
+    final snapshot = await _firestore
+        .collection('food_sellers')
+        .doc(user.uid)
+        .get();
+
+    if (!snapshot.exists) return null;
+
+    return snapshot.data()?['status']?.toString().toLowerCase();
+  }
+
+  Future<void> _openFoodSellerDashboard(BuildContext sheetContext) async {
+    Navigator.pop(sheetContext);
+
+    try {
+      final status = await _getFoodSellerStatus();
+
+      if (!mounted) return;
+
+      if (status == 'active') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const FoodSellerDashboardScreen()),
+        );
+      } else if (status == 'pending') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Your Food Seller application is still pending approval.',
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Your Food Seller account is not approved.'),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not check your seller status. Please try again.',
+          ),
+        ),
+      );
+    }
   }
 
   // Account Options with Dynamic Role Switcher
@@ -600,7 +696,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.pop(sheetContext);
                     Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(builder: (_) => const DoctorDashboardScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const DoctorDashboardScreen(),
+                      ),
                       (route) => false,
                     );
                   },
@@ -634,13 +732,19 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
 
             ListTile(
-              leading: const Icon(Icons.person_outline_rounded, color: _Palette.primary),
+              leading: const Icon(
+                Icons.person_outline_rounded,
+                color: _Palette.primary,
+              ),
               title: const Text('My Profile'),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => Navigator.pop(sheetContext),
             ),
             ListTile(
-              leading: const Icon(Icons.history_rounded, color: _Palette.primary),
+              leading: const Icon(
+                Icons.history_rounded,
+                color: _Palette.primary,
+              ),
               title: const Text('My Activity'),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => Navigator.pop(sheetContext),
@@ -716,9 +820,19 @@ class _GradientButton extends StatelessWidget {
               label,
               style: const TextStyle(color: _Palette.primary, fontWeight: FontWeight.w700, fontSize: 14),
             ),
+          ],
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 13.5,
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 /// Hero text. The teal background comes from TealHeader.
@@ -941,7 +1055,10 @@ class _FloatingNavBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
-  const _FloatingNavBar({required this.selectedIndex, required this.onSelected});
+  const _FloatingNavBar({
+    required this.selectedIndex,
+    required this.onSelected,
+  });
 
   static const _items = [
     (Icons.home_outlined, Icons.home_rounded, 'Home'),
