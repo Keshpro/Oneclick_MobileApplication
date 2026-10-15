@@ -65,6 +65,205 @@ class _VaultScreenState extends State<VaultScreen> {
     });
   }
 
+void _showSearchFilterPanel() {
+  final searchController = TextEditingController(
+    text: _query,
+  );
+
+  String tempFilter = _filter;
+  bool tempAscending = _ascending;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: const Color(0xFFF8FAFC),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(24),
+      ),
+    ),
+    builder: (sheetContext) {
+      return StatefulBuilder(
+        builder: (sheetContext, setModalState) {
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                22,
+                24,
+                MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Search & Filter',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: ink,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pop(sheetContext);
+                        },
+                        icon: const Icon(
+                          Icons.close,
+                          color: muted,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextField(
+                    controller: searchController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'Search Vault records...',
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: muted,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  const Text(
+                    'FILTER',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: muted,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      'All',
+                      'Documents',
+                      'Accounts',
+                      'Favorites',
+                    ].map((filter) {
+                      return ChoiceChip(
+                        label: Text(filter),
+                        selected: tempFilter == filter,
+                        onSelected: (_) {
+                          setModalState(() {
+                            tempFilter = filter;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.swap_vert,
+                      color: purple,
+                    ),
+                    title: const Text(
+                      'Sort records',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: ink,
+                      ),
+                    ),
+                    subtitle: Text(
+                      tempAscending ? 'A to Z' : 'Z to A',
+                    ),
+                    trailing: Switch(
+                      value: tempAscending,
+                      activeThumbColor: purple,
+                      onChanged: (value) {
+                        setModalState(() {
+                          tempAscending = value;
+                        });
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _query = searchController.text;
+                          _filter = tempFilter;
+                          _ascending = tempAscending;
+                        });
+
+                        Navigator.pop(sheetContext);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: purple,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'Apply',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _query = '';
+                          _filter = 'All';
+                          _ascending = true;
+                        });
+
+                        Navigator.pop(sheetContext);
+                      },
+                      child: const Text('Clear filters'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
   List<_VaultItem> get _visibleItems {
     final query = _query.trim().toLowerCase();
     final results = _items.where((item) {
@@ -79,10 +278,7 @@ class _VaultScreenState extends State<VaultScreen> {
           (_filter == 'Documents' && item.type != 'Account') ||
           (_filter == 'Accounts' && item.type == 'Account') ||
           (_filter == 'Favorites' && item.favorite);
-      return matchesQuery &&
-          matchesFilter &&
-          (_folder == null || item.folder == _folder) &&
-          (_tag == null || item.tags.contains(_tag));
+      return matchesQuery && matchesFilter;
     }).toList();
     results.sort((a, b) {
       final result = a.title.compareTo(b.title);
@@ -269,8 +465,7 @@ class _VaultScreenState extends State<VaultScreen> {
   Widget _buildVault(BuildContext context) {
     final visible = _visibleItems;
     final pinned = _items.where((item) => item.favorite).toList();
-    final folders = _items.map((item) => item.folder).toSet().toList();
-    final tags = _items.expand((item) => item.tags).toSet().toList();
+
     return Scaffold(
       extendBody: true,
       backgroundColor: Colors.transparent,
@@ -397,23 +592,17 @@ class _VaultScreenState extends State<VaultScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'My Vault',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: ink,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      _label(''),
-                    ],
+                  const Text(
+                    'My Vault',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: ink,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${_items.length} sample records',
+                    '${_items.length} ${_items.length == 1 ? 'record' : 'records'}',
                     style: const TextStyle(color: muted),
                   ),
                   const SizedBox(height: 24),
@@ -969,8 +1158,11 @@ class _VaultItem {
   final String details;
   final String folder;
   final List<String> tags;
+  final String? fileName;
+  final String? filePath;
   final IconData icon;
   bool favorite;
+
   _VaultItem({
     required this.id,
     required this.title,
@@ -978,6 +1170,8 @@ class _VaultItem {
     required this.details,
     required this.folder,
     required this.tags,
+    this.fileName,
+    this.filePath,
     required this.icon,
     this.favorite = false,
   });
@@ -1279,7 +1473,7 @@ class _VaultPulseDot extends StatefulWidget {
   final Color color;
   final double size;
   final bool ping;
-  final bool animate;
+
   @override
   State<_VaultPulseDot> createState() => _VaultPulseDotState();
 }
@@ -1347,9 +1541,9 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
 }
 
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon) : color = null;
+  const _VaultNavGlyph(this.icon);
   final IconData icon;
-  final Color? color;
+
   @override
   State<_VaultNavGlyph> createState() => _VaultNavGlyphState();
 }
@@ -1357,6 +1551,7 @@ class _VaultNavGlyph extends StatefulWidget {
 class _VaultNavGlyphState extends State<_VaultNavGlyph> {
   bool _hovered = false;
   bool _pressed = false;
+  
   @override
   Widget build(BuildContext context) => MouseRegion(
     cursor: SystemMouseCursors.click,

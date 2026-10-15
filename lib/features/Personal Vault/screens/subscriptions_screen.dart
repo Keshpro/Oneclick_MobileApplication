@@ -14,6 +14,7 @@ import 'sharing_center_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../services/subscription_service.dart';
+import '../services/exchange_rate_service.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
@@ -31,6 +32,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   static const Color danger = Color(0xFFF43F5E);
 
   final SubscriptionService _subscriptionService = SubscriptionService();
+  final ExchangeRateService _exchangeRateService =
+    ExchangeRateService();
+
+  double? _usdToLkrRate;
+  bool _loadingExchangeRate = true;
 
   Future<void> _deleteSubscription(SubscriptionItem item) async {
     final confirmed = await showDialog<bool>(
@@ -571,7 +577,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'PRODUCTIVITY & AI',
-                          total: 'LKR 30,000/mo',
                           icon: Icons.terminal_outlined,
                           items: filteredSubscriptions
                               .where(
@@ -582,7 +587,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'ENTERTAINMENT & MEDIA',
-                          total: 'LKR 11,000/mo',
                           icon: Icons.play_circle_outline,
                           items: filteredSubscriptions
                               .where(
@@ -594,7 +598,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                         const SizedBox(height: 28),
                         _buildCategory(
                           title: 'STORAGE & UTILITIES',
-                          total: 'LKR 3,000/mo',
                           icon: Icons.cloud_outlined,
                           items: filteredSubscriptions
                               .where(
@@ -604,8 +607,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                               .toList(),
                         ),
                         const SizedBox(height: 38),
-                        _buildAddSubscriptionButton(),
-                        const SizedBox(height: 35),
                       ],
                     ),
                   ),
@@ -671,8 +672,12 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                _monthlyCost(subscriptions).toStringAsFixed(2),
-                style: TextStyle(
+                _loadingExchangeRate
+                    ? 'Loading...'
+                    : _formattedMoney(
+                        _monthlyCost(subscriptions),
+                      ),
+                style: const TextStyle(
                   color: ink,
                   fontSize: 32,
                   fontWeight: FontWeight.w700,
@@ -688,34 +693,66 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 ),
               ),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8FB),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: _shadow(),
-                ),
-                child: const Row(
-                  children: [
-                    _VaultReferenceIcon(
-                      Icons.trending_up,
-                      color: danger,
-                      size: 17,
-                    ),
-                    SizedBox(width: 5),
-                    Text(
-                      '+4.2%',
-                      style: TextStyle(
-                        color: danger,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              Builder(
+  builder: (context) {
+    final change = _monthlyChangePercent();
+
+    final bool hasData = change != null;
+    final bool increased =
+        hasData && change > 0;
+    final bool decreased =
+        hasData && change < 0;
+
+    final String label = !hasData
+        ? 'No history'
+        : '${change >= 0 ? '+' : ''}${change.toStringAsFixed(1)}%';
+
+    final Color changeColor =
+        increased
+            ? danger
+            : decreased
+                ? const Color(0xFF16A34A)
+                : muted;
+
+    final IconData changeIcon =
+        increased
+            ? Icons.trending_up
+            : decreased
+                ? Icons.trending_down
+                : Icons.trending_flat;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 7,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8FB),
+        borderRadius:
+            BorderRadius.circular(20),
+        boxShadow: _shadow(),
+      ),
+      child: Row(
+        children: [
+          _VaultReferenceIcon(
+            changeIcon,
+            color: changeColor,
+            size: 17,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: changeColor,
+              fontWeight:
+                  FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  },
+),
             ],
           ),
           const SizedBox(height: 2),
@@ -726,7 +763,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 style: TextStyle(color: muted, fontSize: 14),
               ),
               Text(
-                (_monthlyCost(subscriptions) * 12).toStringAsFixed(2),
+                _formattedMoney(
+                  _monthlyCost(subscriptions) * 12,
+                ),
                 style: TextStyle(
                   color: ink,
                   fontWeight: FontWeight.w700,
@@ -934,7 +973,98 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   // ============================================================
   // ACTION REQUIRED
   // ============================================================
-  Widget _buildRenewals() {
+  
+  bool _sameDate(
+  DateTime first,
+  DateTime second,
+) {
+  return first.year == second.year &&
+      first.month == second.month &&
+      first.day == second.day;
+}
+
+int _daysUntilRenewal(
+  DateTime renewalDate,
+) {
+  final today = DateTime.now();
+
+  final todayOnly =
+      DateTime(
+    today.year,
+    today.month,
+    today.day,
+  );
+
+  final renewalOnly =
+      DateTime(
+    renewalDate.year,
+    renewalDate.month,
+    renewalDate.day,
+  );
+
+  return renewalOnly
+      .difference(todayOnly)
+      .inDays;
+}
+
+List<SubscriptionItem>
+    get _actionableRenewals {
+  final items = subscriptions.where(
+    (item) {
+      final status =
+          _statusKey(item.status);
+
+      if (status != 'active' &&
+          status != 'free trial') {
+        return false;
+      }
+
+      final renewalDate =
+          item.renewalDate;
+
+      if (renewalDate == null) {
+        return false;
+      }
+
+      final days =
+          _daysUntilRenewal(
+        renewalDate,
+      );
+
+      // Show renewals due within the next 7 days.
+      if (days < 0 || days > 7) {
+        return false;
+      }
+
+      final handledFor =
+          item.renewalActionHandledFor;
+
+      if (handledFor != null &&
+          _sameDate(
+            handledFor,
+            renewalDate,
+          )) {
+        return false;
+      }
+
+      return true;
+    },
+  ).toList();
+
+  items.sort(
+    (a, b) => a.renewalDate!
+        .compareTo(
+      b.renewalDate!,
+    ),
+  );
+
+  return items;
+}
+  
+Widget _buildRenewals() {
+  final renewals = _actionableRenewals;
+
+  if (renewals.isEmpty) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -952,7 +1082,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               ),
             ),
             Text(
-              '2 Urgent',
+              '0 Urgent',
               style: TextStyle(
                 color: purple,
                 fontWeight: FontWeight.w600,
@@ -992,6 +1122,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   }
 
   Widget _renewalCard({
+    required SubscriptionItem item,
     required String title,
     required String subtitle,
     required String badge,
@@ -1151,15 +1282,25 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   // ============================================================
   // CATEGORY
   // ============================================================
-  Widget _buildCategory({
-    required String title,
-    required String total,
-    required IconData icon,
-    required List<SubscriptionItem> items,
-  }) {
+Widget _buildCategory({
+  required String title,
+  required IconData icon,
+  required List<SubscriptionItem> items,
+}) {
     if (items.isEmpty) return const SizedBox.shrink();
-    final categoryAmount = _monthlyCost(items);
-    final categoryLabel = _statusKey(selectedFilter) == 'cancelled'
+    final categoryCurrency =
+    title == 'PRODUCTIVITY & AI'
+        ? 'LKR'
+        : selectedCurrency;
+
+final categoryAmount =
+    _monthlyCostInCurrency(
+  items,
+  categoryCurrency,
+);
+
+final categoryLabel =
+    _statusKey(selectedFilter) == 'cancelled'
         ? 'No renewals'
         : _statusKey(selectedFilter) == 'free trial'
         ? '${items.length} trials'
@@ -1750,6 +1891,16 @@ class SubscriptionItem {
   final String category;
   final bool priceHiked;
   final String status;
+
+  // Structured subscription data.
+  final double? amount;
+  final String currency;
+  final String billingCycle;
+  final DateTime? renewalDate;
+  final DateTime? cancelledAt;
+  final DateTime? renewalActionHandledFor;
+  final DateTime? createdAt;
+
   const SubscriptionItem({
     required this.id,
     required this.name,
@@ -1761,6 +1912,13 @@ class SubscriptionItem {
     required this.category,
     this.priceHiked = false,
     this.status = 'Active',
+    this.amount,
+    this.currency = 'LKR',
+    this.billingCycle = 'Monthly',
+    this.renewalDate,
+    this.cancelledAt,
+    this.renewalActionHandledFor,
+    this.createdAt,
   });
 }
 
@@ -2091,7 +2249,7 @@ class _VaultPulseDot extends StatefulWidget {
   final Color color;
   final double size;
   final bool ping;
-  final bool animate;
+
   @override
   State<_VaultPulseDot> createState() => _VaultPulseDotState();
 }
@@ -2159,9 +2317,9 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
 }
 
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon) : color = null;
+  const _VaultNavGlyph(this.icon);
   final IconData icon;
-  final Color? color;
+
   @override
   State<_VaultNavGlyph> createState() => _VaultNavGlyphState();
 }

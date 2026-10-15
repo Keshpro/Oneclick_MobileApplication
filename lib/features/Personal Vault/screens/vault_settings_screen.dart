@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../services/vault_backup_service.dart';
+import '../services/recovery_kit_service.dart';
+import '../services/encrypted_vault_export_service.dart';
 
 class VaultSettingsScreen extends StatefulWidget {
   final bool openBackupSection;
@@ -14,6 +21,12 @@ class VaultSettingsScreen extends StatefulWidget {
 }
 class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
   final GlobalKey _backupSectionKey = GlobalKey();
+  final VaultBackupService _backupService =
+    VaultBackupService();
+  final RecoveryKitService _recoveryKitService =
+    RecoveryKitService();
+  final EncryptedVaultExportService _encryptedVaultExportService =
+    EncryptedVaultExportService();
 
   static const background = Color(0xFFE9EBF2);
   static const purple = Color(0xFF6961FF);
@@ -21,10 +34,27 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
   static const muted = Color(0xFF686C7C);
   static const softPurple = Color(0xFFDCD9FF);
 
-  String _lockTimeout = '5 Min';
+final LocalAuthentication _localAuth =
+    LocalAuthentication();
 
-  bool _biometric = true;
-  bool _failedAttemptProtection = true;
+bool _biometric = false;
+bool _failedAttemptProtection = true;
+bool _biometricBusy = false;
+
+static const String _biometricKey =
+    'vault_biometric_enabled';
+
+  static const String _pushNotificationsKey =
+    'vault_push_notifications';
+
+static const String _emailNotificationsKey =
+    'vault_email_notifications';
+
+static const String _expiryWarningsKey =
+    'vault_expiry_warnings';
+
+static const String _renewalWarningKey =
+    'vault_renewal_warning';
 
   bool _pushNotifications = true;
   bool _emailNotifications = false;
@@ -49,6 +79,10 @@ String _lastBackup = 'Not created';
 void initState() {
   super.initState();
 
+  _loadBiometricPreference();
+
+  _loadReminderPreferences();
+
   if (widget.openBackupSection) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final backupContext = _backupSectionKey.currentContext;
@@ -62,6 +96,189 @@ void initState() {
         );
       }
     });
+  }
+}
+
+Future<void> _loadBiometricPreference() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  final enabled =
+      prefs.getBool(_biometricKey) ?? false;
+
+  if (!mounted) return;
+
+  setState(() {
+    _biometric = enabled;
+  });
+}
+
+Future<void> _saveBiometricPreference(
+  bool value,
+) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await prefs.setBool(
+    _biometricKey,
+    value,
+  );
+}
+
+Future<void> _loadReminderPreferences() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  final pushNotifications =
+      prefs.getBool(_pushNotificationsKey) ?? true;
+
+  final emailNotifications =
+      prefs.getBool(_emailNotificationsKey) ?? false;
+
+  final expiryWarnings =
+      prefs.getStringList(_expiryWarningsKey) ??
+          ['30 days', '14 days', '7 days'];
+
+  final renewalWarning =
+      prefs.getString(_renewalWarningKey) ??
+          '3 days prior';
+
+  if (!mounted) return;
+
+  setState(() {
+    _pushNotifications = pushNotifications;
+    _emailNotifications = emailNotifications;
+
+    _expiryWarnings
+      ..clear()
+      ..addAll(expiryWarnings);
+
+    _renewalWarning = renewalWarning;
+  });
+}
+
+Future<void> _savePushNotifications(
+  bool value,
+) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await prefs.setBool(
+    _pushNotificationsKey,
+    value,
+  );
+}
+
+Future<void> _saveEmailNotifications(
+  bool value,
+) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await prefs.setBool(
+    _emailNotificationsKey,
+    value,
+  );
+}
+
+Future<void> _saveExpiryWarnings() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await prefs.setStringList(
+    _expiryWarningsKey,
+    _expiryWarnings.toList(),
+  );
+}
+
+Future<void> _saveRenewalWarning(
+  String value,
+) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await prefs.setString(
+    _renewalWarningKey,
+    value,
+  );
+}
+
+Future<void> _toggleBiometric(bool value) async {
+  if (_biometricBusy) return;
+
+if (!value) {
+  await _saveBiometricPreference(false);
+
+  if (!mounted) return;
+
+  setState(() {
+    _biometric = false;
+  });
+
+  _message('Biometric authentication disabled.');
+  return;
+}
+
+  if (kIsWeb) {
+    _message(
+      'Biometric authentication is not available on web.',
+    );
+    return;
+  }
+
+  setState(() {
+    _biometricBusy = true;
+  });
+
+  try {
+    final canCheckBiometrics =
+        await _localAuth.canCheckBiometrics;
+
+    final availableBiometrics =
+        await _localAuth.getAvailableBiometrics();
+
+    if (!canCheckBiometrics ||
+        availableBiometrics.isEmpty) {
+      if (!mounted) return;
+
+      _message(
+        'No fingerprint or face authentication is set up on this device.',
+      );
+
+      return;
+    }
+
+    final authenticated =
+        await _localAuth.authenticate(
+      localizedReason:
+          'Authenticate to enable biometric protection for Personal Vault',
+      biometricOnly: true,
+    );
+
+    if (!mounted) return;
+
+if (authenticated) {
+  await _saveBiometricPreference(true);
+
+  if (!mounted) return;
+
+  setState(() {
+    _biometric = true;
+  });
+
+  _message(
+    'Biometric authentication enabled.',
+  );
+} else {
+      _message(
+        'Biometric authentication was not completed.',
+      );
+    }
+  } catch (_) {
+    if (!mounted) return;
+
+    _message(
+      'Biometric authentication is not available on this device.',
+    );
+  } finally {
+    if (mounted) {
+      setState(() {
+        _biometricBusy = false;
+      });
+    }
   }
 }
 
@@ -181,103 +398,40 @@ void _message(String text) {
                   const SizedBox(height: 14),
 
                   _surface(
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Automatic Lock Timeout',
-                          style: TextStyle(
-                            color: ink,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+  child: Column(
+    crossAxisAlignment:
+        CrossAxisAlignment.start,
+    children: [
+      _settingSwitch(
+  title: 'Biometric Authentication',
+  subtitle:
+      'Use fingerprint or face authentication to protect Personal Vault',
+  icon: Icons.fingerprint,
+  value: _biometric,
+  onChanged: (value) {
+    if (_biometricBusy) return;
 
-                        const SizedBox(height: 5),
+    _toggleBiometric(value);
+  },
+),
 
-                        const Text(
-                          'Locks the Vault interface after a period of inactivity',
-                          style: TextStyle(
-                            color: muted,
-                            fontSize: 13,
-                          ),
-                        ),
+      const SizedBox(height: 12),
 
-                        const SizedBox(height: 18),
-
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            'Immediate',
-                            '1 Min',
-                            '5 Min',
-                            '15 Min',
-                          ].map((time) {
-                            return _choiceButton(
-                              text: time,
-                              selected:
-                                  _lockTimeout == time,
-                              onTap: () {
-                                setState(() {
-                                  _lockTimeout = time;
-                                });
-                              },
-                            );
-                          }).toList(),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        _settingSwitch(
-                          title: 'Biometric Unlock',
-                          subtitle:
-                              'Use supported device biometrics for quick access',
-                          icon: Icons.fingerprint,
-                          value: _biometric,
-                          onChanged: (value) {
-                            setState(() {
-                              _biometric = value;
-                            });
-                          },
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        _innerAction(
-                          icon: Icons.key_outlined,
-                          title: 'Master Passphrase',
-                          subtitle:
-                              'Last updated 42 days ago',
-                          trailing: 'Change',
-                          onTap: () {
-                            _message(
-                              'Master passphrase settings will be connected later.',
-                            );
-                          },
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        _settingSwitch(
-                          title:
-                              'Failed Attempt Protection',
-                          subtitle:
-                              'Protect Vault access after repeated failed attempts',
-                          icon: Icons.security_outlined,
-                          value:
-                              _failedAttemptProtection,
-                          onChanged: (value) {
-                            setState(() {
-                              _failedAttemptProtection =
-                                  value;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
+      _settingSwitch(
+        title: 'Failed Attempt Protection',
+        subtitle:
+            'Protect the Vault after repeated failed authentication attempts',
+        icon: Icons.security_outlined,
+        value: _failedAttemptProtection,
+        onChanged: (value) {
+          setState(() {
+            _failedAttemptProtection = value;
+          });
+        },
+      ),
+    ],
+  ),
+),
 
                   const SizedBox(height: 32),
 
@@ -328,10 +482,14 @@ void _message(String text) {
                               tooltip:
                                   'Device notifications',
                               onTap: () {
+                                final newValue =
+                                    !_pushNotifications;
+
                                 setState(() {
-                                  _pushNotifications =
-                                      !_pushNotifications;
+                                  _pushNotifications = newValue;
                                 });
+
+                                _savePushNotifications(newValue);
                               },
                             ),
 
@@ -344,10 +502,14 @@ void _message(String text) {
                               tooltip:
                                   'Email reminders',
                               onTap: () {
+                                final newValue =
+                                    !_emailNotifications;
+
                                 setState(() {
-                                  _emailNotifications =
-                                      !_emailNotifications;
+                                  _emailNotifications = newValue;
                                 });
+
+                                _saveEmailNotifications(newValue);
                               },
                             ),
                           ],
@@ -401,6 +563,7 @@ void _message(String text) {
                                         .add(warning);
                                   }
                                 });
+                                _saveExpiryWarnings();
                               },
                             );
                           }).toList(),
@@ -555,9 +718,7 @@ void _message(String text) {
                           text:
                               'Export Encrypted Vault (.oneclick)',
                           onTap: () {
-                            _message(
-                              'Secure Vault export will be connected later.',
-                            );
+                            _showEncryptedExportDialog();
                           },
                         ),
 
@@ -571,10 +732,27 @@ void _message(String text) {
                           subtitle:
                               'Create recovery information for your Vault',
                           trailing: 'Create PDF',
-                          onTap: () {
-                            _message(
-                              'Recovery Kit generation will be connected later.',
-                            );
+                          onTap: () async {
+                            try {
+                              _message(
+                                'Creating recovery kit PDF...',
+                              );
+
+                              await _recoveryKitService
+                                  .createRecoveryKitPdf();
+
+                              if (!mounted) return;
+
+                              _message(
+                                'Recovery kit PDF created successfully.',
+                              );
+                            } catch (_) {
+                              if (!mounted) return;
+
+                              _message(
+                                'Could not create recovery kit PDF.',
+                              );
+                            }
                           },
                         ),
 
@@ -701,6 +879,8 @@ void _message(String text) {
                         _renewalWarning = option;
                       });
 
+                      _saveRenewalWarning(option);
+
                       Navigator.pop(context);
                     },
                   ),
@@ -752,6 +932,220 @@ void _message(String text) {
       },
     );
   }
+
+  Future<void> _showEncryptedExportDialog() async {
+  final passwordController = TextEditingController();
+  final confirmController = TextEditingController();
+
+  bool obscurePassword = true;
+  bool obscureConfirm = true;
+  bool exporting = false;
+
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: !exporting,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          Future<void> export() async {
+            if (exporting) return;
+
+            final password =
+                passwordController.text.trim();
+
+            final confirmPassword =
+                confirmController.text.trim();
+
+            if (password.length < 8) {
+              _message(
+                'Password must contain at least 8 characters.',
+              );
+              return;
+            }
+
+            if (password != confirmPassword) {
+              _message(
+                'Passwords do not match.',
+              );
+              return;
+            }
+
+            setDialogState(() {
+              exporting = true;
+            });
+
+            try {
+              await _encryptedVaultExportService
+                  .exportEncryptedVault(
+                password: password,
+              );
+
+              if (!mounted) return;
+              if (!dialogContext.mounted) return;
+
+              Navigator.pop(dialogContext);
+
+              _message(
+                'Encrypted Vault export created successfully.',
+              );
+            } catch (_) {
+              if (!mounted) return;
+              if (!dialogContext.mounted) return;
+
+              setDialogState(() {
+                exporting = false;
+              });
+
+              _message(
+                'Could not create encrypted Vault export.',
+              );
+            }
+          }
+
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            title: const Text(
+              'Export Encrypted Vault',
+              style: TextStyle(
+                color: ink,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            content: SizedBox(
+              width: 420,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Create a password to protect this .oneclick export.',
+                    style: TextStyle(
+                      color: muted,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  TextField(
+                    controller: passwordController,
+                    obscureText: obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      hintText:
+                          'Minimum 8 characters',
+                      prefixIcon:
+                          const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        onPressed: () {
+                          setDialogState(() {
+                            obscurePassword =
+                                !obscurePassword;
+                          });
+                        },
+                        icon: Icon(
+                          obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons
+                                  .visibility_off_outlined,
+                        ),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  TextField(
+                    controller: confirmController,
+                    obscureText: obscureConfirm,
+                    decoration: InputDecoration(
+                      labelText: 'Confirm Password',
+                      prefixIcon: const Icon(
+                        Icons.lock_reset_outlined,
+                      ),
+                      suffixIcon: IconButton(
+                        onPressed: () {
+                          setDialogState(() {
+                            obscureConfirm =
+                                !obscureConfirm;
+                          });
+                        },
+                        icon: Icon(
+                          obscureConfirm
+                              ? Icons.visibility_outlined
+                              : Icons
+                                  .visibility_off_outlined,
+                        ),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  const Text(
+                    'Keep this password safe. It is not stored inside the export.',
+                    style: TextStyle(
+                      color: muted,
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: exporting
+                    ? null
+                    : () {
+                        Navigator.pop(
+                          dialogContext,
+                        );
+                      },
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton.icon(
+                onPressed:
+                    exporting ? null : export,
+                icon: exporting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child:
+                            CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.lock_outline,
+                      ),
+                label: Text(
+                  exporting
+                      ? 'Encrypting...'
+                      : 'Create Export',
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+
+  passwordController.dispose();
+  confirmController.dispose();
+}
 
   void _showBackupOptions() {
     showModalBottomSheet<void>(
@@ -887,18 +1281,34 @@ void _message(String text) {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(sheetContext);
+                    onPressed: () async {
+  Navigator.pop(sheetContext);
 
-                      setState(() {
-                        _backupCreated = true;
-                        _lastBackup = 'Just now';
-                      });
+  try {
+    _message(
+      'Creating Vault backup...',
+    );
 
-                      _message(
-                        'Vault backup created successfully.',
-                      );
-                    },
+    await _backupService.createBackup();
+
+    if (!mounted) return;
+
+    setState(() {
+      _backupCreated = true;
+      _lastBackup = 'Just now';
+    });
+
+    _message(
+      'Vault backup created successfully.',
+    );
+  } catch (error) {
+    if (!mounted) return;
+
+    _message(
+      'Could not create Vault backup.',
+    );
+  }
+},
                     icon: const Icon(
                       Icons.cloud_upload_outlined,
                     ),

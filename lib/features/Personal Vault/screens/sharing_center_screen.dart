@@ -1588,7 +1588,7 @@ class _VaultGlassCard extends StatefulWidget {
     : interactive = false;
   final Widget child;
   final EdgeInsetsGeometry padding;
-  final bool interactive;
+
   @override
   State<_VaultGlassCard> createState() => _VaultGlassCardState();
 }
@@ -1599,7 +1599,7 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: widget.interactive ? SystemMouseCursors.click : MouseCursor.defer,
+      cursor: MouseCursor.defer,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() {
         _hovered = false;
@@ -1803,9 +1803,9 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
 }
 
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon) : color = null;
+  const _VaultNavGlyph(this.icon);
   final IconData icon;
-  final Color? color;
+ 
   @override
   State<_VaultNavGlyph> createState() => _VaultNavGlyphState();
 }
@@ -1838,7 +1838,7 @@ class _VaultNavGlyphState extends State<_VaultNavGlyph> {
                   : IconTheme.of(context).color ?? const Color(0xFF94A3B8)),
         ),
       ),
-    ),
+   ),
   );
 }
 

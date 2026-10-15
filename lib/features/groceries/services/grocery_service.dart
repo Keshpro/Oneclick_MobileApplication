@@ -47,7 +47,7 @@ class GroceryService {
       category: 'Beverages',
       description: 'Orange juice - 1L',
       price: 850.00,
-     imageUrl: 'assets/images/groceries/orange_juice.jpg',
+      imageUrl: 'assets/images/groceries/orange_juice.jpg',
       stock: 12,
     ),
     const GroceryProduct(

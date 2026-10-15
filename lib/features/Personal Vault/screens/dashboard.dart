@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -292,8 +293,21 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
   // ============================================================
   // MAIN BUILD
   // ============================================================
+  
   @override
-  Widget build(BuildContext context) {
+Widget build(BuildContext context) {
+  if (_checkingBiometric) {
+  return const Scaffold(
+    backgroundColor: Color(0xFFF8FAFC),
+    body: Center(
+      child: CircularProgressIndicator(),
+    ),
+  );
+}
+
+if (!_biometricAccessGranted) {
+  return const SizedBox.shrink();
+}
     final base = Theme.of(context);
     return Theme(
       data: base.copyWith(
@@ -390,13 +404,28 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
       // APP BAR
       // ========================================================
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        foregroundColor: ink,
-        surfaceTintColor: Colors.transparent,
-        automaticallyImplyLeading: false,
-        elevation: 0,
-        toolbarHeight: 88,
-        titleSpacing: 24,
+  backgroundColor: Colors.transparent,
+  foregroundColor: ink,
+  surfaceTintColor: Colors.transparent,
+  automaticallyImplyLeading: false,
+  elevation: 0,
+  toolbarHeight: 88,
+  leadingWidth: 60,
+  leading: Padding(
+    padding: const EdgeInsets.only(left: 12),
+    child: IconButton(
+      tooltip: 'Back',
+      onPressed: () {
+        Navigator.pop(context);
+      },
+      icon: const Icon(
+        Icons.arrow_back_ios_new_rounded,
+        size: 20,
+        color: ink,
+      ),
+    ),
+  ),
+  titleSpacing: 8,
         title: Row(
           children: [
             Container(
@@ -540,6 +569,8 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                             'Scan & Upload',
                             'Auto-tagging OCR',
                             onTap: () {
+                              if (!_requireLogin(context)) return;
+
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -555,6 +586,8 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                             'Add Account Access',
                             'Save login & recovery details',
                             onTap: () {
+                              if (!_requireLogin(context)) return;
+
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -570,6 +603,8 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                             'Ask Vault AI',
                             'Ask about your documents',
                             onTap: () {
+                              if (!_requireLogin(context)) return;
+
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -586,6 +621,8 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                             'Build Document Pack',
                             'Match Vault files to a checklist',
                             onTap: () {
+                              if (!_requireLogin(context)) return;
+
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -646,12 +683,197 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                   // =================================================
                   // UPCOMING RENEWALS
                   // =================================================
-                  _heading(
-                    'UPCOMING RENEWALS',
-                    trailing: 'View all',
-                    // Opens Subscription Screen
-                    onTap: () {
-                      Navigator.push(
+                  StreamBuilder<List<SubscriptionRecord>>(
+  stream: _subscriptionRecordsStream,
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _heading(
+            'UPCOMING RENEWALS',
+            trailing: 'View all',
+            onTap: () {
+              if (!_requireLogin(context)) return;
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SubscriptionsScreen(),
+                ),
+              );
+            },
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: CircularProgressIndicator(),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (snapshot.hasError) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _heading(
+            'UPCOMING RENEWALS',
+            trailing: 'View all',
+            onTap: () {
+              if (!_requireLogin(context)) return;
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SubscriptionsScreen(),
+                ),
+              );
+            },
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              'Could not load upcoming renewals.',
+              style: TextStyle(
+                color: muted,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    final cutoff = today.add(
+      const Duration(days: 7),
+    );
+
+    final upcoming = (snapshot.data ?? [])
+        .where((subscription) {
+          final renewalDate =
+              _parseSubscriptionRenewal(subscription.renewal);
+
+          if (renewalDate == null) {
+            return false;
+          }
+
+          final date = DateTime(
+            renewalDate.year,
+            renewalDate.month,
+            renewalDate.day,
+          );
+
+          return !date.isBefore(today) &&
+              !date.isAfter(cutoff);
+        })
+        .toList()
+      ..sort((a, b) {
+        final aDate =
+            _parseSubscriptionRenewal(a.renewal)!;
+        final bDate =
+            _parseSubscriptionRenewal(b.renewal)!;
+
+        return aDate.compareTo(bDate);
+      });
+
+    double total = 0;
+
+    for (final subscription in upcoming) {
+      final numericPrice = subscription.price
+          .replaceAll(RegExp(r'[^0-9.]'), '');
+
+      total += double.tryParse(numericPrice) ?? 0;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _heading(
+          'UPCOMING RENEWALS',
+          trailing: 'View all',
+          onTap: () {
+            if (!_requireLogin(context)) return;
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const SubscriptionsScreen(),
+              ),
+            );
+          },
+        ),
+        _surface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Due in the next 7 days',
+                style: TextStyle(
+                  color: muted,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 4),
+
+              Text(
+                'LKR ${total.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  fontSize: 25,
+                  fontWeight: FontWeight.bold,
+                  color: ink,
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              Text(
+                '${upcoming.length} ${upcoming.length == 1 ? 'renewal' : 'renewals'}',
+                style: const TextStyle(
+                  color: muted,
+                  fontSize: 12,
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              if (upcoming.isEmpty)
+                const Text(
+                  'No subscriptions renewing in the next 7 days.',
+                  style: TextStyle(
+                    color: muted,
+                    fontSize: 13,
+                  ),
+                )
+              else
+                for (int i = 0; i < upcoming.length; i++) ...[
+                  Builder(
+                    builder: (context) {
+                      final subscription = upcoming[i];
+
+                      final renewalDate =
+                          _parseSubscriptionRenewal(
+                        subscription.renewal,
+                      )!;
+
+                      final days =
+                          renewalDate.difference(today).inDays;
+
+                      final subtitle = days == 0
+                          ? 'Renews today'
+                          : days == 1
+                              ? 'Renews tomorrow'
+                              : 'Renews in $days days';
+
+                      return _record(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const SubscriptionsScreen(),

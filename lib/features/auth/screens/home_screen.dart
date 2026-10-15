@@ -8,10 +8,14 @@ import 'package:oneclick/features/groceries/customer/screens/grocery_home_screen
 import 'services_screen.dart';
 import 'explore_screen.dart';
 import '../../doctor/patient/screens/doctor_entry_screen.dart';
+import '../../doctor/doctor/screens/doctor_dashboard.dart';
+import '../../../admin/screens/admin_dashboard.dart';
 import '../../drunk_drive/passenger/screens/drunk_drive_home_screen.dart';
 import '../../Personal Vault/screens/dashboard.dart' as personal_vault;
 import '../../food/screens/food_home_screen.dart';
+import '../../food/screens/food_seller_dashboard_screen.dart';
 import '../../quickfix/user/screens/home_services_screen.dart';
+import '../../food/screens/food_seller_dashboard_screen.dart';
 
 class _Palette {
   static const bg = Color(0xFFF3F1FF);
@@ -41,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
   String _userName = '';
   String _userEmail = '';
+  String _userRole = 'user';
   bool _isLoadingUser = true;
 
   bool get _isLoggedIn => _auth.currentUser != null;
@@ -60,7 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
     },
     {
       'title': 'Food',
-      'description': 'Discover great food, save money and explore local food services.',
+      'description':
+          'Discover great food, save money and explore local food services.',
       'icon': Icons.restaurant_rounded,
       'gradient': const [Color(0xFFFF8A65), Color(0xFFE85D04)],
     },
@@ -72,13 +78,18 @@ class _HomeScreenState extends State<HomeScreen> {
     },
     {
       'title': 'Quick Fix',
-      'description': 'Find local professionals for all your home and repair needs.',
+      'description':
+          'Find local professionals for all your home and repair needs.',
       'icon': Icons.build_rounded,
-      'gradient': const [Color.fromARGB(255, 236, 30, 8), Color.fromARGB(255, 251, 52, 2)],
+      'gradient': const [
+        Color.fromARGB(255, 236, 30, 8),
+        Color.fromARGB(255, 251, 52, 2),
+      ],
     },
     {
       'title': 'Personal Vault',
-      'description': 'Keep your personal documents and important information secure.',
+      'description':
+          'Keep your personal documents and important information secure.',
       'icon': Icons.shield_rounded,
       'gradient': const [Color(0xFF38BDF8), Color(0xFF0369A1)],
     },
@@ -100,6 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
+  // Auto-fetch User Details & Determine Role
   Future<void> _loadCurrentUser() async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -108,21 +120,48 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      final doc = await _firestore.collection('users').doc(user.uid).get();
-      final data = doc.data();
+      // 1. Check if user is a Doctor
+      final docSnapshot = await _firestore
+          .collection('doctors')
+          .doc(user.uid)
+          .get();
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        if (mounted) {
+          setState(() {
+            _userName =
+                data?['name']?.toString() ?? user.displayName ?? 'Doctor';
+            _userEmail = data?['email']?.toString() ?? user.email ?? '';
+            _userRole = 'doctor';
+            _isLoadingUser = false;
+          });
+        }
+        return;
+      }
+
+      // 2. Check if user is in 'users' collection
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final data = userDoc.data();
       if (!mounted) return;
+
       setState(() {
         _userName = data?['name']?.toString().trim().isNotEmpty == true
             ? data!['name'].toString()
-            : (user.displayName?.trim().isNotEmpty == true ? user.displayName! : 'User');
+            : (user.displayName?.trim().isNotEmpty == true
+                  ? user.displayName!
+                  : 'User');
         _userEmail = data?['email']?.toString() ?? user.email ?? '';
+        _userRole = data?['role']?.toString().toLowerCase() ?? 'user';
         _isLoadingUser = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _userName = user.displayName?.trim().isNotEmpty == true ? user.displayName! : 'User';
+        _userName = user.displayName?.trim().isNotEmpty == true
+            ? user.displayName!
+            : 'User';
         _userEmail = user.email ?? '';
+        _userRole = 'user';
         _isLoadingUser = false;
       });
     }
@@ -152,7 +191,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   searchController: _searchController,
                   searchQuery: _searchQuery,
                   userName: _isLoggedIn ? _userName : null,
-                  onSearchChanged: (value) => setState(() => _searchQuery = value),
+                  onSearchChanged: (value) =>
+                      setState(() => _searchQuery = value),
                   onSearchClear: () {
                     _searchController.clear();
                     setState(() => _searchQuery = '');
@@ -176,7 +216,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: _Palette.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(20),
@@ -204,19 +247,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisSpacing: 14,
                     childAspectRatio: .86,
                   ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final service = _filteredServices[index];
-                      return _ServiceCard(
-                        title: service['title'].toString(),
-                        description: service['description'].toString(),
-                        icon: service['icon'] as IconData,
-                        gradient: List<Color>.from(service['gradient'] as List),
-                        onTap: () => _openService(service['title'].toString()),
-                      );
-                    },
-                    childCount: _filteredServices.length,
-                  ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final service = _filteredServices[index];
+                    return _ServiceCard(
+                      title: service['title'].toString(),
+                      description: service['description'].toString(),
+                      icon: service['icon'] as IconData,
+                      gradient: List<Color>.from(service['gradient'] as List),
+                      onTap: () => _openService(service['title'].toString()),
+                    );
+                  }, childCount: _filteredServices.length),
                 ),
               )
             else
@@ -225,7 +265,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 40),
                   child: Column(
                     children: [
-                      Icon(Icons.search_off_rounded, size: 46, color: _Palette.inkSoft),
+                      Icon(
+                        Icons.search_off_rounded,
+                        size: 46,
+                        color: _Palette.inkSoft,
+                      ),
                       SizedBox(height: 12),
                       Text(
                         'No services found',
@@ -260,7 +304,9 @@ class _HomeScreenState extends State<HomeScreen> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [_Palette.primary, _Palette.primaryDeep]),
+              gradient: const LinearGradient(
+                colors: [_Palette.primary, _Palette.primaryDeep],
+              ),
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
                 BoxShadow(
@@ -270,7 +316,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            child: const Icon(Icons.grid_view_rounded, color: Colors.white, size: 22),
+            child: const Icon(
+              Icons.grid_view_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 12),
           const Expanded(
@@ -279,11 +329,19 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   'OneClick',
-                  style: TextStyle(color: _Palette.ink, fontSize: 20, fontWeight: FontWeight.w900),
+                  style: TextStyle(
+                    color: _Palette.ink,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 Text(
                   'Everything in one place',
-                  style: TextStyle(color: _Palette.inkSoft, fontSize: 11.5, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    color: _Palette.inkSoft,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -293,7 +351,10 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('No new notifications')),
               ),
-              icon: const Icon(Icons.notifications_none_rounded, color: _Palette.ink),
+              icon: const Icon(
+                Icons.notifications_none_rounded,
+                color: _Palette.ink,
+              ),
             ),
             GestureDetector(
               onTap: _showAccountOptions,
@@ -302,18 +363,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 42,
                 alignment: Alignment.center,
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [_Palette.primary, _Palette.primaryDeep]),
+                  gradient: LinearGradient(
+                    colors: [_Palette.primary, _Palette.primaryDeep],
+                  ),
                   shape: BoxShape.circle,
                 ),
                 child: _isLoadingUser
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : Text(
                         _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 17),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 17,
+                        ),
                       ),
               ),
             ),
@@ -322,7 +392,10 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () => Navigator.pushNamed(context, '/login'),
               child: const Text(
                 'Login',
-                style: TextStyle(color: _Palette.ink, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  color: _Palette.ink,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             _GradientButton(
@@ -342,7 +415,9 @@ class _HomeScreenState extends State<HomeScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [_Palette.primary, _Palette.primaryDeep]),
+          gradient: const LinearGradient(
+            colors: [_Palette.primary, _Palette.primaryDeep],
+          ),
           borderRadius: BorderRadius.circular(26),
           boxShadow: [
             BoxShadow(
@@ -354,18 +429,30 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Column(
           children: [
-            const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 42),
+            const Icon(
+              Icons.person_add_alt_1_rounded,
+              color: Colors.white,
+              size: 42,
+            ),
             const SizedBox(height: 14),
             const Text(
               'Ready to get started?',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
+              ),
             ),
             const SizedBox(height: 7),
             Text(
               'Create an account to access services and manage everything from one place.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white.withValues(alpha: .78), fontSize: 13, height: 1.5),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: .78),
+                fontSize: 13,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 18),
             SizedBox(
@@ -377,16 +464,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   foregroundColor: _Palette.primaryDeep,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
-                child: const Text('Create Account', style: TextStyle(fontWeight: FontWeight.w800)),
+                child: const Text(
+                  'Create Account',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
               ),
             ),
             TextButton(
               onPressed: () => Navigator.pushNamed(context, '/login'),
               child: const Text(
                 'Already have an account? Login',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -397,22 +492,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _openService(String serviceTitle) {
     Widget? screen;
+
     switch (serviceTitle) {
       case 'Doctor':
         screen = const DoctorEntryScreen();
         break;
+
       case 'Drunk & Drive':
         screen = const DrunkDriveHomeScreen();
         break;
+
       case 'Food':
         screen = const FoodHomeScreen();
         break;
+
       case 'Groceries':
         screen = const GroceryHomeScreen();
         break;
+
       case 'Quick Fix':
         screen = const HomeServicesScreen();
         break;
+
       case 'Personal Vault':
         screen = const personal_vault.PersonalDashboardScreen();
         break;
@@ -433,7 +534,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (index == 1) {
       setState(() => _selectedIndex = 1);
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const ServicesScreen())).then((_) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ServicesScreen()),
+      ).then((_) {
         if (mounted) setState(() => _selectedIndex = 0);
       });
       return;
@@ -441,7 +545,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (index == 2) {
       setState(() => _selectedIndex = 2);
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const ExploreScreen())).then((_) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ExploreScreen()),
+      ).then((_) {
         if (mounted) setState(() => _selectedIndex = 0);
       });
       return;
@@ -465,22 +572,36 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 64,
               height: 64,
               decoration: const BoxDecoration(
-                gradient: LinearGradient(colors: [_Palette.primary, _Palette.primaryDeep]),
+                gradient: LinearGradient(
+                  colors: [_Palette.primary, _Palette.primaryDeep],
+                ),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.lock_outline_rounded, color: Colors.white, size: 30),
+              child: const Icon(
+                Icons.lock_outline_rounded,
+                color: Colors.white,
+                size: 30,
+              ),
             ),
             const SizedBox(height: 17),
             Text(
               'Access $serviceName',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _Palette.ink, fontSize: 20, fontWeight: FontWeight.w900),
+              style: const TextStyle(
+                color: _Palette.ink,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
             ),
             const SizedBox(height: 8),
             const Text(
               'Login or create an account to continue using this service.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: _Palette.inkSoft, fontSize: 14, height: 1.5),
+              style: TextStyle(
+                color: _Palette.inkSoft,
+                fontSize: 14,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 22),
             SizedBox(
@@ -491,7 +612,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.pushNamed(context, '/login');
                 },
                 style: _primaryButtonStyle(),
-                child: const Text('Login', style: TextStyle(fontWeight: FontWeight.w800)),
+                child: const Text(
+                  'Login',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
               ),
             ),
             const SizedBox(height: 7),
@@ -504,7 +628,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
                 child: const Text(
                   'Create a new account',
-                  style: TextStyle(fontWeight: FontWeight.w700, color: _Palette.primary),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: _Palette.primary,
+                  ),
                 ),
               ),
             ),
@@ -516,6 +643,64 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // Check Food Seller approval status
+  Future<String?> _getFoodSellerStatus() async {
+    final user = _auth.currentUser;
+
+    if (user == null) return null;
+
+    final snapshot = await _firestore
+        .collection('food_sellers')
+        .doc(user.uid)
+        .get();
+
+    if (!snapshot.exists) return null;
+
+    return snapshot.data()?['status']?.toString().toLowerCase();
+  }
+
+  Future<void> _openFoodSellerDashboard(BuildContext sheetContext) async {
+    Navigator.pop(sheetContext);
+
+    try {
+      final status = await _getFoodSellerStatus();
+
+      if (!mounted) return;
+
+      if (status == 'active') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const FoodSellerDashboardScreen()),
+        );
+      } else if (status == 'pending') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Your Food Seller application is still pending approval.',
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Your Food Seller account is not approved.'),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not check your seller status. Please try again.',
+          ),
+        ),
+      );
+    }
+  }
+
+  // Account Options with Dynamic Role Switcher
   void _showAccountOptions() {
     if (!_isLoggedIn) {
       Navigator.pushNamed(context, '/login');
@@ -538,25 +723,171 @@ class _HomeScreenState extends State<HomeScreen> {
               backgroundColor: _Palette.primary,
               child: Text(
                 _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
             const SizedBox(height: 12),
             Text(
               _userName.isEmpty ? 'OneClick User' : _userName,
-              style: const TextStyle(color: _Palette.ink, fontSize: 21, fontWeight: FontWeight.w900),
+              style: const TextStyle(
+                color: _Palette.ink,
+                fontSize: 21,
+                fontWeight: FontWeight.w900,
+              ),
             ),
             const SizedBox(height: 4),
-            Text(_userEmail, style: const TextStyle(color: _Palette.inkSoft, fontSize: 13)),
+            Text(
+              _userEmail,
+              style: const TextStyle(color: _Palette.inkSoft, fontSize: 13),
+            ),
             const SizedBox(height: 18),
+            if (_auth.currentUser != null) ...[
+              FutureBuilder<String?>(
+                future: _getFoodSellerStatus(),
+                builder: (context, snapshot) {
+                  final status = snapshot.data;
+
+                  if (status != 'active' && status != 'pending') {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3E0),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFFFB74D)),
+                    ),
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.restaurant_rounded,
+                        color: Color(0xFFEF6C00),
+                      ),
+                      title: Text(
+                        status == 'active'
+                            ? 'Switch to Seller Mode'
+                            : 'Food Seller Application Pending',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFEF6C00),
+                        ),
+                      ),
+                      trailing: status == 'active'
+                          ? const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 16,
+                              color: Color(0xFFEF6C00),
+                            )
+                          : const Icon(
+                              Icons.hourglass_top_rounded,
+                              color: Color(0xFFEF6C00),
+                            ),
+                      onTap: status == 'active'
+                          ? () => _openFoodSellerDashboard(sheetContext)
+                          : null,
+                    ),
+                  );
+                },
+              ),
+            ],
+
+            // DYNAMIC ROLE SWITCHER (Shows ONLY for Providers/Admins)
+            if (_userRole == 'doctor') ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF059669).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: ListTile(
+                  leading: const Icon(
+                    Icons.medical_services_rounded,
+                    color: Color(0xFF059669),
+                  ),
+                  title: const Text(
+                    'Switch to Doctor Mode',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF059669),
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                    color: Color(0xFF059669),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const DoctorDashboardScreen(),
+                      ),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ),
+            ] else if (_userRole == 'admin') ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5B4DFF).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF5B4DFF).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: ListTile(
+                  leading: const Icon(
+                    Icons.admin_panel_settings_rounded,
+                    color: Color(0xFF5B4DFF),
+                  ),
+                  title: const Text(
+                    'Switch to Admin Portal',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF5B4DFF),
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                    color: Color(0xFF5B4DFF),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AdminDashboard()),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ),
+            ],
+
             ListTile(
-              leading: const Icon(Icons.person_outline_rounded, color: _Palette.primary),
+              leading: const Icon(
+                Icons.person_outline_rounded,
+                color: _Palette.primary,
+              ),
               title: const Text('My Profile'),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => Navigator.pop(sheetContext),
             ),
             ListTile(
-              leading: const Icon(Icons.history_rounded, color: _Palette.primary),
+              leading: const Icon(
+                Icons.history_rounded,
+                color: _Palette.primary,
+              ),
               title: const Text('My Activity'),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => Navigator.pop(sheetContext),
@@ -564,7 +895,13 @@ class _HomeScreenState extends State<HomeScreen> {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout_rounded, color: Colors.red),
-              title: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w800)),
+              title: const Text(
+                'Logout',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               onTap: () async {
                 Navigator.pop(sheetContext);
                 await _auth.signOut();
@@ -572,6 +909,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 setState(() {
                   _userName = '';
                   _userEmail = '';
+                  _userRole = 'user';
                   _isLoadingUser = false;
                   _selectedIndex = 0;
                 });
@@ -589,21 +927,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _bottomSheetHandle() => Container(
-        width: 45,
-        height: 5,
-        decoration: BoxDecoration(
-          color: _Palette.line,
-          borderRadius: BorderRadius.circular(20),
-        ),
-      );
+    width: 45,
+    height: 5,
+    decoration: BoxDecoration(
+      color: _Palette.line,
+      borderRadius: BorderRadius.circular(20),
+    ),
+  );
 
   ButtonStyle _primaryButtonStyle() => ElevatedButton.styleFrom(
-        backgroundColor: _Palette.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(vertical: 15),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      );
+    backgroundColor: _Palette.primary,
+    foregroundColor: Colors.white,
+    elevation: 0,
+    padding: const EdgeInsets.symmetric(vertical: 15),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+  );
 }
 
 class _GradientButton extends StatelessWidget {
@@ -614,30 +952,36 @@ class _GradientButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(13),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_Palette.primary, _Palette.primaryDeep],
+          ),
           borderRadius: BorderRadius.circular(13),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [_Palette.primary, _Palette.primaryDeep]),
-              borderRadius: BorderRadius.circular(13),
-              boxShadow: [
-                BoxShadow(
-                  color: _Palette.primary.withValues(alpha: .35),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+          boxShadow: [
+            BoxShadow(
+              color: _Palette.primary.withValues(alpha: .35),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
             ),
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13.5),
-            ),
+          ],
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 13.5,
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _HeroCard extends StatelessWidget {
@@ -708,7 +1052,10 @@ class _HeroCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: .14),
                       borderRadius: BorderRadius.circular(30),
@@ -739,7 +1086,11 @@ class _HeroCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     'Discover services, find the right people and get things done with OneClick.',
-                    style: TextStyle(color: Colors.white.withValues(alpha: .80), fontSize: 14, height: 1.5),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: .80),
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
                   ),
                   const SizedBox(height: 22),
                   Container(
@@ -761,15 +1112,23 @@ class _HeroCard extends StatelessWidget {
                       decoration: InputDecoration(
                         hintText: 'Search services...',
                         hintStyle: const TextStyle(color: _Palette.inkSoft),
-                        prefixIcon: const Icon(Icons.search_rounded, color: _Palette.primary),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          color: _Palette.primary,
+                        ),
                         suffixIcon: searchQuery.isNotEmpty
                             ? IconButton(
                                 onPressed: onSearchClear,
-                                icon: const Icon(Icons.close_rounded, color: _Palette.inkSoft),
+                                icon: const Icon(
+                                  Icons.close_rounded,
+                                  color: _Palette.inkSoft,
+                                ),
                               )
                             : null,
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                        ),
                       ),
                     ),
                   ),
@@ -800,75 +1159,95 @@ class _ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: _Palette.surface,
-        borderRadius: BorderRadius.circular(24),
-        child: InkWell(
-          onTap: onTap,
+    color: _Palette.surface,
+    borderRadius: BorderRadius.circular(24),
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          child: Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: _Palette.line),
-              boxShadow: [
-                BoxShadow(
-                  color: gradient.last.withValues(alpha: .10),
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+          border: Border.all(color: _Palette.line),
+          boxShadow: [
+            BoxShadow(
+              color: gradient.last.withValues(alpha: .10),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: gradient),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: gradient.last.withValues(alpha: .35),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 25),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: _Palette.ink, fontSize: 16, fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 7),
-                Expanded(
-                  child: Text(
-                    description,
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: _Palette.inkSoft, fontSize: 12, height: 1.4),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Text(
-                      'Explore',
-                      style: TextStyle(color: gradient.last, fontSize: 12, fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(Icons.arrow_forward_rounded, color: gradient.last, size: 17),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          ],
         ),
-      );
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: gradient,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: gradient.last.withValues(alpha: .35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: Colors.white, size: 25),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _Palette.ink,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Expanded(
+              child: Text(
+                description,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _Palette.inkSoft,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text(
+                  'Explore',
+                  style: TextStyle(
+                    color: gradient.last,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  color: gradient.last,
+                  size: 17,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _GlassSheet extends StatelessWidget {
@@ -900,7 +1279,10 @@ class _FloatingNavBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
-  const _FloatingNavBar({required this.selectedIndex, required this.onSelected});
+  const _FloatingNavBar({
+    required this.selectedIndex,
+    required this.onSelected,
+  });
 
   static const _items = [
     (Icons.home_outlined, Icons.home_rounded, 'Home'),
@@ -946,11 +1328,21 @@ class _FloatingNavBar extends StatelessWidget {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 220),
                         curve: Curves.easeOut,
-                        margin: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
-                        padding: EdgeInsets.symmetric(horizontal: selected ? 14 : 0),
+                        margin: const EdgeInsets.symmetric(
+                          vertical: 9,
+                          horizontal: 4,
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: selected ? 14 : 0,
+                        ),
                         decoration: BoxDecoration(
                           gradient: selected
-                              ? const LinearGradient(colors: [_Palette.primary, _Palette.primaryDeep])
+                              ? const LinearGradient(
+                                  colors: [
+                                    _Palette.primary,
+                                    _Palette.primaryDeep,
+                                  ],
+                                )
                               : null,
                           borderRadius: BorderRadius.circular(18),
                         ),

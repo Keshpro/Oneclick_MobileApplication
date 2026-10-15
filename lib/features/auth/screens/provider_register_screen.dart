@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'pending_approval_screen.dart';
 
-enum ProviderRole { doctor, driver, grocerySeller }
+enum ProviderRole { doctor, driver, grocerySeller, worker, foodSeller }
 
 class ProviderRegisterScreen extends StatefulWidget {
   final ProviderRole role;
@@ -28,7 +28,7 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
   final _doctorIdController = TextEditingController();
   final _experienceController = TextEditingController();
 
-  // Doctor Categories (Matching User / Patient Side Categories)
+  // Doctor Categories
   final List<String> _doctorCategories = [
     'General Physician',
     'Cardiologist',
@@ -39,21 +39,80 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
     'Dentist',
   ];
 
+  // Quick Fix Worker Categories
+  final List<String> _workerCategories = [
+    'Electrician',
+    'Plumber',
+    'Carpenter',
+    'Painter',
+    'Cleaning',
+    'AC Repair',
+    'Appliances',
+    'Gardening',
+    'Locksmith',
+    'Masonry',
+  ];
+
   String? _selectedCategory;
+
+  // Food services selected by the restaurant
+  final Set<String> _selectedFoodServices = {};
+
+  final List<String> _availableFoodServices = [
+    'Food Saver',
+    'Mystery Bites',
+    'SweetCraft',
+  ];
 
   // Driver
   final _licenseController = TextEditingController();
   final _licenseExpiryController = TextEditingController();
 
+  // Worker / Food Partner
+  final _hourlyRateController = TextEditingController();
+  final _restaurantNameController = TextEditingController();
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  bool get _isExistingFoodSellerApplicant =>
+      _isFoodSeller && _auth.currentUser != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (_isExistingFoodSellerApplicant) {
+      final user = _auth.currentUser!;
+
+      _nameController.text = user.displayName ?? '';
+      _emailController.text = user.email ?? '';
+    }
+  }
 
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
   bool get _isDoctor => widget.role == ProviderRole.doctor;
-  String get _roleName => _isDoctor ? 'Doctor' : 'Driver';
+  bool get _isDriver => widget.role == ProviderRole.driver;
+  bool get _isWorker => widget.role == ProviderRole.worker;
+  bool get _isFoodSeller => widget.role == ProviderRole.foodSeller;
+
+  String get _roleName {
+    switch (widget.role) {
+      case ProviderRole.doctor:
+        return 'Doctor';
+      case ProviderRole.driver:
+        return 'Driver';
+      case ProviderRole.worker:
+        return 'Quick Fix Worker';
+      case ProviderRole.foodSeller:
+        return 'Food Partner';
+      default:
+        return 'Provider';
+    }
+  }
 
   @override
   void dispose() {
@@ -68,6 +127,9 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
 
     _licenseController.dispose();
     _licenseExpiryController.dispose();
+
+    _hourlyRateController.dispose();
+    _restaurantNameController.dispose();
 
     super.dispose();
   }
@@ -95,10 +157,22 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
       return;
     }
 
-    if (_isDoctor && _selectedCategory == null) {
+    if (_isFoodSeller && _selectedFoodServices.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select a doctor category'),
+          content: Text('Please select at least one food service.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if ((_isDoctor || _isWorker) && _selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please select a ${_isDoctor ? "doctor" : "worker skill"} category',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -112,36 +186,98 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
     });
 
     UserCredential? credential;
+    bool createdNewAccount = false;
 
     try {
-      // 1. Create user in Firebase Authentication
-      credential = await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      User? user;
 
-      final user = credential.user;
+      if (_isExistingFoodSellerApplicant) {
+        // Use the currently logged-in customer's account.
+        user = _auth.currentUser;
+      } else {
+        // Create a new account for a new provider.
+        credential = await _auth.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
 
-      if (user == null) {
-        throw Exception('Unable to create provider account.');
+        user = credential.user;
+        createdNewAccount = true;
       }
 
-      // 2. Determine target collection
-      final String targetCollection = _isDoctor ? 'doctors' : 'drivers';
+      if (user == null) {
+        throw Exception('Unable to access the user account.');
+      }
+
+      if (_isExistingFoodSellerApplicant) {
+        final existingApplication = await _firestore
+            .collection('food_sellers')
+            .doc(user.uid)
+            .get();
+
+        if (existingApplication.exists) {
+          final status = existingApplication
+              .data()?['status']
+              ?.toString()
+              .toLowerCase();
+
+          if (status == 'pending' || status == 'active') {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    status == 'pending'
+                        ? 'Your Food Seller application is already pending.'
+                        : 'You are already an approved Food Seller.',
+                  ),
+                ),
+              );
+            }
+            return;
+          }
+        }
+      }
+
+      if (createdNewAccount) {
+        await user.updateDisplayName(_nameController.text.trim());
+      }
+
+      // 2. Determine target collection (Worker data directed to 'workers' collection)
+      String targetCollection = 'users';
+      if (_isDoctor) targetCollection = 'doctors';
+      if (_isDriver) targetCollection = 'drivers';
+      if (_isWorker)
+        targetCollection = 'workers'; // Saved in 'workers' collection
+      if (_isFoodSeller) targetCollection = 'food_sellers';
 
       // 3. Prepare details based on role
-      final providerDetails = _isDoctor
-          ? {
-              'doctorId': _doctorIdController.text.trim(),
-              'specialization': _selectedCategory, // Selected Dropdown Category
-              'experienceYears': _experienceController.text.trim(),
-            }
-          : {
-              'drivingLicenseNumber': _licenseController.text.trim(),
-              'licenseExpiryDate': _licenseExpiryController.text.trim(),
-            };
+      Map<String, dynamic> providerDetails = {};
 
-      // 4. Save data into the specific role-based collection
+      if (_isDoctor) {
+        providerDetails = {
+          'doctorId': _doctorIdController.text.trim(),
+          'specialization': _selectedCategory,
+          'experienceYears': _experienceController.text.trim(),
+        };
+      } else if (_isDriver) {
+        providerDetails = {
+          'drivingLicenseNumber': _licenseController.text.trim(),
+          'licenseExpiryDate': _licenseExpiryController.text.trim(),
+        };
+      } else if (_isWorker) {
+        providerDetails = {
+          'category': _selectedCategory,
+          'hourlyRate': _hourlyRateController.text.trim(),
+          'experienceYears': _experienceController.text.trim(),
+        };
+      } else if (_isFoodSeller) {
+        providerDetails = {
+          'restaurantName': _restaurantNameController.text.trim(),
+          'foodServices': _selectedFoodServices.toList(),
+        };
+      }
+
+      // 4. Save data into the specific role-based collection in Firestore
       await _firestore.collection(targetCollection).doc(user.uid).set({
         'uid': user.uid,
         'name': _nameController.text.trim(),
@@ -151,21 +287,34 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
         'accountType': 'provider',
         'status': 'pending',
         'requiresApproval': true,
+        'category': _selectedCategory,
         'providerDetails': providerDetails,
         'providerAgreementAccepted': true,
         'createdAt': FieldValue.serverTimestamp(),
         'approvedAt': null,
       });
 
+      // Also save user profile in main 'users' collection
+
+      if (createdNewAccount) {
+        // Create the main user profile only for a new account.
+        await _firestore.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim().toLowerCase(),
+          'role': widget.role.name,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
       // 5. Add to Activity Logs for Admin Dashboard
       await _firestore.collection('activity_logs').add({
         'action': 'New $_roleName Application',
-        'details': '${_nameController.text.trim()} applied as $_roleName${_isDoctor ? " ($_selectedCategory)" : ""}.',
+        'details':
+            '${_nameController.text.trim()} applied as $_roleName${_selectedCategory != null ? " ($_selectedCategory)" : ""}.',
         'performedBy': 'System',
         'timestamp': FieldValue.serverTimestamp(),
       });
-
-      await _auth.signOut();
 
       if (!mounted) return;
 
@@ -197,7 +346,7 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
         );
       }
     } catch (e) {
-      if (credential?.user != null) {
+      if (createdNewAccount && credential?.user != null) {
         try {
           await credential!.user!.delete();
         } catch (_) {}
@@ -279,10 +428,10 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                   keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 28),
-                _sectionTitle(
-                  _isDoctor ? 'Professional Information' : 'Driver Information',
-                ),
+                _sectionTitle('$_roleName Information'),
                 const SizedBox(height: 14),
+
+                // Doctor Role Fields
                 if (_isDoctor) ...[
                   _field(
                     controller: _doctorIdController,
@@ -290,8 +439,6 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                     icon: Icons.badge_outlined,
                   ),
                   const SizedBox(height: 14),
-
-                  // Specialization / Category Dropdown Selection
                   DropdownButtonFormField<String>(
                     value: _selectedCategory,
                     decoration: _decoration(
@@ -316,7 +463,6 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                       return null;
                     },
                   ),
-
                   const SizedBox(height: 14),
                   _field(
                     controller: _experienceController,
@@ -324,7 +470,9 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                     icon: Icons.work_history_outlined,
                     keyboardType: TextInputType.number,
                   ),
-                ] else ...[
+                ]
+                // Driver Role Fields
+                else if (_isDriver) ...[
                   _field(
                     controller: _licenseController,
                     label: 'Driving Licence Number',
@@ -347,69 +495,167 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                       return null;
                     },
                   ),
+                ]
+                // Worker Role Fields
+                else if (_isWorker) ...[
+                  DropdownButtonFormField<String>(
+                    value: _selectedCategory,
+                    decoration: _decoration(
+                      label: 'Worker Skill Category',
+                      icon: Icons.handyman_outlined,
+                    ),
+                    items: _workerCategories.map((category) {
+                      return DropdownMenuItem<String>(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedCategory = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select worker skill category';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  _field(
+                    controller: _hourlyRateController,
+                    label: 'Expected Hourly Rate (LKR)',
+                    icon: Icons.payments_outlined,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 14),
+                  _field(
+                    controller: _experienceController,
+                    label: 'Years of Experience',
+                    icon: Icons.work_history_outlined,
+                    keyboardType: TextInputType.number,
+                  ),
+                ]
+                // Food Seller Role Fields
+                else if (_isFoodSeller) ...[
+                  _field(
+                    controller: _restaurantNameController,
+                    label: 'Restaurant / Business Name',
+                    icon: Icons.storefront_outlined,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  _sectionTitle('Food Services Offered'),
+
+                  const SizedBox(height: 8),
+
+                  const Text(
+                    'Select all the services your business wants to provide.',
+                    style: TextStyle(color: Color(0xFF747187), fontSize: 13),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  ..._availableFoodServices.map((service) {
+                    return CheckboxListTile(
+                      value: _selectedFoodServices.contains(service),
+                      onChanged: (selected) {
+                        setState(() {
+                          if (selected == true) {
+                            _selectedFoodServices.add(service);
+                          } else {
+                            _selectedFoodServices.remove(service);
+                          }
+                        });
+                      },
+                      title: Text(
+                        service,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      activeColor: const Color(0xFF5B4DFF),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    );
+                  }),
+
+                  if (_selectedFoodServices.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Please select at least one food service.',
+                        style: TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
                 ],
-                const SizedBox(height: 28),
-                _sectionTitle('Account Security'),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: _decoration(
-                    label: 'Password',
-                    icon: Icons.lock_outline_rounded,
-                    suffix: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
+
+                if (!_isExistingFoodSellerApplicant) ...[
+                  const SizedBox(height: 28),
+                  _sectionTitle('Account Security'),
+                  const SizedBox(height: 14),
+
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: _decoration(
+                      label: 'Password',
+                      icon: Icons.lock_outline_rounded,
+                      suffix: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                        ),
                       ),
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a password';
+                      }
+                      if (value.length < 6) {
+                        return 'Password must contain at least 6 characters';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must contain at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: _obscureConfirmPassword,
-                  decoration: _decoration(
-                    label: 'Confirm Password',
-                    icon: Icons.lock_outline_rounded,
-                    suffix: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
-                      icon: Icon(
-                        _obscureConfirmPassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
+
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirmPassword,
+                    decoration: _decoration(
+                      label: 'Confirm Password',
+                      icon: Icons.lock_outline_rounded,
+                      suffix: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
+                          });
+                        },
+                        icon: Icon(
+                          _obscureConfirmPassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                        ),
                       ),
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please confirm your password';
+                      }
+                      if (value != _passwordController.text) {
+                        return 'Passwords do not match';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please confirm your password';
-                    }
-                    if (value != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
-                    return null;
-                  },
-                ),
+                ],
                 const SizedBox(height: 28),
                 Container(
                   padding: const EdgeInsets.all(16),

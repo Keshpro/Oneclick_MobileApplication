@@ -194,9 +194,10 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
     ? Image.asset(
         product.imageUrl,
         fit: BoxFit.cover,
+        width: double.infinity,
         errorBuilder: (context, error, stackTrace) {
           return const Icon(
-            Icons.broken_image_outlined,
+            Icons.shopping_basket_outlined,
             size: 55,
           );
         },
