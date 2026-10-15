@@ -455,7 +455,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
               .collection('doctors')
-              .where('status', isEqualTo: 'active') // Only Active Doctors shown
+              .where('status', isEqualTo: 'active')
               .snapshots(),
           builder: (context, snapshot) {
             final docs = snapshot.data?.docs ?? [];
@@ -739,39 +739,18 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     ),
                   ),
                 ),
-              ),
-            ),
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(20, 28, 20, 12),
-                child: Text('Browse by Specialty', style: TextStyle(color: _text, fontSize: 19, fontWeight: FontWeight.w800)),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 92,
-                child: ListView.separated(
-                  padding:
-                      const EdgeInsets.symmetric(
-                    horizontal: 20,
-                  ),
-                  scrollDirection:
-                      Axis.horizontal,
-                  itemCount:
-                      _specialties.length,
-                  separatorBuilder:
-                      (_, _) =>
-                          const SizedBox(
-                    width: 10,
-                  ),
-                  itemBuilder:
-                      (context, index) {
-                    final specialty =
-                        _specialties[index];
-
-                    final bool selected =
-                        _selectedSpecialty ==
-                            specialty['name'];
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 92,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _specialties.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
+                      itemBuilder: (context, index) {
+                        final specialty = _specialties[index];
+                        final bool selected =
+                            _selectedSpecialty == specialty['name'];
 
                         return InkWell(
                           onTap: () => setState(
