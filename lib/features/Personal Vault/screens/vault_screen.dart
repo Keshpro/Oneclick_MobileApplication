@@ -1,9 +1,7 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
 import 'add_record_screen.dart';
 import 'record_details_screen.dart';
 import 'subscriptions_screen.dart';
@@ -27,6 +25,23 @@ class _VaultScreenState extends State<VaultScreen> {
   static const purple = Color(0xFF4F46E5);
   static const ink = Color(0xFF0F172A);
   static const muted = Color(0xFF64748B);
+
+  // Constants for Folders & Tags
+  static const List<String> folders = [
+    'Personal',
+    'Work',
+    'Finance',
+    'Medical',
+    'Identity'
+  ];
+  static const List<String> tags = [
+    'Important',
+    'Urgent',
+    'Taxes',
+    'Insurance',
+    'Bills'
+  ];
+
   String _query = '';
   String _filter = 'All';
   String? _folder;
@@ -58,211 +73,199 @@ class _VaultScreenState extends State<VaultScreen> {
             folder: record.category,
             tags: record.tags,
             icon: Icons.description_outlined,
-            favorite: false,
+            favorite: record.isFavorite,
           );
         }).toList();
       });
     });
   }
 
-void _showSearchFilterPanel() {
-  final searchController = TextEditingController(
-    text: _query,
-  );
+  void _showSearchFilterPanel() {
+    final searchController = TextEditingController(
+      text: _query,
+    );
 
-  String tempFilter = _filter;
-  bool tempAscending = _ascending;
+    String tempFilter = _filter;
+    bool tempAscending = _ascending;
 
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: const Color(0xFFF8FAFC),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(24),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFFF8FAFC),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
       ),
-    ),
-    builder: (sheetContext) {
-      return StatefulBuilder(
-        builder: (sheetContext, setModalState) {
-          return SafeArea(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                24,
-                22,
-                24,
-                MediaQuery.of(sheetContext).viewInsets.bottom + 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Search & Filter',
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  22,
+                  24,
+                  MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Search & Filter',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: ink,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            Navigator.pop(sheetContext);
+                          },
+                          icon: const Icon(
+                            Icons.close,
+                            color: muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: searchController,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: 'Search Vault records...',
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: muted,
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    const Text(
+                      'FILTER',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: muted,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        'All',
+                        'Documents',
+                        'Accounts',
+                        'Favorites',
+                      ].map((filter) {
+                        return ChoiceChip(
+                          label: Text(filter),
+                          selected: tempFilter == filter,
+                          onSelected: (_) {
+                            setModalState(() {
+                              tempFilter = filter;
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 22),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(
+                        Icons.swap_vert,
+                        color: purple,
+                      ),
+                      title: const Text(
+                        'Sort records',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: ink,
+                        ),
+                      ),
+                      subtitle: Text(
+                        tempAscending ? 'A to Z' : 'Z to A',
+                      ),
+                      trailing: Switch(
+                        value: tempAscending,
+                        activeThumbColor: purple,
+                        onChanged: (value) {
+                          setModalState(() {
+                            tempAscending = value;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _query = searchController.text;
+                            _filter = tempFilter;
+                            _ascending = tempAscending;
+                          });
+
+                          Navigator.pop(sheetContext);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: purple,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 15,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          'Apply',
                           style: TextStyle(
-                            fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            color: ink,
                           ),
                         ),
                       ),
-                      IconButton(
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
                         onPressed: () {
+                          setState(() {
+                            _query = '';
+                            _filter = 'All';
+                            _ascending = true;
+                          });
+
                           Navigator.pop(sheetContext);
                         },
-                        icon: const Icon(
-                          Icons.close,
-                          color: muted,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  TextField(
-                    controller: searchController,
-                    autofocus: true,
-                    decoration: InputDecoration(
-                      hintText: 'Search Vault records...',
-                      prefixIcon: const Icon(
-                        Icons.search,
-                        color: muted,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
+                        child: const Text('Clear filters'),
                       ),
                     ),
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  const Text(
-                    'FILTER',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: muted,
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      'All',
-                      'Documents',
-                      'Accounts',
-                      'Favorites',
-                    ].map((filter) {
-                      return ChoiceChip(
-                        label: Text(filter),
-                        selected: tempFilter == filter,
-                        onSelected: (_) {
-                          setModalState(() {
-                            tempFilter = filter;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(
-                      Icons.swap_vert,
-                      color: purple,
-                    ),
-                    title: const Text(
-                      'Sort records',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: ink,
-                      ),
-                    ),
-                    subtitle: Text(
-                      tempAscending ? 'A to Z' : 'Z to A',
-                    ),
-                    trailing: Switch(
-                      value: tempAscending,
-                      activeThumbColor: purple,
-                      onChanged: (value) {
-                        setModalState(() {
-                          tempAscending = value;
-                        });
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _query = searchController.text;
-                          _filter = tempFilter;
-                          _ascending = tempAscending;
-                        });
-
-                        Navigator.pop(sheetContext);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: purple,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 15,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: const Text(
-                        'Apply',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _query = '';
-                          _filter = 'All';
-                          _ascending = true;
-                        });
-
-                        Navigator.pop(sheetContext);
-                      },
-                      child: const Text('Clear filters'),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
+            );
+          },
+        );
+      },
+    );
+  }
 
   List<_VaultItem> get _visibleItems {
     final query = _query.trim().toLowerCase();
@@ -273,24 +276,23 @@ void _showSearchFilterPanel() {
         item.folder,
         ...item.tags,
       ].join(' ').toLowerCase().contains(query);
-      final matchesFilter =
-          _filter == 'All' ||
+
+      final matchesFilter = _filter == 'All' ||
           (_filter == 'Documents' && item.type != 'Account') ||
           (_filter == 'Accounts' && item.type == 'Account') ||
           (_filter == 'Favorites' && item.favorite);
-      return matchesQuery && matchesFilter;
+
+      final matchesFolder = _folder == null || item.folder == _folder;
+      final matchesTag = _tag == null || item.tags.contains(_tag);
+
+      return matchesQuery && matchesFilter && matchesFolder && matchesTag;
     }).toList();
+
     results.sort((a, b) {
       final result = a.title.compareTo(b.title);
       return _ascending ? result : -result;
     });
     return results;
-  }
-
-  void _comingSoon(String feature) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('$feature will be connected next.')));
   }
 
   void _shareRecord(_VaultItem item) {
@@ -307,48 +309,6 @@ void _showSearchFilterPanel() {
       builder: (context) {
         return ShareRecordSheet(selectedRecord: shareItem);
       },
-    );
-  }
-
-  void _showDetails(_VaultItem item) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _VaultReferenceIcon(item.icon, color: purple, size: 36),
-              const SizedBox(height: 16),
-              Text(
-                item.title,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: ink,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(item.details),
-              const SizedBox(height: 8),
-              Text('Folder: ${item.folder}'),
-              const SizedBox(height: 8),
-              Text(item.tags.map((tag) => '#$tag').join('  ')),
-              const SizedBox(height: 20),
-              const Text(
-                'Demo record only. No file or credentials are stored.',
-                style: TextStyle(color: muted),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -606,7 +566,6 @@ void _showSearchFilterPanel() {
                     style: const TextStyle(color: muted),
                   ),
                   const SizedBox(height: 24),
-                  // Search and alphabetical sorting.
                   Row(
                     children: [
                       Expanded(
@@ -632,12 +591,10 @@ void _showSearchFilterPanel() {
                       _surface(
                         padding: const EdgeInsets.all(4),
                         child: IconButton(
-                          tooltip: _ascending ? 'Sort Z to A' : 'Sort A to Z',
-                          onPressed: () {
-                            setState(() => _ascending = !_ascending);
-                          },
+                          tooltip: 'Filter & Search',
+                          onPressed: _showSearchFilterPanel,
                           icon: const _VaultReferenceIcon(
-                            Icons.swap_vert,
+                            Icons.tune,
                             color: purple,
                           ),
                         ),
@@ -786,9 +743,7 @@ void _showSearchFilterPanel() {
                           NavigationDestinationLabelBehavior.alwaysShow,
                       selectedIndex: 1,
                       onDestinationSelected: (index) {
-                        if (index == 1) {
-                          return;
-                        }
+                        if (index == 1) return;
                         if (index == 0) {
                           Navigator.pushReplacement(
                             context,
@@ -932,9 +887,7 @@ void _showSearchFilterPanel() {
                 ),
                 IconButton(
                   tooltip: 'Share',
-                  onPressed: () {
-                    _shareRecord(item);
-                  },
+                  onPressed: () => _shareRecord(item),
                   icon: const _VaultReferenceIcon(
                     Icons.ios_share,
                     color: muted,
@@ -942,9 +895,7 @@ void _showSearchFilterPanel() {
                 ),
                 IconButton(
                   tooltip: 'Delete',
-                  onPressed: () {
-                    _deleteRecord(item);
-                  },
+                  onPressed: () => _deleteRecord(item),
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                 ),
                 IconButton(
@@ -1027,6 +978,10 @@ void _showSearchFilterPanel() {
       tooltip: item.favorite ? 'Unpin record' : 'Pin record',
       onPressed: () {
         setState(() => item.favorite = !item.favorite);
+        _vaultService.updateFavorite(
+          recordId: item.id,
+          isFavorite: item.favorite,
+        );
       },
       icon: _VaultReferenceIcon(
         item.favorite ? Icons.star : Icons.star_border,
@@ -1274,100 +1229,6 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
   }
 }
 
-class _VaultActionContent extends StatelessWidget {
-  const _VaultActionContent({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.accent,
-  });
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color accent;
-  @override
-  Widget build(BuildContext context) {
-    final hovered = _VaultGlassScope.hoveredOf(context);
-    final isAI = icon == Icons.auto_awesome;
-    final hoverColor = icon == Icons.document_scanner_outlined
-        ? const Color(0xFF6366F1)
-        : accent;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 116),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (isAI)
-            Positioned(
-              right: -4,
-              top: -4,
-              child: IgnorePointer(
-                child: ImageFiltered(
-                  imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: const BoxDecoration(
-                      color: Color(0x1A9333EA),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AnimatedScale(
-                scale: hovered ? 1.05 : 1,
-                duration: const Duration(milliseconds: 300),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: 44,
-                  height: 44,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: hovered ? hoverColor : accent.withAlpha(15),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: accent.withAlpha(30)),
-                  ),
-                  child: _VaultReferenceIcon(
-                    icon,
-                    size: 20,
-                    color: hovered ? Colors.white : accent,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.35,
-                  height: 1.3,
-                  color: hovered ? accent : const Color(0xFF0F172A),
-                ),
-                child: Text(title),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  height: 1.35,
-                  color: const Color(0xFF94A3B8),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _VaultSearchSurface extends StatefulWidget {
   const _VaultSearchSurface({required this.child, required this.padding});
   final Widget child;
@@ -1414,55 +1275,6 @@ class _VaultSearchSurfaceState extends State<_VaultSearchSurface> {
   }
 }
 
-class _VaultRowFeedback extends StatefulWidget {
-  const _VaultRowFeedback({required this.builder});
-  final Widget Function(BuildContext, bool) builder;
-  @override
-  State<_VaultRowFeedback> createState() => _VaultRowFeedbackState();
-}
-
-class _VaultRowFeedbackState extends State<_VaultRowFeedback> {
-  bool _hovered = false;
-  @override
-  Widget build(BuildContext context) => MouseRegion(
-    onEnter: (_) => setState(() => _hovered = true),
-    onExit: (_) => setState(() => _hovered = false),
-    child: widget.builder(context, _hovered),
-  );
-}
-
-class _VaultRecordSubtitle extends StatelessWidget {
-  const _VaultRecordSubtitle({required this.text, required this.color});
-  final String text;
-  final Color color;
-  @override
-  Widget build(BuildContext context) {
-    final expiring = text.startsWith('Expires');
-    final urgent = expiring && color == Colors.red;
-    final textColor = urgent ? const Color(0xFFF43F5E) : color;
-    final label = Text(
-      text,
-      style: GoogleFonts.plusJakartaSans(
-        fontSize: 12,
-        fontWeight: urgent ? FontWeight.w600 : FontWeight.w500,
-        color: textColor,
-      ),
-    );
-    if (!expiring) return label;
-    return Row(
-      children: [
-        _VaultPulseDot(
-          color: urgent ? textColor : const Color(0xFF94A3B8),
-          size: 6,
-          animate: urgent,
-        ),
-        const SizedBox(width: 6),
-        Flexible(child: label),
-      ],
-    );
-  }
-}
-
 class _VaultPulseDot extends StatefulWidget {
   const _VaultPulseDot({
     required this.color,
@@ -1473,6 +1285,7 @@ class _VaultPulseDot extends StatefulWidget {
   final Color color;
   final double size;
   final bool ping;
+  final bool animate;
 
   @override
   State<_VaultPulseDot> createState() => _VaultPulseDotState();
@@ -1502,19 +1315,31 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _controller,
-    builder: (context, child) => SizedBox(
-      width: widget.size,
-      height: widget.size,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          if (widget.ping)
-            Transform.scale(
-              scale: 1 + _controller.value,
-              child: Opacity(
-                opacity: (1 - _controller.value) * 0.75,
+        animation: _controller,
+        builder: (context, child) => SizedBox(
+          width: widget.size,
+          height: widget.size,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              if (widget.ping)
+                Transform.scale(
+                  scale: 1 + _controller.value,
+                  child: Opacity(
+                    opacity: (1 - _controller.value) * 0.75,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: widget.color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+              Opacity(
+                opacity: widget.ping || !widget.animate
+                    ? 1
+                    : 1 - _controller.value * 0.5,
                 child: Container(
                   decoration: BoxDecoration(
                     color: widget.color,
@@ -1522,27 +1347,16 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
                   ),
                 ),
               ),
-            ),
-          Opacity(
-            opacity: widget.ping || !widget.animate
-                ? 1
-                : 1 - _controller.value * 0.5,
-            child: Container(
-              decoration: BoxDecoration(
-                color: widget.color,
-                shape: BoxShape.circle,
-              ),
-            ),
+            ],
           ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
 
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon);
+  const _VaultNavGlyph(this.icon, {this.color});
   final IconData icon;
+  final Color? color;
 
   @override
   State<_VaultNavGlyph> createState() => _VaultNavGlyphState();
@@ -1551,34 +1365,33 @@ class _VaultNavGlyph extends StatefulWidget {
 class _VaultNavGlyphState extends State<_VaultNavGlyph> {
   bool _hovered = false;
   bool _pressed = false;
-  
+
   @override
   Widget build(BuildContext context) => MouseRegion(
-    cursor: SystemMouseCursors.click,
-    onEnter: (_) => setState(() => _hovered = true),
-    onExit: (_) => setState(() {
-      _hovered = false;
-      _pressed = false;
-    }),
-    child: Listener(
-      onPointerDown: (_) => setState(() => _pressed = true),
-      onPointerUp: (_) => setState(() => _pressed = false),
-      onPointerCancel: (_) => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.95 : 1,
-        duration: const Duration(milliseconds: 200),
-        child: _VaultReferenceIcon(
-          widget.icon,
-          size: 20,
-          color:
-              widget.color ??
-              (_hovered
-                  ? const Color(0xFF1E293B)
-                  : IconTheme.of(context).color ?? const Color(0xFF94A3B8)),
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() {
+          _hovered = false;
+          _pressed = false;
+        }),
+        child: Listener(
+          onPointerDown: (_) => setState(() => _pressed = true),
+          onPointerUp: (_) => setState(() => _pressed = false),
+          onPointerCancel: (_) => setState(() => _pressed = false),
+          child: AnimatedScale(
+            scale: _pressed ? 0.95 : 1,
+            duration: const Duration(milliseconds: 200),
+            child: _VaultReferenceIcon(
+              widget.icon,
+              size: 20,
+              color: widget.color ??
+                  (_hovered
+                      ? const Color(0xFF1E293B)
+                      : IconTheme.of(context).color ?? const Color(0xFF94A3B8)),
+            ),
+          ),
         ),
-      ),
-    ),
-  );
+      );
 }
 
 class _VaultReferenceIcon extends StatelessWidget {
@@ -1586,6 +1399,7 @@ class _VaultReferenceIcon extends StatelessWidget {
   final IconData icon;
   final double? size;
   final Color? color;
+
   static const String _documentSvg = r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="2" viewBox="0 0 24 24">
 <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"></path>
 </svg>''';
@@ -1596,6 +1410,7 @@ class _VaultReferenceIcon extends StatelessWidget {
 <line x1="8.59" x2="15.42" y1="13.51" y2="17.49"></line>
 <line x1="15.41" x2="8.59" y1="6.51" y2="10.49"></line>
 </svg>''';
+
   static final Map<IconData, String> _svg = {
     Icons.verified_user_outlined: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
@@ -1687,14 +1502,16 @@ class _VaultReferenceIcon extends StatelessWidget {
 <line x1="15.41" x2="8.59" y1="6.51" y2="10.49"></line>
 </svg>''',
   };
+
   @override
   Widget build(BuildContext context) {
     final svg = _svg[icon];
     final theme = IconTheme.of(context);
     final resolvedColor = color ?? theme.color ?? const Color(0xFF64748B);
     final resolvedSize = size ?? theme.size ?? 24;
-    if (svg == null)
+    if (svg == null) {
       return Icon(icon, size: resolvedSize, color: resolvedColor);
+    }
     return SvgPicture.string(
       svg,
       width: resolvedSize,
