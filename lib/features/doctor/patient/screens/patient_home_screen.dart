@@ -455,7 +455,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
               .collection('doctors')
-              .where('status', isEqualTo: 'active') // Only Active Doctors shown
+              .where('status', isEqualTo: 'active')
               .snapshots(),
           builder: (context, snapshot) {
             final docs = snapshot.data?.docs ?? [];
