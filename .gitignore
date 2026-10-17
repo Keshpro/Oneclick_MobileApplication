@@ -52,3 +52,6 @@ supabase_env.json
 # Node.js / Supabase CLI development dependencies
 node_modules/
 npm-debug.log*
+# Local Supabase CLI package files
+package.json
+package-lock.json
