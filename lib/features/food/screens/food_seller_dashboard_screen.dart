@@ -6,6 +6,7 @@ import 'food_my_offers_screen.dart';
 import 'food_seller_orders_screen.dart';
 import 'food_store_profile_screen.dart';
 import 'food_seller_earnings_screen.dart';
+import '../../auth/screens/home_screen.dart';
 
 class FoodSellerDashboardScreen extends StatefulWidget {
   const FoodSellerDashboardScreen({super.key});
@@ -43,7 +44,25 @@ class _FoodSellerDashboardScreenState extends State<FoodSellerDashboardScreen> {
     final foodSaved = sellerData.foodSold;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Food Seller Dashboard')),
+      appBar: AppBar(
+        title: const Text('Food Seller Dashboard'),
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false,
+              );
+            },
+            icon: const Icon(Icons.person_outline, color: Colors.white),
+            label: const Text(
+              'Customer Mode',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
 
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

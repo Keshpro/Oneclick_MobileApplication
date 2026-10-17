@@ -8,14 +8,17 @@ class SaveBiteOffer extends FoodProduct {
   final String foodName;
   final String restaurantName;
   final String restaurantLogo;
+  @override
   final String foodImage;
 
+  @override
   final double originalPrice;
   final double saverPrice;
 
   final int quantity;
 
   final String endingTime;
+  @override
   final double rating;
   final String description;
   final String category;
@@ -23,7 +26,7 @@ class SaveBiteOffer extends FoodProduct {
   final String allergens;
 
   const SaveBiteOffer({
-    required String id,
+    required super.id,
     required this.foodName,
     required this.restaurantName,
     required this.restaurantLogo,
@@ -38,7 +41,6 @@ class SaveBiteOffer extends FoodProduct {
     required this.collectionTime,
     required this.allergens,
   }) : super(
-         id: id,
          name: foodName,
          sellerName: restaurantName,
          foodImage: foodImage,
@@ -303,7 +305,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: filtered.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 16),
+                separatorBuilder: (_, _) => const SizedBox(height: 16),
                 itemBuilder: (context, index) {
                   return _SaveBiteCard(
                     offer: filtered[index],
@@ -348,7 +350,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
             width: 62,
             height: 62,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(20),
             ),
             child: const Icon(Icons.eco_rounded, color: Colors.white, size: 34),
@@ -397,7 +399,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
           borderRadius: BorderRadius.circular(17),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -444,7 +446,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,
 
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
 
         itemBuilder: (context, index) {
           final category = categories[index];
@@ -678,7 +680,7 @@ class _SaveBiteCard extends StatelessWidget {
                     ),
 
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.94),
+                      color: Colors.white.withValues(alpha: 0.94),
                       borderRadius: BorderRadius.circular(20),
                     ),
 
@@ -878,7 +880,7 @@ class _RestaurantLogo extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade200, width: 1),
 
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 5),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 5),
         ],
       ),
 
@@ -1316,7 +1318,7 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
 
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, -4),
             ),

@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'booking_success_screen.dart';
 
 class JobBookingScreen extends StatefulWidget {
   final Map<String, dynamic> worker;
@@ -14,6 +17,8 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
   TimeOfDay? _selectedTime;
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+
+  bool _isSubmitting = false;
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -65,8 +70,8 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
     }
   }
 
-  void _submitBooking() {
-    if (_selectedDate == null || _selectedTime == null || _addressController.text.isEmpty) {
+  Future<void> _submitBooking() async {
+    if (_selectedDate == null || _selectedTime == null || _addressController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please fill all required fields (Date, Time, and Address)'),
@@ -76,15 +81,53 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
       return;
     }
 
-    final workerName = widget.worker['name'] ?? 'Worker';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Booking request sent to $workerName!'),
-        backgroundColor: Colors.green,
-      ),
-    );
-    
-    Navigator.of(context).pop(); 
+    setState(() => _isSubmitting = true);
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final workerId = widget.worker['id'] ?? widget.worker['uid'] ?? '';
+      final workerName = widget.worker['name'] ?? 'Worker';
+      final category = widget.worker['category'] ?? 'General Repair';
+
+      final formattedDate =
+          "${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}";
+      final formattedTime = _selectedTime!.format(context);
+
+      // Save Booking Request in 'work_appointments' Firestore Collection
+      await FirebaseFirestore.instance.collection('work_appointments').add({
+        'workerId': workerId,
+        'workerName': workerName,
+        'category': category,
+        'customerId': currentUser?.uid ?? '',
+        'customerEmail': currentUser?.email ?? 'Customer',
+        'address': _addressController.text.trim(),
+        'issue': _descriptionController.text.trim(),
+        'date': formattedDate,
+        'time': formattedTime,
+        'status': 'Pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+
+      // Navigate to BookingSuccessScreen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BookingSuccessScreen(worker: widget.worker),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to submit booking: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -97,8 +140,9 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
   @override
   Widget build(BuildContext context) {
     final workerName = widget.worker['name']?.toString() ?? 'Worker';
-    final workerRate = widget.worker['rate']?.toString() ?? 'N/A';
-    
+    final providerDetails = widget.worker['providerDetails'] as Map<String, dynamic>? ?? {};
+    final workerRate = providerDetails['hourlyRate'] ?? widget.worker['hourlyRate'] ?? widget.worker['rate'] ?? '1500';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FB),
       appBar: AppBar(
@@ -113,7 +157,7 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),
@@ -124,7 +168,7 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
             height: 50,
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _submitBooking,
+              onPressed: _isSubmitting ? null : _submitBooking,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xff032744),
                 foregroundColor: Colors.white,
@@ -132,7 +176,14 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Confirm & Send Request', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                    )
+                  : const Text('Confirm & Send Request',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ),
@@ -142,6 +193,7 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Worker Card Overview
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -152,7 +204,7 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: const Color(0xff032744).withOpacity(0.1),
+                    backgroundColor: const Color(0xff032744).withValues(alpha: 0.1),
                     child: Text(
                       workerName.isNotEmpty ? workerName.substring(0, 1).toUpperCase() : 'W',
                       style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xff032744)),
@@ -169,7 +221,7 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
                     ),
                   ),
                   Text(
-                    workerRate,
+                    'LKR $workerRate/hr',
                     style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xff032744)),
                   ),
                 ],
@@ -181,6 +233,7 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
             const Text('When do you need the service?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 15),
             
+            // Date & Time Selectors
             Row(
               children: [
                 Expanded(
@@ -201,7 +254,7 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
                             child: Text(
                               _selectedDate == null 
                                   ? 'Select Date *' 
-                                  : "${_selectedDate!.toLocal()}".split(' ')[0],
+                                  : "${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}",
                               style: TextStyle(
                                 color: _selectedDate == null ? Colors.grey.shade600 : Colors.black,
                                 fontWeight: _selectedDate == null ? FontWeight.normal : FontWeight.bold,
@@ -249,6 +302,7 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
 
             const SizedBox(height: 25),
             
+            // Address Input Field
             const Text('Service Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             TextField(
@@ -271,6 +325,7 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
 
             const SizedBox(height: 25),
             
+            // Issue Description Input Field
             const Text('Describe the issue (Optional)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             TextField(
@@ -288,21 +343,6 @@ class _JobBookingScreenState extends State<JobBookingScreen> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: Colors.grey.shade300),
                 ),
-              ),
-            ),
-            const SizedBox(height: 15),
-            
-            OutlinedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Image picker will open here')),
-                );
-              },
-              icon: const Icon(Icons.add_a_photo, size: 18),
-              label: const Text('Add Photos'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xff032744),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ],

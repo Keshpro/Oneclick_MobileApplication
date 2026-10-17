@@ -1,8 +1,36 @@
 import 'package:flutter/material.dart';
 import 'vault_screen.dart';
+import 'package:file_picker/file_picker.dart';
+import '../services/vault_service.dart';
+import 'pdf_preview_screen.dart';
 
 class SmartUploadReviewScreen extends StatefulWidget {
-  const SmartUploadReviewScreen({super.key});
+  final String title;
+  final String recordType;
+  final String category;
+  final DateTime renewalDate;
+  final bool expiryNotification;
+  final String notes;
+  final List<String> tags;
+  final PlatformFile? selectedFile;
+  final String? merchant;
+  final DateTime? purchaseDate;
+  final String? amount;
+
+  const SmartUploadReviewScreen({
+    super.key,
+    required this.title,
+    required this.recordType,
+    required this.category,
+    required this.renewalDate,
+    required this.expiryNotification,
+    required this.notes,
+    required this.tags,
+    this.selectedFile,
+    this.merchant,
+    this.purchaseDate,
+    this.amount,
+  });
 
   @override
   State<SmartUploadReviewScreen> createState() =>
@@ -11,24 +39,15 @@ class SmartUploadReviewScreen extends StatefulWidget {
 
 class _SmartUploadReviewScreenState
     extends State<SmartUploadReviewScreen> {
+
+  final VaultService _vaultService = VaultService();
+  bool _isSaving = false;
+
   bool renewalReminder = true;
 
-  String selectedCategory = 'Legal & Property';
+late String selectedCategory;
+late TextEditingController titleController;
 
-  final TextEditingController titleController = TextEditingController(
-    text: 'Apartment Lease Agreement - 404 Elm St',
-  );
-
-  final TextEditingController amountController = TextEditingController(
-    text: '\$ 2,450.00',
-  );
-
-  final List<String> tags = [
-    '#lease',
-    '#property',
-    '#landlord',
-    '#rent',
-  ];
 
   static const Color backgroundColor = Color(0xFFF2F3F8);
   static const Color cardColor = Color(0xFFF7F8FC);
@@ -36,10 +55,21 @@ class _SmartUploadReviewScreenState
   static const Color textColor = Color(0xFF303244);
   static const Color secondaryText = Color(0xFF6F7180);
 
+@override
+void initState() {
+  super.initState();
+
+  selectedCategory = widget.category;
+  titleController = TextEditingController(
+    text: widget.title,
+  );
+
+  renewalReminder = widget.expiryNotification;
+}
+
   @override
   void dispose() {
     titleController.dispose();
-    amountController.dispose();
     super.dispose();
   }
 
@@ -73,7 +103,7 @@ class _SmartUploadReviewScreenState
                     const SizedBox(height: 3),
 
                     const Text(
-                      'Verify AI-extracted details before saving',
+                      'Review your record before saving',
                       style: TextStyle(
                         fontSize: 16,
                         color: secondaryText,
@@ -81,10 +111,6 @@ class _SmartUploadReviewScreenState
                     ),
 
                     const SizedBox(height: 22),
-
-                    _buildConfidenceCard(),
-
-                    const SizedBox(height: 26),
 
                     _buildDocumentPreview(),
 
@@ -96,17 +122,14 @@ class _SmartUploadReviewScreenState
 
                     _buildCategorySection(),
 
-                    const SizedBox(height: 22),
-
-                    _buildTagsSection(),
+                    if (widget.recordType == 'Receipt') ...[
+                      const SizedBox(height: 22),
+                      _buildReceiptDetails(),
+                    ],
 
                     const SizedBox(height: 22),
 
                     _buildKeyDates(),
-
-                    const SizedBox(height: 22),
-
-                    _buildNeedsReview(),
 
                     const SizedBox(height: 22),
 
@@ -176,7 +199,7 @@ Widget _buildTopBar(BuildContext context) {
           color: const Color(0xFFF0F1F6),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 15,
               offset: const Offset(0, 6),
             ),
@@ -194,66 +217,6 @@ Widget _buildTopBar(BuildContext context) {
   // ---------------------------------------------------------
   // CONFIDENCE CARD
   // ---------------------------------------------------------
-
-  Widget _buildConfidenceCard() {
-    return _card(
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFFF0F1FA),
-            ),
-            child: const Icon(
-              Icons.auto_awesome,
-              color: primaryColor,
-              size: 27,
-            ),
-          ),
-
-          const SizedBox(width: 16),
-
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '4 fields extracted with high confidence',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
-                  ),
-                ),
-
-                SizedBox(height: 4),
-
-                Row(
-                  children: [
-                    Icon(
-                      Icons.circle,
-                      size: 8,
-                      color: Color(0xFF7846FF),
-                    ),
-                    SizedBox(width: 7),
-                    Text(
-                      '1 item requires your verification',
-                      style: TextStyle(
-                        color: Color(0xFF7846FF),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ---------------------------------------------------------
   // DOCUMENT PREVIEW
@@ -324,9 +287,11 @@ Widget _buildTopBar(BuildContext context) {
 
                 const SizedBox(height: 6),
 
-                const Text(
-                  'Residential Tenancy Agreement',
-                  style: TextStyle(
+                Text(
+                  widget.selectedFile?.name ?? 'No file selected',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
                     color: textColor,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -335,23 +300,53 @@ Widget _buildTopBar(BuildContext context) {
 
                 const SizedBox(height: 3),
 
-                const Text(
-                  '14 Pages • 3.2 MB • Scanned',
-                  style: TextStyle(
+                Text(
+                  widget.selectedFile != null
+                      ? (widget.selectedFile!.extension?.toUpperCase() ?? 'FILE')
+                      : 'No uploaded file',
+                  style: const TextStyle(
                     color: secondaryText,
                     fontSize: 14,
                   ),
                 ),
-
                 const SizedBox(height: 10),
 
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () {
+                    final file = widget.selectedFile;
+
+                    if (file == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('No file selected to preview.'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (file.extension?.toLowerCase() != 'pdf') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Preview is currently available for PDF files only.'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PdfPreviewScreen(
+                          file: file,
+                        ),
+                      ),
+                    );
+                  },
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Tap to inspect full PDF',
+                        'Tap to preview file',
                         style: TextStyle(
                           color: primaryColor,
                           fontSize: 14,
@@ -384,48 +379,16 @@ Widget _buildTopBar(BuildContext context) {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Document Title',
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F2F8),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      size: 15,
-                      color: primaryColor,
-                    ),
-                    SizedBox(width: 5),
-                    Text(
-                      '98% Match',
-                      style: TextStyle(
-                        color: primaryColor,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          Text(
+  widget.recordType == 'Receipt'
+      ? 'Item / Purchase Title'
+      : 'Document Title',
+  style: const TextStyle(
+    color: textColor,
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+  ),
+),
 
           const SizedBox(height: 14),
 
@@ -527,7 +490,7 @@ Widget _buildTopBar(BuildContext context) {
           borderRadius: BorderRadius.circular(25),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -563,213 +526,125 @@ Widget _buildTopBar(BuildContext context) {
   // TAGS
   // ---------------------------------------------------------
 
-  Widget _buildTagsSection() {
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Tags',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
-                  ),
-                ),
-              ),
-              Text(
-                'Tap to remove',
-                style: TextStyle(
-                  color: secondaryText,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              ...tags.map(_tagChip),
-
-              GestureDetector(
-                onTap: _addTag,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 9,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF2F3F8),
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: const Text(
-                    '+ Add',
-                    style: TextStyle(
-                      color: primaryColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _tagChip(String tag) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          tags.remove(tag);
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 9,
-        ),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF2F3F8),
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              tag,
-              style: const TextStyle(
-                color: textColor,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(width: 5),
-            const Icon(
-              Icons.close,
-              size: 15,
-              color: secondaryText,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _addTag() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        final controller = TextEditingController();
-
-        return AlertDialog(
-          title: const Text('Add Tag'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(
-              hintText: 'Enter tag',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                String value = controller.text.trim();
-
-                if (value.isNotEmpty) {
-                  if (!value.startsWith('#')) {
-                    value = '#$value';
-                  }
-
-                  setState(() {
-                    tags.add(value);
-                  });
-                }
-
-                Navigator.pop(context);
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   // ---------------------------------------------------------
   // KEY DATES
   // ---------------------------------------------------------
 
-  Widget _buildKeyDates() {
-    return _card(
-      child: Column(
-        children: [
-          const Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Key Dates Extracted',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
-                  ),
-                ),
-              ),
-
-              Icon(
-                Icons.verified_outlined,
-                color: primaryColor,
-                size: 19,
-              ),
-
-              SizedBox(width: 5),
-
-              Text(
-                'Both Verified',
-                style: TextStyle(
-                  color: primaryColor,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-
-          Row(
-            children: [
-              Expanded(
-                child: _dateBox(
-                  'EFFECTIVE DATE',
-                  'Nov 01, 2024',
-                ),
-              ),
-
-              const SizedBox(width: 14),
-
-              Expanded(
-                child: _dateBox(
-                  'RENEWAL DATE',
-                  'Oct 31, 2025',
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+Widget _buildReceiptDetails() {
+  if (widget.recordType != 'Receipt') {
+    return const SizedBox.shrink();
   }
+
+  String formattedPurchaseDate = 'Not provided';
+
+  if (widget.purchaseDate != null) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+
+    formattedPurchaseDate =
+        '${months[widget.purchaseDate!.month - 1]} '
+        '${widget.purchaseDate!.day}, '
+        '${widget.purchaseDate!.year}';
+  }
+
+  return _card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Receipt Details',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        _detailRow(
+          'Merchant / Store',
+          widget.merchant?.trim().isNotEmpty == true
+              ? widget.merchant!.trim()
+              : 'Not provided',
+        ),
+
+        const SizedBox(height: 12),
+
+        _detailRow(
+          'Purchase Date',
+          formattedPurchaseDate,
+        ),
+
+        const SizedBox(height: 12),
+
+        _detailRow(
+          'Amount',
+          widget.amount?.trim().isNotEmpty == true
+              ? widget.amount!.trim()
+              : 'Not provided',
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _detailRow(String label, String value) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Expanded(
+        flex: 2,
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: secondaryText,
+            fontSize: 14,
+          ),
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        flex: 3,
+        child: Text(
+          value,
+          textAlign: TextAlign.right,
+          style: const TextStyle(
+            color: textColor,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildKeyDates() {
+  return _card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Important Date',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _dateBox(
+          widget.recordType == 'Receipt'
+              ? 'WARRANTY / EXPIRY DATE'
+              : 'RENEWAL / EXPIRY DATE',
+          _formattedRenewalDate,
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _dateBox(String label, String date) {
     return Container(
@@ -800,16 +675,6 @@ Widget _buildTopBar(BuildContext context) {
               fontWeight: FontWeight.w500,
             ),
           ),
-
-          const SizedBox(height: 7),
-
-          const Text(
-            '✓ Confirmed',
-            style: TextStyle(
-              color: primaryColor,
-              fontSize: 12,
-            ),
-          ),
         ],
       ),
     );
@@ -819,89 +684,22 @@ Widget _buildTopBar(BuildContext context) {
   // NEEDS REVIEW
   // ---------------------------------------------------------
 
-  Widget _buildNeedsReview() {
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(
-                Icons.priority_high_rounded,
-                color: Color(0xFF814CFF),
-              ),
-
-              SizedBox(width: 10),
-
-              Expanded(
-                child: Text(
-                  'Needs Review • Monthly Rent or Deposit',
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 15),
-
-          const Text(
-            'Extracted value: \$2,450 / mo. Ambiguity detected with base fee in clause 4.2. Please verify amount below:',
-            style: TextStyle(
-              color: secondaryText,
-              fontSize: 14,
-              height: 1.5,
-            ),
-          ),
-
-          const SizedBox(height: 15),
-
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F2F7),
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: TextField(
-              controller: amountController,
-              style: const TextStyle(
-                color: textColor,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                suffixIcon: Padding(
-                  padding: EdgeInsets.only(right: 12),
-                  child: Center(
-                    widthFactor: 1,
-                    child: Text(
-                      'Clause 4.2',
-                      style: TextStyle(
-                        color: primaryColor,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ---------------------------------------------------------
   // REMINDERS
   // ---------------------------------------------------------
 
+  String get _formattedRenewalDate {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  return '${months[widget.renewalDate.month - 1]} '
+      '${widget.renewalDate.day}, '
+      '${widget.renewalDate.year}';
+}
+  
   Widget _buildRenewalReminder() {
     return _card(
       child: Column(
@@ -917,7 +715,7 @@ Widget _buildTopBar(BuildContext context) {
 
               const SizedBox(width: 12),
 
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -933,7 +731,7 @@ Widget _buildTopBar(BuildContext context) {
                     SizedBox(height: 4),
 
                     Text(
-                      'Auto-schedule notice at 60 days and 30 days prior to Oct 31, 2025.',
+                      'Remind me before $_formattedRenewalDate.',
                       style: TextStyle(
                         color: secondaryText,
                         height: 1.5,
@@ -946,7 +744,7 @@ Widget _buildTopBar(BuildContext context) {
 
               Switch(
                 value: renewalReminder,
-                activeColor: primaryColor,
+                activeThumbColor: primaryColor,
                 onChanged: (value) {
                   setState(() {
                     renewalReminder = value;
@@ -997,21 +795,73 @@ Widget _buildTopBar(BuildContext context) {
       width: double.infinity,
       height: 67,
       child: ElevatedButton.icon(
-        onPressed: () {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Document saved to Vault'),
-    ),
-  );
+        onPressed: _isSaving
+    ? null
+    : () async {
+        setState(() => _isSaving = true);
 
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const VaultScreen(),
-    ),
-    (route) => route.isFirst,
+        try {
+          String? filePath;
+
+if (widget.selectedFile != null) {
+  final bytes = await widget.selectedFile!.readAsBytes();
+
+  filePath = await _vaultService.uploadFile(
+    fileName: widget.selectedFile!.name,
+    bytes: bytes,
   );
-},
+}
+
+await _vaultService.addRecord(
+  title: titleController.text.trim(),
+  recordType: widget.recordType,
+  category: selectedCategory,
+  notes: widget.notes,
+  tags: const [],
+  renewalDate: widget.renewalDate,
+  expiryNotification: renewalReminder,
+  fileName: widget.selectedFile?.name,
+  filePath: filePath,
+  merchant: widget.recordType == 'Receipt'
+      ? widget.merchant
+      : null,
+  purchaseDate: widget.recordType == 'Receipt'
+      ? widget.purchaseDate
+      : null,
+  amount: widget.recordType == 'Receipt'
+      ? widget.amount
+      : null,
+);
+
+          if (!mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Record saved to Vault'),
+            ),
+          );
+
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const VaultScreen(),
+            ),
+            (route) => route.isFirst,
+          );
+        } catch (e) {
+          if (!mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to save record: $e'),
+            ),
+          );
+        } finally {
+          if (mounted) {
+            setState(() => _isSaving = false);
+          }
+        }
+      },
         icon: const Icon(
           Icons.shield_outlined,
           color: primaryColor,
@@ -1026,7 +876,7 @@ Widget _buildTopBar(BuildContext context) {
         ),
         style: ElevatedButton.styleFrom(
           elevation: 8,
-          shadowColor: Colors.black.withOpacity(0.10),
+          shadowColor: Colors.black.withValues(alpha: 0.10),
           backgroundColor: const Color(0xFFF4F5F9),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(35),
@@ -1041,7 +891,9 @@ Widget _buildTopBar(BuildContext context) {
       width: double.infinity,
       height: 52,
       child: ElevatedButton.icon(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.pop(context);
+        },
         icon: const Icon(
           Icons.sync,
           color: secondaryText,
@@ -1057,7 +909,7 @@ Widget _buildTopBar(BuildContext context) {
         ),
         style: ElevatedButton.styleFrom(
           elevation: 4,
-          shadowColor: Colors.black.withOpacity(0.08),
+          shadowColor: Colors.black.withValues(alpha: 0.08),
           backgroundColor: const Color(0xFFF4F5F9),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
@@ -1082,7 +934,7 @@ Widget _buildTopBar(BuildContext context) {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.07),
+            color: Colors.black.withValues(alpha: 0.07),
             blurRadius: 22,
             offset: const Offset(0, 10),
           ),

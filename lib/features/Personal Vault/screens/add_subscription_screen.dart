@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/subscription_service.dart';
 
 class AddSubscriptionScreen extends StatefulWidget {
   const AddSubscriptionScreen({super.key});
@@ -21,9 +22,12 @@ class _AddSubscriptionScreenState
       TextEditingController(text: 'Netflix');
 
   final TextEditingController _costController =
-      TextEditingController(text: '19.99');
+    TextEditingController();
+
+  final SubscriptionService _subscriptionService = SubscriptionService();
 
   String selectedService = 'Netflix';
+  String selectedCurrency = 'LKR';
   String billingCycle = 'Monthly';
   String reminderTime = '3 days before';
 
@@ -31,7 +35,10 @@ class _AddSubscriptionScreenState
   bool freeTrial = false;
   bool advancedExpanded = false;
 
-  DateTime renewalDate = DateTime(2025, 11, 28);
+  DateTime renewalDate =
+    DateTime.now().add(
+  const Duration(days: 30),
+);
 
   @override
   void dispose() {
@@ -323,31 +330,36 @@ Widget _header() {
                             .numberWithOptions(
                       decimal: true,
                     ),
-                    decoration:
-                        const InputDecoration(
-                      border: InputBorder.none,
-                      prefixIcon: Padding(
-                        padding:
-                            EdgeInsets.only(
+                    decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: '300.00',
+                    hintStyle: const TextStyle(
+                      color: Color(0xFFB0B4C3),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    prefixIcon: Padding(
+                        padding: const EdgeInsets.only(
                           left: 18,
                           right: 8,
                         ),
                         child: Text(
-                          '\$',
-                          style: TextStyle(
+                          selectedCurrency == 'USD'
+                              ? '\$'
+                              : 'Rs',
+                          style: const TextStyle(
                             color: purple,
                             fontSize: 16,
-                            fontWeight:
-                                FontWeight.w700,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
                       prefixIconConstraints:
-                          BoxConstraints(
+                          const BoxConstraints(
                         minWidth: 40,
                       ),
                       contentPadding:
-                          EdgeInsets.symmetric(
+                          const EdgeInsets.symmetric(
                         vertical: 18,
                       ),
                     ),
@@ -435,6 +447,60 @@ Widget _header() {
   // BILLING CYCLE
   // ============================================================
 
+Widget _currencySelector() {
+  return Container(
+    height: 52,
+    padding: const EdgeInsets.all(5),
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(28),
+      boxShadow: _softShadow(),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: _currencyButton('LKR'),
+        ),
+        Expanded(
+          child: _currencyButton('USD'),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _currencyButton(String value) {
+  final bool selected =
+      selectedCurrency == value;
+
+  return InkWell(
+    borderRadius: BorderRadius.circular(22),
+    onTap: () {
+      setState(() {
+        selectedCurrency = value;
+      });
+    },
+    child: Container(
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: selected
+            ? Colors.white
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Text(
+        value,
+        style: TextStyle(
+          color: selected
+              ? purple
+              : const Color(0xFF64748B),
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ),
+  );
+}
+ 
   Widget _billingCycleSelector() {
     return Container(
       height: 55,
@@ -626,6 +692,10 @@ Widget _header() {
               ),
             ],
           ),
+
+          const SizedBox(height: 14),
+
+          _currencySelector(),
 
           if (reminderEnabled) ...[
             const SizedBox(height: 18),
@@ -964,51 +1034,89 @@ Widget _header() {
   // SAVE FUNCTION
   // ============================================================
 
-  void _saveSubscription() {
-    final String name =
-        _nameController.text.trim();
+Future<void> _saveSubscription() async {
+  final String name = _nameController.text.trim();
+  final String cost = _costController.text.trim();
 
-    final String cost =
-        _costController.text.trim();
+  if (name.isEmpty) {
+    _message('Please enter a subscription name.');
+    return;
+  }
 
-    if (name.isEmpty) {
-      _message(
-        'Please enter a subscription name.',
-      );
-      return;
-    }
+  if (cost.isEmpty) {
+    _message('Please enter the subscription cost.');
+    return;
+  }
 
-    if (cost.isEmpty) {
-      _message(
-        'Please enter the subscription cost.',
-      );
-      return;
-    }
+  final double? parsedCost =
+    double.tryParse(
+  cost.replaceAll(',', ''),
+);
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
+if (parsedCost == null || parsedCost < 0) {
+  _message(
+    'Please enter a valid subscription cost.',
+  );
+  return;
+}
+
+  try {
+    await _subscriptionService.addSubscription(
+      name: name,
+      subtitle: '$selectedService • $billingCycle',
+      price:
+    '$selectedCurrency ${parsedCost.toStringAsFixed(2)}',
+      renewal: 'Renews ${_formattedDate(renewalDate)}',
+      usage: reminderTime,
+      category: 'Productivity & AI',
+      status: freeTrial
+    ? 'Free Trial'
+    : 'Active',
+      priceHiked: false,
+
+      amount: parsedCost,
+      currency: selectedCurrency,
+      billingCycle: billingCycle,
+      renewalDate: renewalDate,
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          '$name subscription saved.',
-        ),
+        content: Text('$name subscription saved.'),
       ),
     );
 
     Navigator.pop(context);
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to save subscription: $e'),
+      ),
+    );
   }
+}
 
   // ============================================================
   // DATE PICKER
   // ============================================================
 
   Future<void> _selectDate() async {
-    final DateTime? selected =
-        await showDatePicker(
-      context: context,
-      initialDate: renewalDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2035),
-    );
+    final DateTime today = DateTime.now();
+
+final DateTime? selected =
+    await showDatePicker(
+  context: context,
+  initialDate:
+      renewalDate.isBefore(today)
+          ? today
+          : renewalDate,
+  firstDate: today,
+  lastDate: DateTime(2035),
+);
 
     if (selected != null) {
       setState(() {

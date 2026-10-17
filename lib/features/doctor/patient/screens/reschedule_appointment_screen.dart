@@ -652,7 +652,7 @@ class _RescheduleAppointmentScreenState
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: _availableDates.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           const SizedBox(width: 9),
                       itemBuilder: (context, index) {
                         final date = _availableDates[index];

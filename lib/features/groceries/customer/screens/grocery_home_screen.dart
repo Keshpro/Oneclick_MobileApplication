@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-
 import 'my_orders_screen.dart';
 import '../../controllers/grocery_controller.dart';
 import '../../models/grocery_product_model.dart';
 import 'cart_screen.dart';
 import 'product_details_screen.dart';
+import '../../../auth/screens/provider_rules_screen.dart';
 
 class GroceryHomeScreen extends StatefulWidget {
   const GroceryHomeScreen({super.key});
@@ -41,6 +41,18 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
       appBar: AppBar(
         title: const Text('Groceries'),
         actions: [
+          IconButton(
+            tooltip: 'Become a Seller',
+            icon: const Icon(Icons.storefront_outlined),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProviderRulesScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             tooltip: 'My Orders',
             icon: const Icon(Icons.receipt_long_outlined),
@@ -177,7 +189,22 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.shopping_basket_outlined, size: 55),
+                  child: product.imageUrl.isNotEmpty
+    ? Image.asset(
+        product.imageUrl,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        errorBuilder: (context, error, stackTrace) {
+          return const Icon(
+            Icons.shopping_basket_outlined,
+            size: 55,
+          );
+        },
+      )
+    : const Icon(
+        Icons.shopping_basket_outlined,
+        size: 55,
+      ),
                 ),
               ),
 
