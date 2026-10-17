@@ -3,13 +3,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'share_record_screen.dart';
 import 'dashboard.dart';
 import 'vault_screen.dart';
 import 'subscriptions_screen.dart';
-
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/shared_record.dart';
 import '../services/sharing_service.dart';
@@ -32,7 +31,6 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
   final SharingService _sharingService = SharingService();
 
   List<SharedRecord> sharedRecords = [];
-
   List<SharedRecord> receivedRecords = [];
 
   bool sharedByMe = true;
@@ -178,7 +176,6 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
                         if (sharedByMe) ...[
                           _buildRevocationNotice(),
                           const SizedBox(height: 28),
-
                           if (sharedRecords.isEmpty)
                             const Center(
                               child: Padding(
@@ -196,7 +193,6 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
                                 child: _buildSharedRecordCard(record),
                               ),
                             ),
-
                           const SizedBox(height: 10),
                           _buildShareNewRecord(),
                         ] else ...[
@@ -215,9 +211,6 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
     );
   }
 
-  // ============================================================
-  // TOP BAR
-  // ============================================================
   Widget _buildTopBar() {
     void showSharingSearch() {
       final controller = TextEditingController();
@@ -452,7 +445,6 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
                   ],
                 ),
               ),
-
               _topCircle(Icons.search_rounded, onTap: showSharingSearch),
             ],
           ),
@@ -461,26 +453,6 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
     );
   }
 
-  Widget _smallLogo() {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F8FF),
-        shape: BoxShape.circle,
-        boxShadow: _shadow(),
-      ),
-      child: const _VaultReferenceIcon(
-        Icons.touch_app_outlined,
-        color: purple,
-        size: 20,
-      ),
-    );
-  }
-
-  // ============================================================
-  // HERO
-  // ============================================================
   Widget _buildHero() {
     return _card(
       padding: const EdgeInsets.all(20),
@@ -522,9 +494,6 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
     );
   }
 
-  // ============================================================
-  // TABS
-  // ============================================================
   Widget _buildTabs() {
     return Container(
       padding: const EdgeInsets.all(7),
@@ -536,7 +505,7 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
               selected: sharedByMe,
               icon: Icons.outbox_outlined,
               text: 'Shared by Me',
-              count: '3',
+              count: '${sharedRecords.length}',
               onTap: () {
                 setState(() {
                   sharedByMe = true;
@@ -549,7 +518,7 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
               selected: !sharedByMe,
               icon: Icons.inbox_outlined,
               text: 'Shared with Me',
-              count: '2',
+              count: '${receivedRecords.length}',
               onTap: () {
                 setState(() {
                   sharedByMe = false;
@@ -625,9 +594,6 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
     );
   }
 
-  // ============================================================
-  // REVOCATION NOTICE
-  // ============================================================
   Widget _buildRevocationNotice() {
     return _card(
       padding: const EdgeInsets.all(24),
@@ -665,7 +631,6 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
 
   Widget _buildSharedRecordCard(SharedRecord record) {
     final recipientName = record.recipientName.trim();
-
     final initials = recipientName.isNotEmpty
         ? recipientName[0].toUpperCase()
         : '?';
@@ -699,9 +664,9 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
                       ),
                     ),
                     const SizedBox(height: 5),
-                    Text(
+                    const Text(
                       'Shared record',
-                      style: const TextStyle(color: muted, fontSize: 13),
+                      style: TextStyle(color: muted, fontSize: 13),
                     ),
                   ],
                 ),
@@ -715,9 +680,7 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
               ),
             ],
           ),
-
           const SizedBox(height: 23),
-
           _recipient(
             initials: initials,
             name: record.recipientName,
@@ -727,9 +690,7 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
             rightValueColor: isRevoked ? danger : purple,
             verified: !isRevoked,
           ),
-
           const SizedBox(height: 21),
-
           Row(
             children: [
               Expanded(
@@ -746,9 +707,7 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
               ),
             ],
           ),
-
           const SizedBox(height: 22),
-
           Row(
             children: [
               Expanded(
@@ -770,105 +729,6 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
     );
   }
 
-  // ============================================================
-  // HOME PURCHASE
-  // ============================================================
-  Widget _buildHomePurchase() {
-    return _card(
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _circleIcon(Icons.folder_zip_outlined, color: purple2, size: 44),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Home Purchase Tax Bundle',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: ink,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Encrypted bundle • 6 attachments',
-                      style: TextStyle(color: muted, fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-              _pill(
-                icon: Icons.cloud_download_outlined,
-                text: 'View & Download',
-                color: purple,
-              ),
-            ],
-          ),
-          const SizedBox(height: 23),
-          _recipient(
-            initials: 'ER',
-            name: 'Elena Rostova (Notary)',
-            email: 'e.rostova@legaladvisors.ch',
-            rightTitle: 'Vault Seal',
-            rightValue: 'Active',
-            rightValueColor: purple,
-            verified: true,
-          ),
-          const SizedBox(height: 21),
-          Row(
-            children: [
-              Expanded(child: _infoPill(Icons.all_inclusive, 'Never expires')),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _infoPill(
-                  Icons.download_done_outlined,
-                  'Downloaded once (Nov 9)',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: _actionButton(
-                  icon: Icons.link_off,
-                  text: 'Revoke Access',
-                  color: danger,
-                  onTap: () {
-                    _message('This mock card is no longer active.');
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _actionButton(
-                  icon: Icons.receipt_long_outlined,
-                  text: 'Audit Log',
-                  color: ink,
-                  onTap: () {
-                    _message('Opening audit log');
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================
-  // SHARED WITH ME
-  // ============================================================
   Widget _buildReceivedSection() {
     return _card(
       padding: const EdgeInsets.all(22),
@@ -903,16 +763,12 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
               ),
             ],
           ),
-
           const SizedBox(height: 22),
-
           const Text(
             'Records shared with your OneClick account.',
             style: TextStyle(color: muted, fontSize: 12, height: 1.6),
           ),
-
           const SizedBox(height: 21),
-
           if (receivedRecords.isEmpty)
             const Center(
               child: Padding(
@@ -1050,9 +906,6 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
     );
   }
 
-  // ============================================================
-  // SHARE NEW RECORD
-  // ============================================================
   Widget _buildShareNewRecord() {
     return InkWell(
       onTap: () {
@@ -1084,98 +937,82 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
     );
   }
 
-  // ============================================================
-  // BOTTOM NAVIGATION
-  // ============================================================
   Widget _buildBottomNavigation() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(32, 13, 32, 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0F1F7),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .04),
-            blurRadius: 14,
-            offset: const Offset(0, -3),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        minimum: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-        child: Center(
-          heightFactor: 1,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 430),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.white.withAlpha(240)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x140F172A),
-                    blurRadius: 24,
-                    offset: Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(28),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: ColoredBox(
-                    color: Colors.white.withAlpha(235),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _navItem(
-                            icon: Icons.home_outlined,
-                            label: 'Home',
-                            onTap: () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const PersonalDashboardScreen(),
-                                ),
-                              );
-                            },
-                          ),
-                          _navItem(
-                            icon: Icons.folder_special_outlined,
-                            label: 'Vault',
-                            onTap: () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const VaultScreen(),
-                                ),
-                              );
-                            },
-                          ),
-                          _navItem(
-                            icon: Icons.credit_card_outlined,
-                            label: 'Subs',
-                            onTap: () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const SubscriptionsScreen(),
-                                ),
-                              );
-                            },
-                          ),
-                          _navItem(
-                            icon: Icons.share_outlined,
-                            label: 'Sharing',
-                            selected: true,
-                            onTap: () {},
-                          ),
-                        ],
-                      ),
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 430),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: Colors.white.withAlpha(240)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x140F172A),
+                  blurRadius: 24,
+                  offset: Offset(0, -4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: ColoredBox(
+                  color: Colors.white.withAlpha(235),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _navItem(
+                          icon: Icons.home_outlined,
+                          label: 'Home',
+                          onTap: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const PersonalDashboardScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        _navItem(
+                          icon: Icons.folder_special_outlined,
+                          label: 'Vault',
+                          onTap: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const VaultScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        _navItem(
+                          icon: Icons.credit_card_outlined,
+                          label: 'Subs',
+                          onTap: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const SubscriptionsScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        _navItem(
+                          icon: Icons.share_outlined,
+                          label: 'Sharing',
+                          selected: true,
+                          onTap: () {},
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -1229,9 +1066,6 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
     );
   }
 
-  // ============================================================
-  // REUSABLE UI
-  // ============================================================
   Widget _recipient({
     required String initials,
     required String name,
@@ -1513,9 +1347,6 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
     ];
   }
 
-  // ============================================================
-  // ACTIONS
-  // ============================================================
   void _message(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
@@ -1560,13 +1391,10 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
 
     try {
       await _sharingService.revokeAccess(record.id);
-
       if (!mounted) return;
-
       _message('Access revoked for ${record.recipientName}');
     } catch (e) {
       if (!mounted) return;
-
       _message('Failed to revoke access: $e');
     }
   }
@@ -1584,10 +1412,14 @@ class _VaultGlassScope extends InheritedWidget {
 }
 
 class _VaultGlassCard extends StatefulWidget {
-  const _VaultGlassCard({required this.child, required this.padding})
-    : interactive = false;
+  const _VaultGlassCard({
+    required this.child,
+    required this.padding,
+    this.interactive = false,
+  });
   final Widget child;
   final EdgeInsetsGeometry padding;
+  final bool interactive;
 
   @override
   State<_VaultGlassCard> createState() => _VaultGlassCardState();
@@ -1596,10 +1428,11 @@ class _VaultGlassCard extends StatefulWidget {
 class _VaultGlassCardState extends State<_VaultGlassCard> {
   bool _hovered = false;
   bool _pressed = false;
+
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: MouseCursor.defer,
+      cursor: widget.interactive ? SystemMouseCursors.click : MouseCursor.defer,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() {
         _hovered = false;
@@ -1666,69 +1499,6 @@ class _VaultGlassCardState extends State<_VaultGlassCard> {
   }
 }
 
-class _VaultSearchSurface extends StatefulWidget {
-  const _VaultSearchSurface({required this.child, required this.padding});
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-  @override
-  State<_VaultSearchSurface> createState() => _VaultSearchSurfaceState();
-}
-
-class _VaultSearchSurfaceState extends State<_VaultSearchSurface> {
-  bool _focused = false;
-  @override
-  Widget build(BuildContext context) {
-    return Focus(
-      onFocusChange: (value) => setState(() => _focused = value),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: widget.padding,
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(179),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _focused
-                    ? const Color(0x666366F1)
-                    : Colors.white.withAlpha(204),
-                width: _focused ? 2 : 1,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x080F172A),
-                  offset: Offset(0, 2),
-                  blurRadius: 4,
-                ),
-              ],
-            ),
-            child: widget.child,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _VaultRowFeedback extends StatefulWidget {
-  const _VaultRowFeedback({required this.builder});
-  final Widget Function(BuildContext, bool) builder;
-  @override
-  State<_VaultRowFeedback> createState() => _VaultRowFeedbackState();
-}
-
-class _VaultRowFeedbackState extends State<_VaultRowFeedback> {
-  bool _hovered = false;
-  @override
-  Widget build(BuildContext context) => MouseRegion(
-    onEnter: (_) => setState(() => _hovered = true),
-    onExit: (_) => setState(() => _hovered = false),
-    child: widget.builder(context, _hovered),
-  );
-}
-
 class _VaultPulseDot extends StatefulWidget {
   const _VaultPulseDot({
     required this.color,
@@ -1738,6 +1508,7 @@ class _VaultPulseDot extends StatefulWidget {
   final Color color;
   final double size;
   final bool ping;
+
   @override
   State<_VaultPulseDot> createState() => _VaultPulseDotState();
 }
@@ -1748,6 +1519,7 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
     vsync: this,
     duration: const Duration(milliseconds: 1400),
   );
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -1766,19 +1538,29 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _controller,
-    builder: (context, child) => SizedBox(
-      width: widget.size,
-      height: widget.size,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          if (widget.ping)
-            Transform.scale(
-              scale: 1 + _controller.value,
-              child: Opacity(
-                opacity: (1 - _controller.value) * 0.75,
+        animation: _controller,
+        builder: (context, child) => SizedBox(
+          width: widget.size,
+          height: widget.size,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              if (widget.ping)
+                Transform.scale(
+                  scale: 1 + _controller.value,
+                  child: Opacity(
+                    opacity: (1 - _controller.value) * 0.75,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: widget.color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+              Opacity(
+                opacity: widget.ping ? 1 : 1 - _controller.value * 0.5,
                 child: Container(
                   decoration: BoxDecoration(
                     color: widget.color,
@@ -1786,26 +1568,17 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
                   ),
                 ),
               ),
-            ),
-          Opacity(
-            opacity: widget.ping ? 1 : 1 - _controller.value * 0.5,
-            child: Container(
-              decoration: BoxDecoration(
-                color: widget.color,
-                shape: BoxShape.circle,
-              ),
-            ),
+            ],
           ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
 
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon);
+  const _VaultNavGlyph(this.icon, {this.color});
   final IconData icon;
- 
+  final Color? color;
+
   @override
   State<_VaultNavGlyph> createState() => _VaultNavGlyphState();
 }
@@ -1813,33 +1586,33 @@ class _VaultNavGlyph extends StatefulWidget {
 class _VaultNavGlyphState extends State<_VaultNavGlyph> {
   bool _hovered = false;
   bool _pressed = false;
+
   @override
   Widget build(BuildContext context) => MouseRegion(
-    cursor: SystemMouseCursors.click,
-    onEnter: (_) => setState(() => _hovered = true),
-    onExit: (_) => setState(() {
-      _hovered = false;
-      _pressed = false;
-    }),
-    child: Listener(
-      onPointerDown: (_) => setState(() => _pressed = true),
-      onPointerUp: (_) => setState(() => _pressed = false),
-      onPointerCancel: (_) => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.95 : 1,
-        duration: const Duration(milliseconds: 200),
-        child: _VaultReferenceIcon(
-          widget.icon,
-          size: 20,
-          color:
-              widget.color ??
-              (_hovered
-                  ? const Color(0xFF1E293B)
-                  : IconTheme.of(context).color ?? const Color(0xFF94A3B8)),
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() {
+          _hovered = false;
+          _pressed = false;
+        }),
+        child: Listener(
+          onPointerDown: (_) => setState(() => _pressed = true),
+          onPointerUp: (_) => setState(() => _pressed = false),
+          onPointerCancel: (_) => setState(() => _pressed = false),
+          child: AnimatedScale(
+            scale: _pressed ? 0.95 : 1,
+            duration: const Duration(milliseconds: 200),
+            child: _VaultReferenceIcon(
+              widget.icon,
+              size: 20,
+              color: widget.color ??
+                  (_hovered
+                      ? const Color(0xFF1E293B)
+                      : IconTheme.of(context).color ?? const Color(0xFF94A3B8)),
+            ),
+          ),
         ),
-      ),
-   ),
-  );
+      );
 }
 
 class _VaultReferenceIcon extends StatelessWidget {
@@ -1847,6 +1620,7 @@ class _VaultReferenceIcon extends StatelessWidget {
   final IconData icon;
   final double? size;
   final Color? color;
+
   static final Map<IconData, String> _svg = {
     Icons.search_rounded: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="2" viewBox="0 0 24 24">
 <path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -1945,14 +1719,14 @@ class _VaultReferenceIcon extends StatelessWidget {
 <line x1="15.41" x2="8.59" y1="6.51" y2="10.49"></line>
 </svg>''',
   };
+
   @override
   Widget build(BuildContext context) {
     final svg = _svg[icon];
     final theme = IconTheme.of(context);
     final resolvedColor = color ?? theme.color ?? const Color(0xFF64748B);
     final resolvedSize = size ?? theme.size ?? 24;
-    if (svg == null)
-      return Icon(icon, size: resolvedSize, color: resolvedColor);
+    if (svg == null) return Icon(icon, size: resolvedSize, color: resolvedColor);
     return SvgPicture.string(
       svg,
       width: resolvedSize,
@@ -1973,16 +1747,16 @@ class _VaultPressFeedbackState extends State<_VaultPressFeedback> {
   bool _pressed = false;
   @override
   Widget build(BuildContext context) => MouseRegion(
-    cursor: SystemMouseCursors.click,
-    child: Listener(
-      onPointerDown: (_) => setState(() => _pressed = true),
-      onPointerUp: (_) => setState(() => _pressed = false),
-      onPointerCancel: (_) => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? .95 : 1,
-        duration: const Duration(milliseconds: 150),
-        child: widget.child,
-      ),
-    ),
-  );
+        cursor: SystemMouseCursors.click,
+        child: Listener(
+          onPointerDown: (_) => setState(() => _pressed = true),
+          onPointerUp: (_) => setState(() => _pressed = false),
+          onPointerCancel: (_) => setState(() => _pressed = false),
+          child: AnimatedScale(
+            scale: _pressed ? .95 : 1,
+            duration: const Duration(milliseconds: 150),
+            child: widget.child,
+          ),
+        ),
+      );
 }
