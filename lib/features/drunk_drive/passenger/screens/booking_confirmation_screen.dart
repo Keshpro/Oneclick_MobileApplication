@@ -4,7 +4,9 @@ import '../../models/fare_estimate.dart';
 import '../../models/location_model.dart';
 import '../../models/trip_reason.dart';
 import '../../models/vehicle_model.dart';
-import '../../services/booking_service.dart';
+import '../../models/booking_model.dart';
+import '../../models/booking_status.dart';
+import '../../services/booking_firestore_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 import 'drunk_drive_home_screen.dart';
 
@@ -33,17 +35,21 @@ class BookingConfirmationScreen extends StatefulWidget {
 }
 
 class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
-  final BookingService _bookingService = BookingService();
+  final BookingFirestoreService _bookingService = BookingFirestoreService();
   bool _isConfirming = false;
 
   String _rs(double amount) => 'Rs. ${amount.toStringAsFixed(0)}';
 
-  Future<void> _onConfirm() async {
-    setState(() => _isConfirming = true);
 
-    await Future.delayed(const Duration(milliseconds: 400));
+Future<void> _onConfirm() async {
+  if (_isConfirming) return;
 
-    _bookingService.createBooking(
+  setState(() => _isConfirming = true);
+
+  try {
+    final booking = BookingModel(
+      id: '',
+      passengerId: _bookingService.currentUserId,
       vehicle: widget.vehicle,
       pickup: widget.pickup,
       destination: widget.destination,
@@ -51,9 +57,14 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       fareEstimate: widget.fareEstimate,
       distanceKm: widget.distanceKm,
       durationMinutes: widget.durationMinutes,
+      status: BookingStatus.searchingDriver,
+      createdAt: DateTime.now(),
     );
 
+    await _bookingService.createBookingModel(booking);
+
     if (!mounted) return;
+
     setState(() => _isConfirming = false);
 
     await showDialog<void>(
@@ -63,19 +74,28 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
         backgroundColor: DrunkDriveColors.surface,
         title: const Row(
           children: [
-            Icon(Icons.check_circle_rounded, color: DrunkDriveColors.success),
+            Icon(
+              Icons.check_circle_rounded,
+              color: DrunkDriveColors.success,
+            ),
             SizedBox(width: 10),
-            Text('Booking Created', style: TextStyle(color: Colors.white)),
+            Text(
+              'Booking Created',
+              style: TextStyle(color: Colors.white),
+            ),
           ],
         ),
         content: const Text(
-          "We're now finding a nearby verified driver for you.",
+          "We're now searching for an available driver.",
           style: TextStyle(color: DrunkDriveColors.textMuted),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Done', style: TextStyle(color: DrunkDriveColors.accent)),
+            child: const Text(
+              'Done',
+              style: TextStyle(color: DrunkDriveColors.accent),
+            ),
           ),
         ],
       ),
@@ -84,10 +104,23 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     if (!mounted) return;
 
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const DrunkDriveHomeScreen()),
+      MaterialPageRoute(
+        builder: (context) => const DrunkDriveHomeScreen(),
+      ),
       (route) => route.isFirst,
     );
+  } catch (error) {
+    if (!mounted) return;
+
+    setState(() => _isConfirming = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Unable to create booking: $error'),
+      ),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {

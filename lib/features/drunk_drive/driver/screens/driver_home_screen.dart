@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import '../../services/booking_firestore_service.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../models/booking_model.dart';
@@ -22,6 +26,9 @@ class DriverHomeScreen extends StatefulWidget {
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
   final DriverService _driverService = DriverService();
   final BookingService _bookingService = BookingService();
+  final BookingFirestoreService _firestoreService = BookingFirestoreService();
+  StreamSubscription<List<BookingModel>>? _requestsSubscription;
+  StreamSubscription<BookingModel?>? _activeTripSubscription;
   final DriverRatingService _driverRatingService = DriverRatingService();
 
   bool _isOnline = false;
@@ -42,6 +49,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   @override
   void dispose() {
+    _requestsSubscription?.cancel();
+    _activeTripSubscription?.cancel();
     _pinController.dispose();
     super.dispose();
   }
@@ -60,17 +69,47 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   void _loadRequests() {
-    setState(() {
-      _incomingRequests = _bookingService.getAvailableRequests();
-    });
+    _requestsSubscription?.cancel();
+
+    _requestsSubscription = _firestoreService.watchAvailableRequests().listen(
+      (requests) {
+        if (!mounted) return;
+
+        setState(() {
+          _incomingRequests = requests;
+        });
+      },
+      onError: (error) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to load booking requests: $error')),
+        );
+      },
+    );
   }
 
   void _loadActiveTrip() {
-    setState(() {
-      _activeTrip = _bookingService.getMyActiveDriverBooking(
-        VehicleService.currentUserId,
-      );
-    });
+    _activeTripSubscription?.cancel();
+
+    _activeTripSubscription = _firestoreService
+        .watchMyActiveDriverBooking()
+        .listen(
+          (booking) {
+            if (!mounted) return;
+
+            setState(() {
+              _activeTrip = booking;
+            });
+          },
+          onError: (error) {
+            if (!mounted) return;
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Unable to load active trip: $error')),
+            );
+          },
+        );
   }
 
   String get _driverRatingText {
@@ -128,68 +167,113 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     });
   }
 
-  void _onStartHeading() {
+  Future<void> _onStartHeading() async {
     if (_activeTrip == null) return;
 
-    final updated = _bookingService.startHeadingToCustomer(
-      _activeTrip!.id,
-      VehicleService.currentUserId,
-    );
-
-    if (updated == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to update trip status.')),
+    try {
+      final updated = await _firestoreService.startHeadingToCustomer(
+        _activeTrip!.id,
       );
-      return;
-    }
 
-    setState(() {
-      _activeTrip = updated;
-    });
+      if (!mounted) return;
+
+      if (updated == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to update trip status.')),
+        );
+        return;
+      }
+
+      setState(() {
+        _activeTrip = updated;
+      });
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Heading to customer!')));
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to update trip: $error')));
+    }
   }
 
-  void _onDriverArrived() {
+  Future<void> _onDriverArrived() async {
     if (_activeTrip == null) return;
 
-    final updated = _bookingService.markDriverArrived(
-      _activeTrip!.id,
-      VehicleService.currentUserId,
-    );
-
-    if (updated == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to update trip status.')),
+    try {
+      final updated = await _firestoreService.markDriverArrived(
+        _activeTrip!.id,
       );
-      return;
-    }
 
-    setState(() {
-      _activeTrip = updated;
-    });
+      if (!mounted) return;
+
+      if (updated == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to update trip status.')),
+        );
+        return;
+      }
+
+      setState(() {
+        _activeTrip = updated;
+      });
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Arrival confirmed!')));
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to confirm arrival: $error')),
+      );
+    }
   }
 
-  void _onBeginVerification() {
+  Future<void> _onBeginVerification() async {
     if (_activeTrip == null) return;
 
-    final updated = _bookingService.beginVerification(
-      _activeTrip!.id,
-      VehicleService.currentUserId,
-    );
-
-    if (updated == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to start verification.')),
+    try {
+      final updated = await _firestoreService.beginVerification(
+        _activeTrip!.id,
       );
-      return;
-    }
 
-    setState(() {
-      _activeTrip = updated;
-    });
+      if (!mounted) return;
+
+      if (updated == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to start verification.')),
+        );
+        return;
+      }
+
+      setState(() {
+        _activeTrip = updated;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ready to verify customer PIN.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to start verification: $error')),
+      );
+    }
   }
 
   Future<void> _onStartTrip() async {
     if (_activeTrip == null) return;
+    final enteredPin = _pinController.text.trim();
+
+    if (!RegExp(r'^\d{4}$').hasMatch(enteredPin)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid 4-digit PIN.')),
+      );
+      return;
+    }
 
     setState(() => _isStartingTrip = true);
     await Future.delayed(const Duration(milliseconds: 300));
@@ -259,10 +343,22 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    final cancelled = _bookingService.cancelBookingByDriver(
-      _activeTrip!.id,
-      VehicleService.currentUserId,
-    );
+    BookingModel? cancelled;
+
+    try {
+      cancelled = await _firestoreService.cancelBookingByDriver(
+        _activeTrip!.id,
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to cancel booking: $error')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
 
     if (cancelled == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -288,21 +384,34 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   // driver "accepting" a booking here may be accepting their own
   // trip. This resolves naturally once there are separate real
   // accounts — the accept/decline logic itself doesn't change.
-  void _onAccept(BookingModel booking) {
-    final updated = _bookingService.acceptBooking(
-      booking.id,
-      VehicleService.currentUserId,
-    );
-    if (updated == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('This booking is no longer available.')),
-      );
-    } else {
+
+  Future<void> _onAccept(BookingModel booking) async {
+    try {
+      final updated = await _firestoreService.acceptBookingByDriver(booking.id);
+
+      if (!mounted) return;
+
+      if (updated == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This booking is no longer available.')),
+        );
+        return;
+      }
+
+      setState(() {
+        _incomingRequests.removeWhere((b) => b.id == booking.id);
+        _activeTrip = updated;
+      });
+
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Booking Accepted!')));
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to accept booking: $error')),
+      );
     }
-    _loadRequests();
-    _loadActiveTrip();
   }
 
   void _onDecline(BookingModel booking) {
@@ -330,6 +439,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     if (_isOnline) {
       _loadRequests();
       _loadActiveTrip();
+    } else {
+      _requestsSubscription?.cancel();
+      setState(() {
+        _incomingRequests = [];
+      });
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

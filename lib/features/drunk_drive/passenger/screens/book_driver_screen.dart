@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/location_model.dart';
 import '../../models/trip_reason.dart';
 import '../../models/vehicle_model.dart';
-import '../../services/vehicle_service.dart';
+import '../../services/vehicle_firestore_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 import 'add_vehicle_screen.dart';
 import 'fare_estimate_screen.dart';
@@ -24,8 +24,7 @@ class BookDriverScreen extends StatefulWidget {
 }
 
 class _BookDriverScreenState extends State<BookDriverScreen> {
-  final VehicleService _vehicleService = VehicleService();
-
+final VehicleFirestoreService _vehicleService = VehicleFirestoreService();
   List<VehicleModel> _vehicles = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -41,33 +40,41 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
   }
 
   Future<void> _loadVehicles() async {
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    final vehicles = await _vehicleService.getMyVehicleModels();
+
+    if (!mounted) return;
+
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _vehicles = vehicles;
+      _isLoading = false;
+
+      final defaultVehicle = vehicles.where(
+        (vehicle) => vehicle.isDefault,
+      );
+
+      if (defaultVehicle.isNotEmpty) {
+        _selectedVehicleId = defaultVehicle.first.id;
+      } else if (vehicles.isNotEmpty) {
+        _selectedVehicleId = vehicles.first.id;
+      } else {
+        _selectedVehicleId = null;
+      }
     });
+  } catch (error) {
+    if (!mounted) return;
 
-    try {
-      await Future.delayed(const Duration(milliseconds: 300));
-      final vehicles = _vehicleService.getMyVehicles();
-
-      if (!mounted) return;
-      setState(() {
-        _vehicles = vehicles;
-        _isLoading = false;
-        // Pre-select the passenger's default vehicle, if they have one,
-        // so they don't have to tap it manually every time.
-        final defaultVehicle = _vehicleService.getDefaultVehicle();
-        _selectedVehicleId ??= defaultVehicle?.id;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = 'Something went wrong.';
-        _isLoading = false;
-      });
-    }
+    setState(() {
+      _errorMessage = 'Unable to load vehicles: $error';
+      _isLoading = false;
+    });
   }
-
+}
   Future<void> _onAddVehicle() async {
     final added = await Navigator.push<bool>(
       context,
@@ -99,9 +106,16 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     if (result != null) setState(() => _destination = result);
   }
 
-  void _onContinue() {
-    final vehicle = _vehicleService.getVehicleById(_selectedVehicleId!);
-    if (vehicle == null) return;
+ void _onContinue() {
+  if (_selectedVehicleId == null) return;
+
+  final matchingVehicles = _vehicles.where(
+    (vehicle) => vehicle.id == _selectedVehicleId,
+  );
+
+  if (matchingVehicles.isEmpty) return;
+
+  final vehicle = matchingVehicles.first;
 
     Navigator.push(
       context,

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/booking_model.dart';
 import '../../models/booking_status.dart';
-import '../../services/booking_service.dart';
+import '../../services/booking_firestore_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 import 'my_vehicles_screen.dart';
 import 'book_driver_screen.dart';
@@ -19,7 +19,7 @@ class DrunkDriveHomeScreen extends StatefulWidget {
 }
 
 class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
-  final BookingService _bookingService = BookingService();
+  final BookingFirestoreService _bookingService = BookingFirestoreService();
   BookingModel? _activeBooking;
 
   @override
@@ -28,23 +28,33 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
     _loadActiveBooking();
   }
 
-  void _loadActiveBooking() {
-    final bookings = _bookingService.getMyBookings();
+  Future<void> _loadActiveBooking() async {
+    try {
+      final bookings = await _bookingService.getMyBookingModels();
 
-    if (bookings.isEmpty) {
-      setState(() => _activeBooking = null);
-      return;
+      const finishedStatuses = {
+        BookingStatus.completed,
+        BookingStatus.cancelledByUser,
+        BookingStatus.cancelledByDriver,
+        BookingStatus.driverNotFound,
+      };
+
+      final activeBookings = bookings
+          .where((booking) => !finishedStatuses.contains(booking.status))
+          .toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        _activeBooking = activeBookings.isEmpty ? null : activeBookings.first;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to load active booking: $error')),
+      );
     }
-
-    final latest = bookings.first;
-    final isFinished =
-        latest.status == BookingStatus.completed ||
-        latest.status == BookingStatus.cancelledByUser ||
-        latest.status == BookingStatus.cancelledByDriver;
-
-    setState(() {
-      _activeBooking = isFinished ? null : latest;
-    });
   }
 
   @override

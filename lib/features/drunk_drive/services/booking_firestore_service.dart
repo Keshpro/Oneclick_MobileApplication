@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'dart:math';
+
 import '../models/booking_model.dart';
 import '../models/booking_status.dart';
 
@@ -21,7 +23,7 @@ class BookingFirestoreService {
 
   CollectionReference<Map<String, dynamic>> get _bookings =>
       _firestore.collection('drunkDriveBookings');
-
+  
   Future<String> createBooking(Map<String, dynamic> bookingData) async {
     final document = _bookings.doc();
 
@@ -226,4 +228,231 @@ class BookingFirestoreService {
       });
     });
   }
+
+  Stream<List<BookingModel>> watchAvailableRequests() {
+    return _bookings
+        .where(
+          'status',
+          whereIn: [
+            BookingStatus.requested.name,
+            BookingStatus.searchingDriver.name,
+          ],
+        )
+        .snapshots()
+        .map((snapshot) {
+          final requests = snapshot.docs
+              .map((doc) => BookingModel.fromMap(doc.id, doc.data()))
+              .where(
+                (booking) =>
+                    booking.driverId == null &&
+                    booking.passengerId != currentUserId,
+              )
+              .toList();
+
+          requests.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+          return requests;
+        });
+  }
+
+  Future<BookingModel?> acceptBookingByDriver(String bookingId) async {
+    final driverId = currentUserId;
+    final bookingRef = _bookings.doc(bookingId);
+
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(bookingRef);
+
+      if (!snapshot.exists) return null;
+
+      final data = snapshot.data();
+      if (data == null) return null;
+
+      // A driver cannot accept their own passenger booking.
+      if (data['passengerId'] == driverId) return null;
+
+      // Reject bookings that another driver has already accepted.
+      if (data['driverId'] != null) return null;
+
+      final booking = BookingModel.fromMap(snapshot.id, data);
+
+      if (booking.status != BookingStatus.requested &&
+          booking.status != BookingStatus.searchingDriver) {
+        return null;
+      }
+
+      transaction.update(bookingRef, {
+        'driverId': driverId,
+        'status': BookingStatus.driverAssigned.name,
+      });
+
+      return BookingModel.fromMap(snapshot.id, {
+        ...data,
+        'driverId': driverId,
+        'status': BookingStatus.driverAssigned.name,
+      });
+    });
+  }
+
+  Stream<BookingModel?> watchMyActiveDriverBooking() {
+    return _bookings
+        .where('driverId', isEqualTo: currentUserId)
+        .snapshots()
+        .map((snapshot) {
+          final activeBookings = snapshot.docs
+              .map((doc) => BookingModel.fromMap(doc.id, doc.data()))
+              .where(
+                (booking) => !{
+                  BookingStatus.completed,
+                  BookingStatus.cancelledByUser,
+                  BookingStatus.cancelledByDriver,
+                  BookingStatus.driverNotFound,
+                }.contains(booking.status),
+              )
+              .toList();
+
+          activeBookings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+          return activeBookings.isEmpty ? null : activeBookings.first;
+        });
+  }
+
+  Future<BookingModel?> startHeadingToCustomer(String bookingId) async {
+    final driverId = currentUserId;
+    final bookingRef = _bookings.doc(bookingId);
+
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(bookingRef);
+
+      if (!snapshot.exists) return null;
+
+      final data = snapshot.data();
+      if (data == null || data['driverId'] != driverId) {
+        return null;
+      }
+
+      final booking = BookingModel.fromMap(snapshot.id, data);
+
+      if (booking.status != BookingStatus.driverAssigned) {
+        return null;
+      }
+
+      transaction.update(bookingRef, {
+        'status': BookingStatus.driverArriving.name,
+      });
+
+      return BookingModel.fromMap(snapshot.id, {
+        ...data,
+        'status': BookingStatus.driverArriving.name,
+      });
+    });
+  }
+
+  Future<BookingModel?> markDriverArrived(String bookingId) async {
+    final driverId = currentUserId;
+    final bookingRef = _bookings.doc(bookingId);
+
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(bookingRef);
+
+      if (!snapshot.exists) return null;
+
+      final data = snapshot.data();
+
+      if (data == null || data['driverId'] != driverId) {
+        return null;
+      }
+
+      final booking = BookingModel.fromMap(snapshot.id, data);
+
+      if (booking.status != BookingStatus.driverArriving) {
+        return null;
+      }
+
+      transaction.update(bookingRef, {
+        'status': BookingStatus.driverArrived.name,
+      });
+
+      return BookingModel.fromMap(snapshot.id, {
+        ...data,
+        'status': BookingStatus.driverArrived.name,
+      });
+    });
+  }
+
+  Future<BookingModel?> beginVerification(String bookingId) async {
+    final driverId = currentUserId;
+    final bookingRef = _bookings.doc(bookingId);
+
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(bookingRef);
+
+      if (!snapshot.exists) return null;
+
+      final data = snapshot.data();
+
+      if (data == null || data['driverId'] != driverId) {
+        return null;
+      }
+
+      final booking = BookingModel.fromMap(snapshot.id, data);
+
+      if (booking.status != BookingStatus.driverArrived) {
+        return null;
+      }
+
+      transaction.update(bookingRef, {
+        'status': BookingStatus.verification.name,
+      });
+
+      return BookingModel.fromMap(snapshot.id, {
+        ...data,
+        'status': BookingStatus.verification.name,
+      });
+    });
+  }
+
+  String generateTripPin() {
+    final random = Random.secure();
+
+    return List.generate(4, (_) => random.nextInt(10)).join();
+  }
+  Future<BookingModel?> cancelBookingByDriver(String bookingId) async {
+  final driverId = currentUserId;
+  final bookingRef = _bookings.doc(bookingId);
+
+  return _firestore.runTransaction((transaction) async {
+    final snapshot = await transaction.get(bookingRef);
+
+    if (!snapshot.exists) return null;
+
+    final data = snapshot.data();
+
+    if (data == null || data['driverId'] != driverId) {
+      return null;
+    }
+
+    final booking = BookingModel.fromMap(snapshot.id, data);
+
+    const cancellableStatuses = {
+      BookingStatus.driverAssigned,
+      BookingStatus.driverAccepted,
+      BookingStatus.driverArriving,
+      BookingStatus.driverArrived,
+      BookingStatus.verification,
+    };
+
+    if (!cancellableStatuses.contains(booking.status)) {
+      return null;
+    }
+
+    transaction.update(bookingRef, {
+      'status': BookingStatus.cancelledByDriver.name,
+    });
+
+    return BookingModel.fromMap(snapshot.id, {
+      ...data,
+      'status': BookingStatus.cancelledByDriver.name,
+    });
+  });
+}
 }
