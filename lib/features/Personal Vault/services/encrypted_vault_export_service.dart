@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:file_saver/file_saver.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/subscription_record.dart';
 import '../models/vault_record.dart';
@@ -246,39 +245,16 @@ class EncryptedVaultExportService {
 
   Future<Map<String, dynamic>>
       _getVaultPreferences() async {
-    final prefs =
-        await SharedPreferences.getInstance();
-
     return {
-      'biometricEnabled':
-          prefs.getBool(
-                'vault_biometric_enabled',
-              ) ??
-              false,
-      'pushNotifications':
-          prefs.getBool(
-                'vault_push_notifications',
-              ) ??
-              true,
-      'emailNotifications':
-          prefs.getBool(
-                'vault_email_notifications',
-              ) ??
-              false,
-      'expiryWarnings':
-          prefs.getStringList(
-                'vault_expiry_warnings',
-              ) ??
-              [
-                '30 days',
-                '14 days',
-                '7 days',
-              ],
-      'renewalWarning':
-          prefs.getString(
-                'vault_renewal_warning',
-              ) ??
-              '3 days prior',
+      'biometricEnabled': false,
+      'pushNotifications': true,
+      'emailNotifications': false,
+      'expiryWarnings': [
+        '30 days',
+        '14 days',
+        '7 days',
+      ],
+      'renewalWarning': '3 days prior',
     };
   }
 

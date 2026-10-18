@@ -42,18 +42,17 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
         title: const Text('Groceries'),
         actions: [
           IconButton(
-  tooltip: 'Become a Seller',
-  icon: const Icon(Icons.storefront_outlined),
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const ProviderRulesScreen(),
-      ),
-    );
-  },
-),
-
+            tooltip: 'Become a Seller',
+            icon: const Icon(Icons.storefront_outlined),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProviderRulesScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             tooltip: 'My Orders',
             icon: const Icon(Icons.receipt_long_outlined),
