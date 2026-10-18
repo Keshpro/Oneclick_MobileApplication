@@ -62,7 +62,7 @@ class PendingAccounts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4, // Updated length for 4 Provider Roles
+      length: 5, // Updated length for 4 Provider Roles
       child: Scaffold(
         backgroundColor: const Color(0xFFF4F6FB),
         appBar: AppBar(
@@ -78,10 +78,12 @@ class PendingAccounts extends StatelessWidget {
             unselectedLabelColor: Colors.white60,
             indicatorColor: Colors.white,
             tabs: [
+            
               Tab(text: 'Workers'),
               Tab(text: 'Food Sellers'),
               Tab(text: 'Doctors'),
               Tab(text: 'Drivers'),
+              Tab(text: 'Grocery Sellers'),
             ],
           ),
         ),
@@ -91,6 +93,7 @@ class PendingAccounts extends StatelessWidget {
             _buildPendingList(context, 'food_sellers'),
             _buildPendingList(context, 'doctors'),
             _buildPendingList(context, 'drivers'),
+            _buildPendingList(context, 'seller_applications'),
           ],
         ),
       ),
