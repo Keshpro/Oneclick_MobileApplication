@@ -7,7 +7,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'vault_screen.dart';
 import 'subscriptions_screen.dart';
 import 'sharing_center_screen.dart';
