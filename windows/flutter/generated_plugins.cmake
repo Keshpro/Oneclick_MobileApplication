@@ -4,10 +4,15 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   cloud_firestore
+  file_saver
   firebase_app_check
   firebase_auth
   firebase_core
   firebase_storage
+  local_auth_windows
+  printing
+  syncfusion_pdfviewer_windows
+  url_launcher_windows
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

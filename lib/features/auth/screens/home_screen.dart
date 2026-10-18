@@ -16,8 +16,8 @@ import '../../Personal Vault/screens/dashboard.dart' as personal_vault;
 import '../../food/screens/food_home_screen.dart';
 import '../../food/screens/food_seller_dashboard_screen.dart';
 import '../../quickfix/user/screens/home_services_screen.dart';
-import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
-import 'package:oneclick/core/widgets/teal_header.dart'; // UI only: shared wave header
+import 'package:oneclick/core/theme/app_theme.dart'; 
+import 'package:oneclick/core/widgets/teal_header.dart'; 
 
 class _Palette {
   static const bg = AppColors.background;
@@ -584,63 +584,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // Check Food Seller approval status
-  Future<String?> _getFoodSellerStatus() async {
-    final user = _auth.currentUser;
-
-    if (user == null) return null;
-
-    final snapshot = await _firestore
-        .collection('food_sellers')
-        .doc(user.uid)
-        .get();
-
-    if (!snapshot.exists) return null;
-
-    return snapshot.data()?['status']?.toString().toLowerCase();
-  }
-
-  Future<void> _openFoodSellerDashboard(BuildContext sheetContext) async {
-    Navigator.pop(sheetContext);
-
-    try {
-      final status = await _getFoodSellerStatus();
-
-      if (!mounted) return;
-
-      if (status == 'active') {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const FoodSellerDashboardScreen()),
-        );
-      } else if (status == 'pending') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Your Food Seller application is still pending approval.',
-            ),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Your Food Seller account is not approved.'),
-          ),
-        );
-      }
-    } catch (_) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Could not check your seller status. Please try again.',
-          ),
-        ),
-      );
-    }
-  }
-
   // Account Options with Dynamic Role Switcher
   void _showAccountOptions() {
     if (!_isLoggedIn) {
@@ -805,34 +748,30 @@ class _GradientButton extends StatelessWidget {
   const _GradientButton({required this.label, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadius.button),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppRadius.button),
-            ),
-            child: Text(
-              label,
-              style: const TextStyle(color: _Palette.primary, fontWeight: FontWeight.w700, fontSize: 14),
-            ),
-          ],
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.button),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
             color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 13.5,
+            borderRadius: BorderRadius.circular(AppRadius.button),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: _Palette.primary,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// Hero text. The teal background comes from TealHeader.
@@ -958,7 +897,6 @@ class _ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Per-service accent colour (secondary accent); Fresh Teal stays the brand colour.
     final accent = gradient.last;
 
     return Material(
