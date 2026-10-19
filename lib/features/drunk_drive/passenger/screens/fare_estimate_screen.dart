@@ -89,33 +89,36 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = DrunkDrivePalette.of(context);
+
     return Scaffold(
-      backgroundColor: DrunkDriveColors.background,
+      backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: DrunkDriveColors.background,
+        backgroundColor: colors.background,
+        foregroundColor: colors.textPrimary,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           'Estimated Fare',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
-      body: SafeArea(child: _buildBody()),
-      bottomNavigationBar: _isLoading ? null : _buildContinueBar(),
+      body: SafeArea(child: _buildBody(colors)),
+      bottomNavigationBar: _isLoading ? null : _buildContinueBar(colors),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(DrunkDrivePalette colors) {
     if (_isLoading || _estimate == null) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: DrunkDriveColors.accent),
-            SizedBox(height: 16),
+            CircularProgressIndicator(color: colors.accent),
+            const SizedBox(height: 16),
             Text(
               'Calculating fare...',
-              style: TextStyle(color: DrunkDriveColors.textMuted),
+              style: TextStyle(color: colors.textMuted),
             ),
           ],
         ),
@@ -127,94 +130,123 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        _buildTripSummary(),
-        const SizedBox(height: 20),
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: DrunkDriveColors.surface,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Column(
-            children: [
-              _fareRow('Base Fare', estimate.baseFare),
-              _fareRow('Distance Charge', estimate.distanceCharge),
-              _fareRow('Time Charge', estimate.timeCharge),
-              _fareRow('Service Fee', estimate.serviceFee),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Divider(
-                  color: DrunkDriveColors.surfaceBorder,
-                  height: 1,
-                ),
-              ),
-              _fareRow('Estimated Total', estimate.total, isTotal: true),
-            ],
+        Text(
+          'Your Trip',
+          style: TextStyle(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w800,
+            fontSize: 17,
           ),
         ),
         const SizedBox(height: 12),
-        const Text(
-          'This is an estimate. Your final fare may vary slightly based on actual distance and time.',
-          style: TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+        _buildTripSummary(colors),
+        const SizedBox(height: 22),
+        Text(
+          'Fare Breakdown',
+          style: TextStyle(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w800,
+            fontSize: 17,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: colors.surfaceBorder),
+          ),
+          child: Column(
+            children: [
+              _fareRow('Base Fare', estimate.baseFare, colors),
+              _fareRow('Distance Charge', estimate.distanceCharge, colors),
+              _fareRow('Time Charge', estimate.timeCharge, colors),
+              _fareRow('Service Fee', estimate.serviceFee, colors),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Divider(
+                  color: colors.surfaceBorder,
+                  height: 1,
+                ),
+              ),
+              _fareRow(
+                'Estimated Total',
+                estimate.total,
+                colors,
+                isTotal: true,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline_rounded, color: colors.textMuted, size: 17),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'This is an estimate. Your final fare may vary slightly based on actual distance and time.',
+                style: TextStyle(color: colors.textMuted, fontSize: 12, height: 1.4),
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildTripSummary() {
+  Widget _buildTripSummary(DrunkDrivePalette colors) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: DrunkDriveColors.surface,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.surfaceBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _summaryRow(
-            Icons.my_location_rounded,
-            DrunkDriveColors.success,
-            widget.pickup.name,
-          ),
-          const SizedBox(height: 10),
-          _summaryRow(
-            Icons.location_on_rounded,
-            DrunkDriveColors.danger,
-            widget.destination.name,
-          ),
-          const SizedBox(height: 10),
-          _summaryRow(
-            Icons.directions_car_rounded,
-            DrunkDriveColors.accent,
-            widget.vehicle.displayName,
-          ),
-          const SizedBox(height: 10),
-          _summaryRow(
-            Icons.info_outline_rounded,
-            DrunkDriveColors.textMuted,
-            widget.reason.label,
-          ),
-          const SizedBox(height: 10),
+          _summaryRow(Icons.my_location_rounded, colors.success,
+              widget.pickup.name, colors),
+          const SizedBox(height: 12),
+          _summaryRow(Icons.location_on_rounded, colors.danger,
+              widget.destination.name, colors),
+          const SizedBox(height: 12),
+          _summaryRow(Icons.directions_car_rounded, colors.accent,
+              widget.vehicle.displayName, colors),
+          const SizedBox(height: 12),
+          _summaryRow(Icons.info_outline_rounded, colors.textMuted,
+              widget.reason.label, colors),
+          const SizedBox(height: 12),
           _summaryRow(
             Icons.route_rounded,
-            DrunkDriveColors.textMuted,
+            colors.textMuted,
             '${_distanceKm.toStringAsFixed(1)} km • $_durationMinutes min',
+            colors,
           ),
         ],
       ),
     );
   }
 
-  Widget _summaryRow(IconData icon, Color color, String text) {
+  Widget _summaryRow(
+    IconData icon,
+    Color color,
+    String text,
+    DrunkDrivePalette colors,
+  ) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: color, size: 18),
-        const SizedBox(width: 10),
+        Icon(icon, color: color, size: 19),
+        const SizedBox(width: 12),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: colors.textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -224,26 +256,34 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
     );
   }
 
-  Widget _fareRow(String label, double amount, {bool isTotal = false}) {
+  Widget _fareRow(
+    String label,
+    double amount,
+    DrunkDrivePalette colors, {
+    bool isTotal = false,
+  }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: isTotal ? Colors.white : DrunkDriveColors.textMuted,
-              fontWeight: isTotal ? FontWeight.w800 : FontWeight.w500,
-              fontSize: isTotal ? 15 : 13,
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isTotal ? colors.textPrimary : colors.textMuted,
+                fontWeight: isTotal ? FontWeight.w800 : FontWeight.w500,
+                fontSize: isTotal ? 15 : 13,
+              ),
             ),
           ),
+          const SizedBox(width: 12),
           Text(
             _rs(amount),
             style: TextStyle(
-              color: isTotal ? DrunkDriveColors.accent : Colors.white,
-              fontWeight: isTotal ? FontWeight.w800 : FontWeight.w600,
-              fontSize: isTotal ? 16 : 13,
+              color: isTotal ? colors.accent : colors.textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: isTotal ? 17 : 13,
             ),
           ),
         ],
@@ -251,17 +291,22 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
     );
   }
 
-  Widget _buildContinueBar() {
+  Widget _buildContinueBar(DrunkDrivePalette colors) {
     return SafeArea(
-      child: Padding(
+      top: false,
+      child: Container(
         padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          border: Border(top: BorderSide(color: colors.surfaceBorder)),
+        ),
         child: SizedBox(
           width: double.infinity,
-          child: ElevatedButton(
+          child: FilledButton(
             onPressed: _onContinue,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: DrunkDriveColors.accent,
-              foregroundColor: DrunkDriveColors.background,
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.accent,
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),

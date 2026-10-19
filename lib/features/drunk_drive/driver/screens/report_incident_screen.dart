@@ -37,7 +37,6 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
     }
 
     final description = _descriptionController.text.trim();
-
     if (description.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please describe what happened.')),
@@ -45,9 +44,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
       return;
     }
 
-    setState(() {
-      _isSubmitting = true;
-    });
+    setState(() => _isSubmitting = true);
 
     await Future.delayed(const Duration(milliseconds: 300));
 
@@ -59,40 +56,35 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
     );
 
     if (!mounted) return;
-
-    setState(() {
-      _isSubmitting = false;
-    });
+    setState(() => _isSubmitting = false);
 
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
+        final colors = DrunkDrivePalette.of(dialogContext);
         return AlertDialog(
-          backgroundColor: DrunkDriveColors.surface,
-          title: const Row(
+          backgroundColor: colors.surface,
+          title: Row(
             children: [
-              Icon(Icons.check_circle_rounded, color: DrunkDriveColors.success),
-              SizedBox(width: 10),
+              Icon(Icons.check_circle_rounded, color: colors.success),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Incident Reported',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: colors.textPrimary),
                 ),
               ),
             ],
           ),
-          content: const Text(
+          content: Text(
             'Your incident report has been recorded.',
-            style: TextStyle(color: DrunkDriveColors.textMuted),
+            style: TextStyle(color: colors.textMuted),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text(
-                'Done',
-                style: TextStyle(color: DrunkDriveColors.accent),
-              ),
+              child: Text('Done', style: TextStyle(color: colors.accent)),
             ),
           ],
         );
@@ -100,50 +92,48 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
     );
 
     if (!mounted) return;
-
     Navigator.pop(context, true);
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = DrunkDrivePalette.of(context);
+
     return Scaffold(
-      backgroundColor: DrunkDriveColors.background,
+      backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: DrunkDriveColors.background,
+        backgroundColor: colors.background,
+        foregroundColor: colors.textPrimary,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
+        title: Text(
           'Report Incident',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+          style: TextStyle(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            const Text(
+            Text(
               'Incident Type',
               style: TextStyle(
-                color: Colors.white,
+                color: colors.textPrimary,
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
               ),
             ),
             const SizedBox(height: 10),
-
             ...IncidentType.values.map((type) {
               final isSelected = _selectedType == type;
-
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: InkWell(
                   onTap: _isSubmitting
                       ? null
-                      : () {
-                          setState(() {
-                            _selectedType = type;
-                          });
-                        },
+                      : () => setState(() => _selectedType = type),
                   borderRadius: BorderRadius.circular(14),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -152,13 +142,13 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                     ),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? DrunkDriveColors.accent.withValues(alpha: 0.12)
-                          : DrunkDriveColors.surface,
+                          ? colors.accent.withValues(alpha: 0.12)
+                          : colors.surface,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: isSelected
-                            ? DrunkDriveColors.accent
-                            : DrunkDriveColors.surfaceBorder,
+                            ? colors.accent
+                            : colors.surfaceBorder,
                       ),
                     ),
                     child: Row(
@@ -168,8 +158,8 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                               ? Icons.radio_button_checked_rounded
                               : Icons.radio_button_unchecked_rounded,
                           color: isSelected
-                              ? DrunkDriveColors.accent
-                              : DrunkDriveColors.textMuted,
+                              ? colors.accent
+                              : colors.textMuted,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -177,8 +167,8 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                             type.label,
                             style: TextStyle(
                               color: isSelected
-                                  ? DrunkDriveColors.accent
-                                  : Colors.white,
+                                  ? colors.accent
+                                  : colors.textPrimary,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -189,52 +179,44 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                 ),
               );
             }),
-
             const SizedBox(height: 20),
-
-            const Text(
+            Text(
               'Description',
               style: TextStyle(
-                color: Colors.white,
+                color: colors.textPrimary,
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
               ),
             ),
             const SizedBox(height: 10),
-
             TextField(
               controller: _descriptionController,
               enabled: !_isSubmitting,
               minLines: 4,
               maxLines: 7,
               maxLength: 500,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: colors.textPrimary),
+              cursorColor: colors.accent,
               decoration: InputDecoration(
                 hintText: 'Describe what happened...',
-                hintStyle: const TextStyle(color: DrunkDriveColors.textMuted),
+                hintStyle: TextStyle(color: colors.textMuted),
                 filled: true,
-                fillColor: DrunkDriveColors.surface,
+                fillColor: colors.surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(
-                    color: DrunkDriveColors.surfaceBorder,
-                  ),
+                  borderSide: BorderSide(color: colors.surfaceBorder),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(
-                    color: DrunkDriveColors.surfaceBorder,
-                  ),
+                  borderSide: BorderSide(color: colors.surfaceBorder),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: DrunkDriveColors.accent),
+                  borderSide: BorderSide(color: colors.accent),
                 ),
               ),
             ),
-
             const SizedBox(height: 24),
-
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -245,7 +227,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: DrunkDriveColors.background,
+                          color: Colors.white,
                         ),
                       )
                     : const Icon(Icons.report_rounded),
@@ -254,8 +236,8 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: DrunkDriveColors.accent,
-                  foregroundColor: DrunkDriveColors.background,
+                  backgroundColor: colors.accent,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
