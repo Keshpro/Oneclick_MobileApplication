@@ -1,6 +1,7 @@
 import '../models/grocery_product_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+
 class GroceryService {
   // Sample grocery products
   final List<GroceryProduct> _products = [
@@ -97,7 +98,7 @@ class GroceryService {
           product.category.toLowerCase().contains(searchText);
     }).toList();
   }
-}
+
 Stream<List<GroceryProduct>> watchSellerProducts() {
   return FirebaseFirestore.instance
       .collection('grocery_products')
@@ -147,4 +148,5 @@ Stream<List<GroceryProduct>> watchSellerProducts() {
       );
     }).toList();
   });
+}
 }
