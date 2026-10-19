@@ -23,6 +23,13 @@ class BookingModel {
   final DateTime? startedAt;
   final DateTime? completedAt;
 
+  // Payment information is independent of the trip lifecycle status.
+  // Existing Firestore bookings default to unpaid when these fields are absent.
+  final String paymentStatus; // unpaid, pending, paid
+  final String? paymentMethod; // cash, simulatedCard
+  final double? amountDue;
+  final DateTime? paidAt;
+
   const BookingModel({
     required this.id,
     required this.passengerId,
@@ -39,7 +46,13 @@ class BookingModel {
     this.tripPin,
     this.startedAt,
     this.completedAt,
+    this.paymentStatus = 'unpaid',
+    this.paymentMethod,
+    this.amountDue,
+    this.paidAt,
   });
+
+  double get customerAmountDue => amountDue ?? fareEstimate.total;
 
   BookingModel copyWith({
     BookingStatus? status,
@@ -47,6 +60,10 @@ class BookingModel {
     String? tripPin,
     DateTime? startedAt,
     DateTime? completedAt,
+    String? paymentStatus,
+    String? paymentMethod,
+    double? amountDue,
+    DateTime? paidAt,
   }) {
     return BookingModel(
       id: id,
@@ -64,6 +81,10 @@ class BookingModel {
       tripPin: tripPin ?? this.tripPin,
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      amountDue: amountDue ?? this.amountDue,
+      paidAt: paidAt ?? this.paidAt,
     );
   }
 
@@ -111,6 +132,10 @@ class BookingModel {
       'completedAt': completedAt == null
           ? null
           : Timestamp.fromDate(completedAt!),
+      'paymentStatus': paymentStatus,
+      'paymentMethod': paymentMethod,
+      'amountDue': customerAmountDue,
+      'paidAt': paidAt == null ? null : Timestamp.fromDate(paidAt!),
     };
   }
 
@@ -132,6 +157,13 @@ class BookingModel {
       if (value is DateTime) return value;
       return DateTime.parse(value as String);
     }
+
+    final fareEstimate = FareEstimate(
+      baseFare: (fareData['baseFare'] as num).toDouble(),
+      distanceCharge: (fareData['distanceCharge'] as num).toDouble(),
+      timeCharge: (fareData['timeCharge'] as num).toDouble(),
+      serviceFee: (fareData['serviceFee'] as num).toDouble(),
+    );
 
     return BookingModel(
       id: id,
@@ -165,12 +197,7 @@ class BookingModel {
         longitude: optionalDouble(destinationData['longitude']),
       ),
       reason: TripReason.values.byName(data['reason'] as String),
-      fareEstimate: FareEstimate(
-        baseFare: (fareData['baseFare'] as num).toDouble(),
-        distanceCharge: (fareData['distanceCharge'] as num).toDouble(),
-        timeCharge: (fareData['timeCharge'] as num).toDouble(),
-        serviceFee: (fareData['serviceFee'] as num).toDouble(),
-      ),
+      fareEstimate: fareEstimate,
       distanceKm: (data['distanceKm'] as num).toDouble(),
       durationMinutes: (data['durationMinutes'] as num).toInt(),
       status: BookingStatus.values.byName(data['status'] as String),
@@ -179,6 +206,10 @@ class BookingModel {
       tripPin: data['tripPin'] as String?,
       startedAt: optionalDate(data['startedAt']),
       completedAt: optionalDate(data['completedAt']),
+      paymentStatus: data['paymentStatus'] as String? ?? 'unpaid',
+      paymentMethod: data['paymentMethod'] as String?,
+      amountDue: optionalDouble(data['amountDue']) ?? fareEstimate.total,
+      paidAt: optionalDate(data['paidAt']),
     );
   }
 }
