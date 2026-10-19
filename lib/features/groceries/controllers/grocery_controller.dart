@@ -54,7 +54,9 @@ void dispose() {
   // ---------------- PRODUCTS ----------------
 
   List<GroceryProduct> get products {
-  List<GroceryProduct> result = List.from(_firebaseProducts);
+ List<GroceryProduct> result = _firebaseProducts.isNotEmpty
+    ? List.from(_firebaseProducts)
+    : _groceryService.getProducts();
 
   if (_selectedCategory != 'All') {
     result = result
