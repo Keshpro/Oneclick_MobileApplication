@@ -790,7 +790,7 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
                 child: _receivedItem(
                   icon: Icons.description_outlined,
                   title: record.recordTitle,
-                  from: 'Shared by ${record.ownerId}',
+                  from: 'Shared by ${record.ownerEmail}',
                   permission: record.permission,
                   footerIcon: record.expiryDate == null
                       ? Icons.all_inclusive
@@ -1412,9 +1412,11 @@ class _VaultGlassScope extends InheritedWidget {
 }
 
 class _VaultGlassCard extends StatefulWidget {
+  // ignore: unused_element_parameter
   const _VaultGlassCard({
     required this.child,
     required this.padding,
+     // ignore: unused_element_parameter
     this.interactive = false,
   });
   final Widget child;
@@ -1575,7 +1577,11 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
 }
 
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon, {this.color});
+  const _VaultNavGlyph(
+    this.icon, {
+    // ignore: unused_element_parameter
+    this.color,
+  });
   final IconData icon;
   final Color? color;
 

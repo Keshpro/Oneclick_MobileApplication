@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'subscription_details_screen.dart';
+import 'add_subscription_screen.dart';
 import 'ai_subscription_checkup_screen.dart';
 import 'dashboard.dart';
 import 'vault_screen.dart';
@@ -34,7 +35,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   bool _loadingExchangeRate = false;
 
   String selectedFilter = 'All';
-  String selectedCurrency = 'USD';
+  String selectedCurrency = 'LKR';
   String searchQuery = '';
   List<SubscriptionItem> subscriptions = [];
 
@@ -50,7 +51,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   Future<void> _fetchExchangeRate() async {
     try {
       final rate = await _exchangeRateService.getUsdToLkrRate();
-      if (mounted && rate != null) {
+      if (mounted) {
         setState(() {
           _usdToLkrRate = rate;
           _loadingExchangeRate = false;
@@ -82,8 +83,13 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             category: record.category,
             priceHiked: record.priceHiked,
             status: record.status,
-            amount: parsedAmount,
-            currency: record.price.contains('LKR') ? 'LKR' : 'USD',
+            amount: record.amount ?? parsedAmount,
+            currency: record.currency,
+            billingCycle: record.billingCycle,
+            renewalDate: record.renewalDate,
+            cancelledAt: record.cancelledAt,
+            renewalActionHandledFor: record.renewalActionHandledFor,
+            createdAt: record.createdAt,
           );
         }).toList();
       });
@@ -101,37 +107,77 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   int _countFor(String filter) =>
       subscriptions.where((item) => _matchesStatus(item, filter)).length;
 
-  double _monthlyCost(Iterable<SubscriptionItem> items) => items
-      .where((item) => _statusKey(item.status) == 'active')
-      .fold<double>(
-        0,
-        (sum, item) =>
-            sum +
-            (double.tryParse(item.price.replaceAll(RegExp(r'[^0-9.]'), '')) ??
-                0),
-      );
-
-  double _monthlyCostInCurrency(
-      Iterable<SubscriptionItem> items, String currency) {
-    double total = _monthlyCost(items);
-    if (currency == 'LKR' && _usdToLkrRate != null) {
-      return total * _usdToLkrRate!;
-    }
-    return total;
+double _monthlyAmountForItem(
+  SubscriptionItem item,
+  String targetCurrency,
+) {
+  if (_statusKey(item.status) != 'active') {
+    return 0;
   }
 
-  String _formattedMoney(double amountUsd) {
-    if (selectedCurrency == 'LKR' && _usdToLkrRate != null) {
-      final lkrAmount = amountUsd * _usdToLkrRate!;
-      return 'LKR ${lkrAmount.toStringAsFixed(0)}';
-    }
-    return '\$${amountUsd.toStringAsFixed(2)}';
+  double amount =
+      item.amount ??
+      double.tryParse(
+            item.price.replaceAll(RegExp(r'[^0-9.]'), ''),
+          ) ??
+      0;
+
+  if (item.billingCycle.toLowerCase() == 'annual') {
+    amount = amount / 12;
   }
 
-  double? _monthlyChangePercent() {
-    if (subscriptions.isEmpty) return null;
-    return 2.5; 
+  final rate = _usdToLkrRate ?? 300.0;
+
+  if (item.currency == targetCurrency) {
+    return amount;
   }
+
+  if (item.currency == 'USD' && targetCurrency == 'LKR') {
+    return amount * rate;
+  }
+
+  if (item.currency == 'LKR' && targetCurrency == 'USD') {
+    return amount / rate;
+  }
+
+  return amount;
+}
+
+double _monthlyCostInCurrency(
+  Iterable<SubscriptionItem> items,
+  String currency,
+) {
+  return items.fold<double>(
+    0,
+    (sum, item) =>
+        sum + _monthlyAmountForItem(item, currency),
+  );
+}
+
+String _formatNumber(double value) {
+  final parts = value.toStringAsFixed(2).split('.');
+  final whole = parts[0];
+  final decimal = parts[1];
+
+  final formattedWhole = whole.replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),
+    (match) => ',',
+  );
+
+  return '$formattedWhole.$decimal';
+}
+
+String _formattedMoney(double amount) {
+  if (selectedCurrency == 'LKR') {
+    return 'LKR ${_formatNumber(amount)}';
+  }
+
+  return '\$${_formatNumber(amount)}';
+}
+
+double? _monthlyChangePercent() {
+  return null;
+}
 
   List<SubscriptionItem> get filteredSubscriptions {
     final query = searchQuery.trim().toLowerCase();
@@ -624,6 +670,24 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           ],
         ),
       ),
+            floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: purple,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AddSubscriptionScreen(),
+            ),
+          );
+        },
+        icon: const _VaultReferenceIcon(Icons.add),
+        label: const Text('Add Subscription'),
+      ),
       bottomNavigationBar: _buildBottomNavigation(),
     );
   }
@@ -664,9 +728,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               const SizedBox(width: 8),
               const _VaultReferenceIcon(Icons.circle, color: purple, size: 8),
               const Spacer(),
-              _currencyButton('USD'),
-              const SizedBox(width: 6),
               _currencyButton('LKR'),
+              const SizedBox(width: 6),
+              _currencyButton('USD'),
             ],
           ),
           const SizedBox(height: 26),
@@ -676,7 +740,12 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               Text(
                 _loadingExchangeRate
                     ? 'Loading...'
-                    : _formattedMoney(_monthlyCost(subscriptions)),
+                    : _formattedMoney(
+                      _monthlyCostInCurrency(
+                        subscriptions,
+                        selectedCurrency,
+                      ),
+                    ),
                 style: const TextStyle(
                   color: ink,
                   fontSize: 32,
@@ -756,7 +825,13 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 style: TextStyle(color: muted, fontSize: 14),
               ),
               Text(
-                _formattedMoney(_monthlyCost(subscriptions) * 12),
+                _formattedMoney(
+                  _monthlyCostInCurrency(
+                        subscriptions,
+                        selectedCurrency,
+                      ) *
+                      12,
+                ),
                 style: const TextStyle(
                   color: ink,
                   fontWeight: FontWeight.w700,
@@ -873,6 +948,10 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
 
   Widget _buildAICheckup() {
     return _card(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 14,
+      ),
       child: Column(
         children: [
           Row(
@@ -930,7 +1009,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerRight,
             child: _pillButton(
@@ -1219,11 +1298,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
 
     final categoryAmount = _monthlyCostInCurrency(items, categoryCurrency);
 
-    final categoryLabel = _statusKey(selectedFilter) == 'cancelled'
-        ? 'No renewals'
-        : _statusKey(selectedFilter) == 'free trial'
-            ? '${items.length} trials'
-            : '\$${categoryAmount.toStringAsFixed(2)}/mo';
+final categoryLabel = _statusKey(selectedFilter) == 'cancelled'
+    ? 'No renewals'
+    : _statusKey(selectedFilter) == 'free trial'
+        ? '${items.length} trials'
+        : 'LKR ${_formatNumber(categoryAmount)}/mo';
 
     return Column(
       children: [
@@ -1892,6 +1971,7 @@ class _VaultPulseDot extends StatefulWidget {
     required this.color,
     required this.size,
     this.ping = false,
+    // ignore: unused_element_parameter
     this.animate = true,
   });
   final Color color;
@@ -1966,7 +2046,11 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
 }
 
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon, {this.color});
+  const _VaultNavGlyph(
+  this.icon, {
+  // ignore: unused_element_parameter
+  this.color,
+});
   final IconData icon;
   final Color? color;
 
