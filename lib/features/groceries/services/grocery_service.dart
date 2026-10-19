@@ -1,5 +1,6 @@
 import '../models/grocery_product_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 class GroceryService {
   // Sample grocery products
   final List<GroceryProduct> _products = [
@@ -100,6 +101,32 @@ class GroceryService {
 Stream<List<GroceryProduct>> watchSellerProducts() {
   return FirebaseFirestore.instance
       .collection('grocery_products')
+      .snapshots()
+      .map((snapshot) {
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+
+      return GroceryProduct(
+        id: doc.id,
+        name: (data['name'] ?? '').toString(),
+        category: (data['category'] ?? '').toString(),
+        description: (data['description'] ?? '').toString(),
+        price: (data['price'] as num?)?.toDouble() ?? 0.0,
+        discountPrice:
+            (data['discountPrice'] as num?)?.toDouble(),
+        imageUrl: (data['imageUrl'] ?? '').toString(),
+        stock: (data['stock'] as num?)?.toInt() ?? 0,
+        sellerId: (data['sellerId'] ?? '').toString(),
+        sellerName: (data['sellerName'] ?? '').toString(),
+      );
+    }).toList();
+  });
+}
+
+  Stream<List<GroceryProduct>> watchApprovedProducts() {
+  return FirebaseFirestore.instance
+      .collection('grocery_products')
+      .where('status', isEqualTo: 'active')
       .snapshots()
       .map((snapshot) {
     return snapshot.docs.map((doc) {
