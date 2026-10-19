@@ -112,6 +112,17 @@ class _VaultScreenState extends State<VaultScreen> {
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (sheetContext, setModalState) {
+            final searchText = searchController.text.trim().toLowerCase();
+
+            final matches = searchText.isEmpty
+                ? <_VaultItem>[]
+                : _items
+                    .where(
+                      (item) => item.title.toLowerCase().contains(searchText),
+                    )
+                    .take(5)
+                    .toList();
+
             return SafeArea(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -151,6 +162,9 @@ class _VaultScreenState extends State<VaultScreen> {
                     TextField(
                       controller: searchController,
                       autofocus: true,
+                      onChanged: (_) {
+                        setModalState(() {});
+                      },
                       decoration: InputDecoration(
                         hintText: 'Search Vault records...',
                         prefixIcon: const Icon(
@@ -165,6 +179,72 @@ class _VaultScreenState extends State<VaultScreen> {
                         ),
                       ),
                     ),
+                    if (searchText.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      const Text(
+                        'MATCHING RECORDS',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: muted,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (matches.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text('No matching record titles found.'),
+                        )
+                      else
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 220),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: matches.length,
+                            itemBuilder: (context, index) {
+                              final item = matches[index];
+
+                              return ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: Icon(
+                                  item.type == 'Account'
+                                      ? Icons.account_circle_outlined
+                                      : item.type == 'Receipt'
+                                          ? Icons.receipt_long_outlined
+                                          : Icons.description_outlined,
+                                  color: purple,
+                                ),
+                                title: Text(item.title),
+                                subtitle: Text(item.type),
+                                onTap: () {
+                                  Navigator.pop(sheetContext);
+
+                                  Navigator.push(
+                                    this.context,
+                                    MaterialPageRoute(
+                                      builder: (context) => RecordDetailsScreen(
+                                        recordId: item.id,
+                                        title: item.title,
+                                        category: item.folder,
+                                        type: item.type,
+                                        details: item.details,
+                                        tags: item.tags,
+                                        fileName: item.fileName,
+                                        filePath: item.filePath,
+                                        merchant: item.merchant,
+                                        purchaseDate: item.purchaseDate,
+                                        amount: item.amount,
+                                        renewalDate: item.renewalDate,
+                                        expiryNotification: item.expiryNotification,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                    ],
                     const SizedBox(height: 22),
                     const Text(
                       'FILTER',
@@ -581,42 +661,47 @@ class _VaultScreenState extends State<VaultScreen> {
                     style: const TextStyle(color: muted),
                   ),
                   const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _VaultSearchSurface(
-                          padding: EdgeInsets.zero,
-                          child: TextField(
-                            onChanged: (value) {
-                              setState(() => _query = value);
-                            },
-                            decoration: const InputDecoration(
-                              hintText: 'Search items, tags, folders...',
-                              prefixIcon: _VaultReferenceIcon(
-                                Icons.search,
-                                color: muted,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.all(16),
+                  
+                  
+                  _VaultSearchSurface(
+                    padding: EdgeInsets.zero,
+                    child: InkWell(
+                      onTap: _showSearchFilterPanel,
+                      borderRadius: BorderRadius.circular(16),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 15,
+                        ),
+                        child: Row(
+                          children: [
+                            _VaultReferenceIcon(
+                              Icons.search,
+                              color: muted,
                             ),
-                          ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Search items, tags, folders...',
+                                style: TextStyle(
+                                  color: muted,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            _VaultReferenceIcon(
+                              Icons.tune,
+                              color: purple,
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      _surface(
-                        padding: const EdgeInsets.all(4),
-                        child: IconButton(
-                          tooltip: 'Filter & Search',
-                          onPressed: _showSearchFilterPanel,
-                          icon: const _VaultReferenceIcon(
-                            Icons.tune,
-                            color: purple,
-                          ),
-                        ),
-                      ),
-                    ],
-            ),
+                    ),
+                  ),
+
+
                   const SizedBox(height: 28),
+
                   _heading(
                     'PINNED QUICK ACCESS',
                     trailing: '${pinned.length} items',
