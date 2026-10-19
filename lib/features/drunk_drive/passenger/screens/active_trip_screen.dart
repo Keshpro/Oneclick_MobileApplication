@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../models/booking_model.dart';
 import '../../models/booking_status.dart';
-import '../../services/booking_service.dart';
+import '../../services/booking_firestore_service.dart';
 import '../../services/driver_rating_service.dart';
 import '../../services/driver_service.dart';
 import '../../theme/drunk_drive_colors.dart';
@@ -21,21 +21,47 @@ class ActiveTripScreen extends StatefulWidget {
 }
 
 class _ActiveTripScreenState extends State<ActiveTripScreen> {
-  final BookingService _bookingService = BookingService();
+  final BookingFirestoreService _bookingService = BookingFirestoreService();
   final DriverRatingService _driverRatingService = DriverRatingService();
 
   late BookingModel _booking;
   Timer? _driverSearchTimer;
-
+  StreamSubscription<BookingModel?>? _bookingSubscription;
   @override
   void initState() {
     super.initState();
+
     _booking = widget.booking;
+
+    _bookingSubscription = _bookingService
+        .watchBooking(_booking.id)
+        .listen(
+          (updated) {
+            if (!mounted || updated == null) return;
+
+            setState(() {
+              _booking = updated;
+            });
+
+            if (_booking.status != BookingStatus.searchingDriver) {
+              _driverSearchTimer?.cancel();
+            }
+          },
+          onError: (Object error) {
+            if (!mounted) return;
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Unable to update trip: $error')),
+            );
+          },
+        );
+
     _startDriverSearchTimerIfNeeded();
   }
 
   @override
   void dispose() {
+    _bookingSubscription?.cancel();
     _driverSearchTimer?.cancel();
     super.dispose();
   }
@@ -47,42 +73,54 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
       return;
     }
 
-    _driverSearchTimer = Timer(const Duration(seconds: 30), () {
+    _driverSearchTimer = Timer(const Duration(seconds: 30), () async {
       if (!mounted) return;
 
-      final latest = _bookingService.getBookingById(_booking.id);
+      try {
+        final latest = await _bookingService.watchBooking(_booking.id).first;
 
-      if (latest == null ||
-          latest.status != BookingStatus.searchingDriver ||
-          latest.driverId != null) {
-        return;
+        if (latest == null ||
+            latest.status != BookingStatus.searchingDriver ||
+            latest.driverId != null) {
+          return;
+        }
+
+        final updated = await _bookingService.markDriverNotFound(_booking.id);
+
+        if (updated == null || !mounted) return;
+
+        setState(() {
+          _booking = updated;
+        });
+      } catch (error) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to update driver search: $error')),
+        );
       }
+    });
+  }
 
-      final updated = _bookingService.markDriverNotFound(_booking.id);
+  Future<void> _refreshBooking() async {
+    try {
+      final updated = await _bookingService.watchBooking(_booking.id).first;
 
-      if (updated == null || !mounted) {
-        return;
-      }
+      if (updated == null || !mounted) return;
 
       setState(() {
         _booking = updated;
       });
-    });
-  }
 
-  void _refreshBooking() {
-    final updated = _bookingService.getBookingById(_booking.id);
+      if (_booking.status != BookingStatus.searchingDriver) {
+        _driverSearchTimer?.cancel();
+      }
+    } catch (error) {
+      if (!mounted) return;
 
-    if (updated == null || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _booking = updated;
-    });
-
-    if (_booking.status != BookingStatus.searchingDriver) {
-      _driverSearchTimer?.cancel();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to refresh booking: $error')),
+      );
     }
   }
 
@@ -196,7 +234,11 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    final cancelled = _bookingService.cancelBookingByPassenger(_booking.id);
+    final cancelled = await _bookingService.cancelBookingByPassenger(
+      _booking.id,
+    );
+
+    if (!mounted) return;
 
     if (cancelled == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -216,23 +258,35 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
     Navigator.pop(context, true);
   }
 
-  void _retryDriverSearch() {
-    final updated = _bookingService.retryDriverSearch(_booking.id);
+  Future<void> _retryDriverSearch() async {
+    try {
+      final updated = await _bookingService.retryDriverSearch(_booking.id);
 
-    if (updated == null) {
+      if (!mounted) return;
+
+      if (updated == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to restart the driver search.')),
+        );
+        return;
+      }
+
+      setState(() {
+        _booking = updated;
+      });
+
+      _startDriverSearchTimerIfNeeded();
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to restart the driver search.')),
+        const SnackBar(content: Text('Searching for a driver again...')),
       );
-      return;
-    }
+    } catch (error) {
+      if (!mounted) return;
 
-    setState(() {
-      _booking = updated;
-    });
-    _startDriverSearchTimerIfNeeded();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Searching for a driver again...')),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to retry driver search: $error')),
+      );
+    }
   }
 
   Future<void> _showDriverRatingDialog() async {

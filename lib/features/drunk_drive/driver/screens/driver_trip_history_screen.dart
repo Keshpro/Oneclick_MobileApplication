@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/booking_model.dart';
 import '../../models/booking_status.dart';
-import '../../services/booking_service.dart';
-import '../../services/vehicle_service.dart';
+import '../../services/booking_firestore_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 
 class DriverTripHistoryScreen extends StatefulWidget {
@@ -15,7 +14,7 @@ class DriverTripHistoryScreen extends StatefulWidget {
 }
 
 class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
-  final BookingService _bookingService = BookingService();
+  final BookingFirestoreService _firestoreService = BookingFirestoreService();
 
   List<BookingModel> _trips = [];
 
@@ -25,12 +24,22 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
     _loadTrips();
   }
 
-  void _loadTrips() {
-    setState(() {
-      _trips = _bookingService.getDriverTripHistory(
-        VehicleService.currentUserId,
+  Future<void> _loadTrips() async {
+    try {
+      final trips = await _firestoreService.getCompletedDriverTrips();
+
+      if (!mounted) return;
+
+      setState(() {
+        _trips = trips;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to load driver trip history: $error')),
       );
-    });
+    }
   }
 
   String _statusLabel(BookingStatus status) {

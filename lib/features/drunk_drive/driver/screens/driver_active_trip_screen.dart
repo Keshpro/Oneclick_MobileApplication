@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../models/booking_model.dart';
 import '../../models/booking_status.dart';
-import '../../services/booking_service.dart';
-import '../../services/vehicle_service.dart';
+
+import '../../services/booking_firestore_service.dart';
+
 import '../../theme/drunk_drive_colors.dart';
 import 'report_incident_screen.dart';
 
@@ -17,61 +18,44 @@ class DriverActiveTripScreen extends StatefulWidget {
 }
 
 class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
-  final BookingService _bookingService = BookingService();
   bool _isEnding = false;
   bool _isCompleted = false;
 
   Future<void> _onEndTrip() async {
+    if (_isEnding || _isCompleted) return;
+
     setState(() => _isEnding = true);
-    await Future.delayed(const Duration(milliseconds: 300));
 
-    final updated = _bookingService.endTrip(
-      bookingId: widget.booking.id,
-      driverId: VehicleService.currentUserId,
-    );
-
-    if (!mounted) return;
-    setState(() => _isEnding = false);
-
-    if (updated == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to end trip. Please try again.')),
+    try {
+      final updated = await BookingFirestoreService().endTrip(
+        bookingId: widget.booking.id,
       );
-      return;
+
+      if (!mounted) return;
+
+      if (updated == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to complete this trip.')),
+        );
+        return;
+      }
+
+      setState(() => _isCompleted = true);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Trip completed successfully!')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error completing trip: $error')));
+    } finally {
+      if (mounted) {
+        setState(() => _isEnding = false);
+      }
     }
-
-    setState(() => _isCompleted = true);
-
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: DrunkDriveColors.surface,
-        title: const Row(
-          children: [
-            Icon(Icons.flag_circle_rounded, color: DrunkDriveColors.success),
-            SizedBox(width: 10),
-            Text('Trip Completed', style: TextStyle(color: Colors.white)),
-          ],
-        ),
-        content: const Text(
-          'Great job! The trip has been marked as completed.',
-          style: TextStyle(color: DrunkDriveColors.textMuted),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text(
-              'Done',
-              style: TextStyle(color: DrunkDriveColors.accent),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (!mounted) return;
-    Navigator.pop(context);
   }
 
   Future<void> _onReportIncident() async {

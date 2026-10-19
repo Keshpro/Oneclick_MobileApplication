@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../models/vehicle_model.dart';
-import '../../services/vehicle_service.dart';
+import '../../services/vehicle_firestore_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 import 'add_vehicle_screen.dart';
 
@@ -12,7 +13,7 @@ class MyVehiclesScreen extends StatefulWidget {
 }
 
 class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
-  final VehicleService _vehicleService = VehicleService();
+  final VehicleFirestoreService _vehicleService = VehicleFirestoreService();
 
   List<VehicleModel> _vehicles = [];
   bool _isLoading = true;
@@ -31,19 +32,19 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
     });
 
     try {
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      final vehicles = _vehicleService.getMyVehicles();
+      final vehicles = await _vehicleService.getMyVehicleModels();
 
       if (!mounted) return;
+
       setState(() {
         _vehicles = vehicles;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
+
       setState(() {
-        _errorMessage = 'Something went wrong.';
+        _errorMessage = 'Unable to load vehicles: $error';
         _isLoading = false;
       });
     }
@@ -64,29 +65,25 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
   }
 
   Future<void> _onEditVehicle(VehicleModel vehicle) async {
-  final updated = await Navigator.push<bool>(
-    context,
-    MaterialPageRoute(
-      builder: (context) => AddVehicleScreen(
-        vehicle: vehicle,
-      ),
-    ),
-  );
-
-  if (updated == true) {
-    await _loadVehicles();
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Vehicle updated'),
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddVehicleScreen(vehicle: vehicle),
       ),
     );
+
+    if (updated == true) {
+      await _loadVehicles();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Vehicle updated')));
+    }
   }
-}
+
   Future<void> _onSetDefault(VehicleModel vehicle) async {
-    _vehicleService.setDefaultVehicle(vehicle.id);
+    await _vehicleService.setDefaultVehicle(vehicle.id);
     await _loadVehicles();
   }
 
@@ -121,7 +118,7 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
 
     if (confirmed != true) return;
 
-    _vehicleService.deleteVehicle(vehicle.id);
+    await _vehicleService.deleteVehicle(vehicle.id);
     await _loadVehicles();
 
     if (!mounted) return;

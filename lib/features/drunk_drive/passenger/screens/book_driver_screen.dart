@@ -24,7 +24,7 @@ class BookDriverScreen extends StatefulWidget {
 }
 
 class _BookDriverScreenState extends State<BookDriverScreen> {
-final VehicleFirestoreService _vehicleService = VehicleFirestoreService();
+  final VehicleFirestoreService _vehicleService = VehicleFirestoreService();
   List<VehicleModel> _vehicles = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -40,41 +40,40 @@ final VehicleFirestoreService _vehicleService = VehicleFirestoreService();
   }
 
   Future<void> _loadVehicles() async {
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null;
-  });
-
-  try {
-    final vehicles = await _vehicleService.getMyVehicleModels();
-
-    if (!mounted) return;
-
     setState(() {
-      _vehicles = vehicles;
-      _isLoading = false;
-
-      final defaultVehicle = vehicles.where(
-        (vehicle) => vehicle.isDefault,
-      );
-
-      if (defaultVehicle.isNotEmpty) {
-        _selectedVehicleId = defaultVehicle.first.id;
-      } else if (vehicles.isNotEmpty) {
-        _selectedVehicleId = vehicles.first.id;
-      } else {
-        _selectedVehicleId = null;
-      }
+      _isLoading = true;
+      _errorMessage = null;
     });
-  } catch (error) {
-    if (!mounted) return;
 
-    setState(() {
-      _errorMessage = 'Unable to load vehicles: $error';
-      _isLoading = false;
-    });
+    try {
+      final vehicles = await _vehicleService.getMyVehicleModels();
+
+      if (!mounted) return;
+
+      setState(() {
+        _vehicles = vehicles;
+        _isLoading = false;
+
+        final defaultVehicle = vehicles.where((vehicle) => vehicle.isDefault);
+
+        if (defaultVehicle.isNotEmpty) {
+          _selectedVehicleId = defaultVehicle.first.id;
+        } else if (vehicles.isNotEmpty) {
+          _selectedVehicleId = vehicles.first.id;
+        } else {
+          _selectedVehicleId = null;
+        }
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = 'Unable to load vehicles: $error';
+        _isLoading = false;
+      });
+    }
   }
-}
+
   Future<void> _onAddVehicle() async {
     final added = await Navigator.push<bool>(
       context,
@@ -106,16 +105,16 @@ final VehicleFirestoreService _vehicleService = VehicleFirestoreService();
     if (result != null) setState(() => _destination = result);
   }
 
- void _onContinue() {
-  if (_selectedVehicleId == null) return;
+  void _onContinue() {
+    if (_selectedVehicleId == null) return;
 
-  final matchingVehicles = _vehicles.where(
-    (vehicle) => vehicle.id == _selectedVehicleId,
-  );
+    final matchingVehicles = _vehicles.where(
+      (vehicle) => vehicle.id == _selectedVehicleId,
+    );
 
-  if (matchingVehicles.isEmpty) return;
+    if (matchingVehicles.isEmpty) return;
 
-  final vehicle = matchingVehicles.first;
+    final vehicle = matchingVehicles.first;
 
     Navigator.push(
       context,

@@ -23,7 +23,7 @@ class BookingFirestoreService {
 
   CollectionReference<Map<String, dynamic>> get _bookings =>
       _firestore.collection('drunkDriveBookings');
-  
+
   Future<String> createBooking(Map<String, dynamic> bookingData) async {
     final document = _bookings.doc();
 
@@ -400,13 +400,17 @@ class BookingFirestoreService {
         return null;
       }
 
+      final tripPin = generateTripPin();
+
       transaction.update(bookingRef, {
         'status': BookingStatus.verification.name,
+        'tripPin': tripPin,
       });
 
       return BookingModel.fromMap(snapshot.id, {
         ...data,
         'status': BookingStatus.verification.name,
+        'tripPin': tripPin,
       });
     });
   }
@@ -416,43 +420,150 @@ class BookingFirestoreService {
 
     return List.generate(4, (_) => random.nextInt(10)).join();
   }
+
+  Future<BookingModel?> startTripWithPin({
+    required String bookingId,
+    required String enteredPin,
+  }) async {
+    final driverId = currentUserId;
+    final bookingRef = _bookings.doc(bookingId);
+
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(bookingRef);
+
+      if (!snapshot.exists) return null;
+
+      final data = snapshot.data();
+
+      if (data == null || data['driverId'] != driverId) {
+        return null;
+      }
+
+      final booking = BookingModel.fromMap(snapshot.id, data);
+
+      if (booking.status != BookingStatus.verification) {
+        return null;
+      }
+
+      final savedPin = data['tripPin'] as String?;
+
+      if (savedPin == null || savedPin != enteredPin) {
+        return null;
+      }
+
+      final startedAt = Timestamp.now();
+
+      transaction.update(bookingRef, {
+        'status': BookingStatus.tripStarted.name,
+        'startedAt': startedAt,
+        'tripPin': null,
+      });
+
+      return BookingModel.fromMap(snapshot.id, {
+        ...data,
+        'status': BookingStatus.tripStarted.name,
+        'startedAt': startedAt,
+        'tripPin': null,
+      });
+    });
+  }
+
   Future<BookingModel?> cancelBookingByDriver(String bookingId) async {
-  final driverId = currentUserId;
-  final bookingRef = _bookings.doc(bookingId);
+    final driverId = currentUserId;
+    final bookingRef = _bookings.doc(bookingId);
 
-  return _firestore.runTransaction((transaction) async {
-    final snapshot = await transaction.get(bookingRef);
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(bookingRef);
 
-    if (!snapshot.exists) return null;
+      if (!snapshot.exists) return null;
 
-    final data = snapshot.data();
+      final data = snapshot.data();
 
-    if (data == null || data['driverId'] != driverId) {
-      return null;
-    }
+      if (data == null || data['driverId'] != driverId) {
+        return null;
+      }
 
-    final booking = BookingModel.fromMap(snapshot.id, data);
+      final booking = BookingModel.fromMap(snapshot.id, data);
 
-    const cancellableStatuses = {
-      BookingStatus.driverAssigned,
-      BookingStatus.driverAccepted,
-      BookingStatus.driverArriving,
-      BookingStatus.driverArrived,
-      BookingStatus.verification,
-    };
+      const cancellableStatuses = {
+        BookingStatus.driverAssigned,
+        BookingStatus.driverAccepted,
+        BookingStatus.driverArriving,
+        BookingStatus.driverArrived,
+        BookingStatus.verification,
+      };
 
-    if (!cancellableStatuses.contains(booking.status)) {
-      return null;
-    }
+      if (!cancellableStatuses.contains(booking.status)) {
+        return null;
+      }
 
-    transaction.update(bookingRef, {
-      'status': BookingStatus.cancelledByDriver.name,
+      transaction.update(bookingRef, {
+        'status': BookingStatus.cancelledByDriver.name,
+      });
+
+      return BookingModel.fromMap(snapshot.id, {
+        ...data,
+        'status': BookingStatus.cancelledByDriver.name,
+      });
+    });
+  }
+
+  Future<BookingModel?> endTrip({required String bookingId}) async {
+    final driverId = currentUserId;
+    final bookingRef = _bookings.doc(bookingId);
+
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(bookingRef);
+
+      if (!snapshot.exists) return null;
+
+      final data = snapshot.data();
+
+      if (data == null || data['driverId'] != driverId) {
+        return null;
+      }
+
+      final booking = BookingModel.fromMap(snapshot.id, data);
+
+      if (booking.status != BookingStatus.tripStarted &&
+          booking.status != BookingStatus.tripInProgress) {
+        return null;
+      }
+
+      final completedAt = Timestamp.now();
+
+      transaction.update(bookingRef, {
+        'status': BookingStatus.completed.name,
+        'completedAt': completedAt,
+      });
+
+      return BookingModel.fromMap(snapshot.id, {
+        ...data,
+        'status': BookingStatus.completed.name,
+        'completedAt': completedAt,
+      });
+    });
+  }
+
+  Future<List<BookingModel>> getCompletedDriverTrips() async {
+    final driverId = currentUserId;
+
+    final snapshot = await _bookings
+        .where('driverId', isEqualTo: driverId)
+        .get();
+
+    final completedTrips = snapshot.docs
+        .map((doc) => BookingModel.fromMap(doc.id, doc.data()))
+        .where((booking) => booking.status == BookingStatus.completed)
+        .toList();
+
+    completedTrips.sort((a, b) {
+      final aDate = a.completedAt ?? a.createdAt;
+      final bDate = b.completedAt ?? b.createdAt;
+
+      return bDate.compareTo(aDate);
     });
 
-    return BookingModel.fromMap(snapshot.id, {
-      ...data,
-      'status': BookingStatus.cancelledByDriver.name,
-    });
-  });
-}
+    return completedTrips;
+  }
 }

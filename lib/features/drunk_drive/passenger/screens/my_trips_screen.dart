@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/booking_model.dart';
 import '../../models/booking_status.dart';
-import '../../services/booking_service.dart';
+import '../../services/booking_firestore_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 
 class MyTripsScreen extends StatefulWidget {
@@ -13,7 +13,7 @@ class MyTripsScreen extends StatefulWidget {
 }
 
 class _MyTripsScreenState extends State<MyTripsScreen> {
-  final BookingService _bookingService = BookingService();
+  final BookingFirestoreService _bookingService = BookingFirestoreService();
 
   List<BookingModel> _bookings = [];
   bool _isLoading = true;
@@ -27,21 +27,29 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
   Future<void> _loadBookings() async {
     setState(() => _isLoading = true);
 
-    await Future.delayed(
-      const Duration(milliseconds: 300),
-    );
+    try {
+      final bookings = await _bookingService.getMyBookingModels();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _bookings = _bookingService.getMyBookings().where((booking) {
-        return booking.status == BookingStatus.completed ||
-            booking.status == BookingStatus.cancelledByUser ||
-            booking.status == BookingStatus.cancelledByDriver;
-      }).toList();
+      setState(() {
+        _bookings = bookings.where((booking) {
+          return booking.status == BookingStatus.completed ||
+              booking.status == BookingStatus.cancelledByUser ||
+              booking.status == BookingStatus.cancelledByDriver;
+        }).toList();
 
-      _isLoading = false;
-    });
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to load trip history: $error')),
+      );
+    }
   }
 
   String _rs(double amount) {
@@ -102,29 +110,20 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
       appBar: AppBar(
         backgroundColor: DrunkDriveColors.background,
         elevation: 0,
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           'My Trips',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
         ),
       ),
-      body: SafeArea(
-        child: _buildBody(),
-      ),
+      body: SafeArea(child: _buildBody()),
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: DrunkDriveColors.accent,
-        ),
+        child: CircularProgressIndicator(color: DrunkDriveColors.accent),
       );
     }
 
@@ -132,9 +131,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
       return const Center(
         child: Text(
           'No past trips yet.',
-          style: TextStyle(
-            color: DrunkDriveColors.textMuted,
-          ),
+          style: TextStyle(color: DrunkDriveColors.textMuted),
         ),
       );
     }
@@ -151,9 +148,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
         },
         itemBuilder: (context, index) {
           final booking = _bookings[index];
-          final statusColor = _historyStatusColor(
-            booking.status,
-          );
+          final statusColor = _historyStatusColor(booking.status);
 
           return Container(
             padding: const EdgeInsets.all(16),
@@ -166,8 +161,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
               children: [
                 // Status and fare
                 Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -175,16 +169,11 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: statusColor.withValues(
-                          alpha: 0.15,
-                        ),
-                        borderRadius:
-                            BorderRadius.circular(20),
+                        color: statusColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        _historyStatusLabel(
-                          booking.status,
-                        ),
+                        _historyStatusLabel(booking.status),
                         style: TextStyle(
                           color: statusColor,
                           fontSize: 11,
@@ -193,9 +182,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
                       ),
                     ),
                     Text(
-                      _rs(
-                        booking.fareEstimate.total,
-                      ),
+                      _rs(booking.fareEstimate.total),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../models/booking_model.dart';
@@ -21,40 +23,44 @@ class DrunkDriveHomeScreen extends StatefulWidget {
 class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
   final BookingFirestoreService _bookingService = BookingFirestoreService();
   BookingModel? _activeBooking;
-
+  StreamSubscription<List<BookingModel>>? _bookingSubscription;
   @override
   void initState() {
     super.initState();
-    _loadActiveBooking();
+
+    _bookingSubscription = _bookingService.watchMyBookingModels().listen(
+      (bookings) {
+        const finishedStatuses = {
+          BookingStatus.completed,
+          BookingStatus.cancelledByUser,
+          BookingStatus.cancelledByDriver,
+          BookingStatus.driverNotFound,
+        };
+
+        final activeBookings = bookings
+            .where((booking) => !finishedStatuses.contains(booking.status))
+            .toList();
+
+        if (!mounted) return;
+
+        setState(() {
+          _activeBooking = activeBookings.isEmpty ? null : activeBookings.first;
+        });
+      },
+      onError: (Object error) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to watch bookings: $error')),
+        );
+      },
+    );
   }
 
-  Future<void> _loadActiveBooking() async {
-    try {
-      final bookings = await _bookingService.getMyBookingModels();
-
-      const finishedStatuses = {
-        BookingStatus.completed,
-        BookingStatus.cancelledByUser,
-        BookingStatus.cancelledByDriver,
-        BookingStatus.driverNotFound,
-      };
-
-      final activeBookings = bookings
-          .where((booking) => !finishedStatuses.contains(booking.status))
-          .toList();
-
-      if (!mounted) return;
-
-      setState(() {
-        _activeBooking = activeBookings.isEmpty ? null : activeBookings.first;
-      });
-    } catch (error) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to load active booking: $error')),
-      );
-    }
+  @override
+  void dispose() {
+    _bookingSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -232,8 +238,6 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
                           );
 
                           if (!mounted) return;
-
-                          _loadActiveBooking();
                         },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: DrunkDriveColors.accent,
@@ -266,7 +270,7 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
                     MaterialPageRoute(
                       builder: (context) => const BookDriverScreen(),
                     ),
-                  ).then((_) => _loadActiveBooking());
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: DrunkDriveColors.accent,
@@ -350,7 +354,7 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
                     MaterialPageRoute(
                       builder: (context) => const DriverHomeScreen(),
                     ),
-                  ).then((_) => _loadActiveBooking());
+                  );
                 },
                 icon: const Icon(Icons.swap_horiz_rounded),
                 label: const Text(

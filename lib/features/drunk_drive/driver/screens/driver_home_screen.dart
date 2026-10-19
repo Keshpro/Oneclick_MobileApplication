@@ -1,14 +1,14 @@
 import 'dart:async';
 
 import '../../services/booking_firestore_service.dart';
+import '../../services/driver_firestore_service.dart';
 
 import 'package:flutter/material.dart';
 
 import '../../models/booking_model.dart';
 import '../../models/booking_status.dart';
 import '../../models/vehicle_model.dart';
-import '../../services/booking_service.dart';
-import '../../services/driver_service.dart';
+
 import '../../services/vehicle_service.dart';
 import '../../services/driver_rating_service.dart';
 import '../../theme/drunk_drive_colors.dart';
@@ -24,8 +24,6 @@ class DriverHomeScreen extends StatefulWidget {
 }
 
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
-  final DriverService _driverService = DriverService();
-  final BookingService _bookingService = BookingService();
   final BookingFirestoreService _firestoreService = BookingFirestoreService();
   StreamSubscription<List<BookingModel>>? _requestsSubscription;
   StreamSubscription<BookingModel?>? _activeTripSubscription;
@@ -55,16 +53,28 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     super.dispose();
   }
 
-  void _checkAuthorization() {
-    final isApproved = _driverService.isCurrentDriverApproved();
-    setState(() {
-      _isApproved = isApproved;
-    });
+  Future<void> _checkAuthorization() async {
+    try {
+      final isApproved = await DriverFirestoreService()
+          .isCurrentDriverApproved();
 
-    if (isApproved) {
-      _loadRequests();
-      _loadActiveTrip();
-      _loadDriverStats();
+      if (!mounted) return;
+
+      setState(() {
+        _isApproved = isApproved;
+      });
+
+      if (isApproved) {
+        _loadRequests();
+        _loadActiveTrip();
+        _loadDriverStats();
+      }
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to check driver status: $error')),
+      );
     }
   }
 
@@ -128,43 +138,49 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     return '${average.toStringAsFixed(1)} ★ ($count)';
   }
 
-  void _loadDriverStats() {
-    final completedTrips = _bookingService.getCompletedDriverTrips(
-      VehicleService.currentUserId,
-    );
+  Future<void> _loadDriverStats() async {
+    try {
+      final completedTrips = await _firestoreService.getCompletedDriverTrips();
 
-    final now = DateTime.now();
+      if (!mounted) return;
 
-    final startOfToday = DateTime(now.year, now.month, now.day);
+      final now = DateTime.now();
+      final startOfToday = DateTime(now.year, now.month, now.day);
+      final startOfWeek = startOfToday.subtract(
+        Duration(days: now.weekday - 1),
+      );
 
-    final startOfWeek = startOfToday.subtract(Duration(days: now.weekday - 1));
+      int todayTrips = 0;
+      double todayEarnings = 0;
+      double weeklyEarnings = 0;
 
-    int todayTrips = 0;
-    double todayEarnings = 0;
-    double weeklyEarnings = 0;
+      for (final booking in completedTrips) {
+        final completedAt = booking.completedAt;
 
-    for (final booking in completedTrips) {
-      final completedAt = booking.completedAt;
+        if (completedAt == null) continue;
 
-      if (completedAt == null) {
-        continue;
+        if (!completedAt.isBefore(startOfToday)) {
+          todayTrips++;
+          todayEarnings += booking.fareEstimate.total;
+        }
+
+        if (!completedAt.isBefore(startOfWeek)) {
+          weeklyEarnings += booking.fareEstimate.total;
+        }
       }
 
-      if (!completedAt.isBefore(startOfToday)) {
-        todayTrips++;
-        todayEarnings += booking.fareEstimate.total;
-      }
+      setState(() {
+        _todayTrips = todayTrips;
+        _todayEarnings = todayEarnings;
+        _weeklyEarnings = weeklyEarnings;
+      });
+    } catch (error) {
+      if (!mounted) return;
 
-      if (!completedAt.isBefore(startOfWeek)) {
-        weeklyEarnings += booking.fareEstimate.total;
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to load driver statistics: $error')),
+      );
     }
-
-    setState(() {
-      _todayTrips = todayTrips;
-      _todayEarnings = todayEarnings;
-      _weeklyEarnings = weeklyEarnings;
-    });
   }
 
   Future<void> _onStartHeading() async {
@@ -179,7 +195,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
       if (updated == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to update trip status.')),
+          const SnackBar(content: Text('Unable to start heading to customer.')),
         );
         return;
       }
@@ -189,7 +205,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       });
 
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Heading to customer!')));
+          .showSnackBar(const SnackBar(content: Text('Heading to customer.')));
     } catch (error) {
       if (!mounted) return;
 
@@ -211,7 +227,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
       if (updated == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to update trip status.')),
+          const SnackBar(content: Text('Unable to mark driver as arrived.')),
         );
         return;
       }
@@ -220,13 +236,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         _activeTrip = updated;
       });
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Arrival confirmed!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You have arrived at the customer.')),
+      );
     } catch (error) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to confirm arrival: $error')),
+        SnackBar(content: Text('Unable to update arrival: $error')),
       );
     }
   }
@@ -265,7 +282,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   Future<void> _onStartTrip() async {
-    if (_activeTrip == null) return;
+    if (_activeTrip == null || _isStartingTrip) return;
+
+    final bookingId = _activeTrip!.id;
     final enteredPin = _pinController.text.trim();
 
     if (!RegExp(r'^\d{4}$').hasMatch(enteredPin)) {
@@ -276,36 +295,47 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
 
     setState(() => _isStartingTrip = true);
-    await Future.delayed(const Duration(milliseconds: 300));
 
-    final updated = _bookingService.startTrip(
-      bookingId: _activeTrip!.id,
-      driverId: VehicleService.currentUserId,
-      enteredPin: _pinController.text,
-    );
-
-    if (!mounted) return;
-    setState(() => _isStartingTrip = false);
-
-    if (updated == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Incorrect PIN. Please try again.')),
+    try {
+      final updated = await _firestoreService.startTripWithPin(
+        bookingId: bookingId,
+        enteredPin: enteredPin,
       );
-      return;
+
+      if (!mounted) return;
+
+      if (updated == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Incorrect PIN or trip cannot be started.'),
+          ),
+        );
+        return;
+      }
+
+      _pinController.clear();
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DriverActiveTripScreen(booking: updated),
+        ),
+      );
+
+      if (!mounted) return;
+
+      _loadDriverStats();
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to start trip: $error')));
+    } finally {
+      if (mounted) {
+        setState(() => _isStartingTrip = false);
+      }
     }
-
-    _pinController.clear();
-
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DriverActiveTripScreen(booking: updated),
-      ),
-    );
-
-    _loadActiveTrip();
-    _loadRequests();
-    _loadDriverStats();
   }
 
   Future<void> _onCancelBooking() async {

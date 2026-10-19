@@ -4,7 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/vehicle_model.dart';
-import '../../services/vehicle_service.dart';
+import '../../services/vehicle_firestore_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 
 class AddVehicleScreen extends StatefulWidget {
@@ -20,7 +20,7 @@ class AddVehicleScreen extends StatefulWidget {
 
 class _AddVehicleScreenState extends State<AddVehicleScreen> {
   final _formKey = GlobalKey<FormState>();
-  final VehicleService _vehicleService = VehicleService();
+  final VehicleFirestoreService _vehicleService = VehicleFirestoreService();
 
   final _registrationController = TextEditingController();
   final _brandController = TextEditingController();
@@ -32,7 +32,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
   bool _isSaving = false;
   Uint8List? _photoBytes;
-  String? _photoName;
+
   @override
   void initState() {
     super.initState();
@@ -41,7 +41,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
     if (vehicle != null) {
       _photoBytes = vehicle.photoBytes;
-      _photoName = vehicle.photoName;
+
       _registrationController.text = vehicle.registrationNumber;
       _brandController.text = vehicle.brand;
       _modelController.text = vehicle.model;
@@ -75,7 +75,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
     setState(() {
       _photoBytes = bytes;
-      _photoName = file.name;
     });
   }
 
@@ -84,40 +83,41 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
     setState(() => _isSaving = true);
 
-    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      if (widget.isEditing) {
+        await _vehicleService.updateVehicle(
+          vehicleId: widget.vehicle!.id,
+          registrationNumber: _registrationController.text,
+          brand: _brandController.text,
+          model: _modelController.text,
+          colour: _colourController.text,
+          vehicleType: _vehicleType.name,
+          transmission: _transmission.name,
+        );
+      } else {
+        await _vehicleService.addVehicle(
+          registrationNumber: _registrationController.text,
+          brand: _brandController.text,
+          model: _modelController.text,
+          colour: _colourController.text,
+          vehicleType: _vehicleType.name,
+          transmission: _transmission.name,
+        );
+      }
 
-    if (widget.isEditing) {
-      final current = widget.vehicle!;
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (error) {
+      if (!mounted) return;
 
-      final updated = current.copyWith(
-        registrationNumber: _registrationController.text.trim().toUpperCase(),
-        brand: _brandController.text.trim(),
-        model: _modelController.text.trim(),
-        colour: _colourController.text.trim(),
-        vehicleType: _vehicleType,
-        transmission: _transmission,
-        photoBytes: _photoBytes,
-        photoName: _photoName,
-      );
-
-      _vehicleService.updateVehicle(updated);
-    } else {
-      _vehicleService.addVehicle(
-        registrationNumber: _registrationController.text,
-        brand: _brandController.text,
-        model: _modelController.text,
-        colour: _colourController.text,
-        vehicleType: _vehicleType,
-        transmission: _transmission,
-        photoBytes: _photoBytes,
-        photoName: _photoName,
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to save vehicle: $error')));
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
-
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-
-    Navigator.pop(context, true);
   }
 
   String? _requiredValidator(String? value) {
