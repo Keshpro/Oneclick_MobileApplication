@@ -1,10 +1,13 @@
 import 'dart:io';
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:http_parser/http_parser.dart';
 
 import 'pending_approval_screen.dart';
 
@@ -180,31 +183,118 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
     required String fileType,
     required PlatformFile file,
   }) async {
-    final extension = (file.extension ?? 'bin').toLowerCase();
+    // Read configuration passed to Flutter at launch.
+    const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+    const publishableKey = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
 
-    final storageRef = FirebaseStorage.instance.ref().child(
-      'food_seller_verifications/$uid/'
-      '${fileType}_${DateTime.now().millisecondsSinceEpoch}.$extension',
-    );
+    if (supabaseUrl.isEmpty || publishableKey.isEmpty) {
+      throw Exception(
+        'Supabase configuration is missing. Please restart the app '
+        'with the required --dart-define values.',
+      );
+    }
 
-    final metadata = SettableMetadata(
-      contentType: switch (extension) {
-        'pdf' => 'application/pdf',
-        'jpg' || 'jpeg' => 'image/jpeg',
-        'png' => 'image/png',
-        _ => 'application/octet-stream',
-      },
-    );
+    final currentUser = FirebaseAuth.instance.currentUser;
 
-    if (file.path != null) {
-      await storageRef.putFile(File(file.path!), metadata);
-    } else {
+    if (currentUser == null || currentUser.uid != uid) {
+      throw Exception('Please sign in again before uploading documents.');
+    }
+
+    final filePath = file.path;
+
+    if (filePath == null) {
       throw Exception(
         'Unable to read the selected file. Please select it again.',
       );
     }
 
-    return storageRef.fullPath;
+    final localFile = File(filePath);
+
+    if (!await localFile.exists()) {
+      throw Exception(
+        'The selected file could not be found. Please select it again.',
+      );
+    }
+
+    final fileSize = await localFile.length();
+
+    if (fileSize == 0 || fileSize > 10 * 1024 * 1024) {
+      throw Exception('Please select a file smaller than 10 MB.');
+    }
+
+    final idToken = await currentUser.getIdToken();
+
+    if (idToken == null || idToken.isEmpty) {
+      throw Exception('Unable to verify your account. Please sign in again.');
+    }
+
+    final uri = Uri.parse(
+      '${supabaseUrl.replaceFirst(RegExp(r'/+$'), '')}'
+      '/functions/v1/food-verification-upload',
+    );
+
+    final request = http.MultipartRequest('POST', uri);
+
+    request.headers.addAll({
+      'Authorization': 'Bearer $idToken',
+      'apikey': publishableKey,
+    });
+
+    request.fields['fileType'] = fileType;
+
+    final extension = (file.extension ?? '').toLowerCase();
+
+    final mimeType = switch (extension) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'pdf' => 'application/pdf',
+      _ => '',
+    };
+
+    if (mimeType.isEmpty) {
+      throw Exception(
+        'Unsupported file format. Please select a JPG, PNG, or PDF file.',
+      );
+    }
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'file',
+        filePath,
+        filename: file.name,
+        contentType: MediaType.parse(mimeType),
+      ),
+    );
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    Map<String, dynamic> responseData = {};
+
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        responseData = decoded;
+      }
+    } catch (_) {
+      // Handle non-JSON server responses below.
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message =
+          responseData['error']?.toString() ??
+          'Upload failed (HTTP ${response.statusCode}).';
+
+      throw Exception(message);
+    }
+
+    final uploadedPath = responseData['path']?.toString();
+
+    if (uploadedPath == null || uploadedPath.isEmpty) {
+      throw Exception('The server did not return the uploaded file path.');
+    }
+
+    return uploadedPath;
   }
 
   Future<void> _submitApplication() async {
