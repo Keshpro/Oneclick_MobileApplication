@@ -4,6 +4,181 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class ManageProductsScreen extends StatelessWidget {
   const ManageProductsScreen({super.key});
+  Future<void> _deleteProduct(
+  BuildContext context,
+  String productId,
+) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Delete Product'),
+      content: const Text(
+        'Are you sure you want to delete this product?',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirm != true || !context.mounted) return;
+
+  try {
+    final productRef = FirebaseFirestore.instance
+        .collection('grocery_products')
+        .doc(productId);
+
+    final product = await productRef.get();
+
+    if (product.data()?['sellerId'] != user.uid) {
+      throw Exception('You cannot delete this product');
+    }
+
+    await productRef.delete();
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Product deleted successfully')),
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Delete failed: $e')),
+    );
+  }
+}
+Future<void> _editProduct(
+  BuildContext context,
+  String productId,
+  Map<String, dynamic> product,
+) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  final priceController = TextEditingController(
+    text: '${product['price'] ?? 0}',
+  );
+  final stockController = TextEditingController(
+    text: '${product['stock'] ?? 0}',
+  );
+  final descriptionController = TextEditingController(
+    text: '${product['description'] ?? ''}',
+  );
+
+  try {
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit Product'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                ),
+              ),
+              TextField(
+                controller: priceController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Price (Rs.)',
+                ),
+              ),
+              TextField(
+                controller: stockController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Stock',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final price = double.tryParse(priceController.text.trim());
+              final stock = int.tryParse(stockController.text.trim());
+
+              if (price == null || price <= 0 ||
+                  stock == null || stock < 0) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(
+                    content: Text('Enter valid price and stock'),
+                  ),
+                );
+                return;
+              }
+
+              Navigator.pop(dialogContext, true);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (save != true || !context.mounted) return;
+
+    final productRef = FirebaseFirestore.instance
+        .collection('grocery_products')
+        .doc(productId);
+
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      final snapshot = await transaction.get(productRef);
+
+      if (!snapshot.exists ||
+          snapshot.data()?['sellerId'] != user.uid) {
+        throw Exception('Product not found or access denied');
+      }
+
+      transaction.update(productRef, {
+        'description': descriptionController.text.trim(),
+        'price': double.parse(priceController.text.trim()),
+        'stock': int.parse(stockController.text.trim()),
+        'status': 'pending',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Product submitted for approval'),
+      ),
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Update failed: $e')),
+    );
+  } finally {
+    priceController.dispose();
+    stockController.dispose();
+    descriptionController.dispose();
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -88,24 +263,12 @@ class ManageProductsScreen extends StatelessWidget {
                   trailing: PopupMenuButton<String>(
                     onSelected: (value) {
                       if (value == 'edit') {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Edit functionality coming next',
-                            ),
-                          ),
-                        );
-                      }
+  _editProduct(context, productDoc.id, product);
+}
 
                       if (value == 'delete') {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Delete functionality coming next',
-                            ),
-                          ),
-                        );
-                      }
+  _deleteProduct(context, productDoc.id);
+}
                     },
                     itemBuilder: (context) => const [
                       PopupMenuItem(
