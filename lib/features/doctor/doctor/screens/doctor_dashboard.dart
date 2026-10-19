@@ -36,7 +36,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     _listenForDoctorNotifications();
   }
 
-  // Real-time Listener for Doctor Pop-Up Alerts (New & Cancelled Bookings)
+  // Real-time Listener for Doctor Pop-Up Alerts (New & Cancelled Bookings)[cite: 11]
   void _listenForDoctorNotifications() {
     final uid = _currentDoctor?.uid;
     if (uid == null) return;
@@ -53,7 +53,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         final title = data['title'] ?? 'Notification';
         final message = data['message'] ?? '';
 
-        // Mark as read immediately after pop-up display
+        // Mark as read immediately after pop-up display[cite: 11]
         doc.reference.update({'isRead': true});
 
         if (!mounted) return;
@@ -181,7 +181,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                           .where('userId', isEqualTo: doctorUid)
                           .snapshots(),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return const Center(child: CircularProgressIndicator());
                         }
 

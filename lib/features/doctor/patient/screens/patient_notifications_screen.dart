@@ -14,6 +14,19 @@ class PatientNotificationsScreen extends StatelessWidget {
 
   User? get _currentUser => FirebaseAuth.instance.currentUser;
 
+  Future<void> _clearAllNotifications(String uid) async {
+    final batch = FirebaseFirestore.instance.batch();
+    final snapshots = await FirebaseFirestore.instance
+        .collection('notifications')
+        .where('userId', isEqualTo: uid)
+        .get();
+
+    for (var doc in snapshots.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
+  }
+
   @override
   Widget build(BuildContext context) {
     final uid = _currentUser?.uid;
@@ -28,6 +41,14 @@ class PatientNotificationsScreen extends StatelessWidget {
           'Notifications',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
         ),
+        actions: [
+          if (uid != null)
+            IconButton(
+              tooltip: 'Clear All',
+              icon: const Icon(Icons.delete_sweep_outlined, color: Colors.redAccent),
+              onPressed: () => _clearAllNotifications(uid),
+            ),
+        ],
       ),
       body: SafeArea(
         child: uid == null
@@ -65,64 +86,132 @@ class PatientNotificationsScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(20),
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
-                      final data = docs[index].data();
+                      final doc = docs[index];
+                      final data = doc.data();
+                      final docId = doc.id;
                       final title = data['title'] ?? 'Notification';
                       final message = data['message'] ?? '';
                       final isRead = data['isRead'] ?? false;
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: isRead
-                              ? _surface
-                              : const Color(0xFFECFDF5), // Highlight unread
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isRead ? _border : const Color(0xFFA7F3D0),
+                      return Dismissible(
+                        key: Key(docId),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent,
+                            borderRadius: BorderRadius.circular(16),
                           ),
+                          child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: _primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.notifications_active_outlined,
-                                color: _primary,
-                                size: 22,
+                        onDismissed: (direction) {
+                          FirebaseFirestore.instance
+                              .collection('notifications')
+                              .doc(docId)
+                              .delete();
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: isRead ? _surface : const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isRead ? _border : const Color(0xFFA7F3D0),
+                            ),
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(16),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () {
+                                // Toggle Read / Unread state on tap
+                                FirebaseFirestore.instance
+                                    .collection('notifications')
+                                    .doc(docId)
+                                    .update({'isRead': !isRead});
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: _primary.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Icon(
+                                        isRead
+                                            ? Icons.notifications_outlined
+                                            : Icons.notifications_active_outlined,
+                                        color: _primary,
+                                        size: 22,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  title,
+                                                  style: TextStyle(
+                                                    fontWeight: isRead
+                                                        ? FontWeight.w700
+                                                        : FontWeight.w800,
+                                                    fontSize: 14,
+                                                    color: _text,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (!isRead)
+                                                Container(
+                                                  width: 8,
+                                                  height: 8,
+                                                  decoration: const BoxDecoration(
+                                                    color: _primary,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            message,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: _muted,
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      icon: const Icon(Icons.close_rounded,
+                                          size: 18, color: _muted),
+                                      tooltip: 'Remove',
+                                      onPressed: () {
+                                        FirebaseFirestore.instance
+                                            .collection('notifications')
+                                            .doc(docId)
+                                            .delete();
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    title,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 14,
-                                      color: _text,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    message,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: _muted,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       );
                     },
