@@ -17,18 +17,37 @@ class PendingAccounts extends StatelessWidget {
           .collection(collection)
           .doc(docId)
           .update({
-        'status': newStatus,
-        'approvedAt': newStatus == 'active' ? FieldValue.serverTimestamp() : null,
-      });
+  if (collection == 'seller_applications')
+    'grocerySellerStatus': newStatus
+  else
+    'status': newStatus,
+});
 
       // 2. Also update account status in main 'users' collection
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(docId)
-          .update({
-        'status': newStatus,
-      }).catchError((_) {});
+      final application = await FirebaseFirestore.instance
+    .collection(collection)
+    .doc(docId)
+    .get();
 
+String? userId;
+
+if (collection == 'seller_applications') {
+  userId = application.data()?['userId'] as String?;
+} else {
+  userId = docId;
+}
+
+if (userId != null && userId.isNotEmpty) {
+  await FirebaseFirestore.instance
+      .collection('users')
+      .doc(userId)
+      .update({
+    if (collection == 'seller_applications')
+      'grocerySellerStatus': newStatus
+    else
+      'status': newStatus,
+  });
+}
       // 3. Add entry to activity logs collection for Admin Dashboard
       final actionTitle =
           newStatus == 'active' ? 'Account Approved' : 'Account Rejected';
@@ -62,7 +81,7 @@ class PendingAccounts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4, // Updated length for 4 Provider Roles
+      length: 5, // Updated length for 4 Provider Roles
       child: Scaffold(
         backgroundColor: const Color(0xFFF4F6FB),
         appBar: AppBar(
@@ -78,10 +97,12 @@ class PendingAccounts extends StatelessWidget {
             unselectedLabelColor: Colors.white60,
             indicatorColor: Colors.white,
             tabs: [
+            
               Tab(text: 'Workers'),
               Tab(text: 'Food Sellers'),
               Tab(text: 'Doctors'),
               Tab(text: 'Drivers'),
+              Tab(text: 'Grocery Sellers'),
             ],
           ),
         ),
@@ -91,6 +112,7 @@ class PendingAccounts extends StatelessWidget {
             _buildPendingList(context, 'food_sellers'),
             _buildPendingList(context, 'doctors'),
             _buildPendingList(context, 'drivers'),
+            _buildPendingList(context, 'seller_applications'),
           ],
         ),
       ),
@@ -148,9 +170,20 @@ class PendingAccounts extends StatelessWidget {
             final data = doc.data();
             final docId = doc.id;
 
-            final name = data['name'] ?? 'Unknown Name';
-            final email = data['email'] ?? 'No Email';
-            final phone = data['phone'] ?? 'No Phone';
+            final isGrocerySeller = collectionName == 'seller_applications';
+
+final name = isGrocerySeller
+    ? (data['shopName'] ?? 'Unknown Shop')
+    : (data['name'] ?? 'Unknown Name');
+
+final email = data['email'] ?? 'No Email';
+
+final phone = isGrocerySeller
+    ? (data['phoneNumber'] ?? 'No Phone')
+    : (data['phone'] ?? 'No Phone');
+
+final businessAddress =
+    data['businessAddress'] ?? 'No Address';
             final role = data['role'] ?? collectionName;
             final category = data['category'] ?? '';
             final details =
@@ -224,6 +257,13 @@ class PendingAccounts extends StatelessWidget {
                     ),
                     const Divider(height: 24),
                     Text('Phone: $phone', style: const TextStyle(fontSize: 13)),
+                    if (isGrocerySeller) ...[
+  const SizedBox(height: 4),
+  Text(
+    'Business Address: $businessAddress',
+    style: const TextStyle(fontSize: 13),
+  ),
+],
                     const SizedBox(height: 4),
                     Text('Role: $role', style: const TextStyle(fontSize: 13)),
                     if (category.isNotEmpty) ...[
