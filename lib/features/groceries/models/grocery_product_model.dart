@@ -7,6 +7,11 @@ class GroceryProduct {
   final double? discountPrice;
   final String imageUrl;
   final int stock;
+ 
+
+  // Multi-Seller fields
+  final String sellerId;
+  final String sellerName;
 
   const GroceryProduct({
     required this.id,
@@ -17,6 +22,10 @@ class GroceryProduct {
     this.discountPrice,
     required this.imageUrl,
     required this.stock,
+
+    // Optional for backward compatibility
+    this.sellerId = '',
+    this.sellerName = '',
   });
 
   bool get hasDiscount =>

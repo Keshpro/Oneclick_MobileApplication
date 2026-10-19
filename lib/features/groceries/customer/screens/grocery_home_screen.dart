@@ -5,6 +5,9 @@ import '../../models/grocery_product_model.dart';
 import 'cart_screen.dart';
 import 'product_details_screen.dart';
 import '../../../auth/screens/provider_rules_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../seller/screens/seller_dashboard.dart';
 
 class GroceryHomeScreen extends StatefulWidget {
   const GroceryHomeScreen({super.key});
@@ -34,6 +37,73 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
       setState(() {});
     }
   }
+  Future<void> _openSellerArea() async {
+  final user = FirebaseAuth.instance.currentUser;
+
+  if (user == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please log in first')),
+    );
+    return;
+  }
+
+  try {
+    final applicationSnapshot = await FirebaseFirestore.instance
+        .collection('seller_applications')
+        .where('userId', isEqualTo: user.uid)
+        .get();
+
+    if (!mounted) return;
+
+    if (applicationSnapshot.docs.isEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const ProviderRulesScreen(),
+        ),
+      );
+      return;
+    }
+
+    final applications = applicationSnapshot.docs.toList()
+      ..sort((a, b) {
+        final aDate = a.data()['createdAt'] as Timestamp?;
+        final bDate = b.data()['createdAt'] as Timestamp?;
+        return (bDate?.millisecondsSinceEpoch ?? 0)
+            .compareTo(aDate?.millisecondsSinceEpoch ?? 0);
+      });
+
+    final status =
+        (applications.first.data()['status'] ?? 'pending')
+            .toString()
+            .toLowerCase();
+
+    if (status == 'active') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const SellerDashboard(),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            status == 'rejected'
+                ? 'Your seller application was rejected.'
+                : 'Your seller application is pending approval.',
+          ),
+        ),
+      );
+    }
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Unable to check seller status: $e')),
+    );
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -44,14 +114,7 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
           IconButton(
             tooltip: 'Become a Seller',
             icon: const Icon(Icons.storefront_outlined),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ProviderRulesScreen(),
-                ),
-              );
-            },
+            onPressed: _openSellerArea,
           ),
           IconButton(
             tooltip: 'My Orders',

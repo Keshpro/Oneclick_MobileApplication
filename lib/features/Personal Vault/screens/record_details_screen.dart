@@ -18,6 +18,11 @@ class RecordDetailsScreen extends StatefulWidget {
   final List<String> tags;
   final String? fileName;
   final String? filePath;
+  final String? merchant;
+  final DateTime? purchaseDate;
+  final String? amount;
+  final DateTime? renewalDate;
+  final bool? expiryNotification;
 
   const RecordDetailsScreen({
     super.key,
@@ -29,6 +34,11 @@ class RecordDetailsScreen extends StatefulWidget {
     required this.tags,
     this.fileName,
     this.filePath,
+    this.merchant,
+    this.purchaseDate,
+    this.amount,
+    this.renewalDate,
+    this.expiryNotification,
 });
 
   @override
@@ -69,10 +79,11 @@ Future<Uint8List?> _loadPdfBytes() async {
   }
 
   final bytes = await _storageService.downloadFile(
-    path: filePath,
-  );
+  path: filePath,
+).timeout(const Duration(seconds: 20));
 
-  return Uint8List.fromList(bytes);
+
+return Uint8List.fromList(bytes);
 }
 
   static const Color background = Color(0xFFE9EBF2);
@@ -98,7 +109,11 @@ Future<Uint8List?> _loadPdfBytes() async {
 
                   const SizedBox(height: 12),
 
-                  _buildDocumentSummary(),
+                  widget.type == 'Account'
+                    ? _buildAccountSummary()
+                    : widget.type == 'Receipt'
+                        ? _buildReceiptSummary()
+                        : _buildDocumentSummary(),
 
                   const SizedBox(height: 26),
 
@@ -106,19 +121,25 @@ Future<Uint8List?> _loadPdfBytes() async {
 
                   const SizedBox(height: 28),
 
-                  _buildDocumentView(),
+                  if (widget.type == 'Account') ...[
+                    _buildAccountDetails(),
+                  ] else if (widget.type == 'Receipt') ...[
+                    _buildReceiptInformation(),
 
-                  const SizedBox(height: 28),
+                    const SizedBox(height: 28),
 
-                  _buildExtractedDetails(),
+                    _buildDocumentView(),
 
-                  const SizedBox(height: 28),
+                    const SizedBox(height: 28),
 
-                  _buildResidentPortal(),
+                    _buildExtractedDetails(),
+                  ] else ...[
+                    _buildDocumentView(),
 
-                  const SizedBox(height: 28),
+                    const SizedBox(height: 28),
 
-                  _buildWarranty(),
+                    _buildExtractedDetails(),
+                  ],
 
                   const SizedBox(height: 35),
 
@@ -146,10 +167,14 @@ Future<Uint8List?> _loadPdfBytes() async {
 
         const SizedBox(width: 16),
 
-        const Expanded(
+        Expanded(
           child: Text(
-            'Document Detail',
-            style: TextStyle(
+            widget.type == 'Account'
+                ? 'Account Details'
+                : widget.type == 'Receipt'
+                    ? 'Receipt Details'
+                    : 'Document Details',
+            style: const TextStyle(
               color: ink,
               fontSize: 22,
               fontWeight: FontWeight.w600,
@@ -163,21 +188,6 @@ Future<Uint8List?> _loadPdfBytes() async {
             _showMoreOptions();
           },
         ),
-
-        const SizedBox(width: 10),
-
-        Container(
-          width: 46,
-          height: 46,
-          decoration: const BoxDecoration(
-            color: purple,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.person_outline_rounded,
-            color: Colors.white,
-          ),
-        ),
       ],
     );
   }
@@ -185,6 +195,290 @@ Future<Uint8List?> _loadPdfBytes() async {
   // =========================================================
   // DOCUMENT SUMMARY
   // =========================================================
+
+  String? _accountValue(String label) {
+  for (final line in widget.details.split('\n')) {
+    final separator = line.indexOf(':');
+    if (separator == -1) continue;
+
+    final key = line.substring(0, separator).trim();
+    if (key != label) continue;
+
+    final value = line.substring(separator + 1).trim();
+    return value.isEmpty ? null : value;
+  }
+
+  return null;
+}
+
+Widget _buildReceiptInformation() {
+  String formatDate(DateTime? date) {
+    if (date == null) return 'Not provided';
+
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Widget detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(color: muted, fontSize: 14),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value.isEmpty ? 'Not provided' : value,
+              style: const TextStyle(
+                color: ink,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  return _surface(
+    padding: const EdgeInsets.all(24),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Purchase Information',
+          style: TextStyle(
+            color: ink,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 16),
+        detailRow('Item', widget.title),
+        detailRow('Merchant', widget.merchant ?? ''),
+        detailRow('Amount', widget.amount ?? ''),
+        detailRow('Purchase Date', formatDate(widget.purchaseDate)),
+        detailRow('Category', widget.category),
+      ],
+    ),
+  );
+}
+
+Widget _buildAccountDetails() {
+  Widget detailRow(String label, String? value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(color: muted, fontSize: 14),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value?.isNotEmpty == true ? value! : 'Not provided',
+              style: const TextStyle(
+                color: ink,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget section(String title, List<Widget> children) {
+    return _surface(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: ink,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  return Column(
+    children: [
+      section('Account Information', [
+        detailRow('Account Name', widget.title),
+        detailRow('Category', widget.category),
+        detailRow('Username', _accountValue('Username')),
+      ]),
+      const SizedBox(height: 20),
+      section('Security Status', [
+        detailRow(
+          'Two-Factor Authentication',
+          _accountValue('Two-Factor Authentication'),
+        ),
+        detailRow('Backup Codes', _accountValue('Backup Codes')),
+      ]),
+      const SizedBox(height: 20),
+      section('Recovery Information', [
+        detailRow('Recovery Email', _accountValue('Recovery Email')),
+        detailRow('Recovery Phone', _accountValue('Recovery Phone')),
+        detailRow(
+          'Recovery Instructions',
+          _accountValue('Recovery Instructions'),
+        ),
+      ]),
+      const SizedBox(height: 20),
+      section('Additional Notes', [
+        Text(
+          _accountValue('Notes') ?? 'No additional notes.',
+          style: const TextStyle(color: ink, fontSize: 14, height: 1.5),
+        ),
+      ]),
+    ],
+  );
+}
+
+Widget _buildReceiptSummary() {
+  return _surface(
+    padding: const EdgeInsets.all(24),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(
+          Icons.receipt_long_outlined,
+          color: purple,
+          size: 48,
+        ),
+        const SizedBox(width: 18),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.title,
+                style: const TextStyle(
+                  color: ink,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.category,
+                style: const TextStyle(
+                  color: muted,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.merchant?.trim().isNotEmpty == true
+                    ? 'Purchased from ${widget.merchant}'
+                    : 'Merchant not provided',
+                style: const TextStyle(
+                  color: muted,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+  Widget _buildAccountSummary() {
+  return _surface(
+    padding: const EdgeInsets.all(24),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(
+          Icons.account_circle_outlined,
+          color: purple,
+          size: 48,
+        ),
+        const SizedBox(width: 18),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.title,
+                style: const TextStyle(
+                  color: ink,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.category,
+                style: const TextStyle(
+                  color: muted,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Account',
+                style: TextStyle(
+                  color: purple,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+String get _documentExpiryText {
+  final date = widget.renewalDate;
+
+  if (date == null) return 'Expiry date not provided';
+
+  final formattedDate = '${date.day}/${date.month}/${date.year}';
+  return 'Renews / Expires $formattedDate';
+}
+
+String get _documentDaysLeft {
+  final date = widget.renewalDate;
+
+  if (date == null) return 'No date';
+
+  final today = DateUtils.dateOnly(DateTime.now());
+  final expiry = DateUtils.dateOnly(date);
+  final days = expiry.difference(today).inDays;
+
+  if (days < 0) return 'Expired';
+  if (days == 0) return 'Expires today';
+
+  return '$days days left';
+}
 
   Widget _buildDocumentSummary() {
     return _surface(
@@ -270,7 +564,7 @@ Future<Uint8List?> _loadPdfBytes() async {
                           borderRadius: BorderRadius.circular(25),
                           boxShadow: _smallShadow(),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
@@ -281,8 +575,8 @@ Future<Uint8List?> _loadPdfBytes() async {
                             SizedBox(width: 7),
                             Flexible(
                               child: Text(
-                                'Active • Renews Oct 31, 2025',
-                                style: TextStyle(
+                                _documentExpiryText,
+                                style: const TextStyle(
                                   color: purple,
                                   fontSize: 14,
                                 ),
@@ -295,8 +589,8 @@ Future<Uint8List?> _loadPdfBytes() async {
 
                     const SizedBox(width: 12),
 
-                    const Text(
-                      '234 days\nleft',
+                    Text(
+                    _documentDaysLeft,
                       style: TextStyle(
                         color: muted,
                         fontSize: 14,
@@ -318,10 +612,11 @@ Future<Uint8List?> _loadPdfBytes() async {
   // =========================================================
 
   Widget _buildActionButtons() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
+  return SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(
+      children: [
+        if (widget.type == 'Document') ...[
           _actionButton(
             icon: Icons.auto_awesome,
             text: 'Explain Document',
@@ -334,15 +629,17 @@ Future<Uint8List?> _loadPdfBytes() async {
                 ),
               );
             },
-          ),
+                      ),
 
-          const SizedBox(width: 14),
+            const SizedBox(width: 14),
+        ],
 
-          _actionButton(
-  icon: Icons.share_outlined,
+        _actionButton(
+          icon: Icons.share_outlined,
   text: 'Share',
   onTap: () {
     final record = ShareRecordItem(
+      recordId: widget.recordId,
       title: widget.title,
       subtitle: '${widget.category} • ${widget.type}',
       icon: Icons.picture_as_pdf_outlined,
@@ -364,6 +661,7 @@ Future<Uint8List?> _loadPdfBytes() async {
 
           const SizedBox(width: 14),
 
+          if (widget.type != 'Account')
           _actionButton(
   icon: Icons.download_outlined,
   text: 'Download',
@@ -421,9 +719,11 @@ Widget _buildDocumentView() {
 
             const SizedBox(width: 10),
 
-            const Text(
-              'Document View',
-              style: TextStyle(
+            Text(
+              widget.type == 'Receipt'
+                  ? 'Receipt Preview'
+                  : 'Document View',
+              style: const TextStyle(
                 color: ink,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -582,102 +882,33 @@ if (bytes == null || bytes.isEmpty) {
   // EXTRACTED DETAILS
   // =========================================================
 
-  Widget _buildExtractedDetails() {
-    return _surface(
-      padding: const EdgeInsets.all(28),
-      child: Column(
+
+Widget _buildExtractedDetails() {
+  Widget detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Extracted Record Details',
-            style: TextStyle(
-              color: ink,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-
-          const SizedBox(height: 22),
-
-          Row(
-            children: [
-              Expanded(
-                child: _informationCard(
-                  title: 'Renewal Target',
-                  value: 'Oct 31, 2025',
-                  footer: '🔔 Alert: 30d before',
-                  footerColor: purple,
-                ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: muted,
+                fontSize: 14,
               ),
-
-              const SizedBox(width: 16),
-
-              Expanded(
-                child: _informationCard(
-                  title: 'Monthly Cost',
-                  value: '\$2,350.00 / mo',
-                  footer: '◷ Due 1st day',
-                ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: ink,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
               ),
-            ],
-          ),
-
-          const SizedBox(height: 26),
-
-          const Text(
-            'Tags',
-            style: TextStyle(
-              color: muted,
-              fontSize: 14,
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _tag('#lease'),
-              _tag('#property'),
-              _tag('#landlord'),
-              _tag('#rent'),
-            ],
-          ),
-
-          const SizedBox(height: 22),
-
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0F1F6),
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Internal Notes',
-                  style: TextStyle(
-                    color: muted,
-                    fontSize: 14,
-                  ),
-                ),
-
-                SizedBox(height: 12),
-
-                Text(
-                  'Landlord contact: John Doe (555–0192). '
-                  'Water included, electricity separate. '
-                  'Key renewal clause detailed on page 12.',
-                  style: TextStyle(
-                    color: ink,
-                    fontSize: 15,
-                    height: 1.7,
-                  ),
-                ),
-              ],
             ),
           ),
         ],
@@ -685,11 +916,124 @@ if (bytes == null || bytes.isEmpty) {
     );
   }
 
+  Widget section(String title, List<Widget> children) {
+    return _surface(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: ink,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 18),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  final fileName = widget.fileName;
+  final extension = fileName != null && fileName.contains('.')
+      ? fileName.split('.').last.toUpperCase()
+      : 'Not provided';
+
+  final date = widget.renewalDate;
+  final formattedDate = date == null
+      ? 'Not provided'
+      : '${date.day}/${date.month}/${date.year}';
+
+  return Column(
+    children: [
+      section('File Information', [
+        detailRow('File Name', fileName ?? 'Not provided'),
+        detailRow('File Type', extension),
+        detailRow('Category', widget.category),
+      ]),
+
+      const SizedBox(height: 20),
+
+      section(
+        widget.type == 'Receipt'
+            ? 'Warranty & Reminders'
+            : 'Expiry & Reminders',
+        [
+        detailRow(
+          widget.type == 'Receipt'
+              ? 'Warranty / Expiry Date'
+              : 'Renewal / Expiry Date',
+          formattedDate,
+        ),
+        detailRow('Time Remaining', _documentDaysLeft),
+        detailRow(
+          'Reminder',
+          widget.expiryNotification == null
+              ? 'Not provided'
+              : widget.expiryNotification!
+                  ? 'Enabled'
+                  : 'Disabled',
+        ),
+      ]),
+
+      const SizedBox(height: 20),
+
+      section('Notes & Tags', [
+        const Text(
+          'Notes',
+          style: TextStyle(
+            color: muted,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          widget.details.trim().isEmpty
+              ? 'No notes added.'
+              : widget.details,
+          style: const TextStyle(
+            color: ink,
+            fontSize: 15,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 24),
+        const Text(
+          'Tags',
+          style: TextStyle(
+            color: muted,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (widget.tags.isEmpty)
+          const Text(
+            'No tags added.',
+            style: TextStyle(color: muted, fontSize: 14),
+          )
+        else
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: widget.tags.map((tag) {
+              final cleanTag = tag.startsWith('#') ? tag : '#$tag';
+              return _tag(cleanTag);
+            }).toList(),
+          ),
+      ]),
+    ],
+  );
+}
+
   // =========================================================
   // RESIDENT PORTAL
   // =========================================================
 
-  Widget _buildResidentPortal() {
+  // ignore: unused_element
+Widget _buildResidentPortal() {
     return _surface(
       padding: const EdgeInsets.all(28),
       child: Column(
@@ -904,6 +1248,7 @@ if (bytes == null || bytes.isEmpty) {
   // WARRANTY
   // =========================================================
 
+  // ignore: unused_element
   Widget _buildWarranty() {
     return _surface(
       padding: const EdgeInsets.all(28),
@@ -1052,6 +1397,67 @@ if (bytes == null || bytes.isEmpty) {
   // =========================================================
   // BOTTOM ACTIONS
   // =========================================================
+  Future<void> _showMoveFolderDialog() async {
+  final categoryController = TextEditingController(
+    text: widget.category,
+  );
+
+  final selectedCategory = await showDialog<String>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Move to Another Folder'),
+        content: TextField(
+          controller: categoryController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Folder / Category',
+            hintText: 'e.g. Personal, Work, Finance',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final category = categoryController.text.trim();
+
+              if (category.isEmpty) return;
+
+              Navigator.pop(dialogContext, category);
+            },
+            child: const Text('Move'),
+          ),
+        ],
+      );
+    },
+  );
+
+  categoryController.dispose();
+
+  if (selectedCategory == null ||
+      selectedCategory == widget.category) {
+    return;
+  }
+
+  try {
+    await _vaultService.updateRecordCategory(
+      recordId: widget.recordId,
+      category: selectedCategory,
+    );
+
+    if (!mounted) return;
+
+    _showMessage('Record moved successfully.');
+    Navigator.pop(context);
+  } catch (e) {
+    if (!mounted) return;
+
+    _showMessage('Failed to move record: $e');
+  }
+}
 
   Widget _buildBottomActions() {
     return Column(
@@ -1059,9 +1465,7 @@ if (bytes == null || bytes.isEmpty) {
         _largeActionButton(
           icon: Icons.drive_file_move_outline,
           text: 'Move to Another Folder',
-          onTap: () {
-            _showMessage('Folder management will be connected next.');
-          },
+          onTap: _showMoveFolderDialog,
         ),
 
         const SizedBox(height: 15),
@@ -1234,6 +1638,7 @@ if (bytes == null || bytes.isEmpty) {
     );
   }
 
+// ignore: unused_element
   Widget _informationCard({
     required String title,
     required String value,
@@ -1439,11 +1844,52 @@ if (bytes == null || bytes.isEmpty) {
   final notesController = TextEditingController(
     text: widget.details,
   );
+  DateTime? selectedRenewalDate = widget.renewalDate;
+  bool selectedExpiryNotification =
+      widget.expiryNotification ?? false;
+
+  final merchantController = TextEditingController(
+    text: widget.merchant ?? '',
+  );
+
+  final amountController = TextEditingController(
+    text: widget.amount ?? '',
+  );
+
+  DateTime? selectedPurchaseDate = widget.purchaseDate;
+
+  final usernameController = TextEditingController(
+  text: _accountValue('Username') ?? '',
+);
+
+final recoveryEmailController = TextEditingController(
+  text: _accountValue('Recovery Email') ?? '',
+);
+
+final recoveryPhoneController = TextEditingController(
+  text: _accountValue('Recovery Phone') ?? '',
+);
+
+final recoveryInstructionsController = TextEditingController(
+  text: _accountValue('Recovery Instructions') ?? '',
+);
+
+final accountNotesController = TextEditingController(
+  text: _accountValue('Notes') ?? '',
+);
+
+bool accountTwoFactorEnabled =
+    _accountValue('Two-Factor Authentication') == 'Enabled';
+
+bool accountBackupCodesAvailable =
+    _accountValue('Backup Codes') == 'Available';
 
   final result = await showDialog<bool>(
     context: context,
     builder: (dialogContext) {
-      return AlertDialog(
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
         title: const Text('Edit Record'),
         content: SingleChildScrollView(
           child: Column(
@@ -1465,19 +1911,217 @@ if (bytes == null || bytes.isEmpty) {
               const SizedBox(height: 12),
               TextField(
                 controller: typeController,
+                readOnly: true,
                 decoration: const InputDecoration(
                   labelText: 'Record Type',
+                  helperText: 'Record type cannot be changed',
                 ),
               ),
               const SizedBox(height: 12),
+                if (widget.type != 'Account')
+                TextField(
+                  controller: notesController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes',
+                  ),
+                ),
+              if (widget.type == 'Document') ...[
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Renewal / Expiry Date'),
+                  subtitle: Text(
+                    selectedRenewalDate == null
+                        ? 'No date selected'
+                        : '${selectedRenewalDate!.day}/${selectedRenewalDate!.month}/${selectedRenewalDate!.year}',
+                  ),
+                  trailing: const Icon(Icons.calendar_today_outlined),
+                  onTap: () async {
+                    final pickedDate = await showDatePicker(
+                      context: dialogContext,
+                      initialDate: selectedRenewalDate ?? DateTime.now(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+
+                    if (pickedDate != null && dialogContext.mounted) {
+                      setDialogState(() {
+                        selectedRenewalDate = pickedDate;
+                      });
+                    }
+                  },
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Expiry Reminder'),
+                  value: selectedExpiryNotification,
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedExpiryNotification = value;
+                    });
+                  },
+                ),
+              ],
+            if (widget.type == 'Receipt') ...[
+              const SizedBox(height: 16),
+
               TextField(
-                controller: notesController,
-                maxLines: 3,
+                controller: merchantController,
                 decoration: const InputDecoration(
-                  labelText: 'Notes',
+                  labelText: 'Merchant / Store Name',
                 ),
               ),
-            ],
+
+              const SizedBox(height: 12),
+
+              TextField(
+                controller: amountController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Amount',
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Purchase Date'),
+                subtitle: Text(
+                  selectedPurchaseDate == null
+                      ? 'No date selected'
+                      : '${selectedPurchaseDate!.day}/${selectedPurchaseDate!.month}/${selectedPurchaseDate!.year}',
+                ),
+                trailing: const Icon(Icons.calendar_today_outlined),
+                onTap: () async {
+                  final pickedDate = await showDatePicker(
+                    context: dialogContext,
+                    initialDate: selectedPurchaseDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+
+                  if (pickedDate != null && dialogContext.mounted) {
+                    setDialogState(() {
+                      selectedPurchaseDate = pickedDate;
+                    });
+                  }
+                },
+               ),
+               const SizedBox(height: 12),
+
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Warranty / Expiry Date'),
+                subtitle: Text(
+                  selectedRenewalDate == null
+                      ? 'No date selected'
+                      : '${selectedRenewalDate!.day}/${selectedRenewalDate!.month}/${selectedRenewalDate!.year}',
+                ),
+                trailing: const Icon(Icons.calendar_today_outlined),
+                onTap: () async {
+                  final pickedDate = await showDatePicker(
+                    context: dialogContext,
+                    initialDate: selectedRenewalDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+
+                  if (pickedDate != null && dialogContext.mounted) {
+                    setDialogState(() {
+                      selectedRenewalDate = pickedDate;
+                    });
+                  }
+                },
+              ),
+
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Warranty Reminder'),
+                value: selectedExpiryNotification,
+                onChanged: (value) {
+                  setDialogState(() {
+                    selectedExpiryNotification = value;
+                  });
+                },
+              ),
+                        ], // End of Receipt fields
+
+            if (widget.type == 'Account') ...[
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: usernameController,
+                decoration: const InputDecoration(
+                  labelText: 'Email / Username',
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              TextField(
+                controller: recoveryEmailController,
+                decoration: const InputDecoration(
+                  labelText: 'Recovery Email',
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              TextField(
+                controller: recoveryPhoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Recovery Phone',
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Two-Factor Authentication'),
+                value: accountTwoFactorEnabled,
+                onChanged: (value) {
+                  setDialogState(() {
+                    accountTwoFactorEnabled = value;
+                  });
+                },
+              ),
+
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Backup Codes Available'),
+                value: accountBackupCodesAvailable,
+                onChanged: (value) {
+                  setDialogState(() {
+                    accountBackupCodesAvailable = value;
+                  });
+                },
+              ),
+
+              const SizedBox(height: 12),
+
+              TextField(
+                controller: recoveryInstructionsController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Recovery Instructions',
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              TextField(
+                controller: accountNotesController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Additional Notes',
+                ),
+              ),
+            ], // End of Account fields
+
+            ], // End of main Column children
           ),
         ),
         actions: [
@@ -1489,6 +2133,24 @@ if (bytes == null || bytes.isEmpty) {
           ),
           ElevatedButton(
             onPressed: () {
+              if (titleController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter a record title'),
+                  ),
+                );
+                return;
+              }
+              if (widget.type == 'Account' &&
+                  usernameController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter an email or username'),
+                  ),
+                );
+                return;
+              }
+
               Navigator.pop(dialogContext, true);
             },
             child: const Text('Save'),
@@ -1496,6 +2158,8 @@ if (bytes == null || bytes.isEmpty) {
         ],
       );
     },
+    );
+  },
   );
 
   if (result != true) {
@@ -1503,6 +2167,13 @@ if (bytes == null || bytes.isEmpty) {
     categoryController.dispose();
     typeController.dispose();
     notesController.dispose();
+    merchantController.dispose();
+    amountController.dispose();
+    usernameController.dispose();
+    recoveryEmailController.dispose();
+    recoveryPhoneController.dispose();
+    recoveryInstructionsController.dispose();
+    accountNotesController.dispose();
     return;
   }
 
@@ -1512,9 +2183,40 @@ if (bytes == null || bytes.isEmpty) {
       title: titleController.text.trim(),
       category: categoryController.text.trim(),
       recordType: typeController.text.trim(),
-      notes: notesController.text.trim(),
+      notes: widget.type == 'Account'
+    ? [
+        'Username: ${usernameController.text.trim()}',
+        if (recoveryEmailController.text.trim().isNotEmpty)
+          'Recovery Email: ${recoveryEmailController.text.trim()}',
+        if (recoveryPhoneController.text.trim().isNotEmpty)
+          'Recovery Phone: ${recoveryPhoneController.text.trim()}',
+        'Two-Factor Authentication: ${accountTwoFactorEnabled ? "Enabled" : "Not enabled"}',
+        'Backup Codes: ${accountBackupCodesAvailable ? "Available" : "Not available"}',
+        if (recoveryInstructionsController.text.trim().isNotEmpty)
+          'Recovery Instructions: ${recoveryInstructionsController.text.trim()}',
+        if (accountNotesController.text.trim().isNotEmpty)
+          'Notes: ${accountNotesController.text.trim()}',
+      ].join('\n')
+    : notesController.text.trim(),
       tags: widget.tags,
-    );
+      merchant: widget.type == 'Receipt'
+          ? merchantController.text.trim()
+          : null,
+      amount: widget.type == 'Receipt'
+          ? amountController.text.trim()
+          : null,
+      purchaseDate: widget.type == 'Receipt'
+          ? selectedPurchaseDate
+          : null,
+      renewalDate:
+          widget.type == 'Document' || widget.type == 'Receipt'
+              ? selectedRenewalDate
+              : null,
+      expiryNotification:
+          widget.type == 'Document' || widget.type == 'Receipt'
+              ? selectedExpiryNotification
+              : null,
+          );
 
     if (!mounted) return;
 
@@ -1538,6 +2240,13 @@ if (bytes == null || bytes.isEmpty) {
     categoryController.dispose();
     typeController.dispose();
     notesController.dispose();
+    merchantController.dispose();
+    amountController.dispose();
+    usernameController.dispose();
+    recoveryEmailController.dispose();
+    recoveryPhoneController.dispose();
+    recoveryInstructionsController.dispose();
+    accountNotesController.dispose();
   }
 }
 
@@ -1558,23 +2267,37 @@ if (bytes == null || bytes.isEmpty) {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-  leading: const Icon(Icons.edit_outlined),
-  title: const Text('Edit Record'),
-  onTap: () {
-    Navigator.pop(context);
-    _showEditDialog();
-  },
-),
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('Edit Record'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showEditDialog();
+                  },
+                ),
 
                 ListTile(
                   leading: const Icon(Icons.star_border),
                   title: const Text('Add to Favorites'),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(context);
-                    _showMessage('Added to favorites.');
+
+                    try {
+                      await _vaultService.updateFavorite(
+                        recordId: widget.recordId,
+                        isFavorite: true,
+                      );
+
+                      if (!mounted) return;
+
+                      _showMessage('Added to favorites.');
+                    } catch (e) {
+                      if (!mounted) return;
+
+                      _showMessage('Failed to add to favorites: $e');
+                    }
                   },
                 ),
-              ],
+              ]
             ),
           ),
         );
@@ -1631,17 +2354,7 @@ if (bytes == null || bytes.isEmpty) {
               Navigator.pop(dialogContext);
 
               try {
-                final filePath = widget.filePath;
-
-                if (filePath != null && filePath.isNotEmpty) {
-                  await _storageService.deleteFile(
-                    path: filePath,
-                  );
-                }
-
-                await _vaultService.deleteRecord(
-                  widget.recordId,
-                );
+                await _vaultService.deleteRecord(widget.recordId);
 
                 if (!mounted) return;
 

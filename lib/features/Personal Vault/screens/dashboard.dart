@@ -13,7 +13,7 @@ import 'sharing_center_screen.dart';
 import 'ask_ai_vault_screen.dart';
 import 'document_pack_requirements_screen.dart';
 import 'scan_upload_screen.dart';
-import 'add_account_screen.dart';
+import 'add_record_screen.dart';
 import 'vault_settings_screen.dart';
 import 'record_details_screen.dart';
 import '../models/vault_record.dart';
@@ -41,9 +41,6 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
 
   static const String _biometricKey = 'vault_biometric_enabled';
 
-  bool _checkingBiometric = true;
-  bool _biometricAccessGranted = false;
-
   @override
   void initState() {
     super.initState();
@@ -57,10 +54,6 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
   Future<void> _checkBiometricAccess() async {
     if (!_isLoggedIn) {
       if (!mounted) return;
-      setState(() {
-        _checkingBiometric = false;
-        _biometricAccessGranted = true;
-      });
       return;
     }
 
@@ -69,10 +62,6 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
 
     if (!biometricEnabled || kIsWeb) {
       if (!mounted) return;
-      setState(() {
-        _checkingBiometric = false;
-        _biometricAccessGranted = true;
-      });
       return;
     }
 
@@ -101,10 +90,6 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
       if (!mounted) return;
 
       if (authenticated) {
-        setState(() {
-          _checkingBiometric = false;
-          _biometricAccessGranted = true;
-        });
         return;
       }
 
@@ -735,7 +720,9 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const AddAccountScreen(),
+                                  builder: (_) => const AddRecordScreen(
+                                    initialRecordType: 'Account',
+                                  ),
                                 ),
                               );
                             },
@@ -781,6 +768,18 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                   StreamBuilder<List<VaultRecord>>(
                     stream: _vaultRecordsStream,
                     builder: (context, snapshot) {
+                      return StreamBuilder<List<SubscriptionRecord>>(
+                        stream: _subscriptionRecordsStream,
+                        builder: (context, subscriptionSnapshot) {
+                      if (snapshot.hasError) {
+                        return Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            'Unable to load expiring records: ${snapshot.error}',
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        );
+                      }
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -798,15 +797,88 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                       final today = DateTime(now.year, now.month, now.day);
                       final cutoff = today.add(const Duration(days: 60));
 
-                      final expiringRecords = (snapshot.data ?? []).where((record) {
-                        final renewal = DateTime(
-                          record.renewalDate.year,
-                          record.renewalDate.month,
-                          record.renewalDate.day,
+                      debugPrint('Dashboard record count: ${snapshot.data?.length ?? 0}');
+
+                      for (final record in snapshot.data ?? <VaultRecord>[]) {
+                        debugPrint(
+                          'Record: ${record.title}, '
+                          'Type: ${record.recordType}, '
+                          'Renewal: ${record.renewalDate}',
                         );
-                        return !renewal.isBefore(today) && !renewal.isAfter(cutoff);
-                      }).toList()
-                        ..sort((a, b) => a.renewalDate.compareTo(b.renewalDate));
+                      }
+
+                      final expiringRecords = (snapshot.data ?? []).where((record) {
+                      if (record.recordType == 'Account') {
+                        return false;
+                      }
+
+                      final renewal = DateTime(
+                        record.renewalDate.year,
+                        record.renewalDate.month,
+                        record.renewalDate.day,
+                      );
+
+                      return !renewal.isBefore(today) && !renewal.isAfter(cutoff);
+                    }).toList()
+                      ..sort((a, b) => a.renewalDate.compareTo(b.renewalDate));
+
+                      final expiringSubscriptions =
+    (subscriptionSnapshot.data ?? <SubscriptionRecord>[])
+        .where((subscription) {
+  if (subscription.status.toLowerCase() != 'active') {
+    return false;
+  }
+
+  final renewalDate = subscription.renewalDate ??
+      _parseSubscriptionRenewal(subscription.renewal);
+
+  if (renewalDate == null) return false;
+
+  final date = DateTime(
+    renewalDate.year,
+    renewalDate.month,
+    renewalDate.day,
+  );
+
+  return !date.isBefore(today) && !date.isAfter(cutoff);
+}).toList()
+      ..sort((a, b) {
+        final aDate = a.renewalDate ??
+            _parseSubscriptionRenewal(a.renewal)!;
+        final bDate = b.renewalDate ??
+            _parseSubscriptionRenewal(b.renewal)!;
+
+        return aDate.compareTo(bDate);
+      });
+
+      final expiringItems = <({
+  DateTime date,
+  VaultRecord? record,
+  SubscriptionRecord? subscription,
+})>[];
+
+for (final record in expiringRecords) {
+  expiringItems.add((
+    date: record.renewalDate,
+    record: record,
+    subscription: null,
+  ));
+}
+
+for (final subscription in expiringSubscriptions) {
+  final date = subscription.renewalDate ??
+      _parseSubscriptionRenewal(subscription.renewal);
+
+  if (date == null) continue;
+
+  expiringItems.add((
+    date: date,
+    record: null,
+    subscription: subscription,
+  ));
+}
+
+expiringItems.sort((a, b) => a.date.compareTo(b.date));
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -814,9 +886,9 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                           _heading(
                             'EXPIRING SOON',
                             trailing:
-                                '${expiringRecords.length} ${expiringRecords.length == 1 ? 'item' : 'items'}',
+                                '${expiringItems.length} ${expiringItems.length == 1 ? 'item' : 'items'}',
                           ),
-                          if (expiringRecords.isEmpty)
+                          if (expiringItems.isEmpty)
                             const Padding(
                               padding: EdgeInsets.symmetric(vertical: 12),
                               child: Text(
@@ -828,62 +900,91 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                             _surface(
                               child: Column(
                                 children: [
-                                  for (int i = 0; i < expiringRecords.length; i++) ...[
-                                    Builder(
-                                      builder: (context) {
-                                        final record = expiringRecords[i];
-                                        final renewal = DateTime(
-                                          record.renewalDate.year,
-                                          record.renewalDate.month,
-                                          record.renewalDate.day,
-                                        );
-                                        final days = renewal.difference(today).inDays;
-                                        final status = days == 0
-                                            ? 'Expires today'
-                                            : days == 1
-                                                ? 'Expires tomorrow'
-                                                : 'Expires in $days days';
+                                  for (int i = 0; i < expiringItems.length; i++) ...[
+  Builder(
+    builder: (context) {
+      final item = expiringItems[i];
+      final record = item.record;
+      final subscription = item.subscription;
 
-                                        return _record(
-                                          context,
-                                          icon: Icons.description_outlined,
-                                          title: record.title,
-                                          subtitle: status,
-                                          subtitleColor:
-                                              days <= 14 ? Colors.red : muted,
-                                          onTap: () {
-                                            if (!_requireLogin(context)) return;
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => RecordDetailsScreen(
-                                                  recordId: record.id,
-                                                  title: record.title,
-                                                  category: record.category,
-                                                  type: record.recordType,
-                                                  details: record.notes,
-                                                  tags: record.tags,
-                                                  fileName: record.fileName,
-                                                  filePath: record.filePath,
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        );
-                                      },
-                                    ),
-                                    if (i != expiringRecords.length - 1)
-                                      const Divider(height: 24),
-                                  ],
+      final date = DateTime(
+        item.date.year,
+        item.date.month,
+        item.date.day,
+      );
+
+      final days = date.difference(today).inDays;
+      final isSubscription = subscription != null;
+      final isWarranty = record?.recordType == 'Receipt';
+
+      final action = isSubscription ? 'Renews' : 'Expires';
+
+      final status = days == 0
+          ? '$action today'
+          : days == 1
+              ? '$action tomorrow'
+              : '$action in $days days';
+
+      return _record(
+        context,
+        icon: isSubscription
+            ? Icons.subscriptions_outlined
+            : isWarranty
+                ? Icons.receipt_long_outlined
+                : Icons.description_outlined,
+        title: subscription?.name ?? record!.title,
+        subtitle: status,
+        subtitleColor: days <= 14 ? Colors.red : muted,
+        onTap: () {
+          if (!_requireLogin(context)) return;
+
+          if (subscription != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const SubscriptionsScreen(),
+              ),
+            );
+          } else if (record != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => RecordDetailsScreen(
+                  recordId: record.id,
+                  title: record.title,
+                  category: record.category,
+                  type: record.recordType,
+                  details: record.notes,
+                  tags: record.tags,
+                  fileName: record.fileName,
+                  filePath: record.filePath,
+                  renewalDate: record.renewalDate,
+                  expiryNotification: record.expiryNotification,
+                  merchant: record.merchant,
+                  purchaseDate: record.purchaseDate,
+                  amount: record.amount,
+                ),
+              ),
+            );
+          }
+        },
+      );
+    },
+  ),
+  if (i != expiringItems.length - 1)
+    const Divider(height: 24),
+],
                                 ],
                               ),
                             ),
                         ],
+                     );
+                        },
                       );
                     },
                   ),
                   const SizedBox(height: 24),
-                  StreamBuilder<List<SubscriptionRecord>>(
+            StreamBuilder<List<SubscriptionRecord>>(
                     stream: _subscriptionRecordsStream,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -1502,6 +1603,11 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
               tags: record.tags,
               fileName: record.fileName,
               filePath: record.filePath,
+              renewalDate: record.renewalDate,
+              expiryNotification: record.expiryNotification,
+              merchant: record.merchant,
+              purchaseDate: record.purchaseDate,
+              amount: record.amount,
             ),
           ),
         );
@@ -1722,6 +1828,11 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                       tags: record.tags,
                       fileName: record.fileName,
                       filePath: record.filePath,
+                      renewalDate: record.renewalDate,
+                      expiryNotification: record.expiryNotification,
+                      merchant: record.merchant,
+                      purchaseDate: record.purchaseDate,
+                      amount: record.amount,
                     ),
                   ),
                 );
@@ -1832,6 +1943,11 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                                         tags: record.tags,
                                         fileName: record.fileName,
                                         filePath: record.filePath,
+                                        renewalDate: record.renewalDate,
+                                        expiryNotification: record.expiryNotification,
+                                        merchant: record.merchant,
+                                        purchaseDate: record.purchaseDate,
+                                        amount: record.amount,
                                       ),
                                     ),
                                   );

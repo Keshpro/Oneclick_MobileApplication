@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GroceryAudit extends StatefulWidget {
   const GroceryAudit({super.key});
@@ -8,32 +9,48 @@ class GroceryAudit extends StatefulWidget {
 }
 
 class _GroceryAuditState extends State<GroceryAudit> {
-  final List<Map<String, dynamic>> items = [
-    {
-      'id': 'GR001',
-      'seller': 'Fresh Mart',
-      'item': 'Rice 5kg',
-      'category': 'Grocery',
-      'price': 'Rs. 1450',
-      'status': 'Pending',
-    },
-    {
-      'id': 'GR002',
-      'seller': 'City Grocery',
-      'item': 'Milk Powder',
-      'category': 'Dairy',
-      'price': 'Rs. 1250',
-      'status': 'Approved',
-    },
-    {
-      'id': 'GR003',
-      'seller': 'Super Foods',
-      'item': 'Sugar 1kg',
-      'category': 'Grocery',
-      'price': 'Rs. 320',
-      'status': 'Pending',
-    },
-  ];
+  final Set<String> _updatingIds = {};
+
+  Future<void> _updateProductStatus(
+    String productId,
+    String status,
+  ) async {
+    if (_updatingIds.contains(productId)) return;
+
+    setState(() => _updatingIds.add(productId));
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('grocery_products')
+          .doc(productId)
+          .update({
+        'status': status,
+        'reviewedAt': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            status == 'active'
+                ? 'Grocery product approved'
+                : 'Grocery product rejected',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Update failed: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _updatingIds.remove(productId));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,78 +60,119 @@ class _GroceryAuditState extends State<GroceryAudit> {
         backgroundColor: const Color(0xff032744),
         foregroundColor: Colors.white,
       ),
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance
+            .collection('grocery_products')
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Center(
+              child: Text('Unable to load grocery products'),
+            );
+          }
 
-      body: ListView.builder(
-        padding: const EdgeInsets.all(15),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
+          if (!snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
 
-          return Card(
-            margin: const EdgeInsets.only(bottom: 15),
-            child: Padding(
-              padding: const EdgeInsets.all(15),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+          final items = snapshot.data!.docs;
+
+          if (items.isEmpty) {
+            return const Center(
+              child: Text('No grocery products available'),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(15),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final doc = items[index];
+              final item = doc.data();
+
+              final status =
+                  (item['status'] ?? 'pending').toString();
+
+              final price =
+                  (item['price'] as num?)?.toDouble() ?? 0.0;
+
+              final isUpdating = _updatingIds.contains(doc.id);
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 15),
+                child: Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.shopping_cart,
-                        color: Colors.purple,
-                      ),
-
-                      const SizedBox(width: 10),
-
-                      Expanded(
-                        child: Text(
-                          'Item ${item['id']}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.shopping_cart,
+                            color: Colors.purple,
                           ),
-                        ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Item ${doc.id}',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          _status(status),
+                        ],
                       ),
-
-                      _status(item['status']),
+                      const Divider(),
+                      Text(
+                        'Seller: ${item['sellerName'] ?? 'Unknown Seller'}',
+                      ),
+                      Text(
+                        'Item: ${item['name'] ?? 'Unknown Product'}',
+                      ),
+                      Text(
+                        'Category: ${item['category'] ?? 'Unknown'}',
+                      ),
+                      Text('Price: Rs. ${price.toStringAsFixed(2)}'),
+                      const SizedBox(height: 15),
+                      if (isUpdating)
+                        const Center(
+                          child: CircularProgressIndicator(),
+                        )
+                      else if (status == 'pending')
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            OutlinedButton(
+                              onPressed: () =>
+                                  _updateProductStatus(
+                                    doc.id,
+                                    'rejected',
+                                  ),
+                              child: const Text(
+                                'Reject',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            ElevatedButton(
+                              onPressed: () =>
+                                  _updateProductStatus(
+                                    doc.id,
+                                    'active',
+                                  ),
+                              child: const Text('Approve'),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
-
-                  const Divider(),
-
-                  Text('Seller: ${item['seller']}'),
-                  Text('Item: ${item['item']}'),
-                  Text('Category: ${item['category']}'),
-                  Text('Price: ${item['price']}'),
-
-                  const SizedBox(height: 15),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      OutlinedButton(
-                        onPressed: () {
-                          _reject(index);
-                        },
-                        child: const Text(
-                          'Reject',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-
-                      const SizedBox(width: 10),
-
-                      ElevatedButton(
-                        onPressed: () {
-                          _approve(index);
-                        },
-                        child: const Text('Approve'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
         },
       ),
@@ -122,7 +180,8 @@ class _GroceryAuditState extends State<GroceryAudit> {
   }
 
   Widget _status(String status) {
-    final bool approved = status == 'Approved';
+    final approved = status == 'active';
+    final rejected = status == 'rejected';
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -132,39 +191,25 @@ class _GroceryAuditState extends State<GroceryAudit> {
       decoration: BoxDecoration(
         color: approved
             ? Colors.green.withValues(alpha: 0.15)
-            : Colors.orange.withValues(alpha: 0.15),
+            : rejected
+                ? Colors.red.withValues(alpha: 0.15)
+                : Colors.orange.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        status,
+        approved
+            ? 'Approved'
+            : rejected
+                ? 'Rejected'
+                : 'Pending',
         style: TextStyle(
-          color: approved ? Colors.green : Colors.orange,
+          color: approved
+              ? Colors.green
+              : rejected
+                  ? Colors.red
+                  : Colors.orange,
           fontWeight: FontWeight.bold,
         ),
-      ),
-    );
-  }
-
-  void _approve(int index) {
-    setState(() {
-      items[index]['status'] = 'Approved';
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Grocery item approved'),
-      ),
-    );
-  }
-
-  void _reject(int index) {
-    setState(() {
-      items[index]['status'] = 'Rejected';
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Grocery item rejected'),
       ),
     );
   }
