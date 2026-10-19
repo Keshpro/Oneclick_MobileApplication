@@ -97,11 +97,14 @@ class _BecomeSellerScreenState extends State<BecomeSellerScreen> {
     if (_formKey.currentState!.validate()) {
       try {
         final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+  throw Exception('Please log in before applying as a seller.');
+}
 
         await FirebaseFirestore.instance
             .collection('seller_applications')
             .add({
-          'userId': user?.uid,
+          'userId': user.uid,
           'shopName': _shopNameController.text.trim(),
           'phoneNumber': _phoneController.text.trim(),
           'businessAddress': _addressController.text.trim(),

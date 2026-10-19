@@ -1,6 +1,13 @@
+import 'dart:io';
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:http_parser/http_parser.dart';
 
 import 'pending_approval_screen.dart';
 
@@ -72,6 +79,21 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
   final _hourlyRateController = TextEditingController();
   final _restaurantNameController = TextEditingController();
 
+  // Food Seller verification
+  bool? _hasBusinessRegistration;
+  bool _acceptedHomeBusinessDeclaration = false;
+
+  PlatformFile? _brDocument;
+  PlatformFile? _nicFrontDocument;
+  PlatformFile? _nicBackDocument;
+  PlatformFile? _declarationDocument;
+
+  final Map<String, PlatformFile> _businessPhotos = {};
+
+  final _businessAddressController = TextEditingController();
+  final _businessContactController = TextEditingController();
+  final _declarationDetailsController = TextEditingController();
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -131,6 +153,10 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
     _hourlyRateController.dispose();
     _restaurantNameController.dispose();
 
+    _businessAddressController.dispose();
+    _businessContactController.dispose();
+    _declarationDetailsController.dispose();
+
     super.dispose();
   }
 
@@ -152,8 +178,182 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
     });
   }
 
+  Future<String> _uploadVerificationFile({
+    required String uid,
+    required String fileType,
+    required PlatformFile file,
+  }) async {
+    // Read configuration passed to Flutter at launch.
+    const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+    const publishableKey = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
+
+    if (supabaseUrl.isEmpty || publishableKey.isEmpty) {
+      throw Exception(
+        'Supabase configuration is missing. Please restart the app '
+        'with the required --dart-define values.',
+      );
+    }
+
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null || currentUser.uid != uid) {
+      throw Exception('Please sign in again before uploading documents.');
+    }
+
+    final filePath = file.path;
+
+    if (filePath == null) {
+      throw Exception(
+        'Unable to read the selected file. Please select it again.',
+      );
+    }
+
+    final localFile = File(filePath);
+
+    if (!await localFile.exists()) {
+      throw Exception(
+        'The selected file could not be found. Please select it again.',
+      );
+    }
+
+    final fileSize = await localFile.length();
+
+    if (fileSize == 0 || fileSize > 10 * 1024 * 1024) {
+      throw Exception('Please select a file smaller than 10 MB.');
+    }
+
+    final idToken = await currentUser.getIdToken();
+
+    if (idToken == null || idToken.isEmpty) {
+      throw Exception('Unable to verify your account. Please sign in again.');
+    }
+
+    final uri = Uri.parse(
+      '${supabaseUrl.replaceFirst(RegExp(r'/+$'), '')}'
+      '/functions/v1/food-verification-upload',
+    );
+
+    final request = http.MultipartRequest('POST', uri);
+
+    request.headers.addAll({
+      'Authorization': 'Bearer $idToken',
+      'apikey': publishableKey,
+    });
+
+    request.fields['fileType'] = fileType;
+
+    final extension = (file.extension ?? '').toLowerCase();
+
+    final mimeType = switch (extension) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'pdf' => 'application/pdf',
+      _ => '',
+    };
+
+    if (mimeType.isEmpty) {
+      throw Exception(
+        'Unsupported file format. Please select a JPG, PNG, or PDF file.',
+      );
+    }
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'file',
+        filePath,
+        filename: file.name,
+        contentType: MediaType.parse(mimeType),
+      ),
+    );
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    Map<String, dynamic> responseData = {};
+
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        responseData = decoded;
+      }
+    } catch (_) {
+      // Handle non-JSON server responses below.
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message =
+          responseData['error']?.toString() ??
+          'Upload failed (HTTP ${response.statusCode}).';
+
+      throw Exception(message);
+    }
+
+    final uploadedPath = responseData['path']?.toString();
+
+    if (uploadedPath == null || uploadedPath.isEmpty) {
+      throw Exception('The server did not return the uploaded file path.');
+    }
+
+    return uploadedPath;
+  }
+
   Future<void> _submitApplication() async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_isFoodSeller && _hasBusinessRegistration == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please indicate whether you have a BR certificate.'),
+        ),
+      );
+      return;
+    }
+
+    if (_isFoodSeller &&
+        _hasBusinessRegistration == true &&
+        _brDocument == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please upload your BR certificate.')),
+      );
+      return;
+    }
+
+    if (_isFoodSeller &&
+        _hasBusinessRegistration == false &&
+        !_acceptedHomeBusinessDeclaration) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please read and accept the Home Business Declaration.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (_isFoodSeller &&
+        (_nicFrontDocument == null || _nicBackDocument == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please upload both sides of your NIC.')),
+      );
+      return;
+    }
+
+    if (_isFoodSeller &&
+        !_businessPhotos.keys.toSet().containsAll([
+          'kitchen',
+          'storage',
+          'packaging',
+          'products',
+        ])) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please upload all four required business photos.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
@@ -250,7 +450,61 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
         targetCollection = 'workers'; // Saved in 'workers' collection
       if (_isFoodSeller) targetCollection = 'food_sellers';
 
+      Map<String, dynamic> verificationFiles = {};
+
+      if (_isFoodSeller) {
+        final uid = user.uid;
+
+        verificationFiles['nicFront'] = await _uploadVerificationFile(
+          uid: uid,
+          fileType: 'nic_front',
+          file: _nicFrontDocument!,
+        );
+
+        verificationFiles['nicBack'] = await _uploadVerificationFile(
+          uid: uid,
+          fileType: 'nic_back',
+          file: _nicBackDocument!,
+        );
+
+        if (_hasBusinessRegistration == true) {
+          verificationFiles['businessRegistration'] =
+              await _uploadVerificationFile(
+                uid: uid,
+                fileType: 'br_certificate',
+                file: _brDocument!,
+              );
+        } else {
+          verificationFiles['homeBusinessDeclaration'] = {
+            'accepted': _acceptedHomeBusinessDeclaration,
+            'acceptedAt': Timestamp.now(),
+          };
+
+          if (_declarationDocument != null) {
+            verificationFiles['declarationLetter'] =
+                await _uploadVerificationFile(
+                  uid: uid,
+                  fileType: 'declaration_letter',
+                  file: _declarationDocument!,
+                );
+          }
+        }
+
+        final uploadedPhotos = <String, String>{};
+
+        for (final entry in _businessPhotos.entries) {
+          uploadedPhotos[entry.key] = await _uploadVerificationFile(
+            uid: uid,
+            fileType: 'photo_${entry.key}',
+            file: entry.value,
+          );
+        }
+
+        verificationFiles['businessPhotos'] = uploadedPhotos;
+      }
+
       // 3. Prepare details based on role
+
       Map<String, dynamic> providerDetails = {};
 
       if (_isDoctor) {
@@ -274,6 +528,10 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
         providerDetails = {
           'restaurantName': _restaurantNameController.text.trim(),
           'foodServices': _selectedFoodServices.toList(),
+          'businessRegistrationStatus': _hasBusinessRegistration == true
+              ? 'registered'
+              : 'home_business',
+          'verificationFiles': verificationFiles,
         };
       }
 
@@ -369,6 +627,134 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
         });
       }
     }
+  }
+
+  Future<void> _pickVerificationDocument(String type) async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+      );
+
+      if (result.isEmpty) return;
+
+      final file = result.single;
+
+      if (file.path != null &&
+          await File(file.path!).length() > 10 * 1024 * 1024) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a file smaller than 10 MB.'),
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        switch (type) {
+          case 'br':
+            _brDocument = file;
+            break;
+          case 'nic_front':
+            _nicFrontDocument = file;
+            break;
+
+          case 'nic_back':
+            _nicBackDocument = file;
+            break;
+          case 'declaration':
+            _declarationDocument = file;
+            break;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Unable to select file: $e')));
+    }
+  }
+
+  Future<void> _pickBusinessPhoto(String type) async {
+    try {
+      final result = await FilePicker.pickFiles(type: FileType.image);
+
+      if (result.isEmpty) return;
+
+      final file = result.single;
+
+      if (file.path != null &&
+          await File(file.path!).length() > 10 * 1024 * 1024) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a photo smaller than 10 MB.'),
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _businessPhotos[type] = file;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Unable to select photo: $e')));
+    }
+  }
+
+  Widget _documentPickerCard({
+    required String title,
+    required String description,
+    required PlatformFile? file,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE4E2EC)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.upload_file_rounded,
+            color: Color(0xFF5B4DFF),
+            size: 30,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  file?.name ?? description,
+                  style: const TextStyle(
+                    color: Color(0xFF747187),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: onPressed,
+            child: Text(file == null ? 'Choose' : 'Change'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -543,6 +929,192 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                     controller: _restaurantNameController,
                     label: 'Restaurant / Business Name',
                     icon: Icons.storefront_outlined,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  const SizedBox(height: 20),
+                  _sectionTitle('Identity Verification'),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Upload clear photos or scans of both sides of your NIC.',
+                    style: TextStyle(color: Color(0xFF747187), fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _documentPickerCard(
+                    title: 'NIC — Front Side',
+                    description: 'Choose the front side of your NIC.',
+                    file: _nicFrontDocument,
+                    onPressed: () => _pickVerificationDocument('nic_front'),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  _documentPickerCard(
+                    title: 'NIC — Back Side',
+                    description: 'Choose the back side of your NIC.',
+                    file: _nicBackDocument,
+                    onPressed: () => _pickVerificationDocument('nic_back'),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  _sectionTitle('Business Verification'),
+
+                  const SizedBox(height: 8),
+
+                  const Text(
+                    'Do you have a Business Registration (BR) certificate?',
+                    style: TextStyle(
+                      color: Color(0xFF747187),
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  RadioGroup<bool>(
+                    groupValue: _hasBusinessRegistration,
+                    onChanged: (value) {
+                      setState(() {
+                        _acceptedHomeBusinessDeclaration = false;
+                        _hasBusinessRegistration = value;
+                        if (value == true) {
+                          _declarationDetailsController.clear();
+                        }
+                      });
+                    },
+                    child: const Column(
+                      children: [
+                        RadioListTile<bool>(
+                          value: true,
+                          title: Text('Yes, I have a BR certificate'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        RadioListTile<bool>(
+                          value: false,
+                          title: Text(
+                            'No, I run an unregistered / home business',
+                          ),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  if (_hasBusinessRegistration == true) ...[
+                    const SizedBox(height: 8),
+                    _documentPickerCard(
+                      title: 'Business Registration Certificate',
+                      description:
+                          'Select a PDF or image of your BR certificate.',
+                      file: _brDocument,
+                      onPressed: () => _pickVerificationDocument('br'),
+                    ),
+                  ],
+
+                  if (_hasBusinessRegistration == false) ...[
+                    const SizedBox(height: 12),
+
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE4E2EC)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Oneclick Home Business Declaration',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'I confirm that the information I provide about my '
+                            'home-based food business is accurate. I agree to maintain '
+                            'appropriate cleanliness and safe food preparation, storage, '
+                            'handling, and packaging practices. I understand that Oneclick '
+                            'may review my submitted documents and business photos before '
+                            'deciding on my seller application. I understand that this '
+                            'declaration does not replace any registration, licence, or '
+                            'permit required by applicable law.',
+                            style: TextStyle(
+                              color: Color(0xFF747187),
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            value: _acceptedHomeBusinessDeclaration,
+                            title: const Text(
+                              'I have read this declaration and confirm that '
+                              'the information I provide is accurate.',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                _acceptedHomeBusinessDeclaration =
+                                    value ?? false;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+                  _sectionTitle('Business Photo Verification'),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Upload clear photos showing your food preparation, '
+                    'storage, packaging, and products.',
+                    style: TextStyle(color: Color(0xFF747187), fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _documentPickerCard(
+                    title: 'Kitchen / Preparation Area',
+                    description:
+                        'Upload a photo of your food preparation area.',
+                    file: _businessPhotos['kitchen'],
+                    onPressed: () => _pickBusinessPhoto('kitchen'),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  _documentPickerCard(
+                    title: 'Ingredient Storage',
+                    description: 'Upload a photo of your ingredient storage.',
+                    file: _businessPhotos['storage'],
+                    onPressed: () => _pickBusinessPhoto('storage'),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  _documentPickerCard(
+                    title: 'Food Packaging Area',
+                    description: 'Upload a photo of your packaging area.',
+                    file: _businessPhotos['packaging'],
+                    onPressed: () => _pickBusinessPhoto('packaging'),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  _documentPickerCard(
+                    title: 'Finished Food Products',
+                    description: 'Upload a photo of the food you sell.',
+                    file: _businessPhotos['products'],
+                    onPressed: () => _pickBusinessPhoto('products'),
                   ),
 
                   const SizedBox(height: 20),
