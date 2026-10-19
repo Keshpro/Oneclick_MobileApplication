@@ -55,15 +55,15 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
     }
   }
 
-  Color _statusColor(BookingStatus status) {
+  Color _statusColor(BookingStatus status, DrunkDrivePalette colors) {
     switch (status) {
       case BookingStatus.completed:
-        return DrunkDriveColors.success;
+        return colors.success;
       case BookingStatus.cancelledByDriver:
       case BookingStatus.cancelledByUser:
-        return DrunkDriveColors.danger;
+        return colors.danger;
       default:
-        return DrunkDriveColors.textMuted;
+        return colors.textMuted;
     }
   }
 
@@ -77,8 +77,8 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
     final hour = date.hour == 0
         ? 12
         : date.hour > 12
-        ? date.hour - 12
-        : date.hour;
+            ? date.hour - 12
+            : date.hour;
 
     final minute = date.minute.toString().padLeft(2, '0');
     final period = date.hour >= 12 ? 'PM' : 'AM';
@@ -88,37 +88,42 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = DrunkDrivePalette.of(context);
+
     return Scaffold(
-      backgroundColor: DrunkDriveColors.background,
+      backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: DrunkDriveColors.background,
-        foregroundColor: Colors.white,
+        backgroundColor: colors.background,
+        foregroundColor: colors.textPrimary,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Trip History',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          _loadTrips();
-        },
+        onRefresh: _loadTrips,
+        color: colors.accent,
+        backgroundColor: colors.surface,
         child: _trips.isEmpty
             ? ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                children: const [
-                  SizedBox(height: 180),
+                children: [
+                  const SizedBox(height: 180),
                   Icon(
                     Icons.history_rounded,
                     size: 56,
-                    color: DrunkDriveColors.textMuted,
+                    color: colors.textMuted,
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Center(
                     child: Text(
                       'No driver trips yet.',
                       style: TextStyle(
-                        color: DrunkDriveColors.textMuted,
+                        color: colors.textMuted,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
@@ -132,11 +137,12 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
                 itemCount: _trips.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
+                  final booking = _trips[index];
                   return _TripHistoryCard(
-                    booking: _trips[index],
-                    statusLabel: _statusLabel(_trips[index].status),
-                    statusColor: _statusColor(_trips[index].status),
-                    dateText: _formatDate(_trips[index]),
+                    booking: booking,
+                    statusLabel: _statusLabel(booking.status),
+                    statusColor: _statusColor(booking.status, colors),
+                    dateText: _formatDate(booking),
                   );
                 },
               ),
@@ -160,14 +166,15 @@ class _TripHistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = DrunkDrivePalette.of(context);
     final isCompleted = booking.status == BookingStatus.completed;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: DrunkDriveColors.surface,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: DrunkDriveColors.surfaceBorder),
+        border: Border.all(color: colors.surfaceBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,8 +194,8 @@ class _TripHistoryCard extends StatelessWidget {
               if (isCompleted)
                 Text(
                   'Rs. ${booking.fareEstimate.total.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    color: DrunkDriveColors.success,
+                  style: TextStyle(
+                    color: colors.success,
                     fontWeight: FontWeight.w800,
                     fontSize: 16,
                   ),
@@ -215,22 +222,24 @@ class _TripHistoryCard extends StatelessWidget {
                 '${booking.distanceKm.toStringAsFixed(1)} km • ${booking.durationMinutes} min',
           ),
           const SizedBox(height: 14),
-          const Divider(color: DrunkDriveColors.surfaceBorder, height: 1),
+          Divider(color: colors.surfaceBorder, height: 1),
           const SizedBox(height: 12),
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.schedule_rounded,
-                color: DrunkDriveColors.textMuted,
+                color: colors.textMuted,
                 size: 16,
               ),
               const SizedBox(width: 6),
-              Text(
-                dateText,
-                style: const TextStyle(
-                  color: DrunkDriveColors.textMuted,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+              Flexible(
+                child: Text(
+                  dateText,
+                  style: TextStyle(
+                    color: colors.textMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -249,16 +258,18 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = DrunkDrivePalette.of(context);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: DrunkDriveColors.accent, size: 18),
+        Icon(icon, color: colors.accent, size: 18),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: colors.textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w600,
               height: 1.3,

@@ -9,13 +9,7 @@ import 'add_vehicle_screen.dart';
 import 'fare_estimate_screen.dart';
 import 'location_picker_screen.dart';
 
-// Book a Driver flow.
-//
-// This step only implements vehicle selection (spec section 8). Pickup
-// location, destination, and reason are added in later steps and will
-// live on this same screen, above the vehicle selector, once built.
-// "Continue" is a placeholder until those fields exist.
-
+/// Customer booking form. Vehicle data continues to come from Firestore.
 class BookDriverScreen extends StatefulWidget {
   const BookDriverScreen({super.key});
 
@@ -47,17 +41,19 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
 
     try {
       final vehicles = await _vehicleService.getMyVehicleModels();
-
       if (!mounted) return;
 
       setState(() {
         _vehicles = vehicles;
         _isLoading = false;
-
-        final defaultVehicle = vehicles.where((vehicle) => vehicle.isDefault);
-
-        if (defaultVehicle.isNotEmpty) {
-          _selectedVehicleId = defaultVehicle.first.id;
+        final previousSelection = vehicles.where(
+          (vehicle) => vehicle.id == _selectedVehicleId,
+        );
+        final defaultVehicles = vehicles.where((vehicle) => vehicle.isDefault);
+        if (previousSelection.isNotEmpty) {
+          _selectedVehicleId = previousSelection.first.id;
+        } else if (defaultVehicles.isNotEmpty) {
+          _selectedVehicleId = defaultVehicles.first.id;
         } else if (vehicles.isNotEmpty) {
           _selectedVehicleId = vehicles.first.id;
         } else {
@@ -66,7 +62,6 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
       });
     } catch (error) {
       if (!mounted) return;
-
       setState(() {
         _errorMessage = 'Unable to load vehicles: $error';
         _isLoading = false;
@@ -79,9 +74,8 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
       context,
       MaterialPageRoute(builder: (context) => const AddVehicleScreen()),
     );
-    if (added == true) {
-      await _loadVehicles();
-    }
+    if (!mounted) return;
+    if (added == true) await _loadVehicles();
   }
 
   Future<void> _selectPickup() async {
@@ -92,6 +86,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
             const LocationPickerScreen(title: 'Pickup Location'),
       ),
     );
+    if (!mounted) return;
     if (result != null) setState(() => _pickup = result);
   }
 
@@ -102,25 +97,27 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
         builder: (context) => const LocationPickerScreen(title: 'Destination'),
       ),
     );
+    if (!mounted) return;
     if (result != null) setState(() => _destination = result);
   }
 
   void _onContinue() {
-    if (_selectedVehicleId == null) return;
-
+    if (_selectedVehicleId == null ||
+        _pickup == null ||
+        _destination == null ||
+        _selectedReason == null) {
+      return;
+    }
     final matchingVehicles = _vehicles.where(
       (vehicle) => vehicle.id == _selectedVehicleId,
     );
-
     if (matchingVehicles.isEmpty) return;
-
-    final vehicle = matchingVehicles.first;
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => FareEstimateScreen(
-          vehicle: vehicle,
+          vehicle: matchingVehicles.first,
           pickup: _pickup!,
           destination: _destination!,
           reason: _selectedReason!,
@@ -131,34 +128,33 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = DrunkDrivePalette.of(context);
     return Scaffold(
-      backgroundColor: DrunkDriveColors.background,
+      backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: DrunkDriveColors.background,
+        backgroundColor: colors.background,
+        foregroundColor: colors.textPrimary,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           'Book a Driver',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
-      body: SafeArea(child: _buildBody()),
-      bottomNavigationBar: _buildContinueBar(),
+      body: SafeArea(child: _buildBody(colors)),
+      bottomNavigationBar: _buildContinueBar(colors),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(DrunkDrivePalette colors) {
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: DrunkDriveColors.accent),
-            SizedBox(height: 16),
-            Text(
-              'Loading vehicles...',
-              style: TextStyle(color: DrunkDriveColors.textMuted),
-            ),
+            CircularProgressIndicator(color: colors.accent),
+            const SizedBox(height: 16),
+            Text('Loading vehicles...', style: TextStyle(color: colors.textMuted)),
           ],
         ),
       );
@@ -166,29 +162,29 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
 
     if (_errorMessage != null) {
       return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              color: DrunkDriveColors.danger,
-              size: 40,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _errorMessage!,
-              style: const TextStyle(color: DrunkDriveColors.textMuted),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadVehicles,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: DrunkDriveColors.accent,
-                foregroundColor: DrunkDriveColors.background,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline_rounded, color: colors.danger, size: 40),
+              const SizedBox(height: 12),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: colors.textMuted),
               ),
-              child: const Text('Try Again'),
-            ),
-          ],
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: _loadVehicles,
+                style: FilledButton.styleFrom(
+                  backgroundColor: colors.accent,
+                  foregroundColor: colors.surface,
+                ),
+                child: const Text('Try Again'),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -200,25 +196,22 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.directions_car_outlined,
-                color: DrunkDriveColors.textMuted,
-                size: 48,
-              ),
+              Icon(Icons.directions_car_outlined,
+                  color: colors.textMuted, size: 48),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 "You don't have a vehicle registered.",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: DrunkDriveColors.textMuted),
+                style: TextStyle(color: colors.textMuted),
               ),
               const SizedBox(height: 20),
-              ElevatedButton.icon(
+              FilledButton.icon(
                 onPressed: _onAddVehicle,
                 icon: const Icon(Icons.add_rounded),
                 label: const Text('Add Vehicle'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: DrunkDriveColors.accent,
-                  foregroundColor: DrunkDriveColors.background,
+                style: FilledButton.styleFrom(
+                  backgroundColor: colors.accent,
+                  foregroundColor: colors.surface,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 14,
@@ -234,18 +227,11 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const Text(
-          'Trip Details',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: 16,
-          ),
-        ),
+        _SectionTitle(title: 'Trip Details', colors: colors),
         const SizedBox(height: 12),
         _LocationTile(
           icon: Icons.my_location_rounded,
-          iconColor: DrunkDriveColors.success,
+          iconColor: colors.success,
           label: 'Pickup Location',
           value: _pickup?.name,
           onTap: _selectPickup,
@@ -253,24 +239,17 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
         const SizedBox(height: 10),
         _LocationTile(
           icon: Icons.location_on_rounded,
-          iconColor: DrunkDriveColors.danger,
+          iconColor: colors.danger,
           label: 'Destination',
           value: _destination?.name,
           onTap: _selectDestination,
         ),
         const SizedBox(height: 24),
-        const Text(
-          'Select Vehicle',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: 16,
-          ),
-        ),
+        _SectionTitle(title: 'Select Vehicle', colors: colors),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'The driver will drive this vehicle for your trip.',
-          style: TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+          style: TextStyle(color: colors.textMuted, fontSize: 12),
         ),
         const SizedBox(height: 16),
         ..._vehicles.map(
@@ -285,25 +264,18 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
         ),
         TextButton.icon(
           onPressed: _onAddVehicle,
-          icon: const Icon(Icons.add_rounded, color: DrunkDriveColors.accent),
-          label: const Text(
+          icon: Icon(Icons.add_rounded, color: colors.accent),
+          label: Text(
             'Add another vehicle',
-            style: TextStyle(color: DrunkDriveColors.accent),
+            style: TextStyle(color: colors.accent),
           ),
         ),
         const SizedBox(height: 24),
-        const Text(
-          'Reason',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: 16,
-          ),
-        ),
+        _SectionTitle(title: 'Reason', colors: colors),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'This helps us brief your driver. It is not used to make any medical or legal decision.',
-          style: TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
+          style: TextStyle(color: colors.textMuted, fontSize: 12),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -321,26 +293,31 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     );
   }
 
-  Widget? _buildContinueBar() {
+  Widget? _buildContinueBar(DrunkDrivePalette colors) {
     if (_isLoading || _errorMessage != null || _vehicles.isEmpty) return null;
 
+    final enabled = _selectedVehicleId != null &&
+        _pickup != null &&
+        _destination != null &&
+        _selectedReason != null;
+
     return SafeArea(
-      child: Padding(
+      top: false,
+      child: Container(
         padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          border: Border(top: BorderSide(color: colors.surfaceBorder)),
+        ),
         child: SizedBox(
           width: double.infinity,
-          child: ElevatedButton(
-            onPressed:
-                (_selectedVehicleId == null ||
-                    _pickup == null ||
-                    _destination == null ||
-                    _selectedReason == null)
-                ? null
-                : _onContinue,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: DrunkDriveColors.accent,
-              foregroundColor: DrunkDriveColors.background,
-              disabledBackgroundColor: DrunkDriveColors.surfaceBorder,
+          child: FilledButton(
+            onPressed: enabled ? _onContinue : null,
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.accent,
+              foregroundColor: colors.surface,
+              disabledBackgroundColor: colors.surfaceBorder,
+              disabledForegroundColor: colors.textMuted,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -352,6 +329,25 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final DrunkDrivePalette colors;
+
+  const _SectionTitle({required this.title, required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: TextStyle(
+        color: colors.textPrimary,
+        fontWeight: FontWeight.w800,
+        fontSize: 16,
       ),
     );
   }
@@ -370,8 +366,9 @@ class _SelectableVehicleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = DrunkDrivePalette.of(context);
     return Material(
-      color: DrunkDriveColors.surface,
+      color: colors.surface,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -381,8 +378,8 @@ class _SelectableVehicleCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: isSelected ? DrunkDriveColors.accent : Colors.transparent,
-              width: 1.5,
+              color: isSelected ? colors.accent : colors.surfaceBorder,
+              width: isSelected ? 1.8 : 1,
             ),
           ),
           child: Row(
@@ -391,9 +388,7 @@ class _SelectableVehicleCard extends StatelessWidget {
                 isSelected
                     ? Icons.radio_button_checked_rounded
                     : Icons.radio_button_off_rounded,
-                color: isSelected
-                    ? DrunkDriveColors.accent
-                    : DrunkDriveColors.textMuted,
+                color: isSelected ? colors.accent : colors.textMuted,
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -406,8 +401,8 @@ class _SelectableVehicleCard extends StatelessWidget {
                           child: Text(
                             vehicle.displayName,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: DrunkDriveColors.textPrimary,
+                            style: TextStyle(
+                              color: colors.textPrimary,
                               fontWeight: FontWeight.w800,
                               fontSize: 15,
                             ),
@@ -417,19 +412,15 @@ class _SelectableVehicleCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
+                                horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: DrunkDriveColors.success.withValues(
-                                alpha: 0.15,
-                              ),
+                              color: colors.success.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Text(
+                            child: Text(
                               'DEFAULT',
                               style: TextStyle(
-                                color: DrunkDriveColors.success,
+                                color: colors.success,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -441,10 +432,7 @@ class _SelectableVehicleCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       '${vehicle.registrationNumber} • ${vehicle.colour} • ${vehicle.transmission.label}',
-                      style: const TextStyle(
-                        color: DrunkDriveColors.textMuted,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: colors.textMuted, fontSize: 12),
                     ),
                   ],
                 ),
@@ -474,14 +462,19 @@ class _LocationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = DrunkDrivePalette.of(context);
     return Material(
-      color: DrunkDriveColors.surface,
+      color: colors.surface,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        child: Padding(
+        child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: colors.surfaceBorder),
+          ),
           child: Row(
             children: [
               Icon(icon, color: iconColor, size: 20),
@@ -492,18 +485,15 @@ class _LocationTile extends StatelessWidget {
                   children: [
                     Text(
                       label,
-                      style: const TextStyle(
-                        color: DrunkDriveColors.textMuted,
-                        fontSize: 11,
-                      ),
+                      style: TextStyle(color: colors.textMuted, fontSize: 11),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       value ?? 'Select $label',
                       style: TextStyle(
                         color: value == null
-                            ? DrunkDriveColors.textMuted
-                            : Colors.white,
+                            ? colors.textMuted
+                            : colors.textPrimary,
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
                       ),
@@ -511,10 +501,7 @@ class _LocationTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: DrunkDriveColors.textMuted,
-              ),
+              Icon(Icons.chevron_right_rounded, color: colors.textMuted),
             ],
           ),
         ),
@@ -536,10 +523,11 @@ class _ReasonChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = DrunkDrivePalette.of(context);
     return Material(
       color: isSelected
-          ? DrunkDriveColors.accent.withValues(alpha: 0.15)
-          : DrunkDriveColors.surface,
+          ? colors.accent.withValues(alpha: 0.12)
+          : colors.surface,
       borderRadius: BorderRadius.circular(30),
       child: InkWell(
         onTap: onTap,
@@ -549,17 +537,13 @@ class _ReasonChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
             border: Border.all(
-              color: isSelected
-                  ? DrunkDriveColors.accent
-                  : DrunkDriveColors.surfaceBorder,
+              color: isSelected ? colors.accent : colors.surfaceBorder,
             ),
           ),
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected
-                  ? DrunkDriveColors.accent
-                  : DrunkDriveColors.textMuted,
+              color: isSelected ? colors.accent : colors.textMuted,
               fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
               fontSize: 13,
             ),
