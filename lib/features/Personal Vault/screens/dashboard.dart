@@ -19,6 +19,7 @@ import '../models/vault_record.dart';
 import '../models/subscription_record.dart';
 import '../services/vault_service.dart';
 import '../services/subscription_service.dart';
+import 'expense_manager_screen.dart';
 
 class PersonalDashboardScreen extends StatefulWidget {
   const PersonalDashboardScreen({super.key});
@@ -739,6 +740,24 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                                 MaterialPageRoute(
                                   builder: (_) =>
                                       const DocumentPackRequirementsScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          _action(
+                            context,
+                            width,
+                            Icons.account_balance_wallet_outlined,
+                            'Expense Manager',
+                            'Track your OneClick spending',
+                            onTap: () {
+                              if (!_requireLogin(context)) return;
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const ExpenseManagerScreen(),
                                 ),
                               );
                             },
