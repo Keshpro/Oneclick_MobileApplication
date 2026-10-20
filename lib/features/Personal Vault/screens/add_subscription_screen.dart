@@ -230,25 +230,6 @@ Widget _header() {
                   ),
                 ),
               ),
-
-              TextButton.icon(
-                onPressed: () {
-                  _message(
-                    'Smart Auto-fill selected.',
-                  );
-                },
-                icon: const Icon(
-                  Icons.auto_awesome,
-                  size: 15,
-                ),
-                label: const Text(
-                  'Smart Auto-fill',
-                ),
-                style: TextButton.styleFrom(
-                  foregroundColor: purple,
-                  padding: EdgeInsets.zero,
-                ),
-              ),
             ],
           ),
 

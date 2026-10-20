@@ -10,7 +10,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'vault_screen.dart';
 import 'subscriptions_screen.dart';
 import 'sharing_center_screen.dart';
-import 'ask_ai_vault_screen.dart';
 import 'document_pack_requirements_screen.dart';
 import 'scan_upload_screen.dart';
 import 'add_record_screen.dart';
@@ -698,7 +697,7 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                             width,
                             Icons.document_scanner_outlined,
                             'Scan & Upload',
-                            'Auto-tagging OCR',
+                            'Upload and review documents',
                             onTap: () {
                               if (!_requireLogin(context)) return;
                               Navigator.push(
@@ -723,22 +722,6 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                                   builder: (_) => const AddRecordScreen(
                                     initialRecordType: 'Account',
                                   ),
-                                ),
-                              );
-                            },
-                          ),
-                          _action(
-                            context,
-                            width,
-                            Icons.auto_awesome,
-                            'Ask Vault AI',
-                            'Ask about your documents',
-                            onTap: () {
-                              if (!_requireLogin(context)) return;
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const AskAIVaultScreen(),
                                 ),
                               );
                             },
@@ -1463,12 +1446,10 @@ expiringItems.sort((a, b) => a.date.compareTo(b.date));
     VoidCallback? onTap,
   }) {
     final Color accent = icon == Icons.shield_outlined
-        ? const Color(0xFF2563EB)
-        : icon == Icons.auto_awesome
-            ? const Color(0xFF9333EA)
-            : icon == Icons.folder_copy_outlined
-                ? const Color(0xFF0891B2)
-                : purple;
+    ? const Color(0xFF2563EB)
+    : icon == Icons.folder_copy_outlined
+        ? const Color(0xFF0891B2)
+        : purple;
 
     return SizedBox(
       width: width,
@@ -2188,7 +2169,6 @@ class _VaultActionContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hovered = _VaultGlassScope.hoveredOf(context);
-    final isAI = icon == Icons.auto_awesome;
     final hoverColor = icon == Icons.document_scanner_outlined
         ? const Color(0xFF6366F1)
         : accent;
@@ -2198,24 +2178,6 @@ class _VaultActionContent extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          if (isAI)
-            Positioned(
-              right: -4,
-              top: -4,
-              child: IgnorePointer(
-                child: ImageFiltered(
-                  imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: const BoxDecoration(
-                      color: Color(0x1A9333EA),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ),
-            ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2523,9 +2485,6 @@ class _VaultReferenceIcon extends StatelessWidget {
 </svg>''',
     Icons.shield_outlined: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="2" viewBox="0 0 24 24">
 <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-linecap="round" stroke-linejoin="round"></path>
-</svg>''',
-    Icons.auto_awesome: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="2" viewBox="0 0 24 24">
-<path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" stroke-linecap="round" stroke-linejoin="round"></path>
 </svg>''',
     Icons.folder_copy_outlined: r'''<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#000000" stroke-width="2" viewBox="0 0 24 24">
 <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round"></path>

@@ -443,8 +443,6 @@ setState(() {
 
                         const SizedBox(height: 20),
 
-
-
                         const SizedBox(height: 20),
 
                         _label('RECOVERY INSTRUCTIONS'),
@@ -563,15 +561,7 @@ setState(() {
 
                         if (_recordType != 'Account') ...[
                           const SizedBox(height: 32),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _label('DOCUMENT SCAN & FILES'),
-                              ),
-                              const SizedBox(width: 8),
-                              _aiBadge(),
-                            ],
-                          ),
+                          _label('DOCUMENT SCAN & FILES'),
                           const SizedBox(height: 14),
                           _uploadCard(),
                         ],
@@ -714,7 +704,7 @@ setState(() {
                                   child: Text(
                                     _recordType == 'Account'
                                         ? 'Save Account to Vault'
-                                        : 'Continue to Smart Review',
+                                        : 'Continue to Review',
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
                                       fontSize: 18,
@@ -1179,32 +1169,6 @@ String get _dateLabel {
             onChanged: (value) {
               setState(() => _expiryNotification = value);
             },
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  Widget _aiBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE0DFFF),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.auto_awesome, color: purple, size: 16),
-          SizedBox(width: 5),
-          Text(
-            'Smart Review AI',
-            style: TextStyle(
-              color: purple,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
           ),
         ],
       ),

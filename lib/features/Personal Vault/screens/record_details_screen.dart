@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
-import 'explain_document_screen.dart';
+
 import 'share_record_screen.dart';
 import '../services/vault_service.dart';
 import '../services/supabase_storage_service.dart';
@@ -616,23 +616,6 @@ String get _documentDaysLeft {
     scrollDirection: Axis.horizontal,
     child: Row(
       children: [
-        if (widget.type == 'Document') ...[
-          _actionButton(
-            icon: Icons.auto_awesome,
-            text: 'Explain Document',
-            highlighted: true,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ExplainDocumentScreen(),
-                ),
-              );
-            },
-                      ),
-
-            const SizedBox(width: 14),
-        ],
 
         _actionButton(
           icon: Icons.share_outlined,
