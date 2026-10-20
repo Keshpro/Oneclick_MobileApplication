@@ -1,7 +1,40 @@
 import 'package:flutter/material.dart';
 
-class DocumentPackExportScreen extends StatelessWidget {
-  const DocumentPackExportScreen({super.key});
+import '../models/document_pack.dart';
+import '../models/vault_record.dart';
+
+import '../services/vault_service.dart';
+import '../services/document_pack_service.dart';
+import '../services/document_pack_zip_service.dart';
+
+import 'document_pack_home_screen.dart';
+
+class DocumentPackExportScreen extends StatefulWidget {
+  const DocumentPackExportScreen({
+    super.key,
+    required this.pack,
+  });
+
+  final DocumentPack pack;
+
+  @override
+  State<DocumentPackExportScreen> createState() =>
+      _DocumentPackExportScreenState();
+}
+
+class _DocumentPackExportScreenState
+    extends State<DocumentPackExportScreen> {
+  late final DocumentPack pack;
+
+  bool _isSaving = false;
+  String? _savedPackId;
+  bool _isExportingZip = false;
+
+  @override
+  void initState() {
+    super.initState();
+    pack = widget.pack;
+  }
 
   static const background = Color(0xFFE9EBF2);
   static const card = Color(0xFFEEF0F6);
@@ -41,32 +74,55 @@ class DocumentPackExportScreen extends StatelessWidget {
 
                   const SizedBox(height: 16),
 
-                  _document(
-                    'Valid Passport',
-                    'US_Passport_2030.pdf',
+                  StreamBuilder<List<VaultRecord>>(
+                    stream: VaultService().getRecords(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return const Text(
+                          'Unable to load Vault documents.',
+                          style: TextStyle(color: muted),
+                        );
+                      }
+
+                      if (!snapshot.hasData) {
+                        return const Center(
+                          child: CircularProgressIndicator(color: purple),
+                        );
+                      }
+
+                      final recordsById = {
+                        for (final record in snapshot.data!) record.id: record,
+                      };
+
+                      return Column(
+                        children: [
+                          for (final requirement in pack.requirements) ...[
+                            Builder(
+                              builder: (context) {
+                                final record = recordsById[requirement.vaultRecordId];
+
+                                if (record == null ||
+                                    ((record.fileUrl?.trim().isNotEmpty ?? false) == false &&
+                                    (record.filePath?.trim().isNotEmpty ?? false) == false)) {
+                                  return _document(
+                                    requirement.name,
+                                    'Selected Vault document unavailable',
+                                    available: false,
+                                  );
+                                }
+
+                                return _document(
+                                  requirement.name,
+                                  record.fileName ?? record.title,
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                        ],
+                      );
+                    },
                   ),
-
-                  const SizedBox(height: 12),
-
-                  _document(
-                    'Proof of Accommodation',
-                    'Apartment_Lease_Agreement_2025.pdf',
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  _document(
-                    'Travel Health Insurance',
-                    'International_Health_Policy_2025.pdf',
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  _document(
-                    'Bank Statement',
-                    'Bank_Statement_Jan_2025.pdf',
-                  ),
-
                   const SizedBox(height: 28),
 
                   _packName(),
@@ -83,25 +139,17 @@ class DocumentPackExportScreen extends StatelessWidget {
                   ),
 
                   const SizedBox(height: 16),
+                  
 
                   _exportOption(
                     context,
                     icon: Icons.folder_zip_outlined,
-                    title: 'Encrypted ZIP',
+                    title: 'Download ZIP',
                     description:
-                        'Download all selected documents as one protected package.',
+                        'Download the selected Vault documents as one ZIP file.',
                     button: 'Download ZIP',
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  _exportOption(
-                    context,
-                    icon: Icons.link_rounded,
-                    title: 'Secure Share Link',
-                    description:
-                        'Create a controlled link for the complete document pack.',
-                    button: 'Create Secure Link',
+                    onPressed: _downloadZip,
+                    isLoading: _isExportingZip,
                   ),
 
                   const SizedBox(height: 22),
@@ -199,62 +247,79 @@ class DocumentPackExportScreen extends StatelessWidget {
     );
   }
 
-  Widget _readyCard() {
-    return _surface(
-      child: const Row(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: Color(0xFFE2F7F0),
-            child: Icon(
-              Icons.check_circle_outline,
-              color: green,
-              size: 31,
-            ),
-          ),
+  
+Widget _readyCard() {
+  final matched = pack.matchedRequirements;
+  final total = pack.totalRequirements;
+  final allMatched = total > 0 && matched == total;
 
-          SizedBox(width: 17),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'All 4 Requirements Satisfied',
-                  style: TextStyle(
-                    color: ink,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: 5),
-                Text(
-                  'Your pack is ready for final review and export.',
-                  style: TextStyle(
-                    color: muted,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
+  return _surface(
+    child: Row(
+      children: [
+        CircleAvatar(
+          radius: 28,
+          backgroundColor: allMatched
+              ? const Color(0xFFE2F7F0)
+              : const Color(0xFFFFF2DE),
+          child: Icon(
+            allMatched
+                ? Icons.check_circle_outline
+                : Icons.info_outline,
+            color: allMatched ? green : purple,
+            size: 31,
           ),
-        ],
-      ),
-    );
-  }
+        ),
+        const SizedBox(width: 17),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                allMatched
+                    ? 'All $total Requirements Matched'
+                    : '$matched of $total Requirements Matched',
+                style: const TextStyle(
+                  color: ink,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                allMatched
+                    ? 'Your confirmed Vault matches are ready for final review.'
+                    : 'Some requirements still need matching.',
+                style: const TextStyle(
+                  color: muted,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 
   Widget _document(
-    String requirement,
-    String file,
-  ) {
+  String requirement,
+  String file, {
+  bool available = true,
+}) {
     return _surface(
       child: Row(
         children: [
-          const CircleAvatar(
-            backgroundColor: Color(0xFFE2F7F0),
+          CircleAvatar(
+            backgroundColor: available
+                ? const Color(0xFFE2F7F0)
+                : const Color(0xFFFFE8ED),
             child: Icon(
-              Icons.check_rounded,
-              color: green,
+              available
+                  ? Icons.check_rounded
+                  : Icons.error_outline,
+              color: available ? green : const Color(0xFFFF3B62),
             ),
           ),
 
@@ -295,7 +360,7 @@ class DocumentPackExportScreen extends StatelessWidget {
 
   Widget _packName() {
     return _surface(
-      child: const Row(
+      child: Row(
         children: [
           Icon(
             Icons.folder_copy_outlined,
@@ -317,8 +382,8 @@ class DocumentPackExportScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'Schengen Visa & Residency',
-                  style: TextStyle(
+                  pack.name,
+                  style: const TextStyle(
                     color: ink,
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
@@ -336,13 +401,49 @@ class DocumentPackExportScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _downloadZip() async {
+  if (_isExportingZip) return;
+
+  setState(() {
+    _isExportingZip = true;
+  });
+
+  try {
+    await DocumentPackZipService().exportPack(pack);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('ZIP export completed successfully.'),
+      ),
+    );
+    } catch (error) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Unable to export ZIP: $error'),
+      ),
+    );
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isExportingZip = false;
+      });
+    }
+  }
+}
+
   Widget _exportOption(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String description,
-    required String button,
-  }) {
+  BuildContext context, {
+  required IconData icon,
+  required String title,
+  required String description,
+  required String button,
+  VoidCallback? onPressed,
+  bool isLoading = false,
+}) {
     return _surface(
       child: Column(
         children: [
@@ -394,15 +495,16 @@ class DocumentPackExportScreen extends StatelessWidget {
           const SizedBox(height: 18),
 
           InkWell(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '$button will be connected to backend functionality later.',
-                  ),
-                ),
-              );
-            },
+            onTap: isLoading
+              ? null
+              : onPressed ??
+                  () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('$button is not available yet.'),
+                      ),
+                    );
+                  },
             borderRadius: BorderRadius.circular(25),
             child: Container(
               width: double.infinity,
@@ -413,7 +515,7 @@ class DocumentPackExportScreen extends StatelessWidget {
                 boxShadow: _shadow(),
               ),
               child: Text(
-                button,
+                isLoading ? 'Preparing ZIP...' : button,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: purple,
@@ -427,47 +529,98 @@ class DocumentPackExportScreen extends StatelessWidget {
     );
   }
 
-  Widget _saveButton(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Document pack saved to Vault for this demo.',
-            ),
-          ),
-        );
-      },
-      borderRadius: BorderRadius.circular(30),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 18),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0F1F6),
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: _shadow(),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.bookmark_add_outlined,
-              color: purple,
-            ),
-            SizedBox(width: 9),
-            Text(
-              'Save Pack to Vault',
-              style: TextStyle(
-                color: purple,
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
-              ),
-            ),
-          ],
-        ),
+  Future<void> _savePack() async {
+  if (_isSaving || _savedPackId != null) return;
+
+  setState(() {
+    _isSaving = true;
+  });
+
+  try {
+    final id = await DocumentPackService().savePack(pack);
+
+    if (!mounted) return;
+
+    setState(() {
+      _savedPackId = id;
+    });
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => const DocumentPackHomeScreen(),
+      ),
+      (route) => route.isFirst,
+    );
+  } catch (error) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Unable to save document pack. Please try again.'),
       ),
     );
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isSaving = false;
+      });
+    }
   }
+}
+
+  
+Widget _saveButton(BuildContext context) {
+  final saved = _savedPackId != null;
+
+  return InkWell(
+    onTap: (_isSaving || saved) ? null : _savePack,
+    borderRadius: BorderRadius.circular(30),
+    child: Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F1F6),
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: _shadow(),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (_isSaving)
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: purple,
+              ),
+            )
+          else
+            Icon(
+              saved
+                  ? Icons.check_circle_outline
+                  : Icons.bookmark_add_outlined,
+              color: saved ? green : purple,
+            ),
+          const SizedBox(width: 9),
+          Text(
+            _isSaving
+                ? 'Saving Pack...'
+                : saved
+                    ? 'Pack Saved'
+                    : 'Save Pack to Vault',
+            style: TextStyle(
+              color: saved ? green : purple,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 
   Widget _step(
     String number,

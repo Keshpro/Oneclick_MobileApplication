@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+
 import 'document_pack_matches_screen.dart';
+import 'document_requirements_editor.dart';
+import '../models/document_pack.dart';
+import 'pdf_preview_screen.dart';
+import '../services/pdf_checklist_service.dart';
 
 class DocumentPackRequirementsScreen extends StatefulWidget {
   const DocumentPackRequirementsScreen({super.key});
@@ -17,12 +23,14 @@ class _DocumentPackRequirementsScreenState
   static const ink = Color(0xFF303344);
   static const muted = Color(0xFF707383);
 
-  final TextEditingController _requirementsController =
-      TextEditingController();
+  final TextEditingController _packNameController =
+    TextEditingController();
+
+  List<String> _checklistItems = [];
 
   @override
   void dispose() {
-    _requirementsController.dispose();
+    _packNameController.dispose();
     super.dispose();
   }
 
@@ -137,44 +145,178 @@ class _DocumentPackRequirementsScreenState
   }
 
   Widget _packInfo() {
-    return _surface(
-      child: const Row(
-        children: [
-          Icon(
-            Icons.folder_copy_outlined,
-            color: purple,
-            size: 28,
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'NEW DOCUMENT PACK',
-                  style: TextStyle(
-                    color: purple,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: .5,
-                  ),
+  return _surface(
+    child: Row(
+      children: [
+        const Icon(
+          Icons.folder_copy_outlined,
+          color: purple,
+          size: 28,
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'NEW DOCUMENT PACK',
+                style: TextStyle(
+                  color: purple,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: .5,
                 ),
-                SizedBox(height: 6),
-                Text(
-                  'Schengen Visa & Residency',
-                  style: TextStyle(
-                    color: ink,
-                    fontSize: 19,
-                    fontWeight: FontWeight.w600,
-                  ),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _packNameController,
+                textCapitalization: TextCapitalization.words,
+                style: const TextStyle(
+                  color: ink,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
-            ),
+                decoration: const InputDecoration(
+                  hintText: 'Enter pack name',
+                  hintStyle: TextStyle(color: muted),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
+      ],
+    ),
+  );
+}
+
+
+Future<void> _selectRequirementsPdf() async {
+  try {
+    final files = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
+
+    if (!mounted || files.isEmpty) return;
+
+    final file = files.first;
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      _message('Please select a PDF file.');
+      return;
+    }
+
+    // Keep the existing working PDF preview.
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PdfPreviewScreen(file: file),
       ),
     );
+
+    if (!mounted) return;
+
+    // Read the same selected PDF for text extraction.
+    final bytes = await file.readAsBytes();
+
+    if (!mounted) return;
+
+    final extractedText =
+        await PdfChecklistService().extractText(bytes);
+
+    if (!mounted) return;
+
+    final reviewController = TextEditingController(
+      text: extractedText,
+    );
+
+    try {
+      final approvedText = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Review PDF Requirements'),
+            content: SizedBox(
+              width: 500,
+              child: SingleChildScrollView(
+                child: TextField(
+                  controller: reviewController,
+                  maxLines: 12,
+                  minLines: 6,
+                  decoration: const InputDecoration(
+                    labelText: 'Edit extracted requirements',
+                    helperText:
+                        'Keep one document requirement per line.',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () =>
+                    Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(
+                  dialogContext,
+                  reviewController.text,
+                ),
+                child: const Text('Add to Checklist'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (!mounted || approvedText == null) return;
+
+      final newItems = approvedText
+          .split(RegExp(r'\r?\n'))
+          .map(
+            (line) => line
+                .trim()
+                .replaceFirst(
+                  RegExp(r'^(?:[-*•]\s*|\d+[.)]\s*)'),
+                  '',
+                )
+                .trim(),
+          )
+          .where((line) => line.isNotEmpty)
+          .toList();
+
+      final combined = List<String>.from(_checklistItems);
+      final existing = combined
+          .map((item) => item.toLowerCase())
+          .toSet();
+
+      for (final item in newItems) {
+        if (existing.add(item.toLowerCase())) {
+          combined.add(item);
+        }
+      }
+
+      setState(() {
+        _checklistItems = combined;
+      });
+
+      _message('PDF requirements added. Review your checklist.');
+    } finally {
+      reviewController.dispose();
+    }
+  } catch (error) {
+    if (!mounted) return;
+
+    _message(
+      'Unable to extract PDF text. Try a text-based PDF.',
+    );
   }
+}
+
 
   Widget _requirements() {
     return _surface(
@@ -201,9 +343,7 @@ class _DocumentPackRequirementsScreenState
           const SizedBox(height: 22),
 
           InkWell(
-            onTap: () {
-              _message('Checklist upload will be connected later.');
-            },
+            onTap: _selectRequirementsPdf,
             borderRadius: BorderRadius.circular(25),
             child: Container(
               width: double.infinity,
@@ -230,7 +370,7 @@ class _DocumentPackRequirementsScreenState
                   ),
                   SizedBox(height: 5),
                   Text(
-                    'PDF, image or document',
+                    'PDF files only',
                     style: TextStyle(
                       color: muted,
                       fontSize: 12,
@@ -262,20 +402,13 @@ class _DocumentPackRequirementsScreenState
               borderRadius: BorderRadius.circular(24),
               boxShadow: _shadow(),
             ),
-            child: TextField(
-              controller: _requirementsController,
-              minLines: 5,
-              maxLines: 8,
-              decoration: const InputDecoration(
-                hintText:
-                    'Example:\n• Valid passport\n• Proof of accommodation\n• Travel health insurance\n• Bank statement',
-                hintStyle: TextStyle(
-                  color: muted,
-                  height: 1.6,
-                ),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.all(20),
-              ),
+            child: DocumentRequirementsEditor(
+              requirements: _checklistItems,
+              onChanged: (updated) {
+                setState(() {
+                  _checklistItems = updated;
+                });
+              },
             ),
           ),
         ],
@@ -286,10 +419,33 @@ class _DocumentPackRequirementsScreenState
   Widget _continueButton() {
     return InkWell(
       onTap: () {
+        final packName = _packNameController.text.trim();
+
+        if (packName.isEmpty) {
+          _message('Please enter a pack name.');
+          return;
+        }
+
+        if (_checklistItems.isEmpty) {
+          _message('Please add at least one document requirement.');
+          return;
+        }
+
+        final pack = DocumentPack(
+          name: packName,
+          requirements: [
+            for (var index = 0; index < _checklistItems.length; index++)
+              DocumentRequirement(
+                id: 'requirement_${index + 1}',
+                name: _checklistItems[index],
+              ),
+          ],
+        );
+
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => const DocumentPackMatchesScreen(),
+            builder: (_) => DocumentPackMatchesScreen(pack: pack),
           ),
         );
       },

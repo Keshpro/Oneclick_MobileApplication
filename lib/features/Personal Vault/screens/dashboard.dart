@@ -10,7 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'vault_screen.dart';
 import 'subscriptions_screen.dart';
 import 'sharing_center_screen.dart';
-import 'document_pack_requirements_screen.dart';
+import 'document_pack_home_screen.dart';
 import 'scan_upload_screen.dart';
 import 'add_record_screen.dart';
 import 'vault_settings_screen.dart';
@@ -739,7 +739,7 @@ class _PersonalDashboardScreenState extends State<PersonalDashboardScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) =>
-                                      const DocumentPackRequirementsScreen(),
+                                      const DocumentPackHomeScreen(),
                                 ),
                               );
                             },

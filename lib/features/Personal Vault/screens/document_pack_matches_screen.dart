@@ -1,8 +1,31 @@
 import 'package:flutter/material.dart';
 import 'document_pack_gaps_screen.dart';
+import '../models/document_pack.dart';
+import '../models/vault_record.dart';
+import 'document_pack_vault_picker.dart';
 
-class DocumentPackMatchesScreen extends StatelessWidget {
-  const DocumentPackMatchesScreen({super.key});
+class DocumentPackMatchesScreen extends StatefulWidget {
+  const DocumentPackMatchesScreen({
+    super.key,
+    required this.pack,
+  });
+
+  final DocumentPack pack;
+
+  @override
+  State<DocumentPackMatchesScreen> createState() =>
+      _DocumentPackMatchesScreenState();
+}
+
+class _DocumentPackMatchesScreenState
+    extends State<DocumentPackMatchesScreen> {
+  late DocumentPack pack;
+
+  @override
+  void initState() {
+    super.initState();
+    pack = widget.pack;
+  }
 
   static const background = Color(0xFFE9EBF2);
   static const card = Color(0xFFEEF0F6);
@@ -33,9 +56,9 @@ class DocumentPackMatchesScreen extends StatelessWidget {
                   _configuration(),
                   const SizedBox(height: 28),
 
-                  const Text(
-                    'CHECKLIST VALIDATION (4 ITEMS)',
-                    style: TextStyle(
+                  Text(
+                    'CHECKLIST VALIDATION (${pack.totalRequirements} ITEMS)',
+                    style: const TextStyle(
                       color: muted,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
@@ -44,31 +67,10 @@ class DocumentPackMatchesScreen extends StatelessWidget {
 
                   const SizedBox(height: 18),
 
-                  _matchedCard(
-                    context,
-                    icon: Icons.badge_outlined,
-                    requirement: 'Valid Passport (Biometric)',
-                    file: 'US_Passport_2030.pdf',
-                    note: 'Extracted expiry: Aug 2030',
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  _reviewCard(context),
-
-                  const SizedBox(height: 18),
-
-                  _matchedCard(
-                    context,
-                    icon: Icons.health_and_safety_outlined,
-                    requirement: 'Travel Health Insurance',
-                    file: 'International_Health_Policy_2025.pdf',
-                    note: 'Meets €30,000 threshold',
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  _missingCard(context),
+                  for (final requirement in pack.requirements) ...[
+                    _unmatchedCard(context, requirement),
+                    const SizedBox(height: 18),
+                  ],
 
                   const SizedBox(height: 24),
 
@@ -180,83 +182,85 @@ class DocumentPackMatchesScreen extends StatelessWidget {
     );
   }
 
-  Widget _configuration() {
-    return _surface(
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.folder_copy_outlined,
-                color: purple,
-              ),
-              SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'PACK CONFIGURATION',
-                      style: TextStyle(
-                        color: purple,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+  
+Widget _configuration() {
+  return _surface(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.folder_copy_outlined,
+              color: purple,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'PACK CONFIGURATION',
+                    style: TextStyle(
+                      color: purple,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
-                    SizedBox(height: 5),
-                    Text(
-                      'Schengen Visa & Residency',
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    pack.name,
+                    style: const TextStyle(
+                      color: ink,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.tune_rounded,
+              color: muted,
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        const Row(
+          children: [
+            Icon(
+              Icons.attachment_rounded,
+              color: purple,
+              size: 18,
+            ),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  style: TextStyle(
+                    color: muted,
+                    fontSize: 13,
+                  ),
+                  children: [
+                    TextSpan(text: 'Source: '),
+                    TextSpan(
+                      text: 'Manually entered checklist',
                       style: TextStyle(
                         color: ink,
-                        fontSize: 19,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(
-                Icons.tune_rounded,
-                color: muted,
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          Row(
-            children: [
-              Icon(
-                Icons.attachment_rounded,
-                color: purple,
-                size: 18,
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    style: TextStyle(
-                      color: muted,
-                      fontSize: 13,
-                    ),
-                    children: [
-                      TextSpan(text: 'Source: '),
-                      TextSpan(
-                        text: 'Uploaded Consulate Checklist.pdf',
-                        style: TextStyle(
-                          color: ink,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
 
   Widget _matchedCard(
     BuildContext context, {
@@ -413,6 +417,111 @@ class DocumentPackMatchesScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _selectVaultDocument(
+  DocumentRequirement requirement,
+) async {
+  final selected = await Navigator.push<VaultRecord>(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const DocumentPackVaultPicker(),
+    ),
+  );
+
+  if (!mounted || selected == null) return;
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Confirm Document Match'),
+      content: Text(
+        'Use "${selected.title}" for "${requirement.name}"?',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Confirm Match'),
+        ),
+      ],
+    ),
+  );
+
+  if (!mounted || confirmed != true) return;
+
+  setState(() {
+    pack = pack.copyWith(
+      requirements: [
+        for (final item in pack.requirements)
+          if (item.id == requirement.id)
+            item.copyWith(vaultRecordId: selected.id)
+          else
+            item,
+      ],
+    );
+  });
+}
+
+  Widget _unmatchedCard(
+    BuildContext context,
+    DocumentRequirement requirement,
+  ) {
+  return Container(
+    padding: const EdgeInsets.all(22),
+    decoration: BoxDecoration(
+      color: card,
+      borderRadius: BorderRadius.circular(30),
+      border: const Border(
+        left: BorderSide(color: orange, width: 6),
+      ),
+      boxShadow: _shadow(),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.description_outlined, color: ink),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                requirement.name,
+                style: const TextStyle(
+                  color: ink,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        const Text(
+          'Not matched yet. Select a document from your Vault in the next integration step.',
+          style: TextStyle(
+            color: muted,
+            fontSize: 13,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 14),
+        _status(
+          requirement.isMatched ? 'Matched' : 'Not Matched',
+          requirement.isMatched ? green : orange,
+        ),
+        const SizedBox(height: 14),
+        _wideButton(
+          Icons.folder_open_outlined,
+          requirement.isMatched ? 'Change Vault Document' : 'Select from Vault',
+          () => _selectVaultDocument(requirement),
+        ),
+      ],
+    ),
+  );
+}
+
   Widget _missingCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(22),
@@ -493,59 +602,63 @@ class DocumentPackMatchesScreen extends StatelessWidget {
   }
 
   Widget _summary() {
-    return _surface(
-      child: const Row(
-        children: [
-          SizedBox(
-            width: 70,
-            height: 70,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CircularProgressIndicator(
-                  value: .75,
-                  strokeWidth: 6,
-                  color: purple,
-                  backgroundColor: Color(0xFFD5D7E0),
+  final total = pack.totalRequirements;
+  final matched = pack.matchedRequirements;
+  final percentage = pack.completionPercentage;
+
+  return _surface(
+    child: Row(
+      children: [
+        SizedBox(
+          width: 70,
+          height: 70,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CircularProgressIndicator(
+                value: percentage / 100,
+                strokeWidth: 6,
+                color: purple,
+                backgroundColor: const Color(0xFFD5D7E0),
+              ),
+              Text(
+                '${percentage.round()}%',
+                style: const TextStyle(
+                  color: ink,
+                  fontWeight: FontWeight.w600,
                 ),
-                Text(
-                  '75%',
-                  style: TextStyle(
-                    color: ink,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          SizedBox(width: 18),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '3 of 4 Documents Identified',
-                  style: TextStyle(
-                    color: ink,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 17,
-                  ),
+        ),
+        const SizedBox(width: 18),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$matched of $total Documents Matched',
+                style: const TextStyle(
+                  color: ink,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 17,
                 ),
-                SizedBox(height: 5),
-                Text(
-                  'Review questionable matches and add missing documents.',
-                  style: TextStyle(
-                    color: muted,
-                    fontSize: 13,
-                  ),
+              ),
+              const SizedBox(height: 5),
+              const Text(
+                'Select and confirm documents from your Vault to complete this pack.',
+                style: TextStyle(
+                  color: muted,
+                  fontSize: 13,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _continue(BuildContext context) {
     return _wideButton(
@@ -555,7 +668,7 @@ class DocumentPackMatchesScreen extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => const DocumentPackGapsScreen(),
+            builder: (_) => DocumentPackGapsScreen(pack: pack),
           ),
         );
       },
