@@ -52,6 +52,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   bool _isApproved = false;
 
   List<BookingModel> _incomingRequests = [];
+  Set<String> _declinedBookingIds = {};
 
   BookingModel? _activeTrip;
 
@@ -94,13 +95,17 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         _isApproved = isApproved;
       });
       if (isApproved) {
-        final savedOnlineStatus = await DriverFirestoreService()
-            .getMyOnlineStatus();
+        final driverService = DriverFirestoreService();
+
+        final savedOnlineStatus = await driverService.getMyOnlineStatus();
+
+        final declinedIds = await driverService.getMyDeclinedBookingIds();
 
         if (!mounted) return;
 
         setState(() {
           _isOnline = savedOnlineStatus;
+          _declinedBookingIds = declinedIds;
         });
 
         if (_isOnline) {
@@ -127,7 +132,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         if (!mounted) return;
 
         setState(() {
-          _incomingRequests = requests;
+          _incomingRequests = requests.where((booking) {
+            return !_declinedBookingIds.contains(booking.id);
+          }).toList();
         });
       },
 
@@ -508,19 +515,28 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
   }
 
-  void _onDecline(BookingModel booking) {
-    // Mock-stage decline: this driver simply stops seeing it. A real
+  Future<void> _onDecline(BookingModel booking) async {
+    try {
+      await DriverFirestoreService().declineBooking(booking.id);
 
-    // backend would record which driver declined so it isn't shown
+      if (!mounted) return;
 
-    // to them again, without affecting other drivers.
+      setState(() {
+        _declinedBookingIds.add(booking.id);
 
-    setState(() {
-      _incomingRequests.removeWhere((b) => b.id == booking.id);
-    });
+        _incomingRequests.removeWhere((request) => request.id == booking.id);
+      });
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('Request declined')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Booking request declined successfully.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to decline booking: $error')),
+      );
+    }
   }
 
   bool _isUpdatingOnlineStatus = false;
