@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/booking_model.dart';
 import '../../models/booking_status.dart';
 import '../../services/booking_firestore_service.dart';
+import '../../services/driver_trip_location_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 import 'report_incident_screen.dart';
 
@@ -19,6 +22,39 @@ class DriverActiveTripScreen extends StatefulWidget {
 class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
   final BookingFirestoreService _bookingService = BookingFirestoreService();
   late final Stream<DocumentSnapshot<Map<String, dynamic>>> _bookingStream;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _trackingStatusListener;
+
+  final DriverTripLocationService _locationService = DriverTripLocationService();
+  bool _locationBusy = false;
+  bool _locationSharing = false;
+
+  Future<void> _toggleLocation() async {
+    if (_locationBusy) return;
+    setState(() => _locationBusy = true);
+    try {
+      if (_locationSharing) {
+        await _locationService.stop();
+      } else {
+        await _locationService.start(widget.booking.id);
+      }
+      if (mounted) setState(() => _locationSharing = _locationService.isSharing);
+    } catch (error) {
+      if (mounted) _showMessage('Location sharing: $error');
+    } finally {
+      if (mounted) setState(() => _locationBusy = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    // Best-effort cleanup if the screen is closed. The passenger also checks
+    // location freshness, so abandoned browser sessions do not look live.
+    _locationService.onError = null;
+    final listener = _trackingStatusListener;
+    if (listener != null) unawaited(listener.cancel());
+    unawaited(_locationService.stop().catchError((Object _) {}));
+    super.dispose();
+  }
 
   bool _isEnding = false;
   bool _isConfirmingCash = false;
@@ -26,10 +62,23 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
   @override
   void initState() {
     super.initState();
+    _locationService.onError = (error) async {
+      if (!mounted) return;
+      setState(() => _locationSharing = false);
+      _showMessage('Location sharing stopped: $error');
+    };
     _bookingStream = FirebaseFirestore.instance
         .collection('drunkDriveBookings')
         .doc(widget.booking.id)
         .snapshots();
+    _trackingStatusListener = _bookingStream.listen((snapshot) {
+      final status = snapshot.data()?['status'];
+      if (status != 'tripStarted' && status != 'tripInProgress' &&
+          _locationService.isSharing) {
+        unawaited(_locationService.stop().catchError((Object _) {}));
+        if (mounted) setState(() => _locationSharing = false);
+      }
+    });
   }
 
   void _showMessage(String message) {
@@ -51,7 +100,13 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
         _showMessage('Unable to complete this trip. Please refresh and try again.');
         return;
       }
-      _showMessage('Trip completed. Payment has not been confirmed yet.');
+      try {
+        await _locationService.stop();
+      } catch (_) {
+        // Trip completion already succeeded. Do not report it as failed.
+      }
+      if (mounted) setState(() => _locationSharing = false);
+      if (mounted) _showMessage('Trip completed. Payment has not been confirmed yet.');
     } catch (error) {
       if (!mounted) return;
       _showMessage('Error completing trip: $error');
@@ -227,6 +282,41 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
                           ],
                         ),
                       ),
+                      if (!completed &&
+                          (booking.status == BookingStatus.tripStarted ||
+                              booking.status == BookingStatus.tripInProgress)) ...[
+                        const SizedBox(height: 16),
+                        Card(
+                          color: colors.surface,
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Live location sharing', style: TextStyle(
+                                  color: colors.textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                )),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _locationSharing
+                                    ? 'Your location is being shared with this passenger while this screen is active.'
+                                    : 'Share your GPS position with the passenger during this trip. You can stop at any time.',
+                                  style: TextStyle(color: colors.textMuted),
+                                ),
+                                const SizedBox(height: 10),
+                                OutlinedButton.icon(
+                                  onPressed: _locationBusy ? null : _toggleLocation,
+                                  icon: Icon(_locationSharing ? Icons.location_off : Icons.my_location),
+                                  label: Text(_locationBusy
+                                      ? 'Updating…'
+                                      : _locationSharing ? 'Stop Sharing' : 'Start Sharing Location'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
                       Container(
                         padding: const EdgeInsets.all(16),

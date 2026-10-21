@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import 'package:flutter/services.dart';
 
@@ -12,7 +15,6 @@ import '../../services/booking_firestore_service.dart';
 
 import '../../services/driver_rating_service.dart';
 
-import '../../services/driver_service.dart';
 
 import '../../theme/drunk_drive_colors.dart';
 
@@ -42,6 +44,7 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
   late BookingModel _booking;
 
   Timer? _driverSearchTimer;
+  Timer? _locationFreshnessTimer;
 
   StreamSubscription<BookingModel?>? _bookingSubscription;
 
@@ -50,6 +53,10 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
     super.initState();
 
     _booking = widget.booking;
+    _locationFreshnessTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) { if (mounted) setState(() {}); },
+    );
 
     _bookingSubscription = _bookingService
         .watchBooking(_booking.id)
@@ -83,6 +90,7 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
     _bookingSubscription?.cancel();
 
     _driverSearchTimer?.cancel();
+    _locationFreshnessTimer?.cancel();
 
     super.dispose();
   }
@@ -318,158 +326,137 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
 
   Future<void> _showDriverRatingDialog() async {
     final driverId = _booking.driverId;
+    if (driverId == null || !mounted) return;
 
-    if (driverId == null ||
-        _driverRatingService.hasRatedBooking(_booking.id) ||
-        !mounted) {
+    try {
+      if (await _driverRatingService.hasRatedBooking(_booking.id)) return;
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to check driver rating: $error')),
+      );
       return;
     }
+    if (!mounted) return;
 
     int selectedRating = 0;
-
+    bool isSubmitting = false;
     final reviewController = TextEditingController();
 
-    await showDialog<void>(
-      context: context,
-
-      barrierDismissible: false,
-
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: _palette.surface,
-
-              title: Text(
-                'Rate Your Driver',
-
-                style: TextStyle(
-                  color: _palette.textPrimary,
-
-                  fontWeight: FontWeight.w800,
-                ),
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            backgroundColor: _palette.surface,
+            title: Text(
+              'Rate Your Driver',
+              style: TextStyle(
+                color: _palette.textPrimary,
+                fontWeight: FontWeight.w800,
               ),
-
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-
-                  children: [
-                    Text(
-                      'How was your experience with your driver?',
-
-                      textAlign: TextAlign.center,
-
-                      style: TextStyle(color: _palette.textMuted),
-                    ),
-
-                    SizedBox(height: 18),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-
-                      children: List.generate(5, (index) {
-                        final star = index + 1;
-
-                        return IconButton(
-                          onPressed: () {
-                            setDialogState(() {
-                              selectedRating = star;
-                            });
-                          },
-
-                          icon: Icon(
-                            star <= selectedRating
-                                ? Icons.star_rounded
-                                : Icons.star_border_rounded,
-
-                            color: _palette.accent,
-
-                            size: 34,
-                          ),
-                        );
-                      }),
-                    ),
-
-                    SizedBox(height: 16),
-
-                    TextField(
-                      controller: reviewController,
-
-                      maxLines: 3,
-
-                      style: TextStyle(color: _palette.textPrimary),
-
-                      decoration: InputDecoration(
-                        hintText: 'Write a review (optional)',
-
-                        hintStyle: TextStyle(color: _palette.textMuted),
-
-                        filled: true,
-
-                        fillColor: _palette.background,
-
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-                  },
-
-                  child: Text(
-                    'Skip',
-
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'How was your experience with your driver?',
+                    textAlign: TextAlign.center,
                     style: TextStyle(color: _palette.textMuted),
                   ),
-                ),
-
-                ElevatedButton(
-                  onPressed: selectedRating == 0
-                      ? null
-                      : () {
-                          final submitted = _driverRatingService.submitRating(
+                  const SizedBox(height: 18),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      final star = index + 1;
+                      return IconButton(
+                        onPressed: isSubmitting
+                            ? null
+                            : () => setDialogState(() => selectedRating = star),
+                        icon: Icon(
+                          star <= selectedRating
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          color: _palette.accent,
+                          size: 34,
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: reviewController,
+                    enabled: !isSubmitting,
+                    maxLines: 3,
+                    style: TextStyle(color: _palette.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'Write a review (optional)',
+                      hintStyle: TextStyle(color: _palette.textMuted),
+                      filled: true,
+                      fillColor: _palette.background,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () => Navigator.pop(dialogContext),
+                child: Text('Skip', style: TextStyle(color: _palette.textMuted)),
+              ),
+              ElevatedButton(
+                onPressed: selectedRating == 0 || isSubmitting
+                    ? null
+                    : () async {
+                        setDialogState(() => isSubmitting = true);
+                        try {
+                          final saved = await _driverRatingService.submitRating(
                             bookingId: _booking.id,
-
                             driverId: driverId,
-
                             rating: selectedRating,
-
                             review: reviewController.text,
                           );
-
-                          if (submitted != null) {
-                            Navigator.pop(dialogContext);
-                          }
-                        },
-
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _palette.accent,
-
-                    foregroundColor: _onAccent,
-                  ),
-
-                  child: Text(
-                    'Submit Rating',
-
-                    style: TextStyle(fontWeight: FontWeight.w800),
-                  ),
+                          if (!dialogContext.mounted) return;
+                          Navigator.pop(dialogContext);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(saved == null
+                                  ? 'This trip has already been rated.'
+                                  : 'Rating saved to Firebase.'),
+                            ),
+                          );
+                        } catch (error) {
+                          if (!dialogContext.mounted) return;
+                          setDialogState(() => isSubmitting = false);
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            SnackBar(content: Text('Unable to save rating: $error')),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _palette.accent,
+                  foregroundColor: _onAccent,
                 ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    reviewController.dispose();
+                child: Text(isSubmitting ? 'Saving...' : 'Submit Rating'),
+              ),
+            ],
+          ),
+        ),
+      );
+    } finally {
+      // Allow dialog route to finish before disposing a controller used by it.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        reviewController.dispose();
+      });
+    }
   }
 
   Future<void> _openPayment() async {
@@ -633,26 +620,42 @@ Booking ID: ${_booking.id}
     );
   }
 
-  void _contactDriver() {
+  Future<void> _contactDriver() async {
     final driverId = _booking.driverId;
 
-    if (driverId == null) {
+    if (driverId == null || driverId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No driver has been assigned yet.')),
+        const SnackBar(content: Text('No driver has been assigned yet.')),
       );
-
       return;
     }
 
-    final driver = DriverService().getDriverApplicationByUserId(driverId);
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('drunkDriveDriverApplications')
+          .doc(driverId)
+          .get();
 
-    if (driver == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Driver contact details are unavailable.')),
-      );
+      if (!mounted) return;
 
-      return;
-    }
+      final data = snapshot.data();
+      if (data == null ||
+          data['userId'] != driverId ||
+          data['status'] != 'approved') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Approved driver contact details are unavailable.')),
+        );
+        return;
+      }
+
+      final driverName = (data['fullName'] as String? ?? '').trim();
+      final driverPhone = (data['phone'] as String? ?? '').trim();
+      if (driverPhone.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Driver phone number is not available.')),
+        );
+        return;
+      }
 
     showModalBottomSheet<void>(
       context: context,
@@ -698,7 +701,7 @@ Booking ID: ${_booking.id}
                   ),
 
                   title: Text(
-                    driver.fullName,
+                    driverName.isEmpty ? 'Assigned Driver' : driverName,
 
                     style: TextStyle(
                       color: _palette.textPrimary,
@@ -735,7 +738,7 @@ Booking ID: ${_booking.id}
 
                       Expanded(
                         child: Text(
-                          driver.phone,
+                          driverPhone,
 
                           style: TextStyle(
                             color: _palette.textPrimary,
@@ -758,7 +761,7 @@ Booking ID: ${_booking.id}
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       await Clipboard.setData(
-                        ClipboardData(text: driver.phone),
+                        ClipboardData(text: driverPhone),
                       );
 
                       if (!sheetContext.mounted) return;
@@ -799,6 +802,12 @@ Booking ID: ${_booking.id}
         );
       },
     );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to load driver contact: $error')),
+      );
+    }
   }
 
   Future<void> _showEmergencyOptions() async {
@@ -1065,6 +1074,10 @@ Status: ${_booking.status.label}
 
               if (_showTripPin) ...[_buildPinCard(), SizedBox(height: 16)],
 
+              _buildLiveMap(),
+
+              SizedBox(height: 16),
+
               _buildRouteCard(),
 
               SizedBox(height: 16),
@@ -1320,6 +1333,121 @@ Status: ${_booking.status.label}
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLiveMap() {
+    final pickupLat = _booking.pickup.latitude;
+    final pickupLng = _booking.pickup.longitude;
+    final destinationLat = _booking.destination.latitude;
+    final destinationLng = _booking.destination.longitude;
+    if (pickupLat == null || pickupLng == null ||
+        destinationLat == null || destinationLng == null) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text('Map unavailable: this booking has no saved coordinates.',
+              style: TextStyle(color: _palette.textMuted)),
+        ),
+      );
+    }
+
+    final pickup = LatLng(pickupLat, pickupLng);
+    final destination = LatLng(destinationLat, destinationLng);
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('drunkDriveBookings')
+          .doc(_booking.id)
+          .snapshots(),
+      builder: (context, snapshot) {
+        LatLng? driverPosition;
+        String label = 'Waiting for the driver to share their location.';
+        final data = snapshot.data?.data();
+        if (snapshot.hasError) {
+          label = 'Could not load location updates.';
+        } else if (data != null &&
+            data['passengerId'] == _booking.passengerId &&
+            data['driverId'] == _booking.driverId &&
+            _booking.driverId != null) {
+          final location = data['driverLocation'];
+          if (location is Map) {
+            final updatedAt = location['updatedAt'];
+            final lat = location['latitude'];
+            final lng = location['longitude'];
+            final fresh = updatedAt is Timestamp &&
+                DateTime.now().difference(updatedAt.toDate()).inSeconds < 90;
+            final tracking = location['trackingActive'] == true;
+            final running = data['status'] == 'tripStarted' ||
+                data['status'] == 'tripInProgress';
+            if (tracking && fresh && running && lat is num && lng is num) {
+              driverPosition = LatLng(lat.toDouble(), lng.toDouble());
+              label = 'Driver position shared recently (not turn-by-turn navigation).';
+            } else if (tracking && running) {
+              label = 'Driver location is unavailable or outdated.';
+            } else {
+              label = 'Driver location sharing is not active.';
+            }
+          }
+        }
+        final markers = <Marker>[
+          Marker(
+            point: pickup,
+            width: 44, height: 44,
+            child: const Icon(Icons.trip_origin, color: Colors.green, size: 34),
+          ),
+          Marker(
+            point: destination,
+            width: 44, height: 44,
+            child: const Icon(Icons.location_on, color: Colors.red, size: 38),
+          ),
+          if (driverPosition != null)
+            Marker(
+              point: driverPosition,
+              width: 48, height: 48,
+              child: const Icon(Icons.directions_car, color: Colors.blue, size: 36),
+            ),
+        ];
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: _palette.surface,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Trip map', style: TextStyle(
+                color: _palette.textPrimary,
+                fontWeight: FontWeight.w800,
+              )),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: SizedBox(
+                  height: 260,
+                  child: FlutterMap(
+                    options: MapOptions(initialCenter: pickup, initialZoom: 13),
+                    children: [
+                      TileLayer(
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'oneclick',
+                      ),
+                      MarkerLayer(markers: markers),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(label, style: TextStyle(color: _palette.textMuted, fontSize: 12)),
+              const SizedBox(height: 4),
+              Text('Green: pickup  •  Red: destination  •  Blue: driver',
+                  style: TextStyle(color: _palette.textMuted, fontSize: 11)),
+              Text('© OpenStreetMap contributors',
+                  style: TextStyle(color: _palette.textMuted, fontSize: 11)),
+            ],
+          ),
+        );
+      },
     );
   }
 
