@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../auth/screens/provider_role_selection_screen.dart';
 import '../../driver/screens/driver_home_screen.dart';
@@ -14,6 +15,7 @@ import 'active_trip_screen.dart';
 import 'book_driver_screen.dart';
 import 'my_trips_screen.dart';
 import 'my_vehicles_screen.dart';
+import 'drunk_drive_guest_screen.dart';
 
 /// Customer entry point for Drunk & Drive.
 /// The shared OneClick provider flow stays in the auth module.
@@ -33,6 +35,8 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Guest visitors must never start authenticated booking queries.
+    if (FirebaseAuth.instance.currentUser == null) return;
     _subscription = _bookings.watchMyBookingModels().listen(
       (bookings) {
         const terminal = {
@@ -92,6 +96,11 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // This also protects routes that open DrunkDriveHomeScreen directly.
+    if (FirebaseAuth.instance.currentUser == null) {
+      return const DrunkDriveGuestScreen();
+    }
+
     final dark = Theme.of(context).brightness == Brightness.dark;
     final colors = DrunkDrivePalette.of(context);
     final textTheme = Theme.of(context).textTheme;
