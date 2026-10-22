@@ -20,14 +20,29 @@ class FoodCartService {
 
   // Add any type of FoodProduct to the cart.
   void addProduct(FoodProduct product, int quantity) {
+    if (quantity <= 0 || product.availableQuantity <= 0) {
+      return;
+    }
+
     final existingIndex = items.indexWhere(
       (item) => item.product.id == product.id,
     );
 
     if (existingIndex != -1) {
-      items[existingIndex].quantity += quantity;
+      final existingItem = items[existingIndex];
+      final remainingStock = product.availableQuantity - existingItem.quantity;
+
+      if (remainingStock <= 0) return;
+
+      existingItem.quantity += quantity > remainingStock
+          ? remainingStock
+          : quantity;
     } else {
-      items.add(FoodCartItem(product: product, quantity: quantity));
+      final safeQuantity = quantity > product.availableQuantity
+          ? product.availableQuantity
+          : quantity;
+
+      items.add(FoodCartItem(product: product, quantity: safeQuantity));
     }
   }
 

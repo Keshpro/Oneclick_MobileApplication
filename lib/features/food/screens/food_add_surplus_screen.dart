@@ -60,6 +60,17 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
       return;
     }
 
+    final parsedQuantity = int.tryParse(quantityController.text.trim());
+
+    if (parsedQuantity == null || parsedQuantity <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Quantity must be a whole number greater than zero.'),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isSaving = true;
     });
