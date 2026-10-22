@@ -32,6 +32,9 @@ class BookingFirestoreService {
       'passengerId': currentUserId,
       'driverId': null,
       'status': 'searchingDriver',
+      'paymentStatus': 'unpaid',
+      'paymentMethod': null,
+      'paidAt': null,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
@@ -76,6 +79,9 @@ class BookingFirestoreService {
       'driverId': null,
       'tripPin': null,
       'status': 'searchingDriver',
+      'paymentStatus': 'unpaid',
+      'paymentMethod': null,
+      'paidAt': null,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
@@ -532,16 +538,109 @@ class BookingFirestoreService {
 
       final completedAt = Timestamp.now();
 
-      transaction.update(bookingRef, {
+      // Completing a trip does not mean that payment was received.
+      final amountDue = booking.customerAmountDue;
+      final changes = <String, dynamic>{
         'status': BookingStatus.completed.name,
         'completedAt': completedAt,
-      });
+        'amountDue': amountDue,
+        'paymentStatus': 'unpaid',
+        'paymentMethod': null,
+        'paidAt': null,
+      };
+      transaction.update(bookingRef, changes);
 
-      return BookingModel.fromMap(snapshot.id, {
-        ...data,
-        'status': BookingStatus.completed.name,
-        'completedAt': completedAt,
-      });
+      return BookingModel.fromMap(snapshot.id, {...data, ...changes});
+    });
+  }
+
+  /// Reads one booking for its passenger or assigned driver.
+  /// Firestore Security Rules must enforce the same access restrictions.
+  Future<BookingModel?> getBookingForParticipant(String bookingId) async {
+    final snapshot = await _bookings.doc(bookingId).get();
+    if (!snapshot.exists) return null;
+    final data = snapshot.data();
+    if (data == null) return null;
+    final userId = currentUserId;
+    if (data['passengerId'] != userId && data['driverId'] != userId) {
+      return null;
+    }
+    return BookingModel.fromMap(snapshot.id, data);
+  }
+
+  /// Passenger selects cash. This does NOT mark the booking as paid.
+  /// It records that the driver needs to confirm receipt of cash.
+  Future<BookingModel?> requestCashPayment(String bookingId) async {
+    final passengerId = currentUserId;
+    final bookingRef = _bookings.doc(bookingId);
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(bookingRef);
+      if (!snapshot.exists) return null;
+      final data = snapshot.data();
+      if (data == null || data['passengerId'] != passengerId) return null;
+      final booking = BookingModel.fromMap(snapshot.id, data);
+      if (booking.status != BookingStatus.completed ||
+          booking.paymentStatus != 'unpaid') {
+        return null;
+      }
+      final changes = <String, dynamic>{
+        'paymentStatus': 'pending',
+        'paymentMethod': 'cash',
+        'amountDue': booking.customerAmountDue,
+      };
+      transaction.update(bookingRef, changes);
+      return BookingModel.fromMap(snapshot.id, {...data, ...changes});
+    });
+  }
+
+  /// Only the assigned driver can confirm cash was actually received.
+  Future<BookingModel?> confirmCashPaymentReceived(String bookingId) async {
+    final driverId = currentUserId;
+    final bookingRef = _bookings.doc(bookingId);
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(bookingRef);
+      if (!snapshot.exists) return null;
+      final data = snapshot.data();
+      if (data == null || data['driverId'] != driverId) return null;
+      final booking = BookingModel.fromMap(snapshot.id, data);
+      if (booking.status != BookingStatus.completed ||
+          booking.paymentStatus != 'pending' ||
+          booking.paymentMethod != 'cash') {
+        return null;
+      }
+      final paidAt = Timestamp.now();
+      final changes = <String, dynamic>{
+        'paymentStatus': 'paid',
+        'paidAt': paidAt,
+      };
+      transaction.update(bookingRef, changes);
+      return BookingModel.fromMap(snapshot.id, {...data, ...changes});
+    });
+  }
+
+  /// Prototype only: no bank/card processing takes place.
+  /// Records a simulation outcome, never an actual paid transaction.
+  Future<BookingModel?> completeSimulatedCardPayment(String bookingId) async {
+    final passengerId = currentUserId;
+    final bookingRef = _bookings.doc(bookingId);
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(bookingRef);
+      if (!snapshot.exists) return null;
+      final data = snapshot.data();
+      if (data == null || data['passengerId'] != passengerId) return null;
+      final booking = BookingModel.fromMap(snapshot.id, data);
+      if (booking.status != BookingStatus.completed ||
+          booking.paymentStatus != 'unpaid') {
+        return null;
+      }
+      final changes = <String, dynamic>{
+        'paymentStatus': 'simulated',
+        'paymentMethod': 'simulatedCard',
+        'amountDue': booking.customerAmountDue,
+        'paidAt': null,
+      };
+      transaction.update(bookingRef, changes);
+      return BookingModel.fromMap(snapshot.id, {...data, ...changes});
     });
   }
 

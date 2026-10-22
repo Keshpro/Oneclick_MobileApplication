@@ -1,14 +1,23 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+
 import 'package:flutter/services.dart';
 
 import '../../models/booking_model.dart';
+
 import '../../models/booking_status.dart';
+
 import '../../services/booking_firestore_service.dart';
+
 import '../../services/driver_rating_service.dart';
-import '../../services/driver_service.dart';
+
+
 import '../../theme/drunk_drive_colors.dart';
+
 import 'payment_screen.dart';
 
 class ActiveTripScreen extends StatefulWidget {
@@ -23,21 +32,31 @@ class ActiveTripScreen extends StatefulWidget {
 class _ActiveTripScreenState extends State<ActiveTripScreen> {
   DrunkDrivePalette get _palette => DrunkDrivePalette.of(context);
 
-  Color get _onAccent => ThemeData.estimateBrightnessForColor(_palette.accent) == Brightness.dark
+  Color get _onAccent =>
+      ThemeData.estimateBrightnessForColor(_palette.accent) == Brightness.dark
       ? Colors.white
       : Colors.black;
 
   final BookingFirestoreService _bookingService = BookingFirestoreService();
+
   final DriverRatingService _driverRatingService = DriverRatingService();
 
   late BookingModel _booking;
+
   Timer? _driverSearchTimer;
+  Timer? _locationFreshnessTimer;
+
   StreamSubscription<BookingModel?>? _bookingSubscription;
+
   @override
   void initState() {
     super.initState();
 
     _booking = widget.booking;
+    _locationFreshnessTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) { if (mounted) setState(() {}); },
+    );
 
     _bookingSubscription = _bookingService
         .watchBooking(_booking.id)
@@ -53,6 +72,7 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
               _driverSearchTimer?.cancel();
             }
           },
+
           onError: (Object error) {
             if (!mounted) return;
 
@@ -68,7 +88,10 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
   @override
   void dispose() {
     _bookingSubscription?.cancel();
+
     _driverSearchTimer?.cancel();
+    _locationFreshnessTimer?.cancel();
+
     super.dispose();
   }
 
@@ -220,17 +243,23 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
   Future<void> _cancelBooking() async {
     final confirmed = await showDialog<bool>(
       context: context,
+
       builder: (context) {
         return AlertDialog(
           title: Text('Cancel Booking?'),
+
           content: Text('Are you sure you want to cancel this booking?'),
+
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
+
               child: Text('Keep Booking'),
             ),
+
             TextButton(
               onPressed: () => Navigator.pop(context, true),
+
               child: Text('Cancel Booking'),
             ),
           ],
@@ -248,10 +277,9 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
 
     if (cancelled == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('This booking can no longer be cancelled.'),
-        ),
+        SnackBar(content: Text('This booking can no longer be cancelled.')),
       );
+
       return;
     }
 
@@ -274,6 +302,7 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Unable to restart the driver search.')),
         );
+
         return;
       }
 
@@ -297,129 +326,143 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
 
   Future<void> _showDriverRatingDialog() async {
     final driverId = _booking.driverId;
+    if (driverId == null || !mounted) return;
 
-    if (driverId == null ||
-        _driverRatingService.hasRatedBooking(_booking.id) ||
-        !mounted) {
+    try {
+      if (await _driverRatingService.hasRatedBooking(_booking.id)) return;
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to check driver rating: $error')),
+      );
       return;
     }
+    if (!mounted) return;
 
     int selectedRating = 0;
+    bool isSubmitting = false;
     final reviewController = TextEditingController();
 
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: _palette.surface,
-              title: Text(
-                'Rate Your Driver',
-                style: TextStyle(
-                  color: _palette.textPrimary,
-                  fontWeight: FontWeight.w800,
-                ),
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            backgroundColor: _palette.surface,
+            title: Text(
+              'Rate Your Driver',
+              style: TextStyle(
+                color: _palette.textPrimary,
+                fontWeight: FontWeight.w800,
               ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'How was your experience with your driver?',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: _palette.textMuted),
-                    ),
-                    SizedBox(height: 18),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(5, (index) {
-                        final star = index + 1;
-
-                        return IconButton(
-                          onPressed: () {
-                            setDialogState(() {
-                              selectedRating = star;
-                            });
-                          },
-                          icon: Icon(
-                            star <= selectedRating
-                                ? Icons.star_rounded
-                                : Icons.star_border_rounded,
-                            color: _palette.accent,
-                            size: 34,
-                          ),
-                        );
-                      }),
-                    ),
-                    SizedBox(height: 16),
-                    TextField(
-                      controller: reviewController,
-                      maxLines: 3,
-                      style: TextStyle(color: _palette.textPrimary),
-                      decoration: InputDecoration(
-                        hintText: 'Write a review (optional)',
-                        hintStyle: TextStyle(
-                          color: _palette.textMuted,
-                        ),
-                        filled: true,
-                        fillColor: _palette.background,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-                  },
-                  child: Text(
-                    'Skip',
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'How was your experience with your driver?',
+                    textAlign: TextAlign.center,
                     style: TextStyle(color: _palette.textMuted),
                   ),
-                ),
-                ElevatedButton(
-                  onPressed: selectedRating == 0
-                      ? null
-                      : () {
-                          final submitted = _driverRatingService.submitRating(
+                  const SizedBox(height: 18),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      final star = index + 1;
+                      return IconButton(
+                        onPressed: isSubmitting
+                            ? null
+                            : () => setDialogState(() => selectedRating = star),
+                        icon: Icon(
+                          star <= selectedRating
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          color: _palette.accent,
+                          size: 34,
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: reviewController,
+                    enabled: !isSubmitting,
+                    maxLines: 3,
+                    style: TextStyle(color: _palette.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'Write a review (optional)',
+                      hintStyle: TextStyle(color: _palette.textMuted),
+                      filled: true,
+                      fillColor: _palette.background,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () => Navigator.pop(dialogContext),
+                child: Text('Skip', style: TextStyle(color: _palette.textMuted)),
+              ),
+              ElevatedButton(
+                onPressed: selectedRating == 0 || isSubmitting
+                    ? null
+                    : () async {
+                        setDialogState(() => isSubmitting = true);
+                        try {
+                          final saved = await _driverRatingService.submitRating(
                             bookingId: _booking.id,
                             driverId: driverId,
                             rating: selectedRating,
                             review: reviewController.text,
                           );
-
-                          if (submitted != null) {
-                            Navigator.pop(dialogContext);
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _palette.accent,
-                    foregroundColor: _onAccent,
-                  ),
-                  child: Text(
-                    'Submit Rating',
-                    style: TextStyle(fontWeight: FontWeight.w800),
-                  ),
+                          if (!dialogContext.mounted) return;
+                          Navigator.pop(dialogContext);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(saved == null
+                                  ? 'This trip has already been rated.'
+                                  : 'Rating saved to Firebase.'),
+                            ),
+                          );
+                        } catch (error) {
+                          if (!dialogContext.mounted) return;
+                          setDialogState(() => isSubmitting = false);
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            SnackBar(content: Text('Unable to save rating: $error')),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _palette.accent,
+                  foregroundColor: _onAccent,
                 ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    reviewController.dispose();
+                child: Text(isSubmitting ? 'Saving...' : 'Submit Rating'),
+              ),
+            ],
+          ),
+        ),
+      );
+    } finally {
+      // Allow dialog route to finish before disposing a controller used by it.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        reviewController.dispose();
+      });
+    }
   }
 
   Future<void> _openPayment() async {
     final result = await Navigator.push<bool>(
       context,
+
       MaterialPageRoute(builder: (_) => PaymentScreen(booking: _booking)),
     );
 
@@ -439,65 +482,96 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
   Future<void> _shareTrip() async {
     final shareText =
         '''
+
 Drunk & Drive Trip
 
+
+
 Pickup: ${_booking.pickup.name}
+
 Destination: ${_booking.destination.name}
+
 Vehicle: ${_booking.vehicle.displayName}
+
 Registration: ${_booking.vehicle.registrationNumber}
+
 Distance: ${_booking.distanceKm.toStringAsFixed(1)} km
+
 Status: ${_booking.status.label}
 
+
+
 Booking ID: ${_booking.id}
+
 ''';
 
     await showModalBottomSheet<void>(
       context: context,
+
       backgroundColor: _palette.surface,
+
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
+
       builder: (sheetContext) {
         return SafeArea(
           child: Padding(
             padding: EdgeInsets.all(20),
+
             child: Column(
               mainAxisSize: MainAxisSize.min,
+
               crossAxisAlignment: CrossAxisAlignment.start,
+
               children: [
                 Text(
                   'Share Trip',
+
                   style: TextStyle(
                     color: _palette.textPrimary,
+
                     fontSize: 20,
+
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+
                 SizedBox(height: 8),
+
                 Text(
                   'Copy these trip details and share them with someone you trust.',
-                  style: TextStyle(
-                    color: _palette.textMuted,
-                    height: 1.4,
-                  ),
+
+                  style: TextStyle(color: _palette.textMuted, height: 1.4),
                 ),
+
                 SizedBox(height: 16),
+
                 Container(
                   width: double.infinity,
+
                   padding: EdgeInsets.all(14),
+
                   decoration: BoxDecoration(
                     color: _onAccent,
+
                     borderRadius: BorderRadius.circular(14),
+
                     border: Border.all(color: _palette.surfaceBorder),
                   ),
+
                   child: Text(
                     shareText.trim(),
+
                     style: TextStyle(color: _palette.textPrimary, height: 1.5),
                   ),
                 ),
+
                 SizedBox(height: 16),
+
                 SizedBox(
                   width: double.infinity,
+
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       await Clipboard.setData(
@@ -516,15 +590,22 @@ Booking ID: ${_booking.id}
                         ),
                       );
                     },
+
                     icon: Icon(Icons.copy_rounded),
+
                     label: Text(
                       'Copy Trip Details',
+
                       style: TextStyle(fontWeight: FontWeight.w800),
                     ),
+
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _palette.accent,
+
                       foregroundColor: _onAccent,
+
                       padding: EdgeInsets.symmetric(vertical: 15),
+
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -539,69 +620,99 @@ Booking ID: ${_booking.id}
     );
   }
 
-  void _contactDriver() {
+  Future<void> _contactDriver() async {
     final driverId = _booking.driverId;
 
-    if (driverId == null) {
+    if (driverId == null || driverId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No driver has been assigned yet.')),
+        const SnackBar(content: Text('No driver has been assigned yet.')),
       );
       return;
     }
 
-    final driver = DriverService().getDriverApplicationByUserId(driverId);
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('drunkDriveDriverApplications')
+          .doc(driverId)
+          .get();
 
-    if (driver == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Driver contact details are unavailable.'),
-        ),
-      );
-      return;
-    }
+      if (!mounted) return;
+
+      final data = snapshot.data();
+      if (data == null ||
+          data['userId'] != driverId ||
+          data['status'] != 'approved') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Approved driver contact details are unavailable.')),
+        );
+        return;
+      }
+
+      final driverName = (data['fullName'] as String? ?? '').trim();
+      final driverPhone = (data['phone'] as String? ?? '').trim();
+      if (driverPhone.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Driver phone number is not available.')),
+        );
+        return;
+      }
 
     showModalBottomSheet<void>(
       context: context,
+
       backgroundColor: _palette.surface,
+
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
+
       builder: (sheetContext) {
         return SafeArea(
           child: Padding(
             padding: EdgeInsets.all(20),
+
             child: Column(
               mainAxisSize: MainAxisSize.min,
+
               crossAxisAlignment: CrossAxisAlignment.start,
+
               children: [
                 Text(
                   'Contact Driver',
+
                   style: TextStyle(
                     color: _palette.textPrimary,
+
                     fontSize: 20,
+
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+
                 SizedBox(height: 18),
 
                 ListTile(
                   contentPadding: EdgeInsets.zero,
+
                   leading: CircleAvatar(
                     backgroundColor: _palette.accent,
-                    child: Icon(
-                      Icons.person_rounded,
-                      color: _onAccent,
-                    ),
+
+                    child: Icon(Icons.person_rounded, color: _onAccent),
                   ),
+
                   title: Text(
-                    driver.fullName,
+                    driverName.isEmpty ? 'Assigned Driver' : driverName,
+
                     style: TextStyle(
                       color: _palette.textPrimary,
+
                       fontWeight: FontWeight.w800,
                     ),
                   ),
+
                   subtitle: Text(
                     'Assigned Driver',
+
                     style: TextStyle(color: _palette.textMuted),
                   ),
                 ),
@@ -610,24 +721,30 @@ Booking ID: ${_booking.id}
 
                 Container(
                   width: double.infinity,
+
                   padding: EdgeInsets.all(16),
+
                   decoration: BoxDecoration(
                     color: _onAccent,
+
                     borderRadius: BorderRadius.circular(14),
                   ),
+
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.phone_rounded,
-                        color: _palette.accent,
-                      ),
+                      Icon(Icons.phone_rounded, color: _palette.accent),
+
                       SizedBox(width: 12),
+
                       Expanded(
                         child: Text(
-                          driver.phone,
+                          driverPhone,
+
                           style: TextStyle(
                             color: _palette.textPrimary,
+
                             fontSize: 16,
+
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -640,10 +757,11 @@ Booking ID: ${_booking.id}
 
                 SizedBox(
                   width: double.infinity,
+
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       await Clipboard.setData(
-                        ClipboardData(text: driver.phone),
+                        ClipboardData(text: driverPhone),
                       );
 
                       if (!sheetContext.mounted) return;
@@ -653,20 +771,25 @@ Booking ID: ${_booking.id}
                       if (!mounted) return;
 
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Driver phone number copied.'),
-                        ),
+                        SnackBar(content: Text('Driver phone number copied.')),
                       );
                     },
+
                     icon: Icon(Icons.copy_rounded),
+
                     label: Text(
                       'Copy Phone Number',
+
                       style: TextStyle(fontWeight: FontWeight.w800),
                     ),
+
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _palette.accent,
+
                       foregroundColor: _onAccent,
+
                       padding: EdgeInsets.symmetric(vertical: 15),
+
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -679,74 +802,105 @@ Booking ID: ${_booking.id}
         );
       },
     );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to load driver contact: $error')),
+      );
+    }
   }
 
   Future<void> _showEmergencyOptions() async {
     final emergencyDetails =
         '''
+
 Drunk & Drive - Emergency Trip Details
 
+
+
 Booking ID: ${_booking.id}
+
 Pickup: ${_booking.pickup.name}
+
 Destination: ${_booking.destination.name}
+
 Vehicle: ${_booking.vehicle.displayName}
+
 Registration: ${_booking.vehicle.registrationNumber}
+
 Status: ${_booking.status.label}
+
 ''';
 
     await showModalBottomSheet<void>(
       context: context,
+
       backgroundColor: _palette.surface,
+
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
+
       builder: (sheetContext) {
         return SafeArea(
           child: Padding(
             padding: EdgeInsets.all(20),
+
             child: Column(
               mainAxisSize: MainAxisSize.min,
+
               crossAxisAlignment: CrossAxisAlignment.start,
+
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.sos_rounded,
-                      color: _palette.danger,
-                      size: 30,
-                    ),
+                    Icon(Icons.sos_rounded, color: _palette.danger, size: 30),
+
                     SizedBox(width: 12),
+
                     Expanded(
                       child: Text(
                         'Emergency / SOS',
+
                         style: TextStyle(
                           color: _palette.textPrimary,
+
                           fontSize: 20,
+
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
                   ],
                 ),
+
                 SizedBox(height: 16),
 
                 Container(
                   width: double.infinity,
+
                   padding: EdgeInsets.all(14),
+
                   decoration: BoxDecoration(
                     color: _palette.danger.withValues(alpha: 0.10),
+
                     borderRadius: BorderRadius.circular(14),
+
                     border: Border.all(
                       color: _palette.danger.withValues(alpha: 0.5),
                     ),
                   ),
+
                   child: Text(
                     'This app does not automatically contact emergency services. '
                     'If you are in immediate danger, contact the appropriate local '
                     'emergency service directly.',
+
                     style: TextStyle(
                       color: _palette.textPrimary,
+
                       height: 1.4,
+
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -757,16 +911,15 @@ Status: ${_booking.status.label}
                 Text(
                   'You can copy your trip details so they are ready to provide '
                   'to someone assisting you.',
-                  style: TextStyle(
-                    color: _palette.textMuted,
-                    height: 1.4,
-                  ),
+
+                  style: TextStyle(color: _palette.textMuted, height: 1.4),
                 ),
 
                 SizedBox(height: 16),
 
                 SizedBox(
                   width: double.infinity,
+
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       await Clipboard.setData(
@@ -785,15 +938,22 @@ Status: ${_booking.status.label}
                         ),
                       );
                     },
+
                     icon: Icon(Icons.copy_rounded),
+
                     label: Text(
                       'Copy Emergency Trip Details',
+
                       style: TextStyle(fontWeight: FontWeight.w800),
                     ),
+
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _palette.danger,
+
                       foregroundColor: _palette.textPrimary,
+
                       padding: EdgeInsets.symmetric(vertical: 15),
+
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -803,8 +963,10 @@ Status: ${_booking.status.label}
 
                 if (_booking.driverId != null) ...[
                   SizedBox(height: 10),
+
                   SizedBox(
                     width: double.infinity,
+
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(sheetContext);
@@ -813,15 +975,22 @@ Status: ${_booking.status.label}
 
                         _contactDriver();
                       },
+
                       icon: Icon(Icons.phone_rounded),
+
                       label: Text(
                         'Contact Driver',
+
                         style: TextStyle(fontWeight: FontWeight.w800),
                       ),
+
                       style: OutlinedButton.styleFrom(
                         foregroundColor: _palette.accent,
+
                         side: BorderSide(color: _palette.accent),
+
                         padding: EdgeInsets.symmetric(vertical: 15),
+
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -834,12 +1003,16 @@ Status: ${_booking.status.label}
 
                 SizedBox(
                   width: double.infinity,
+
                   child: TextButton(
                     onPressed: () => Navigator.pop(sheetContext),
+
                     child: Text(
                       'Close',
+
                       style: TextStyle(
                         color: _palette.textMuted,
+
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -857,47 +1030,66 @@ Status: ${_booking.status.label}
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _palette.background,
+
       appBar: AppBar(
         backgroundColor: _palette.background,
+
         elevation: 0,
+
         iconTheme: IconThemeData(color: _palette.textPrimary),
+
         title: Text(
           'Trip Details',
-          style: TextStyle(color: _palette.textPrimary, fontWeight: FontWeight.w800),
+
+          style: TextStyle(
+            color: _palette.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
         ),
+
         actions: [
           IconButton(
             onPressed: _refreshBooking,
+
             tooltip: 'Refresh trip',
+
             icon: Icon(Icons.refresh_rounded, color: _palette.textPrimary),
           ),
         ],
       ),
+
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () async {
-            _refreshBooking();
-          },
+          onRefresh: _refreshBooking,
+
           child: ListView(
             physics: AlwaysScrollableScrollPhysics(),
+
             padding: EdgeInsets.all(20),
+
             children: [
               _buildStatusCard(),
+
               SizedBox(height: 16),
 
-              if (_showTripPin) ...[
-                _buildPinCard(),
-                SizedBox(height: 16),
-              ],
+              if (_showTripPin) ...[_buildPinCard(), SizedBox(height: 16)],
+
+              _buildLiveMap(),
+
+              SizedBox(height: 16),
 
               _buildRouteCard(),
+
               SizedBox(height: 16),
 
               _buildVehicleCard(),
+
               SizedBox(height: 16),
 
               _buildTripSummaryCard(),
+
               SizedBox(height: 20),
+
               if (_booking.status == BookingStatus.requested ||
                   _booking.status == BookingStatus.searchingDriver ||
                   _booking.status == BookingStatus.driverAssigned ||
@@ -907,75 +1099,102 @@ Status: ${_booking.status.label}
                   _booking.status == BookingStatus.verification) ...[
                 SizedBox(
                   width: double.infinity,
+
                   child: OutlinedButton.icon(
                     onPressed: _cancelBooking,
+
                     icon: Icon(Icons.cancel_outlined),
+
                     label: Text(
                       'Cancel Booking',
+
                       style: TextStyle(fontWeight: FontWeight.w800),
                     ),
+
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _palette.danger,
+
                       side: BorderSide(color: _palette.danger),
+
                       padding: EdgeInsets.symmetric(vertical: 16),
+
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                   ),
                 ),
-                SizedBox(height: 16),
-              ],
-              if (_booking.status == BookingStatus.driverNotFound) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _retryDriverSearch,
-                    icon: Icon(Icons.refresh_rounded),
-                    label: Text(
-                      'Retry Driver Search',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _palette.accent,
-                      foregroundColor: _onAccent,
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 16),
-              ],
-              if (_booking.status == BookingStatus.tripCompleted ||
-                  _booking.status == BookingStatus.payment) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _openPayment,
-                    icon: Icon(Icons.payment_rounded),
-                    label: Text(
-                      'Proceed to Payment',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _palette.accent,
-                      foregroundColor: _onAccent,
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
-                ),
+
                 SizedBox(height: 16),
               ],
 
-              if (_tripIsRunning) ...[
-                _buildSafetyCard(),
+              if (_booking.status == BookingStatus.driverNotFound) ...[
+                SizedBox(
+                  width: double.infinity,
+
+                  child: ElevatedButton.icon(
+                    onPressed: _retryDriverSearch,
+
+                    icon: Icon(Icons.refresh_rounded),
+
+                    label: Text(
+                      'Retry Driver Search',
+
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _palette.accent,
+
+                      foregroundColor: _onAccent,
+
+                      padding: EdgeInsets.symmetric(vertical: 16),
+
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+
                 SizedBox(height: 16),
               ],
+
+              if (_booking.status == BookingStatus.tripCompleted ||
+                  _booking.status == BookingStatus.payment ||
+                  _booking.status == BookingStatus.completed) ...[
+                SizedBox(
+                  width: double.infinity,
+
+                  child: ElevatedButton.icon(
+                    onPressed: _openPayment,
+
+                    icon: Icon(Icons.payment_rounded),
+
+                    label: Text(
+                      'Proceed to Payment',
+
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _palette.accent,
+
+                      foregroundColor: _onAccent,
+
+                      padding: EdgeInsets.symmetric(vertical: 16),
+
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+
+                SizedBox(height: 16),
+              ],
+
+              if (_tripIsRunning) ...[_buildSafetyCard(), SizedBox(height: 16)],
 
               _buildActionButtons(),
             ],
@@ -988,14 +1207,20 @@ Status: ${_booking.status.label}
   Widget _buildStatusCard() {
     return Container(
       width: double.infinity,
+
       padding: EdgeInsets.all(16),
+
       decoration: BoxDecoration(
         color: _statusColor.withValues(alpha: 0.12),
+
         borderRadius: BorderRadius.circular(18),
+
         border: Border.all(color: _statusColor.withValues(alpha: 0.6)),
       ),
+
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+
         children: [
           Icon(
             _tripIsCompleted
@@ -1003,28 +1228,41 @@ Status: ${_booking.status.label}
                 : _tripIsRunning
                 ? Icons.directions_car_filled_rounded
                 : Icons.schedule_rounded,
+
             color: _statusColor,
+
             size: 28,
           ),
+
           SizedBox(width: 12),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+
               children: [
                 Text(
                   _booking.status.label,
+
                   style: TextStyle(
                     color: _statusColor,
+
                     fontSize: 16,
+
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+
                 SizedBox(height: 5),
+
                 Text(
                   _statusMessage,
+
                   style: TextStyle(
                     color: _palette.textMuted,
+
                     fontSize: 12,
+
                     height: 1.4,
                   ),
                 ),
@@ -1039,41 +1277,57 @@ Status: ${_booking.status.label}
   Widget _buildPinCard() {
     return Container(
       width: double.infinity,
+
       padding: EdgeInsets.all(18),
+
       decoration: BoxDecoration(
         color: _palette.surface,
+
         borderRadius: BorderRadius.circular(18),
+
         border: Border.all(color: _palette.accent),
       ),
+
       child: Column(
         children: [
-          Icon(
-            Icons.pin_rounded,
-            color: _palette.accent,
-            size: 30,
-          ),
+          Icon(Icons.pin_rounded, color: _palette.accent, size: 30),
+
           SizedBox(height: 8),
+
           Text(
             'Trip PIN',
+
             style: TextStyle(color: _palette.textMuted, fontSize: 12),
           ),
+
           SizedBox(height: 8),
+
           Text(
             _booking.tripPin!,
+
             style: TextStyle(
               color: _palette.accent,
+
               fontSize: 30,
+
               fontWeight: FontWeight.w800,
+
               letterSpacing: 8,
             ),
           ),
+
           SizedBox(height: 8),
+
           Text(
             'Give this PIN to your assigned driver only when you are ready to start the trip.',
+
             textAlign: TextAlign.center,
+
             style: TextStyle(
               color: _palette.textMuted,
+
               fontSize: 11,
+
               height: 1.4,
             ),
           ),
@@ -1082,36 +1336,168 @@ Status: ${_booking.status.label}
     );
   }
 
+  Widget _buildLiveMap() {
+    final pickupLat = _booking.pickup.latitude;
+    final pickupLng = _booking.pickup.longitude;
+    final destinationLat = _booking.destination.latitude;
+    final destinationLng = _booking.destination.longitude;
+    if (pickupLat == null || pickupLng == null ||
+        destinationLat == null || destinationLng == null) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text('Map unavailable: this booking has no saved coordinates.',
+              style: TextStyle(color: _palette.textMuted)),
+        ),
+      );
+    }
+
+    final pickup = LatLng(pickupLat, pickupLng);
+    final destination = LatLng(destinationLat, destinationLng);
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('drunkDriveBookings')
+          .doc(_booking.id)
+          .snapshots(),
+      builder: (context, snapshot) {
+        LatLng? driverPosition;
+        String label = 'Waiting for the driver to share their location.';
+        final data = snapshot.data?.data();
+        if (snapshot.hasError) {
+          label = 'Could not load location updates.';
+        } else if (data != null &&
+            data['passengerId'] == _booking.passengerId &&
+            data['driverId'] == _booking.driverId &&
+            _booking.driverId != null) {
+          final location = data['driverLocation'];
+          if (location is Map) {
+            final updatedAt = location['updatedAt'];
+            final lat = location['latitude'];
+            final lng = location['longitude'];
+            final fresh = updatedAt is Timestamp &&
+                DateTime.now().difference(updatedAt.toDate()).inSeconds < 90;
+            final tracking = location['trackingActive'] == true;
+            final running = data['status'] == 'tripStarted' ||
+                data['status'] == 'tripInProgress';
+            if (tracking && fresh && running && lat is num && lng is num) {
+              driverPosition = LatLng(lat.toDouble(), lng.toDouble());
+              label = 'Driver position shared recently (not turn-by-turn navigation).';
+            } else if (tracking && running) {
+              label = 'Driver location is unavailable or outdated.';
+            } else {
+              label = 'Driver location sharing is not active.';
+            }
+          }
+        }
+        final markers = <Marker>[
+          Marker(
+            point: pickup,
+            width: 44, height: 44,
+            child: const Icon(Icons.trip_origin, color: Colors.green, size: 34),
+          ),
+          Marker(
+            point: destination,
+            width: 44, height: 44,
+            child: const Icon(Icons.location_on, color: Colors.red, size: 38),
+          ),
+          if (driverPosition != null)
+            Marker(
+              point: driverPosition,
+              width: 48, height: 48,
+              child: const Icon(Icons.directions_car, color: Colors.blue, size: 36),
+            ),
+        ];
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: _palette.surface,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Trip map', style: TextStyle(
+                color: _palette.textPrimary,
+                fontWeight: FontWeight.w800,
+              )),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: SizedBox(
+                  height: 260,
+                  child: FlutterMap(
+                    options: MapOptions(initialCenter: pickup, initialZoom: 13),
+                    children: [
+                      TileLayer(
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'oneclick',
+                      ),
+                      MarkerLayer(markers: markers),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(label, style: TextStyle(color: _palette.textMuted, fontSize: 12)),
+              const SizedBox(height: 4),
+              Text('Green: pickup  •  Red: destination  •  Blue: driver',
+                  style: TextStyle(color: _palette.textMuted, fontSize: 11)),
+              Text('© OpenStreetMap contributors',
+                  style: TextStyle(color: _palette.textMuted, fontSize: 11)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildRouteCard() {
     return Container(
       padding: EdgeInsets.all(18),
+
       decoration: BoxDecoration(
         color: _palette.surface,
+
         borderRadius: BorderRadius.circular(18),
       ),
+
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+
         children: [
           Text(
             'Route',
+
             style: TextStyle(
               color: _palette.textPrimary,
+
               fontWeight: FontWeight.w800,
+
               fontSize: 15,
             ),
           ),
+
           SizedBox(height: 16),
+
           _detailRow(
             Icons.my_location_rounded,
+
             _palette.success,
+
             'Pickup',
+
             _booking.pickup.name,
           ),
+
           SizedBox(height: 16),
+
           _detailRow(
             Icons.location_on_rounded,
+
             _palette.danger,
+
             'Destination',
+
             _booking.destination.name,
           ),
         ],
@@ -1122,33 +1508,50 @@ Status: ${_booking.status.label}
   Widget _buildVehicleCard() {
     return Container(
       padding: EdgeInsets.all(18),
+
       decoration: BoxDecoration(
         color: _palette.surface,
+
         borderRadius: BorderRadius.circular(18),
       ),
+
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+
         children: [
           Text(
             'Your Vehicle',
+
             style: TextStyle(
               color: _palette.textPrimary,
+
               fontWeight: FontWeight.w800,
+
               fontSize: 15,
             ),
           ),
+
           SizedBox(height: 16),
+
           _detailRow(
             Icons.directions_car_rounded,
+
             _palette.accent,
+
             'Vehicle',
+
             _booking.vehicle.displayName,
           ),
+
           SizedBox(height: 14),
+
           _detailRow(
             Icons.confirmation_number_outlined,
+
             _palette.textMuted,
+
             'Registration',
+
             _booking.vehicle.registrationNumber,
           ),
         ],
@@ -1159,40 +1562,62 @@ Status: ${_booking.status.label}
   Widget _buildTripSummaryCard() {
     return Container(
       padding: EdgeInsets.all(18),
+
       decoration: BoxDecoration(
         color: _palette.surface,
+
         borderRadius: BorderRadius.circular(18),
       ),
+
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+
         children: [
           Text(
             'Trip Summary',
+
             style: TextStyle(
               color: _palette.textPrimary,
+
               fontWeight: FontWeight.w800,
+
               fontSize: 15,
             ),
           ),
+
           SizedBox(height: 16),
+
           _detailRow(
             Icons.route_rounded,
+
             _palette.textMuted,
+
             'Distance',
+
             '${_booking.distanceKm.toStringAsFixed(1)} km',
           ),
+
           SizedBox(height: 14),
+
           _detailRow(
             Icons.schedule_rounded,
+
             _palette.textMuted,
+
             'Estimated Time',
+
             '${_booking.durationMinutes} min',
           ),
+
           SizedBox(height: 14),
+
           _detailRow(
             Icons.payments_rounded,
+
             _palette.success,
+
             'Estimated Fare',
+
             'Rs. ${_booking.fareEstimate.total.toStringAsFixed(0)}',
           ),
         ],
@@ -1203,24 +1628,32 @@ Status: ${_booking.status.label}
   Widget _buildSafetyCard() {
     return Container(
       padding: EdgeInsets.all(16),
+
       decoration: BoxDecoration(
         color: _palette.accent.withValues(alpha: 0.08),
+
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _palette.accent.withValues(alpha: 0.35),
-        ),
+
+        border: Border.all(color: _palette.accent.withValues(alpha: 0.35)),
       ),
+
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+
         children: [
           Icon(Icons.shield_outlined, color: _palette.accent),
+
           SizedBox(width: 12),
+
           Expanded(
             child: Text(
               'Your trip is active. Stay safe and use the emergency option if you need assistance.',
+
               style: TextStyle(
                 color: _palette.textMuted,
+
                 fontSize: 12,
+
                 height: 1.4,
               ),
             ),
@@ -1235,17 +1668,25 @@ Status: ${_booking.status.label}
       children: [
         SizedBox(
           width: double.infinity,
+
           child: OutlinedButton.icon(
             onPressed: _shareTrip,
+
             icon: Icon(Icons.share_rounded),
+
             label: Text(
               'Share Trip',
+
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
+
             style: OutlinedButton.styleFrom(
               foregroundColor: _palette.textPrimary,
+
               side: BorderSide(color: _palette.surfaceBorder),
+
               padding: EdgeInsets.symmetric(vertical: 14),
+
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
@@ -1255,19 +1696,28 @@ Status: ${_booking.status.label}
 
         if (_booking.driverId != null) ...[
           SizedBox(height: 10),
+
           SizedBox(
             width: double.infinity,
+
             child: OutlinedButton.icon(
               onPressed: _contactDriver,
+
               icon: Icon(Icons.phone_rounded),
+
               label: Text(
                 'Contact Driver',
+
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
+
               style: OutlinedButton.styleFrom(
                 foregroundColor: _palette.accent,
+
                 side: BorderSide(color: _palette.accent),
+
                 padding: EdgeInsets.symmetric(vertical: 14),
+
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -1280,13 +1730,18 @@ Status: ${_booking.status.label}
 
         SizedBox(
           width: double.infinity,
+
           child: TextButton.icon(
             onPressed: _showEmergencyOptions,
+
             icon: Icon(Icons.sos_rounded, color: _palette.danger),
+
             label: Text(
               'Emergency / SOS',
+
               style: TextStyle(
                 color: _palette.danger,
+
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -1299,26 +1754,33 @@ Status: ${_booking.status.label}
   Widget _detailRow(IconData icon, Color color, String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
+
       children: [
         Icon(icon, color: color, size: 20),
+
         SizedBox(width: 12),
+
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+
             children: [
               Text(
                 label,
-                style: TextStyle(
-                  color: _palette.textMuted,
-                  fontSize: 11,
-                ),
+
+                style: TextStyle(color: _palette.textMuted, fontSize: 11),
               ),
+
               SizedBox(height: 3),
+
               Text(
                 value,
+
                 style: TextStyle(
                   color: _palette.textPrimary,
+
                   fontSize: 14,
+
                   fontWeight: FontWeight.w700,
                 ),
               ),
