@@ -3,12 +3,14 @@ import '../services/sharing_service.dart';
 import '../services/vault_service.dart';
 
 class ShareRecordItem {
+  final String? recordId;
   final String title;
   final String subtitle;
   final IconData icon;
   final bool isPack;
 
   const ShareRecordItem({
+    this.recordId,
     required this.title,
     required this.subtitle,
     required this.icon,
@@ -82,6 +84,7 @@ void _loadVaultRecords() {
     setState(() {
       records = vaultRecords.map((record) {
         return ShareRecordItem(
+          recordId: record.id,
           title: record.title,
           subtitle: '${record.category} • ${record.recordType}',
           icon: Icons.description_outlined,
@@ -1107,6 +1110,7 @@ Future<void> _confirmSharing() async {
   try {
     await _sharingService.shareRecord(
       recordTitle: widget.selectedRecord.title,
+      recordId: widget.selectedRecord.recordId,
       recipientName: recipient,
       recipientEmail: recipient,
       permission: permission,

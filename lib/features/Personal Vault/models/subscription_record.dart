@@ -23,6 +23,7 @@ class SubscriptionRecord {
   final DateTime? renewalDate;
   final DateTime? cancelledAt;
   final DateTime? renewalActionHandledFor;
+  final bool renewalReminders;
 
   const SubscriptionRecord({
     required this.id,
@@ -42,6 +43,7 @@ class SubscriptionRecord {
     this.renewalDate,
     this.cancelledAt,
     this.renewalActionHandledFor,
+    this.renewalReminders = true,
   });
 
   Map<String, dynamic> toMap() {
@@ -56,6 +58,7 @@ class SubscriptionRecord {
       'status': status,
       'priceHiked': priceHiked,
       'createdAt': Timestamp.fromDate(createdAt),
+      'renewalReminders': renewalReminders,
 
       // New structured fields.
       'amount': amount,
@@ -153,6 +156,9 @@ class SubscriptionRecord {
           (map['renewalActionHandledFor']
                   as Timestamp?)
               ?.toDate(),
+      renewalReminders: map['renewalReminders'] is bool
+          ? map['renewalReminders'] as bool
+          : true,
     );
   }
 }

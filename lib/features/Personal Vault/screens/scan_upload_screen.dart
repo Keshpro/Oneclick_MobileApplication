@@ -102,8 +102,8 @@ Future<void> _chooseFile() async {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Scan a physical document or upload an existing file. '
-                    'OneClick will prepare it for Smart Review.',
+                    'Select a document to review its details '
+                    'before saving it to your Vault.',
                     style: TextStyle(
                       color: _muted,
                       fontSize: 14,
@@ -206,15 +206,15 @@ Future<void> _chooseFile() async {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(
-                          Icons.auto_awesome_rounded,
+                          Icons.description_outlined,
                           color: _purple,
                           size: 21,
                         ),
                         SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Smart Review can help identify document details '
-                            'before you save the record to your Vault.',
+                            'Review your document details before saving '
+                            'the record to your Vault.',
                             style: TextStyle(
                               color: _muted,
                               height: 1.45,
@@ -247,7 +247,7 @@ Future<void> _chooseFile() async {
                         ),
                       ),
                       child: const Text(
-                        'Continue to Smart Review',
+                        'Continue to Review',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,

@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'subscription_details_screen.dart';
-import 'ai_subscription_checkup_screen.dart';
+import 'add_subscription_screen.dart';
 import 'dashboard.dart';
 import 'vault_screen.dart';
 import 'sharing_center_screen.dart';
@@ -34,7 +34,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   bool _loadingExchangeRate = false;
 
   String selectedFilter = 'All';
-  String selectedCurrency = 'USD';
+  String selectedCurrency = 'LKR';
   String searchQuery = '';
   List<SubscriptionItem> subscriptions = [];
 
@@ -50,7 +50,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   Future<void> _fetchExchangeRate() async {
     try {
       final rate = await _exchangeRateService.getUsdToLkrRate();
-      if (mounted && rate != null) {
+      if (mounted) {
         setState(() {
           _usdToLkrRate = rate;
           _loadingExchangeRate = false;
@@ -82,8 +82,13 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             category: record.category,
             priceHiked: record.priceHiked,
             status: record.status,
-            amount: parsedAmount,
-            currency: record.price.contains('LKR') ? 'LKR' : 'USD',
+            amount: record.amount ?? parsedAmount,
+            currency: record.currency,
+            billingCycle: record.billingCycle,
+            renewalDate: record.renewalDate,
+            cancelledAt: record.cancelledAt,
+            renewalActionHandledFor: record.renewalActionHandledFor,
+            createdAt: record.createdAt,
           );
         }).toList();
       });
@@ -101,37 +106,77 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   int _countFor(String filter) =>
       subscriptions.where((item) => _matchesStatus(item, filter)).length;
 
-  double _monthlyCost(Iterable<SubscriptionItem> items) => items
-      .where((item) => _statusKey(item.status) == 'active')
-      .fold<double>(
-        0,
-        (sum, item) =>
-            sum +
-            (double.tryParse(item.price.replaceAll(RegExp(r'[^0-9.]'), '')) ??
-                0),
-      );
-
-  double _monthlyCostInCurrency(
-      Iterable<SubscriptionItem> items, String currency) {
-    double total = _monthlyCost(items);
-    if (currency == 'LKR' && _usdToLkrRate != null) {
-      return total * _usdToLkrRate!;
-    }
-    return total;
+double _monthlyAmountForItem(
+  SubscriptionItem item,
+  String targetCurrency,
+) {
+  if (_statusKey(item.status) != 'active') {
+    return 0;
   }
 
-  String _formattedMoney(double amountUsd) {
-    if (selectedCurrency == 'LKR' && _usdToLkrRate != null) {
-      final lkrAmount = amountUsd * _usdToLkrRate!;
-      return 'LKR ${lkrAmount.toStringAsFixed(0)}';
-    }
-    return '\$${amountUsd.toStringAsFixed(2)}';
+  double amount =
+      item.amount ??
+      double.tryParse(
+            item.price.replaceAll(RegExp(r'[^0-9.]'), ''),
+          ) ??
+      0;
+
+  if (item.billingCycle.toLowerCase() == 'annual') {
+    amount = amount / 12;
   }
 
-  double? _monthlyChangePercent() {
-    if (subscriptions.isEmpty) return null;
-    return 2.5; 
+  final rate = _usdToLkrRate ?? 300.0;
+
+  if (item.currency == targetCurrency) {
+    return amount;
   }
+
+  if (item.currency == 'USD' && targetCurrency == 'LKR') {
+    return amount * rate;
+  }
+
+  if (item.currency == 'LKR' && targetCurrency == 'USD') {
+    return amount / rate;
+  }
+
+  return amount;
+}
+
+double _monthlyCostInCurrency(
+  Iterable<SubscriptionItem> items,
+  String currency,
+) {
+  return items.fold<double>(
+    0,
+    (sum, item) =>
+        sum + _monthlyAmountForItem(item, currency),
+  );
+}
+
+String _formatNumber(double value) {
+  final parts = value.toStringAsFixed(2).split('.');
+  final whole = parts[0];
+  final decimal = parts[1];
+
+  final formattedWhole = whole.replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),
+    (match) => ',',
+  );
+
+  return '$formattedWhole.$decimal';
+}
+
+String _formattedMoney(double amount) {
+  if (selectedCurrency == 'LKR') {
+    return 'LKR ${_formatNumber(amount)}';
+  }
+
+  return '\$${_formatNumber(amount)}';
+}
+
+double? _monthlyChangePercent() {
+  return null;
+}
 
   List<SubscriptionItem> get filteredSubscriptions {
     final query = searchQuery.trim().toLowerCase();
@@ -142,6 +187,68 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       return matchesSearch && _matchesStatus(item, selectedFilter);
     }).toList();
   }
+
+  Future<void> _keepRenewal(SubscriptionItem item) async {
+  final renewalDate = item.renewalDate;
+
+  if (renewalDate == null) {
+    _message('No renewal date found for ${item.name}.');
+    return;
+  }
+
+  try {
+    await _subscriptionService.keepSubscriptionRenewal(
+      subscriptionId: item.id,
+      renewalDate: renewalDate,
+    );
+
+    if (!mounted) return;
+
+    _message('${item.name} kept for this renewal.');
+  } catch (error) {
+    if (!mounted) return;
+
+    _message('Could not save your decision: $error');
+  }
+}
+
+  Future<void> _cancelRenewal(SubscriptionItem item) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Cancel Subscription'),
+      content: Text(
+        'Mark ${item.name} as cancelled in Personal Vault?\n\n'
+        'This will NOT cancel your actual subscription '
+        'with the provider.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Go Back'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Mark Cancelled'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !mounted) return;
+
+  try {
+    await _subscriptionService.cancelSubscription(item.id);
+
+    if (!mounted) return;
+
+    _message('${item.name} marked as cancelled in Personal Vault.');
+  } catch (error) {
+    if (!mounted) return;
+
+    _message('Could not update subscription: $error');
+  }
+}
 
   Future<void> _deleteSubscription(SubscriptionItem item) async {
     final confirmed = await showDialog<bool>(
@@ -311,54 +418,131 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     }
   }
 
-  void _showSearch() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(22),
-            decoration: const BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+  
+void _showSearch() {
+  final searchController = TextEditingController(text: searchQuery);
+  String currentQuery = searchQuery;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) {
+      return StatefulBuilder(
+        builder: (sheetContext, setSheetState) {
+          final query = currentQuery.trim().toLowerCase();
+
+          final suggestions = query.isEmpty
+            ? <SubscriptionItem>[]
+            : subscriptions.where((item) {
+                return item.name.toLowerCase().contains(query);
+              }).take(6).toList();
+
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
             ),
-            child: TextField(
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Search subscriptions...',
-                prefixIcon: const _VaultReferenceIcon(
-                  Icons.search,
-                  color: purple,
-                ),
-                suffixIcon: searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const _VaultReferenceIcon(Icons.close),
-                        onPressed: () {
-                          setState(() => searchQuery = '');
-                          Navigator.pop(context);
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: surface,
+            child: Container(
+              padding: const EdgeInsets.all(22),
+              decoration: const BoxDecoration(
+                color: bg,
+                borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(30)),
               ),
-              onChanged: (value) => setState(() => searchQuery = value),
-              onSubmitted: (_) => Navigator.pop(context),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    autofocus: true,
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search subscriptions...',
+                      prefixIcon: const _VaultReferenceIcon(
+                        Icons.search,
+                        color: purple,
+                      ),
+                      suffixIcon: currentQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () {
+                                setState(() => searchQuery = '');
+                                Navigator.pop(sheetContext);
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: surface,
+                    ),
+                    onChanged: (value) {
+                      setSheetState(() => currentQuery = value);
+                      setState(() => searchQuery = value);
+                    },
+                    onSubmitted: (_) => Navigator.pop(sheetContext),
+                  ),
+                  if (query.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Suggestions',
+                      style: TextStyle(
+                        color: muted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (suggestions.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text('No matching subscriptions found.'),
+                      )
+                    else
+                      ...suggestions.map(
+                        (item) => ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(
+                            Icons.subscriptions_outlined,
+                            color: purple,
+                          ),
+                          title: Text(item.name),
+                          subtitle: Text(item.subtitle),
+                          onTap: () {
+                            Navigator.pop(sheetContext);
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SubscriptionDetailsScreen(
+                                  subscriptionId: item.id,
+                                  name: item.name,
+                                  subtitle: item.subtitle,
+                                  price: item.price,
+                                  status: item.status,
+                                  billingCycle: item.billingCycle,
+                                  renewalDate: item.renewalDate,
+                                  onEdit: () => _editSubscription(item),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
-    );
-  }
+          );
+        },
+      );
+    },
+  ).whenComplete(() {
+    searchController.dispose();
+  });
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -568,8 +752,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                         const SizedBox(height: 24),
                         _buildForecastCard(),
                         const SizedBox(height: 28),
-                        _buildAICheckup(),
-                        const SizedBox(height: 34),
                         _buildRenewals(),
                         const SizedBox(height: 30),
                         _buildFilters(),
@@ -624,6 +806,24 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           ],
         ),
       ),
+            floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: purple,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AddSubscriptionScreen(),
+            ),
+          );
+        },
+        icon: const _VaultReferenceIcon(Icons.add),
+        label: const Text('Add Subscription'),
+      ),
       bottomNavigationBar: _buildBottomNavigation(),
     );
   }
@@ -664,9 +864,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               const SizedBox(width: 8),
               const _VaultReferenceIcon(Icons.circle, color: purple, size: 8),
               const Spacer(),
-              _currencyButton('USD'),
-              const SizedBox(width: 6),
               _currencyButton('LKR'),
+              const SizedBox(width: 6),
+              _currencyButton('USD'),
             ],
           ),
           const SizedBox(height: 26),
@@ -676,7 +876,12 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               Text(
                 _loadingExchangeRate
                     ? 'Loading...'
-                    : _formattedMoney(_monthlyCost(subscriptions)),
+                    : _formattedMoney(
+                      _monthlyCostInCurrency(
+                        subscriptions,
+                        selectedCurrency,
+                      ),
+                    ),
                 style: const TextStyle(
                   color: ink,
                   fontSize: 32,
@@ -756,7 +961,13 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 style: TextStyle(color: muted, fontSize: 14),
               ),
               Text(
-                _formattedMoney(_monthlyCost(subscriptions) * 12),
+                _formattedMoney(
+                  _monthlyCostInCurrency(
+                        subscriptions,
+                        selectedCurrency,
+                      ) *
+                      12,
+                ),
                 style: const TextStyle(
                   color: ink,
                   fontWeight: FontWeight.w700,
@@ -871,87 +1082,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     );
   }
 
-  Widget _buildAICheckup() {
-    return _card(
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _circleIcon(Icons.auto_awesome, color: purple2, size: 44),
-              const SizedBox(width: 15),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            'AI Checkup Ready',
-                            style: TextStyle(
-                              color: ink,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        _NewBadge(),
-                      ],
-                    ),
-                    SizedBox(height: 6),
-                    Text.rich(
-                      TextSpan(
-                        style: TextStyle(
-                          color: Color(0xFF64748B),
-                          fontSize: 14,
-                          height: 1.4,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: '3 optimizations found. You can trim up to ',
-                          ),
-                          TextSpan(
-                            text: 'LKR 11,000/mo',
-                            style: TextStyle(
-                              color: purple,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          TextSpan(
-                            text: ' in duplicate streaming & dormant tiers.',
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Align(
-            alignment: Alignment.centerRight,
-            child: _pillButton(
-              icon: Icons.bolt,
-              text: 'Run Checkup',
-              color: purple,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AISubscriptionCheckupScreen(),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   bool _sameDate(DateTime first, DateTime second) {
     return first.year == second.year &&
         first.month == second.month &&
@@ -1020,42 +1150,22 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           height: 195,
           child: ListView(
             scrollDirection: Axis.horizontal,
-            children: renewals.isEmpty
-                ? [
-                    _renewalCardItem(
-                      title: 'HBO Max',
-                      subtitle: 'Free 7-Day Trial',
-                      badge: '3 days left',
-                      description: 'Converts to LKR 5,000/mo on Nov 08 unless cancelled.',
-                      icon: Icons.movie_outlined,
-                      urgent: true,
-                    ),
-                    const SizedBox(width: 16),
-                    _renewalCardItem(
-                      title: 'Figma Pro',
-                      subtitle: 'Annual Billing',
-                      badge: '7 days',
-                      description: 'Auto-charge amount will renew automatically.',
-                      icon: Icons.brush_outlined,
-                      urgent: false,
-                    ),
-                  ]
-                : renewals.map((item) {
-                    final days = item.renewalDate != null
-                        ? _daysUntilRenewal(item.renewalDate!)
-                        : 0;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: _renewalCardItem(
-                        title: item.name,
-                        subtitle: item.subtitle,
-                        badge: '$days days',
-                        description: item.renewal,
-                        icon: item.icon,
-                        urgent: days <= 3,
-                      ),
-                    );
-                  }).toList(),
+            children: renewals.map((item) {
+              final days = _daysUntilRenewal(item.renewalDate!);
+
+              return Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: _renewalCardItem(
+                  item: item,
+                  title: item.name,
+                  subtitle: item.subtitle,
+                  badge: '$days days',
+                  description: item.renewal,
+                  icon: item.icon,
+                  urgent: days <= 3,
+                ),
+              );
+            }).toList(),
           ),
         ),
       ],
@@ -1063,7 +1173,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   }
 
   Widget _renewalCardItem({
-    required String title,
+  required SubscriptionItem item,
+  required String title,
     required String subtitle,
     required String badge,
     required String description,
@@ -1136,7 +1247,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               children: [
                 Expanded(
                   child: TextButton(
-                    onPressed: () => _message('$title cancellation selected.'),
+                    onPressed: () => _cancelRenewal(item),
                     child: Text(
                       'Cancel',
                       style: TextStyle(
@@ -1148,7 +1259,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 ),
                 Expanded(
                   child: TextButton(
-                    onPressed: () => _message('$title kept.'),
+                    onPressed: () => _keepRenewal(item),
                     child: const Text(
                       'Keep Plan',
                       style: TextStyle(
@@ -1219,11 +1330,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
 
     final categoryAmount = _monthlyCostInCurrency(items, categoryCurrency);
 
-    final categoryLabel = _statusKey(selectedFilter) == 'cancelled'
-        ? 'No renewals'
-        : _statusKey(selectedFilter) == 'free trial'
-            ? '${items.length} trials'
-            : '\$${categoryAmount.toStringAsFixed(2)}/mo';
+final categoryLabel = _statusKey(selectedFilter) == 'cancelled'
+    ? 'No renewals'
+    : _statusKey(selectedFilter) == 'free trial'
+        ? '${items.length} trials'
+        : 'LKR ${_formatNumber(categoryAmount)}/mo';
 
     return Column(
       children: [
@@ -1267,25 +1378,21 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     return InkWell(
       borderRadius: BorderRadius.circular(24),
       onTap: () {
-        if (item.name == 'Adobe Creative Cloud') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SubscriptionDetailsScreen(
-                subscriptionId: item.id,
-                name: item.name,
-                subtitle: item.subtitle,
-                price: item.price,
-                status: item.status,
-                billingCycle: item.billingCycle,
-                renewalDate: item.renewalDate,
-                onEdit: () => _editSubscription(item),
-              ),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SubscriptionDetailsScreen(
+              subscriptionId: item.id,
+              name: item.name,
+              subtitle: item.subtitle,
+              price: item.price,
+              status: item.status,
+              billingCycle: item.billingCycle,
+              renewalDate: item.renewalDate,
+              onEdit: () => _editSubscription(item),
             ),
-          );
-        } else {
-          _message('${item.name} details will be added soon.');
-        }
+          ),
+        );
       },
       child: _VaultGlassCard(
         interactive: true,
@@ -1664,41 +1771,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     );
   }
 
-  Widget _pillButton({
-    required IconData icon,
-    required String text,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0F3FF),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: _shadow(),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _VaultReferenceIcon(icon, color: color, size: 20),
-            const SizedBox(width: 9),
-            Text(
-              text,
-              style: TextStyle(
-                color: color,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   List<BoxShadow> _shadow() {
     return const [
       BoxShadow(
@@ -1760,28 +1832,6 @@ class SubscriptionItem {
     this.renewalActionHandledFor,
     this.createdAt,
   });
-}
-
-class _NewBadge extends StatelessWidget {
-  const _NewBadge();
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFF823AFF),
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: const Text(
-        'NEW',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
 }
 
 class _VaultGlassScope extends InheritedWidget {
@@ -1892,6 +1942,7 @@ class _VaultPulseDot extends StatefulWidget {
     required this.color,
     required this.size,
     this.ping = false,
+    // ignore: unused_element_parameter
     this.animate = true,
   });
   final Color color;
@@ -1966,7 +2017,11 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
 }
 
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon, {this.color});
+  const _VaultNavGlyph(
+  this.icon, {
+  // ignore: unused_element_parameter
+  this.color,
+});
   final IconData icon;
   final Color? color;
 

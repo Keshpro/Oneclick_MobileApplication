@@ -4,8 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/vehicle_model.dart';
-import '../../services/vehicle_service.dart';
-import '../../theme/drunk_drive_colors.dart';
+import '../../services/vehicle_firestore_service.dart';
 
 class AddVehicleScreen extends StatefulWidget {
   final VehicleModel? vehicle;
@@ -20,7 +19,7 @@ class AddVehicleScreen extends StatefulWidget {
 
 class _AddVehicleScreenState extends State<AddVehicleScreen> {
   final _formKey = GlobalKey<FormState>();
-  final VehicleService _vehicleService = VehicleService();
+  final VehicleFirestoreService _vehicleService = VehicleFirestoreService();
 
   final _registrationController = TextEditingController();
   final _brandController = TextEditingController();
@@ -29,19 +28,34 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
   VehicleType _vehicleType = VehicleType.car;
   TransmissionType _transmission = TransmissionType.automatic;
-
   bool _isSaving = false;
   Uint8List? _photoBytes;
-  String? _photoName;
+
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
+  Color get _background =>
+      _isDark ? const Color(0xFF101418) : Colors.white;
+
+  Color get _surface =>
+      _isDark ? const Color(0xFF1B2329) : const Color(0xFFF4F7F7);
+
+  Color get _text =>
+      _isDark ? Colors.white : const Color(0xFF17252A);
+
+  Color get _muted =>
+      _isDark ? Colors.white70 : const Color(0xFF60747A);
+
+  Color get _border =>
+      _isDark ? const Color(0xFF35444A) : const Color(0xFFE1E8E8);
+
+  Color get _accent => Theme.of(context).colorScheme.primary;
+
   @override
   void initState() {
     super.initState();
-
     final vehicle = widget.vehicle;
-
     if (vehicle != null) {
       _photoBytes = vehicle.photoBytes;
-      _photoName = vehicle.photoName;
       _registrationController.text = vehicle.registrationNumber;
       _brandController.text = vehicle.brand;
       _modelController.text = vehicle.model;
@@ -62,62 +76,54 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
   Future<void> _pickVehiclePhoto() async {
     final file = await FilePicker.pickFile(type: FileType.image);
-
-    if (file == null) {
-      return;
-    }
+    if (file == null) return;
 
     final bytes = await file.readAsBytes();
-
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
       _photoBytes = bytes;
-      _photoName = file.name;
     });
   }
 
   Future<void> _onSave() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isSaving = true);
 
-    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      if (widget.isEditing) {
+        await _vehicleService.updateVehicle(
+          vehicleId: widget.vehicle!.id,
+          registrationNumber: _registrationController.text,
+          brand: _brandController.text,
+          model: _modelController.text,
+          colour: _colourController.text,
+          vehicleType: _vehicleType.name,
+          transmission: _transmission.name,
+        );
+      } else {
+        await _vehicleService.addVehicle(
+          registrationNumber: _registrationController.text,
+          brand: _brandController.text,
+          model: _modelController.text,
+          colour: _colourController.text,
+          vehicleType: _vehicleType.name,
+          transmission: _transmission.name,
+        );
+      }
 
-    if (widget.isEditing) {
-      final current = widget.vehicle!;
-
-      final updated = current.copyWith(
-        registrationNumber: _registrationController.text.trim().toUpperCase(),
-        brand: _brandController.text.trim(),
-        model: _modelController.text.trim(),
-        colour: _colourController.text.trim(),
-        vehicleType: _vehicleType,
-        transmission: _transmission,
-        photoBytes: _photoBytes,
-        photoName: _photoName,
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to save vehicle: $error')),
       );
-
-      _vehicleService.updateVehicle(updated);
-    } else {
-      _vehicleService.addVehicle(
-        registrationNumber: _registrationController.text,
-        brand: _brandController.text,
-        model: _modelController.text,
-        colour: _colourController.text,
-        vehicleType: _vehicleType,
-        transmission: _transmission,
-        photoBytes: _photoBytes,
-        photoName: _photoName,
-      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
-
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-
-    Navigator.pop(context, true);
   }
 
   String? _requiredValidator(String? value) {
@@ -126,41 +132,41 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   }
 
   InputDecoration _decoration(String label) {
+    OutlineInputBorder outline(Color color, {double width = 1}) {
+      return OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: color, width: width),
+      );
+    }
+
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: DrunkDriveColors.textMuted),
+      labelStyle: TextStyle(color: _muted),
+      floatingLabelStyle: TextStyle(color: _accent),
       filled: true,
-      fillColor: DrunkDriveColors.surface,
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: DrunkDriveColors.surfaceBorder),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: DrunkDriveColors.accent),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: DrunkDriveColors.danger),
-      ),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+      fillColor: _surface,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+      enabledBorder: outline(_border),
+      focusedBorder: outline(_accent, width: 1.5),
+      errorBorder: outline(Theme.of(context).colorScheme.error),
+      focusedErrorBorder: outline(Theme.of(context).colorScheme.error, width: 1.5),
+      border: outline(_border),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final fieldStyle = TextStyle(color: _text);
+
     return Scaffold(
-      backgroundColor: DrunkDriveColors.background,
+      backgroundColor: _background,
       appBar: AppBar(
-        backgroundColor: DrunkDriveColors.background,
+        backgroundColor: _background,
+        foregroundColor: _text,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
           widget.isEditing ? 'Edit Vehicle' : 'Add Vehicle',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-          ),
+          style: TextStyle(color: _text, fontWeight: FontWeight.w800),
         ),
       ),
       body: SafeArea(
@@ -169,9 +175,23 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              Text(
+                'Vehicle Details',
+                style: TextStyle(
+                  color: _text,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Enter the details of the vehicle your driver will use.',
+                style: TextStyle(color: _muted, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _registrationController,
-                style: const TextStyle(color: Colors.white),
+                style: fieldStyle,
                 textCapitalization: TextCapitalization.characters,
                 decoration: _decoration('Registration Number'),
                 validator: _requiredValidator,
@@ -179,37 +199,36 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _brandController,
-                style: const TextStyle(color: Colors.white),
+                style: fieldStyle,
                 decoration: _decoration('Brand'),
                 validator: _requiredValidator,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _modelController,
-                style: const TextStyle(color: Colors.white),
+                style: fieldStyle,
                 decoration: _decoration('Model'),
                 validator: _requiredValidator,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _colourController,
-                style: const TextStyle(color: Colors.white),
+                style: fieldStyle,
                 decoration: _decoration('Colour'),
                 validator: _requiredValidator,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<VehicleType>(
                 initialValue: _vehicleType,
-                dropdownColor: DrunkDriveColors.surface,
-                style: const TextStyle(color: Colors.white),
+                dropdownColor: _surface,
+                style: fieldStyle,
+                iconEnabledColor: _muted,
                 decoration: _decoration('Vehicle Type'),
                 items: VehicleType.values
-                    .map(
-                      (type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(type.label),
-                      ),
-                    )
+                    .map((type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(type.label),
+                        ))
                     .toList(),
                 onChanged: (value) {
                   if (value != null) setState(() => _vehicleType = value);
@@ -218,23 +237,21 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               const SizedBox(height: 16),
               DropdownButtonFormField<TransmissionType>(
                 initialValue: _transmission,
-                dropdownColor: DrunkDriveColors.surface,
-                style: const TextStyle(color: Colors.white),
+                dropdownColor: _surface,
+                style: fieldStyle,
+                iconEnabledColor: _muted,
                 decoration: _decoration('Transmission'),
                 items: TransmissionType.values
-                    .map(
-                      (type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(type.label),
-                      ),
-                    )
+                    .map((type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(type.label),
+                        ))
                     .toList(),
                 onChanged: (value) {
                   if (value != null) setState(() => _transmission = value);
                 },
               ),
-              const SizedBox(height: 16),
-
+              const SizedBox(height: 20),
               if (_photoBytes != null) ...[
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
@@ -248,12 +265,12 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                         height: 180,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: DrunkDriveColors.surface,
+                          color: _surface,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Unable to display selected photo.',
-                          style: TextStyle(color: DrunkDriveColors.textMuted),
+                          style: TextStyle(color: _muted),
                         ),
                       );
                     },
@@ -261,23 +278,21 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
-
               OutlinedButton.icon(
                 onPressed: _pickVehiclePhoto,
                 icon: Icon(
                   _photoBytes == null
                       ? Icons.add_a_photo_outlined
                       : Icons.edit_outlined,
-                  color: DrunkDriveColors.textMuted,
                 ),
                 label: Text(
                   _photoBytes == null
                       ? 'Add Vehicle Photo (optional)'
                       : 'Change Vehicle Photo',
-                  style: const TextStyle(color: DrunkDriveColors.textMuted),
                 ),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: DrunkDriveColors.surfaceBorder),
+                  foregroundColor: _accent,
+                  side: BorderSide(color: _border),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -285,26 +300,25 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                 ),
               ),
               const SizedBox(height: 28),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _isSaving ? null : _onSave,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: DrunkDriveColors.accent,
-                    foregroundColor: DrunkDriveColors.background,
+                    backgroundColor: _accent,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                   child: _isSaving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: DrunkDriveColors.background,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
                       : const Text(

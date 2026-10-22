@@ -91,7 +91,7 @@ void initState() {
                     const SizedBox(height: 6),
 
                     const Text(
-                      'Smart Upload Review',
+                      'Document Review',
                       style: TextStyle(
                         fontSize: 27,
                         fontWeight: FontWeight.w700,
@@ -443,7 +443,7 @@ Widget _buildTopBar(BuildContext context) {
                 ),
               ),
               Text(
-                'Auto-Suggested',
+                'Select Category',
                 style: TextStyle(
                   color: secondaryText,
                   fontSize: 14,

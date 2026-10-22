@@ -35,10 +35,95 @@ class _SubscriptionDetailsScreenState
   static const Color ink = Color(0xFF292B43);
   static const Color muted = Color(0xFF6F7185);
   static const Color purple = Color(0xFF5E5BFF);
-  static const Color purple2 = Color(0xFF7C35FF);
   static const Color danger = Color(0xFFCE334B);
 
   bool renewalReminders = true;
+  bool _loadingRenewalReminders = true;
+  bool _savingRenewalReminders = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRenewalReminders();
+  }
+
+
+Future<void> _loadRenewalReminders() async {
+  try {
+    final records = await _subscriptionService
+        .getSubscriptions()
+        .first;
+
+    for (final record in records) {
+      if (record.id == widget.subscriptionId) {
+        if (!mounted) return;
+
+        setState(() {
+          renewalReminders = record.renewalReminders;
+          _loadingRenewalReminders = false;
+        });
+        return;
+      }
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _loadingRenewalReminders = false;
+    });
+  } catch (error) {
+    if (!mounted) return;
+
+    setState(() {
+      _loadingRenewalReminders = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Could not load reminder settings: $error',
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _updateRenewalReminders(bool enabled) async {
+  if (_loadingRenewalReminders || _savingRenewalReminders) return;
+
+  final previousValue = renewalReminders;
+
+  setState(() {
+    renewalReminders = enabled;
+    _savingRenewalReminders = true;
+  });
+
+  try {
+    await _subscriptionService.updateRenewalReminders(
+      subscriptionId: widget.subscriptionId,
+      enabled: enabled,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _savingRenewalReminders = false;
+    });
+  } catch (error) {
+    if (!mounted) return;
+
+    setState(() {
+      renewalReminders = previousValue;
+      _savingRenewalReminders = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Could not save reminder setting: $error'),
+      ),
+    );
+  }
+}
 
   final SubscriptionService _subscriptionService =
     SubscriptionService();
@@ -112,7 +197,7 @@ class _SubscriptionDetailsScreenState
 
                   const SizedBox(height: 28),
 
-                  _buildBillingAndUsage(),
+                  _buildRenewalReminders(),
 
                   const SizedBox(height: 28),
 
@@ -121,10 +206,6 @@ class _SubscriptionDetailsScreenState
                   const SizedBox(height: 28),
 
                   _buildCancellationProtocol(),
-
-                  const SizedBox(height: 28),
-
-                  _buildCancellationEvidence(),
 
                   const SizedBox(height: 28),
 
@@ -163,18 +244,6 @@ class _SubscriptionDetailsScreenState
               fontWeight: FontWeight.w700,
             ),
           ),
-        ),
-
-        _circleButton(
-          icon: Icons.share_outlined,
-          onTap: () => _message('Share subscription details'),
-        ),
-
-        const SizedBox(width: 10),
-
-        _circleButton(
-          icon: Icons.more_vert,
-          onTap: () => _message('More options'),
         ),
       ],
     );
@@ -277,32 +346,6 @@ String _annualSpendLabel() {
   return '${_detailsCurrency()} '
       '${_formatAmount(annualAmount)} '
       'estimated annual spend';
-}
-
-String _formattedRenewalDate() {
-  final date = widget.renewalDate;
-
-  if (date == null) {
-    return 'Not set';
-  }
-
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-
-  return '${months[date.month - 1]} '
-      '${date.day}, ${date.year}';
 }
 
   Widget _buildSubscriptionSummary() {
@@ -466,166 +509,52 @@ _badge(
   // BILLING & USAGE
   // ============================================================
 
-  Widget _buildBillingAndUsage() {
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  
+Widget _buildRenewalReminders() {
+  return _card(
+    child: Row(
+      children: [
+        _circleIcon(
+          Icons.notifications_active_outlined,
+          color: muted,
+          size: 42,
+        ),
+        const SizedBox(width: 13),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.receipt_long_outlined,
-                color: purple,
-                size: 22,
-              ),
-
-              const SizedBox(width: 10),
-
-              const Expanded(
-                child: Text(
-                  'BILLING & USAGE',
-                  style: TextStyle(
-                    color: Color(0xFF55576E),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: .3,
-                  ),
+              Text(
+                'Renewal Reminders',
+                style: TextStyle(
+                  color: ink,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-
-              _badge(
-                widget.billingCycle,
-                purple,
+              SizedBox(height: 3),
+              Text(
+                'Reminder preference',
+                style: TextStyle(
+                  color: muted,
+                  fontSize: 11,
+                ),
               ),
             ],
           ),
-
-          const SizedBox(height: 22),
-
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(17),
-            decoration: _softDecoration(radius: 25),
-            child: const Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.trending_up,
-                  color: purple2,
-                  size: 20,
-                ),
-
-                SizedBox(width: 12),
-
-                Expanded(
-                  child: Text.rich(
-                    TextSpan(
-                      style: TextStyle(
-                        color: muted,
-                        fontSize: 13,
-                        height: 1.45,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: 'Price Increase: ',
-                          style: TextStyle(
-                            color: ink,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                              'Adjusted +\$5.00/mo on Sep 2025 (Previously \$49.99/mo).',
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          Row(
-            children: [
-              Expanded(
-                child: _infoBox(
-                  icon: Icons.calendar_today_outlined,
-                  label: 'Next Bill',
-                  title: _formattedRenewalDate(),
-                  subtitle: widget.renewalDate == null
-                      ? 'No renewal date'
-                      : _renewalLabel(),
-                ),
-              ),
-
-              const SizedBox(width: 14),
-
-              Expanded(
-              child: _infoBox(
-                icon: Icons.credit_card_outlined,
-                label: 'Payment',
-                title: 'Not linked',
-                subtitle: 'No payment method stored',
-              ),
-            ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          const SizedBox(height: 23),
-
-          Row(
-            children: [
-              _circleIcon(
-                Icons.notifications_active_outlined,
-                color: muted,
-                size: 42,
-              ),
-
-              const SizedBox(width: 13),
-
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Renewal Reminders',
-                      style: TextStyle(
-                        color: ink,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(height: 3),
-                    Text(
-                      'Alerts 7 days & 24h prior',
-                      style: TextStyle(
-                        color: muted,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              Switch(
-                value: renewalReminders,
-                activeThumbColor: purple,
-                onChanged: (value) {
-                  setState(() {
-                    renewalReminders = value;
-                  });
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+        Switch(
+          value: renewalReminders,
+          activeThumbColor: purple,
+          onChanged: _loadingRenewalReminders ||
+                  _savingRenewalReminders
+              ? null
+              : _updateRenewalReminders,
+        ),
+      ],
+    ),
+  );
+}
 
   // ============================================================
   // VAULT & LEGAL
@@ -785,83 +714,6 @@ _badge(
   // CANCELLATION EVIDENCE
   // ============================================================
 
-  Widget _buildCancellationEvidence() {
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Cancellation Evidence',
-                  style: TextStyle(
-                    color: ink,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-
-              _badge(
-                'Pending',
-                muted,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 17),
-
-          InkWell(
-            borderRadius: BorderRadius.circular(27),
-            onTap: () => _message(
-              'Upload proof of cancellation selected.',
-            ),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                vertical: 24,
-                horizontal: 16,
-              ),
-              decoration: _softDecoration(radius: 27),
-              child: Column(
-                children: [
-                  _circleIcon(
-                    Icons.cloud_upload_outlined,
-                    color: purple,
-                    size: 46,
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  const Text(
-                    'Upload Proof of Cancellation',
-                    style: TextStyle(
-                      color: ink,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  const Text(
-                    'Attach confirmation email snapshot or PDF',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: muted,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ============================================================
   // DANGER ZONE
   // ============================================================
@@ -961,75 +813,6 @@ _badge(
         boxShadow: _shadow(),
       ),
       child: child,
-    );
-  }
-
-  Widget _infoBox({
-    required IconData icon,
-    required String label,
-    required String title,
-    required String subtitle,
-    IconData? trailing,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: _softDecoration(radius: 27),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                icon,
-                color: muted,
-                size: 16,
-              ),
-
-              const SizedBox(width: 8),
-
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    color: muted,
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-
-              if (trailing != null)
-                Icon(
-                  trailing,
-                  color: muted,
-                  size: 17,
-                ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: ink,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-
-          const SizedBox(height: 5),
-
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: muted,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
     );
   }
 

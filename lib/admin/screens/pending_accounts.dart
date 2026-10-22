@@ -17,18 +17,37 @@ class PendingAccounts extends StatelessWidget {
           .collection(collection)
           .doc(docId)
           .update({
-        'status': newStatus,
-        'approvedAt': newStatus == 'active' ? FieldValue.serverTimestamp() : null,
-      });
+  if (collection == 'seller_applications')
+    'grocerySellerStatus': newStatus
+  else
+    'status': newStatus,
+});
 
       // 2. Also update account status in main 'users' collection
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(docId)
-          .update({
-        'status': newStatus,
-      }).catchError((_) {});
+      final application = await FirebaseFirestore.instance
+    .collection(collection)
+    .doc(docId)
+    .get();
 
+String? userId;
+
+if (collection == 'seller_applications') {
+  userId = application.data()?['userId'] as String?;
+} else {
+  userId = docId;
+}
+
+if (userId != null && userId.isNotEmpty) {
+  await FirebaseFirestore.instance
+      .collection('users')
+      .doc(userId)
+      .update({
+    if (collection == 'seller_applications')
+      'grocerySellerStatus': newStatus
+    else
+      'status': newStatus,
+  });
+}
       // 3. Add entry to activity logs collection for Admin Dashboard
       final actionTitle =
           newStatus == 'active' ? 'Account Approved' : 'Account Rejected';
@@ -62,7 +81,7 @@ class PendingAccounts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4, // Updated length for 4 Provider Roles
+      length: 6, // Existing provider tabs + Drunk & Drive
       child: Scaffold(
         backgroundColor: const Color(0xFFF4F6FB),
         appBar: AppBar(
@@ -78,10 +97,13 @@ class PendingAccounts extends StatelessWidget {
             unselectedLabelColor: Colors.white60,
             indicatorColor: Colors.white,
             tabs: [
+            
               Tab(text: 'Workers'),
               Tab(text: 'Food Sellers'),
               Tab(text: 'Doctors'),
               Tab(text: 'Drivers'),
+              Tab(text: 'Grocery Sellers'),
+              Tab(text: 'Drunk & Drive'),
             ],
           ),
         ),
@@ -91,6 +113,8 @@ class PendingAccounts extends StatelessWidget {
             _buildPendingList(context, 'food_sellers'),
             _buildPendingList(context, 'doctors'),
             _buildPendingList(context, 'drivers'),
+            _buildPendingList(context, 'seller_applications'),
+            _buildDrunkDrivePendingList(context),
           ],
         ),
       ),
@@ -148,9 +172,20 @@ class PendingAccounts extends StatelessWidget {
             final data = doc.data();
             final docId = doc.id;
 
-            final name = data['name'] ?? 'Unknown Name';
-            final email = data['email'] ?? 'No Email';
-            final phone = data['phone'] ?? 'No Phone';
+            final isGrocerySeller = collectionName == 'seller_applications';
+
+final name = isGrocerySeller
+    ? (data['shopName'] ?? 'Unknown Shop')
+    : (data['name'] ?? 'Unknown Name');
+
+final email = data['email'] ?? 'No Email';
+
+final phone = isGrocerySeller
+    ? (data['phoneNumber'] ?? 'No Phone')
+    : (data['phone'] ?? 'No Phone');
+
+final businessAddress =
+    data['businessAddress'] ?? 'No Address';
             final role = data['role'] ?? collectionName;
             final category = data['category'] ?? '';
             final details =
@@ -224,6 +259,13 @@ class PendingAccounts extends StatelessWidget {
                     ),
                     const Divider(height: 24),
                     Text('Phone: $phone', style: const TextStyle(fontSize: 13)),
+                    if (isGrocerySeller) ...[
+  const SizedBox(height: 4),
+  Text(
+    'Business Address: $businessAddress',
+    style: const TextStyle(fontSize: 13),
+  ),
+],
                     const SizedBox(height: 4),
                     Text('Role: $role', style: const TextStyle(fontSize: 13)),
                     if (category.isNotEmpty) ...[
@@ -308,4 +350,148 @@ class PendingAccounts extends StatelessWidget {
       },
     );
   }
+  // Drunk & Drive uses a separate application collection and approval status.
+  // Do not update users.status: it is shared by other OneClick modules.
+  Future<void> _updateDrunkDriveStatus(
+    BuildContext context,
+    String applicationId,
+    String name,
+    String newStatus,
+  ) async {
+    if (newStatus != 'approved' && newStatus != 'rejected') return;
+
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final applicationRef = firestore
+          .collection('drunkDriveDriverApplications')
+          .doc(applicationId);
+      final logRef = firestore.collection('activity_logs').doc();
+
+      await firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(applicationRef);
+        if (!snapshot.exists || snapshot.data()?['status'] != 'pending') {
+          throw StateError('Application is no longer pending.');
+        }
+
+        transaction.update(applicationRef, {
+          'status': newStatus,
+          'adminNotes': null,
+        });
+        transaction.set(logRef, {
+          'action': newStatus == 'approved'
+              ? 'Drunk & Drive Driver Approved'
+              : 'Drunk & Drive Driver Rejected',
+          'details': '$name (Drunk & Drive) was marked as $newStatus.',
+          'performedBy': 'Admin',
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      });
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$name marked as $newStatus'),
+          backgroundColor: newStatus == 'approved' ? Colors.green : Colors.red,
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to update driver application: $error')),
+      );
+    }
+  }
+
+  Widget _buildDrunkDrivePendingList(BuildContext context) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('drunkDriveDriverApplications')
+          .where('status', isEqualTo: 'pending')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Text('Unable to load Drunk & Drive applications: ${snapshot.error}'),
+          );
+        }
+
+        final applications = snapshot.data?.docs ?? [];
+        if (applications.isEmpty) {
+          return const Center(child: Text('No pending Drunk & Drive applications'));
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(15),
+          itemCount: applications.length,
+          itemBuilder: (context, index) {
+            final doc = applications[index];
+            final data = doc.data();
+            final name = (data['fullName'] as String?)?.trim().isNotEmpty == true
+                ? data['fullName'] as String
+                : 'Unnamed Applicant';
+            final phone = data['phone'] as String? ?? 'Not provided';
+            final licenceType = data['licenceType'] as String? ?? 'Not provided';
+            final expiry = data['licenceExpiry'] as String? ?? 'Not provided';
+            final experience = data['drivingExperienceYears'] as num? ?? 0;
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.bold,
+                    )),
+                    const SizedBox(height: 10),
+                    Text('Phone: $phone'),
+                    Text('Licence type: $licenceType'),
+                    Text('Licence expiry: $expiry'),
+                    Text('Driving experience: $experience years'),
+                    Text('Manual: ${data['canDriveManual'] == true ? 'Yes' : 'No'}'),
+                    Text('Automatic: ${data['canDriveAutomatic'] == true ? 'Yes' : 'No'}'),
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => _updateDrunkDriveStatus(
+                            context, doc.id, name, 'rejected',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                          ),
+                          child: const Text('Reject'),
+                        ),
+                        const SizedBox(width: 10),
+                        ElevatedButton(
+                          onPressed: () => _updateDrunkDriveStatus(
+                            context, doc.id, name, 'approved',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Approve'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
 }
