@@ -28,14 +28,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     super.dispose();
   }
 
-  void _placeOrder() {
-    final success = widget.controller.placeOrder(
+  Future<void> _placeOrder() async {
+   final success = await widget.controller.placeOrder(
       deliveryMethod: _deliveryMethod,
       paymentMethod: _paymentMethod,
       deliveryAddress: _deliveryMethod == DeliveryMethod.delivery
           ? _addressController.text.trim()
           : null,
     );
+    if (!mounted) return;
 
     if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
