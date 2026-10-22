@@ -1,8 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../models/booking_model.dart';
 import '../../models/booking_status.dart';
-import '../../services/booking_service.dart';
+import '../../services/booking_firestore_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -15,207 +17,261 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  final BookingService _bookingService = BookingService();
+  final BookingFirestoreService _bookingService = BookingFirestoreService();
+  StreamSubscription<BookingModel?>? _bookingSubscription;
 
+  late BookingModel _booking;
   String _selectedMethod = 'Cash';
   bool _isProcessing = false;
+  String? _loadError;
+
+  @override
+  void initState() {
+    super.initState();
+    _booking = widget.booking;
+    _bookingSubscription = _bookingService.watchBooking(widget.booking.id).listen(
+      (booking) {
+        if (!mounted) return;
+        setState(() {
+          if (booking != null) _booking = booking;
+          _loadError = booking == null ? 'Booking could not be found.' : null;
+        });
+      },
+      onError: (Object error) {
+        if (!mounted) return;
+        setState(() => _loadError = 'Unable to load payment details: $error');
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _bookingSubscription?.cancel();
+    super.dispose();
+  }
+
+  String _statusText(BookingModel booking) {
+    switch (booking.paymentStatus) {
+      case 'paid':
+        return 'Cash payment confirmed by driver';
+      case 'pending':
+        return 'Waiting for driver to confirm cash received';
+      case 'simulated':
+        return 'Card payment simulated — no money was charged';
+      default:
+        return 'Payment not yet requested';
+    }
+  }
 
   Future<void> _pay() async {
-    if (_isProcessing) return;
-
+    if (_isProcessing || _loadError != null) return;
     setState(() => _isProcessing = true);
 
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    var booking = _bookingService.getBookingById(widget.booking.id);
-
-    if (booking == null) {
+    try {
+      // Recheck Firestore rather than relying on the booking passed by navigation.
+      final booking = await _bookingService.getBookingForParticipant(
+        widget.booking.id,
+      );
       if (!mounted) return;
 
-      setState(() => _isProcessing = false);
+      if (booking == null) {
+        _showMessage('Booking could not be found or accessed.');
+        return;
+      }
+      setState(() => _booking = booking);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Booking could not be found.')),
-      );
-      return;
-    }
+      if (booking.status != BookingStatus.completed) {
+        _showMessage('Payment is available after the trip is completed.');
+        return;
+      }
+      if (booking.paymentStatus != 'unpaid') {
+        _showMessage(_statusText(booking));
+        return;
+      }
 
-    if (booking.status == BookingStatus.tripCompleted) {
-      booking = _bookingService.moveToPayment(booking.id);
-    }
-
-    if (booking == null || booking.status != BookingStatus.payment) {
+      final isCash = _selectedMethod == 'Cash';
+      final updated = isCash
+          ? await _bookingService.requestCashPayment(booking.id)
+          : await _bookingService.completeSimulatedCardPayment(booking.id);
       if (!mounted) return;
 
-      setState(() => _isProcessing = false);
+      if (updated == null) {
+        _showMessage('Payment status changed. Please check and try again.');
+        return;
+      }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to start payment. Please try again.'),
-        ),
-      );
-      return;
-    }
-
-    final completed = _bookingService.completePayment(booking.id);
-
-    if (!mounted) return;
-
-    setState(() => _isProcessing = false);
-
-    if (completed == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment could not be completed.')),
-      );
-      return;
-    }
-
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: DrunkDriveColors.surface,
-          title: const Row(
+      setState(() => _booking = updated);
+      final palette = DrunkDrivePalette.of(context);
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: palette.surface,
+          title: Row(
             children: [
-              Icon(Icons.check_circle_rounded, color: DrunkDriveColors.success),
-              SizedBox(width: 10),
+              Icon(
+                isCash ? Icons.hourglass_top_rounded : Icons.info_rounded,
+                color: palette.accent,
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Payment Completed',
-                  style: TextStyle(color: Colors.white),
+                  isCash ? 'Cash Payment Requested' : 'Card Payment Simulated',
+                  style: TextStyle(color: palette.textPrimary),
                 ),
               ),
             ],
           ),
           content: Text(
-            _selectedMethod == 'Cash'
-                ? 'The trip has been marked as paid by cash.'
-                : 'Mock card payment completed successfully.',
-            style: const TextStyle(color: DrunkDriveColors.textMuted),
+            isCash
+                ? 'Please pay the driver directly. Your payment stays pending '
+                    'until the driver confirms receiving the cash.'
+                : 'This is a demonstration only. No real card was charged '
+                    'and this booking is not marked as paid.',
+            style: TextStyle(color: palette.textMuted),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text(
-                'Done',
-                style: TextStyle(color: DrunkDriveColors.accent),
-              ),
+              child: Text('Done', style: TextStyle(color: palette.accent)),
             ),
           ],
-        );
-      },
+        ),
+      );
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage('Unable to update payment: $error');
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
-
-    if (!mounted) return;
-
-    Navigator.pop(context, true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final booking =
-        _bookingService.getBookingById(widget.booking.id) ?? widget.booking;
+    final palette = DrunkDrivePalette.of(context);
+    final booking = _booking;
+    final canRequest = booking.status == BookingStatus.completed &&
+        booking.paymentStatus == 'unpaid' &&
+        _loadError == null;
 
     return Scaffold(
-      backgroundColor: DrunkDriveColors.background,
+      backgroundColor: palette.background,
       appBar: AppBar(
-        backgroundColor: DrunkDriveColors.background,
+        backgroundColor: palette.background,
+        foregroundColor: palette.textPrimary,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Payment',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
-        ),
+        title: const Text('Payment', style: TextStyle(fontWeight: FontWeight.w800)),
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
+            if (_loadError != null) ...[
+              Text(_loadError!, style: TextStyle(color: palette.danger)),
+              const SizedBox(height: 16),
+            ],
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: DrunkDriveColors.surface,
+                color: palette.surface,
                 borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: palette.surfaceBorder),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Trip Fare',
-                    style: TextStyle(
-                      color: DrunkDriveColors.textMuted,
-                      fontSize: 12,
-                    ),
-                  ),
+                  Text('Customer to Pay',
+                      style: TextStyle(color: palette.textMuted, fontSize: 12)),
                   const SizedBox(height: 6),
                   Text(
-                    'Rs. ${booking.fareEstimate.total.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    'Rs. ${booking.customerAmountDue.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      color: palette.textPrimary,
                       fontSize: 30,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 18),
-                  _summaryRow('From', booking.pickup.name),
+                  _summaryRow('From', booking.pickup.name, palette),
                   const SizedBox(height: 10),
-                  _summaryRow('To', booking.destination.name),
+                  _summaryRow('To', booking.destination.name, palette),
                   const SizedBox(height: 10),
-                  _summaryRow(
-                    'Distance',
-                    '${booking.distanceKm.toStringAsFixed(1)} km',
-                  ),
+                  _summaryRow('Distance',
+                      '${booking.distanceKm.toStringAsFixed(1)} km', palette),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'Payment Method',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: palette.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: palette.surfaceBorder),
+              ),
+              child: Text(
+                _statusText(booking),
+                style: TextStyle(
+                  color: booking.paymentStatus == 'paid'
+                      ? palette.success
+                      : palette.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-            const SizedBox(height: 12),
-            _paymentOption(
-              value: 'Cash',
-              icon: Icons.payments_outlined,
-              title: 'Cash',
-              subtitle: 'Pay the driver directly',
-            ),
-            const SizedBox(height: 10),
-            _paymentOption(
-              value: 'Card',
-              icon: Icons.credit_card_rounded,
-              title: 'Card',
-              subtitle: 'Mock card payment for prototype',
-            ),
+            if (canRequest) ...[
+              const SizedBox(height: 24),
+              Text('Payment Method',
+                  style: TextStyle(
+                    color: palette.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  )),
+              const SizedBox(height: 12),
+              _paymentOption(
+                value: 'Cash',
+                icon: Icons.payments_outlined,
+                title: 'Cash',
+                subtitle: 'Pay the driver directly',
+                palette: palette,
+              ),
+              const SizedBox(height: 10),
+              _paymentOption(
+                value: 'Card',
+                icon: Icons.credit_card_rounded,
+                title: 'Card (simulation)',
+                subtitle: 'Demo only — no card charge will occur',
+                palette: palette,
+              ),
+            ],
             const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: DrunkDriveColors.accent.withValues(alpha: 0.08),
+                color: palette.accent.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: palette.accent.withValues(alpha: 0.25),
+                ),
               ),
-              child: const Row(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.info_outline_rounded,
-                    color: DrunkDriveColors.accent,
-                    size: 20,
-                  ),
-                  SizedBox(width: 10),
+                  Icon(Icons.info_outline_rounded, color: palette.accent, size: 20),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'This is currently a prototype payment flow. No real card transaction will be made.',
-                      style: TextStyle(
-                        color: DrunkDriveColors.textMuted,
-                        fontSize: 12,
-                        height: 1.4,
-                      ),
+                      'Cash payment is only recorded as paid after driver confirmation. '
+                      'Card payments are simulated and do not transfer money.',
+                      style: TextStyle(color: palette.textMuted, fontSize: 12, height: 1.4),
                     ),
                   ),
                 ],
@@ -225,31 +281,39 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ),
       ),
       bottomNavigationBar: SafeArea(
-        child: Padding(
+        top: false,
+        child: Container(
           padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: palette.surface,
+            border: Border(top: BorderSide(color: palette.surfaceBorder)),
+          ),
           child: SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _isProcessing ? null : _pay,
+              onPressed: (_isProcessing || !canRequest) ? null : _pay,
               style: ElevatedButton.styleFrom(
-                backgroundColor: DrunkDriveColors.accent,
-                foregroundColor: DrunkDriveColors.background,
+                backgroundColor: palette.accent,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               child: _isProcessing
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : Text(
-                      _selectedMethod == 'Cash'
-                          ? 'Confirm Cash Payment'
-                          : 'Pay Now',
+                      !canRequest
+                          ? booking.paymentStatus == 'unpaid'
+                              ? 'Available After Trip Completion'
+                              : _statusText(booking)
+                          : _selectedMethod == 'Cash'
+                              ? 'Request Cash Payment'
+                              : 'Simulate Card Payment',
                       style: const TextStyle(fontWeight: FontWeight.w800),
+                      textAlign: TextAlign.center,
                     ),
             ),
           ),
@@ -263,92 +327,70 @@ class _PaymentScreenState extends State<PaymentScreen> {
     required IconData icon,
     required String title,
     required String subtitle,
+    required DrunkDrivePalette palette,
   }) {
     final selected = _selectedMethod == value;
-
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedMethod = value;
-        });
-      },
+    return Material(
+      color: palette.surface,
       borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: DrunkDriveColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected
-                ? DrunkDriveColors.accent
-                : DrunkDriveColors.surfaceBorder,
+      child: InkWell(
+        onTap: _isProcessing ? null : () => setState(() => _selectedMethod = value),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected ? palette.accent : palette.surfaceBorder,
+              width: selected ? 1.5 : 1,
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: selected
-                  ? DrunkDriveColors.accent
-                  : DrunkDriveColors.textMuted,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: DrunkDriveColors.textMuted,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
+          child: Row(
+            children: [
+              Icon(icon, color: selected ? palette.accent : palette.textMuted),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: TextStyle(
+                          color: palette.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        )),
+                    const SizedBox(height: 3),
+                    Text(subtitle,
+                        style: TextStyle(color: palette.textMuted, fontSize: 11)),
+                  ],
+                ),
               ),
-            ),
-            Icon(
-              selected
-                  ? Icons.radio_button_checked_rounded
-                  : Icons.radio_button_off_rounded,
-              color: selected
-                  ? DrunkDriveColors.accent
-                  : DrunkDriveColors.textMuted,
-            ),
-          ],
+              Icon(
+                selected
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_off_rounded,
+                color: selected ? palette.accent : palette.textMuted,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _summaryRow(String label, String value) {
+  Widget _summaryRow(String label, String value, DrunkDrivePalette palette) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
           width: 75,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: DrunkDriveColors.textMuted,
-              fontSize: 12,
-            ),
-          ),
+          child: Text(label, style: TextStyle(color: palette.textMuted, fontSize: 12)),
         ),
         Expanded(
           child: Text(
             value,
             textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: palette.textPrimary,
               fontWeight: FontWeight.w600,
               fontSize: 12,
             ),

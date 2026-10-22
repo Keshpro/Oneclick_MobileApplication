@@ -6,6 +6,10 @@ import '../../models/doctor_model.dart';
 import 'ai_assistant_screen.dart';
 import 'book_appointment_screen.dart';
 import 'my_appointments_screen.dart';
+import 'patient_medical_vault_screen.dart';
+import 'patient_notifications_screen.dart';
+import 'patient_prescriptions_screen.dart';
+import 'patient_profile_screen.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -67,6 +71,70 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     );
   }
 
+  void _openPrescriptions() {
+    if (_isLoggedIn) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const PatientPrescriptionsScreen(),
+        ),
+      );
+      return;
+    }
+    _showLoginRequired(
+      title: 'Login required',
+      description: 'Login to view and manage your medical prescriptions.',
+    );
+  }
+
+  void _openMedicalVault() {
+    if (_isLoggedIn) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const PatientMedicalVaultScreen(),
+        ),
+      );
+      return;
+    }
+    _showLoginRequired(
+      title: 'Login required',
+      description: 'Login to view and upload your medical documents.',
+    );
+  }
+
+  void _openNotifications() {
+    if (_isLoggedIn) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const PatientNotificationsScreen(),
+        ),
+      );
+      return;
+    }
+    _showLoginRequired(
+      title: 'Login required',
+      description: 'Login to view your notifications.',
+    );
+  }
+
+  void _openProfile() {
+    if (_isLoggedIn) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const PatientProfileScreen(),
+        ),
+      );
+      return;
+    }
+    _showLoginRequired(
+      title: 'Login required',
+      description: 'Login to view your health profile and settings.',
+    );
+  }
+
   void _openBooking(DoctorModel doctor) {
     if (_isLoggedIn) {
       Navigator.push(
@@ -99,7 +167,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     );
   }
 
-  void _showLoginRequired({required String title, required String description}) {
+  void _showLoginRequired({
+    required String title,
+    required String description,
+  }) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -324,7 +395,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${doctor.name} is an experienced ${doctor.specialtyLabel} currently available through the OneClick healthcare service. Browse availability and consultation information before making an appointment.',
+                    '${doctor.name} is an experienced ${doctor.specialtyLabel} currently available through the OneClick healthcare service.',
                     style: const TextStyle(
                       color: _muted,
                       fontSize: 13,
@@ -332,56 +403,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 22),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: _border),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 45,
-                          height: 45,
-                          decoration: BoxDecoration(
-                            color: doctor.available
-                                ? _lightGreen
-                                : const Color(0xFFFFF7ED),
-                            borderRadius: BorderRadius.circular(13),
-                          ),
-                          child: Icon(
-                            Icons.calendar_month_rounded,
-                            color: doctor.available
-                                ? _primary
-                                : const Color(0xFFEA580C),
-                          ),
-                        ),
-                        const SizedBox(width: 13),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Next available',
-                                style: TextStyle(color: _muted, fontSize: 11),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                doctor.nextSlot,
-                                style: const TextStyle(
-                                  color: _text,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -505,6 +526,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
             return CustomScrollView(
               slivers: [
+                // App Header Bar
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -561,21 +583,59 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                             ],
                           ),
                         ),
-                        if (_isLoggedIn)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            margin: const EdgeInsets.only(right: 5),
-                            decoration: const BoxDecoration(
-                              color: _primary,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
+                        // Real-time Notification Icon with Red Dot Indicator
+                        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                          stream: FirebaseFirestore.instance
+                              .collection('notifications')
+                              .where('userId',
+                                  isEqualTo: _currentUser?.uid ?? '')
+                              .where('isRead', isEqualTo: false)
+                              .snapshots(),
+                          builder: (context, notifSnapshot) {
+                            final unreadDocs =
+                                notifSnapshot.data?.docs.length ?? 0;
+                            final hasUnread = unreadDocs > 0;
+
+                            return Stack(
+                              children: [
+                                IconButton(
+                                  tooltip: 'Notifications',
+                                  onPressed: _openNotifications,
+                                  icon: const Icon(
+                                    Icons.notifications_none_rounded,
+                                    color: _text,
+                                  ),
+                                ),
+                                if (hasUnread)
+                                  Positioned(
+                                    right: 10,
+                                    top: 10,
+                                    child: Container(
+                                      width: 9,
+                                      height: 9,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.redAccent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
                         IconButton(
-                          tooltip: 'My Appointments',
-                          onPressed: _openMyAppointments,
+                          tooltip: 'Medical Vault',
+                          onPressed: _openMedicalVault,
                           icon: const Icon(
-                            Icons.calendar_today_rounded,
+                            Icons.folder_special_outlined,
+                            color: _text,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Profile',
+                          onPressed: _openProfile,
+                          icon: const Icon(
+                            Icons.person_outline_rounded,
                             color: _text,
                           ),
                         ),
@@ -583,6 +643,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     ),
                   ),
                 ),
+
+                // Hero Banner
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
@@ -591,67 +653,20 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       decoration: BoxDecoration(
                         color: _primaryDark,
                         borderRadius: BorderRadius.circular(28),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 22,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 11,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.10),
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.health_and_safety_rounded,
-                                  color: Color(0xFF6EE7B7),
-                                  size: 15,
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  'ONECLICK HEALTH',
-                                  style: TextStyle(
-                                    color: Color(0xFF6EE7B7),
-                                    fontSize: 10,
-                                    letterSpacing: 0.7,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 17),
                           const Text(
                             'Find the right doctor\nfor your care.',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 29,
-                              height: 1.12,
+                              fontSize: 27,
+                              height: 1.15,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
-                          const SizedBox(height: 10),
-                          const Text(
-                            'Explore trusted doctors, check availability and find the care you need.',
-                            style: TextStyle(
-                              color: Color(0xFFA7F3D0),
-                              fontSize: 13,
-                              height: 1.5,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 16),
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
@@ -663,23 +678,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                                   setState(() => _searchQuery = value),
                               decoration: InputDecoration(
                                 hintText: 'Doctor, specialty or hospital...',
-                                hintStyle: const TextStyle(
-                                  color: Color(0xFF94A3B8),
-                                  fontSize: 13,
-                                ),
                                 prefixIcon: const Icon(
                                   Icons.search_rounded,
                                   color: _primary,
                                 ),
-                                suffixIcon: _searchQuery.isNotEmpty
-                                    ? IconButton(
-                                        onPressed: () {
-                                          _searchController.clear();
-                                          setState(() => _searchQuery = '');
-                                        },
-                                        icon: const Icon(Icons.close_rounded),
-                                      )
-                                    : null,
                                 border: InputBorder.none,
                                 contentPadding: const EdgeInsets.symmetric(
                                   vertical: 16,
@@ -692,40 +694,66 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     ),
                   ),
                 ),
+
+                // Quick Action Cards (4 Grid items)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 25, 20, 0),
-                    child: Row(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                    child: Column(
                       children: [
-                        Expanded(
-                          child: _quickAction(
-                            icon: Icons.search_rounded,
-                            title: 'Find Doctor',
-                            subtitle: 'Browse doctors',
-                            color: _primary,
-                            onTap: () {
-                              _searchController.clear();
-                              setState(() {
-                                _searchQuery = '';
-                                _selectedSpecialty = 'All';
-                              });
-                            },
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _quickAction(
+                                icon: Icons.calendar_month_rounded,
+                                title: 'Appointments',
+                                subtitle: 'Manage bookings',
+                                color: _primary,
+                                onTap: _openMyAppointments,
+                              ),
+                            ),
+                            const SizedBox(width: 11),
+                            Expanded(
+                              child: _quickAction(
+                                icon: Icons.medication_outlined,
+                                title: 'Prescriptions',
+                                subtitle: 'View E-Scripts',
+                                color: _purple,
+                                onTap: _openPrescriptions,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 11),
-                        Expanded(
-                          child: _quickAction(
-                            icon: Icons.smart_toy_outlined,
-                            title: 'AI Assistant',
-                            subtitle: 'Ask Health AI',
-                            color: _purple,
-                            onTap: _openAiAssistant,
-                          ),
+                        const SizedBox(height: 11),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _quickAction(
+                                icon: Icons.folder_special_outlined,
+                                title: 'Medical Vault',
+                                subtitle: 'Upload reports',
+                                color: const Color(0xFF0284C7),
+                                onTap: _openMedicalVault,
+                              ),
+                            ),
+                            const SizedBox(width: 11),
+                            Expanded(
+                              child: _quickAction(
+                                icon: Icons.smart_toy_outlined,
+                                title: 'AI Assistant',
+                                subtitle: 'Ask Health AI',
+                                color: const Color(0xFFD97706),
+                                onTap: _openAiAssistant,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
                 ),
+
+                // Specialty Selector
                 const SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(20, 28, 20, 12),
@@ -798,29 +826,21 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     ),
                   ),
                 ),
+
+                // Doctor Section Title
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 28, 20, 13),
                     child: Row(
                       children: [
                         const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Doctors',
-                                style: TextStyle(
-                                  color: _text,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              SizedBox(height: 3),
-                              Text(
-                                'Explore doctors available on OneClick',
-                                style: TextStyle(color: _muted, fontSize: 11),
-                              ),
-                            ],
+                          child: Text(
+                            'Available Doctors',
+                            style: TextStyle(
+                              color: _text,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                         Text(
@@ -835,6 +855,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     ),
                   ),
                 ),
+
+                // Doctor Cards
                 if (snapshot.connectionState == ConnectionState.waiting)
                   const SliverToBoxAdapter(
                     child: Padding(
@@ -845,23 +867,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 else if (filteredDoctors.isEmpty)
                   const SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 45),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.person_search_rounded,
-                            color: Color(0xFF94A3B8),
-                            size: 50,
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            'No doctors found',
-                            style: TextStyle(
-                              color: Color(0xFF475569),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Center(
+                        child: Text(
+                          'No doctors found.',
+                          style: TextStyle(color: _muted),
+                        ),
                       ),
                     ),
                   )
@@ -870,246 +881,16 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     itemCount: filteredDoctors.length,
                     itemBuilder: (context, index) {
                       return Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          20,
-                          index == 0 ? 0 : 6,
-                          20,
-                          8,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
                         child: _doctorCard(filteredDoctors[index]),
                       );
                     },
                   ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 22, 20, 15),
-                    child: InkWell(
-                      onTap: _openAiAssistant,
-                      borderRadius: BorderRadius.circular(24),
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF5F3FF),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: const Color(0xFFEDE9FE)),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color: _purple,
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              child: const Icon(
-                                Icons.smart_toy_rounded,
-                                color: Colors.white,
-                                size: 30,
-                              ),
-                            ),
-                            const SizedBox(width: 15),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          'AI Health Assistant',
-                                          style: TextStyle(
-                                            color: _text,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(width: 7),
-                                      DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          color: Color(0xFFEDE9FE),
-                                          borderRadius: BorderRadius.all(
-                                            Radius.circular(20),
-                                          ),
-                                        ),
-                                        child: Padding(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 7,
-                                            vertical: 3,
-                                          ),
-                                          child: Text(
-                                            'AI',
-                                            style: TextStyle(
-                                              color: _purple,
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: 5),
-                                  Text(
-                                    'Ask health questions and find the right care faster.',
-                                    style: TextStyle(
-                                      color: _muted,
-                                      fontSize: 12,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              size: 16,
-                              color: _purple,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 35),
-                    child: _isLoggedIn ? _loggedInCard() : _guestCard(),
-                  ),
-                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 30)),
               ],
             );
           },
         ),
-      ),
-    );
-  }
-
-  Widget _loggedInCard() {
-    final user = _currentUser;
-    String displayName = 'OneClick User';
-    if (user?.displayName != null && user!.displayName!.trim().isNotEmpty) {
-      displayName = user.displayName!;
-    } else if (user?.email != null && user!.email!.trim().isNotEmpty) {
-      displayName = user.email!.split('@').first;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _lightGreen,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFD1FAE5)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration:
-                const BoxDecoration(color: _primary, shape: BoxShape.circle),
-            child:
-                const Icon(Icons.person_rounded, color: Colors.white, size: 28),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Hi, $displayName',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: _text,
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 5),
-          const Text(
-            'You are signed in. You can book and manage your appointments.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _muted, fontSize: 12, height: 1.5),
-          ),
-          const SizedBox(height: 15),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _openMyAppointments,
-              icon: const Icon(Icons.calendar_month_rounded, size: 18),
-              label: const Text(
-                'My Appointments',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _guestCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _border),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.account_circle_outlined, color: _primary, size: 34),
-          const SizedBox(height: 10),
-          const Text(
-            'Like what you see?',
-            style: TextStyle(
-              color: _text,
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'You can explore doctors and try the AI Health Assistant without an account. Create an account when you are ready to book appointments or use personalized features.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _muted, fontSize: 12, height: 1.5),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, '/register'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: const Text(
-                'Create Free Account',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
-          ),
-          const SizedBox(height: 5),
-          TextButton(
-            onPressed: () => Navigator.pushNamed(context, '/login'),
-            child: const Text(
-              'Already have an account? Login',
-              style: TextStyle(color: _primary, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1139,7 +920,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 width: 43,
                 height: 43,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.10),
+                  color: color.withOpacity(0.10),
                   borderRadius: BorderRadius.circular(13),
                 ),
                 child: Icon(icon, color: color, size: 22),
@@ -1190,30 +971,27 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             border: Border.all(color: _border),
           ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 70,
-                height: 78,
+                width: 65,
+                height: 65,
                 decoration: BoxDecoration(
                   color: _lightGreen,
-                  borderRadius: BorderRadius.circular(17),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(
                   Icons.person_rounded,
                   color: _primary,
-                  size: 38,
+                  size: 36,
                 ),
               ),
-              const SizedBox(width: 13),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       doctor.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: _text,
                         fontSize: 15,
@@ -1229,98 +1007,18 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 5),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.location_on_outlined,
-                          color: Color(0xFF94A3B8),
-                          size: 13,
-                        ),
-                        const SizedBox(width: 3),
-                        Expanded(
-                          child: Text(
-                            doctor.hospital,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style:
-                                const TextStyle(color: _muted, fontSize: 10),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 9),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.star_rounded,
-                          color: Color(0xFFF59E0B),
-                          size: 15,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          '${doctor.rating}',
-                          style: const TextStyle(
-                            color: _text,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '(${doctor.reviews})',
-                          style: const TextStyle(
-                            color: Color(0xFF94A3B8),
-                            fontSize: 10,
-                          ),
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: doctor.available
-                                ? _lightGreen
-                                : const Color(0xFFFFF7ED),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            doctor.available ? 'Available' : 'Next day',
-                            style: TextStyle(
-                              color: doctor.available
-                                  ? _primary
-                                  : const Color(0xFFEA580C),
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            doctor.nextSlot,
-                            style: const TextStyle(
-                              color: Color(0xFF475569),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const Icon(
-                          Icons.arrow_forward_rounded,
-                          color: _primary,
-                          size: 17,
-                        ),
-                      ],
+                    const SizedBox(height: 4),
+                    Text(
+                      doctor.hospital,
+                      style: const TextStyle(color: _muted, fontSize: 10),
                     ),
                   ],
                 ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: _muted,
               ),
             ],
           ),

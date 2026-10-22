@@ -66,13 +66,8 @@ static const String _renewalWarningKey =
   };
 
   String _renewalWarning = '3 days prior';
-
-  bool _localDocumentProcessing = true;
-  bool _aiDocumentReasoning = true;
-  bool _credentialMasking = true;
-
- bool _backupCreated = false;
-String _lastBackup = 'Not created';
+  bool _backupCreated = false;
+  String _lastBackup = 'Not created';
 
 // Scroll to DATA & BACKUP when opened from Dashboard
 @override
@@ -589,94 +584,6 @@ void _message(String text) {
                   const SizedBox(height: 32),
 
                   // =================================================
-                  // AI
-                  // =================================================
-
-                  _sectionTitle(
-                    Icons.psychology_outlined,
-                    'AI DOCUMENT PROCESSING',
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  _surface(
-                    child: Column(
-                      children: [
-                        _settingSwitch(
-                          title:
-                              'Local Document Processing',
-                          subtitle:
-                              'Process supported document text on the device when available',
-                          icon: Icons
-                              .document_scanner_outlined,
-                          value:
-                              _localDocumentProcessing,
-                          onChanged: (value) {
-                            setState(() {
-                              _localDocumentProcessing =
-                                  value;
-                            });
-                          },
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        _settingSwitch(
-                          title:
-                              'AI Document Reasoning',
-                          subtitle:
-                              'Enable AI features such as summaries and Ask Vault AI',
-                          icon: Icons.auto_awesome,
-                          value:
-                              _aiDocumentReasoning,
-                          onChanged: (value) {
-                            setState(() {
-                              _aiDocumentReasoning =
-                                  value;
-                            });
-                          },
-                        ),
-
-                        const SizedBox(height: 18),
-
-                        _innerStatus(
-                          icon: Icons.shield_outlined,
-                          title:
-                              'Sensitive Credential Masking',
-                          subtitle:
-                              'Passwords and backup codes are excluded from AI context',
-                          status:
-                              _credentialMasking
-                                  ? 'ENABLED'
-                                  : 'OFF',
-                          trailingIcon:
-                              Icons.lock_outline,
-                          onTap: () {
-                            setState(() {
-                              _credentialMasking =
-                                  !_credentialMasking;
-                            });
-                          },
-                        ),
-
-                        const SizedBox(height: 18),
-
-                        _dangerButton(
-                          icon:
-                              Icons.delete_sweep_outlined,
-                          text:
-                              'Clear AI Query History',
-                          onTap: () {
-                            _showClearHistoryDialog();
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // =================================================
                   // DATA & BACKUP
                   // =================================================
 
@@ -888,46 +795,6 @@ void _message(String text) {
               ],
             ),
           ),
-        );
-      },
-    );
-  }
-
-  void _showClearHistoryDialog() {
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: background,
-          title: const Text(
-            'Clear AI Query History?',
-          ),
-          content: const Text(
-            'This demo action clears the AI query history associated with the Vault.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-
-                _message(
-                  'AI query history cleared.',
-                );
-              },
-              child: const Text(
-                'Clear',
-                style: TextStyle(
-                  color: Colors.red,
-                ),
-              ),
-            ),
-          ],
         );
       },
     );
@@ -1938,60 +1805,6 @@ void _message(String text) {
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _dangerButton({
-    required IconData icon,
-    required String text,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(24),
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          vertical: 16,
-          horizontal: 18,
-        ),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.white70,
-              offset: Offset(-3, -3),
-              blurRadius: 8,
-            ),
-            BoxShadow(
-              color: Color(0xFFD0D2DC),
-              offset: Offset(3, 3),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: Colors.red,
-              size: 20,
-            ),
-
-            const SizedBox(width: 8),
-
-            Text(
-              text,
-              style: const TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.w600,
               ),
             ),
           ],

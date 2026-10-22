@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:oneclick/core/theme/app_theme.dart';
 import 'package:oneclick/shared/models/user_model.dart';
 import '../features/auth/screens/splash_screen.dart';
 import '../features/auth/screens/home_screen.dart';
@@ -18,14 +19,22 @@ class MyApp extends StatelessWidget {
       // Application title
       title: 'OneClick',
 
-      // Default application theme
-      theme: ThemeData(
+      // Match the existing OneClick teal design and follow system dark mode.
+      theme: AppTheme.light,
+      darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color.fromARGB(255, 50, 225, 73),
+          seedColor: AppColors.primaryLight,
+          brightness: Brightness.dark,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+        scaffoldBackgroundColor: const Color(0xFF0C1014),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF0C1014),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
       ),
+      themeMode: ThemeMode.system,
 
       // First screen when application starts
       initialRoute: '/',

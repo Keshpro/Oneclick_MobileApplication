@@ -39,12 +39,13 @@ class SharingService {
   }
 
   Future<void> shareRecord({
-    required String recordTitle,
-    required String recipientName,
-    required String recipientEmail,
-    required String permission,
-    DateTime? expiryDate,
-  }) async {
+  required String recordTitle,
+  String? recordId,
+  required String recipientName,
+  required String recipientEmail,
+  required String permission,
+  DateTime? expiryDate,
+}) async {
     final doc = _sharedRecordsCollection.doc();
 
     final sharedRecord = SharedRecord(
@@ -52,6 +53,7 @@ class SharingService {
       ownerId: _userId,
       ownerEmail: _userEmail,
       recordTitle: recordTitle,
+      recordId: recordId,
       recipientName: recipientName,
       recipientEmail: recipientEmail,
       permission: permission,

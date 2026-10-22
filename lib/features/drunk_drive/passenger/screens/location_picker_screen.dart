@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../models/location_model.dart';
-import '../../services/location_service.dart';
-import '../../theme/drunk_drive_colors.dart';
 
+/// Choose an actual map coordinate for a pickup or destination.
+/// Selecting a point does not share live GPS location with Firestore.
 class LocationPickerScreen extends StatefulWidget {
   final String title;
 
@@ -14,97 +17,183 @@ class LocationPickerScreen extends StatefulWidget {
 }
 
 class _LocationPickerScreenState extends State<LocationPickerScreen> {
-  final LocationService _locationService = LocationService();
-  final TextEditingController _searchController = TextEditingController();
+  // Initial map view (Colombo), not the device's actual location.
+  static const LatLng _initialCenter = LatLng(6.9271, 79.8612);
 
-  List<LocationModel> _results = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _results = _locationService.getMockLocations();
-    _searchController.addListener(_onSearchChanged);
-  }
+  final MapController _mapController = MapController();
+  LatLng? _selected;
+  bool _locating = false;
 
   @override
   void dispose() {
-    _searchController.removeListener(_onSearchChanged);
-    _searchController.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
-  void _onSearchChanged() {
-    setState(() {
-      _results = _locationService.searchLocations(_searchController.text);
-    });
+  Future<void> _useCurrentLocation() async {
+    if (_locating) return;
+    setState(() => _locating = true);
+
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        throw StateError('Location services are disabled. Tap the map instead.');
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw StateError('Location permission is unavailable. Tap the map instead.');
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 15),
+        ),
+      );
+      if (!mounted) return;
+
+      final point = LatLng(position.latitude, position.longitude);
+      setState(() => _selected = point);
+      _mapController.move(point, 16);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to get current location: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  void _confirmSelection() {
+    final point = _selected;
+    if (point == null) return;
+
+    // Coordinates are accurate, but a reverse-geocoding service is needed
+    // to show a human-readable street address.
+    final label = '${point.latitude.toStringAsFixed(5)}, '
+        '${point.longitude.toStringAsFixed(5)}';
+    Navigator.pop(
+      context,
+      LocationModel(
+        name: label,
+        address: null,
+        latitude: point.latitude,
+        longitude: point.longitude,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: DrunkDriveColors.background,
-      appBar: AppBar(
-        backgroundColor: DrunkDriveColors.background,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          widget.title,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
-        ),
-      ),
+      appBar: AppBar(title: Text(widget.title)),
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(20),
-              child: TextField(
-                controller: _searchController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Search for a location',
-                  hintStyle: const TextStyle(color: DrunkDriveColors.textMuted),
-                  prefixIcon: const Icon(Icons.search_rounded, color: DrunkDriveColors.textMuted),
-                  filled: true,
-                  fillColor: DrunkDriveColors.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Tap the map to choose a place, or use your current location.',
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                    tooltip: 'Use my current location',
+                    onPressed: _locating ? null : _useCurrentLocation,
+                    icon: _locating
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.my_location_rounded),
+                  ),
+                ],
               ),
             ),
             Expanded(
-              child: _results.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No matching locations.',
-                        style: TextStyle(color: DrunkDriveColors.textMuted),
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: _results.length,
-                      separatorBuilder: (_, _) =>
-                          const Divider(color: DrunkDriveColors.surfaceBorder, height: 1),
-                      itemBuilder: (context, index) {
-                        final location = _results[index];
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.location_on_outlined, color: DrunkDriveColors.accent),
-                          title: Text(
-                            location.name,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                          ),
-                          subtitle: location.address != null
-                              ? Text(
-                                  location.address!,
-                                  style: const TextStyle(color: DrunkDriveColors.textMuted, fontSize: 12),
-                                )
-                              : null,
-                          onTap: () => Navigator.pop(context, location),
-                        );
-                      },
+              child: Stack(
+                children: [
+                  FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: _initialCenter,
+                      initialZoom: 12,
+                      onTap: (_, point) => setState(() => _selected = point),
                     ),
+                    children: [
+                      TileLayer(
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'oneclick',
+                      ),
+                      if (_selected != null)
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: _selected!,
+                              width: 48,
+                              height: 48,
+                              alignment: Alignment.topCenter,
+                              child: const Icon(
+                                Icons.location_pin,
+                                size: 46,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        child: Text(
+                          '© OpenStreetMap contributors · openstreetmap.org/copyright',
+                          style: TextStyle(fontSize: 10),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    _selected == null
+                        ? 'No location selected'
+                        : 'Selected: ${_selected!.latitude.toStringAsFixed(5)}, '
+                            '${_selected!.longitude.toStringAsFixed(5)}',
+                    style: TextStyle(color: colors.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: _selected == null ? null : _confirmSelection,
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text('Confirm Location'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

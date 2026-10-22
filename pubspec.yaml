@@ -19,6 +19,8 @@ dependencies:
   flutter:
     sdk: flutter
 
+  url_launcher: 6.3.3
+
   # iOS-style icons
   cupertino_icons: ^1.0.8
 
@@ -48,7 +50,10 @@ dependencies:
   shared_preferences: ^2.5.6
   supabase_flutter: ^2.18.3
   syncfusion_flutter_pdfviewer: ^35.1.40+1
-  http_parser: ^4.1.2
+  google_maps_flutter: ^2.19.0
+  geolocator: ^14.0.1
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
 
 # Packages used during development
 dev_dependencies:

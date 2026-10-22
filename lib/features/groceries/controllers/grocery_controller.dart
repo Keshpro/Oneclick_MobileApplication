@@ -4,39 +4,78 @@ import '../models/cart_item_model.dart';
 import '../models/grocery_order_model.dart';
 import '../models/grocery_product_model.dart';
 import '../services/grocery_service.dart';
+import 'dart:async';
 
 class GroceryController extends ChangeNotifier {
   final GroceryService _groceryService = GroceryService();
+  List<GroceryProduct> _firebaseProducts = [];
+
+StreamSubscription<List<GroceryProduct>>? _productsSubscription;
+
+bool _productsLoading = true;
+String? _productsError;
+
+bool get productsLoading => _productsLoading;
+String? get productsError => _productsError;
 
   final List<CartItem> _cartItems = [];
   final List<GroceryOrder> _orders = [];
 
   String _selectedCategory = 'All';
   String _searchQuery = '';
+  GroceryController() {
+  _listenToApprovedProducts();
+}
+
+void _listenToApprovedProducts() {
+  _productsSubscription = _groceryService
+      .watchApprovedProducts()
+      .listen(
+    (products) {
+      _firebaseProducts = products;
+      _productsLoading = false;
+      _productsError = null;
+      notifyListeners();
+    },
+    onError: (Object error) {
+      _productsLoading = false;
+      _productsError = error.toString();
+      notifyListeners();
+    },
+  );
+}
+
+@override
+void dispose() {
+  _productsSubscription?.cancel();
+  super.dispose();
+}
 
   // ---------------- PRODUCTS ----------------
 
   List<GroceryProduct> get products {
-    List<GroceryProduct> result;
+ List<GroceryProduct> result = _firebaseProducts.isNotEmpty
+    ? List.from(_firebaseProducts)
+    : _groceryService.getProducts();
 
-    if (_selectedCategory == 'All') {
-      result = _groceryService.getProducts();
-    } else {
-      result =
-          _groceryService.getProductsByCategory(_selectedCategory);
-    }
-
-    if (_searchQuery.isNotEmpty) {
-      result = result.where((product) {
-        final query = _searchQuery.toLowerCase();
-
-        return product.name.toLowerCase().contains(query) ||
-            product.category.toLowerCase().contains(query);
-      }).toList();
-    }
-
-    return result;
+  if (_selectedCategory != 'All') {
+    result = result
+        .where((product) => product.category == _selectedCategory)
+        .toList();
   }
+
+  if (_searchQuery.isNotEmpty) {
+    final query = _searchQuery.toLowerCase();
+
+    result = result.where((product) {
+      return product.name.toLowerCase().contains(query) ||
+          product.category.toLowerCase().contains(query) ||
+          product.sellerName.toLowerCase().contains(query);
+    }).toList();
+  }
+
+  return result;
+}
 
   List<String> get categories =>
       _groceryService.getCategories();
