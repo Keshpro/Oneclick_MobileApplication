@@ -200,9 +200,18 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
 
             // Products
             Expanded(
-              child: _controller.products.isEmpty
-                  ? const Center(child: Text('No products found'))
-                  : GridView.builder(
+             child: _controller.productsLoading
+    ? const Center(child: CircularProgressIndicator())
+    : _controller.productsError != null
+        ? Center(
+            child: Text(
+              'Failed to load products: ${_controller.productsError}',
+              textAlign: TextAlign.center,
+            ),
+          )
+        : _controller.products.isEmpty
+            ? const Center(child: Text('No approved products available'))
+            : GridView.builder(
                       padding: const EdgeInsets.all(16),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
@@ -284,6 +293,16 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                 product.category,
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
               ),
+              if (product.sellerName.isNotEmpty)
+  Text(
+    'Seller: ${product.sellerName}',
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+    style: const TextStyle(
+      fontSize: 11,
+      color: Colors.grey,
+    ),
+  ),
 
               const SizedBox(height: 5),
 
