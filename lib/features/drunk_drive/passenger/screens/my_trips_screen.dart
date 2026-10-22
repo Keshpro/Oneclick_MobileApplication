@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../models/booking_model.dart';
 import '../../models/booking_status.dart';
 import '../../services/booking_firestore_service.dart';
+import '../../services/driver_rating_service.dart';
+import 'payment_screen.dart';
 import '../../theme/drunk_drive_colors.dart';
 
 class MyTripsScreen extends StatefulWidget {
@@ -14,6 +17,7 @@ class MyTripsScreen extends StatefulWidget {
 
 class _MyTripsScreenState extends State<MyTripsScreen> {
   final BookingFirestoreService _bookingService = BookingFirestoreService();
+  final DriverRatingService _ratingService = DriverRatingService();
 
   List<BookingModel> _bookings = [];
   bool _isLoading = true;
@@ -47,6 +51,133 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Unable to load trip history: $error')),
       );
+    }
+  }
+
+  Future<void> _openPayment(BookingModel booking) async {
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => PaymentScreen(booking: booking)),
+    );
+    if (mounted) await _loadBookings();
+  }
+
+  Future<void> _rateDriver(BookingModel booking) async {
+    final driverId = booking.driverId;
+    if (booking.status != BookingStatus.completed || driverId == null) return;
+
+    try {
+      final alreadyRated = await _ratingService.hasRatedBooking(booking.id);
+      if (!mounted) return;
+      if (alreadyRated) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You already rated this trip.')),
+        );
+        return;
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to check rating: $error')),
+      );
+      return;
+    }
+
+    int selectedRating = 0;
+    bool isSubmitting = false;
+    final reviewController = TextEditingController();
+    final colors = DrunkDrivePalette.of(context);
+
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            backgroundColor: colors.surface,
+            title: Text('Rate Your Driver',
+                style: TextStyle(color: colors.textPrimary)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('How was your trip?',
+                      style: TextStyle(color: colors.textMuted)),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    children: List.generate(5, (index) {
+                      final star = index + 1;
+                      return IconButton(
+                        tooltip: '$star star${star == 1 ? '' : 's'}',
+                        onPressed: isSubmitting
+                            ? null
+                            : () => setDialogState(() => selectedRating = star),
+                        icon: Icon(
+                          star <= selectedRating
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          color: colors.accent,
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: reviewController,
+                    maxLines: 3,
+                    style: TextStyle(color: colors.textPrimary),
+                    decoration: const InputDecoration(
+                      labelText: 'Review (optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: isSubmitting || selectedRating == 0
+                    ? null
+                    : () async {
+                        setDialogState(() => isSubmitting = true);
+                        try {
+                          final result = await _ratingService.submitRating(
+                            bookingId: booking.id,
+                            driverId: driverId,
+                            rating: selectedRating,
+                            review: reviewController.text,
+                          );
+                          if (!dialogContext.mounted) return;
+                          Navigator.pop(dialogContext);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(result == null
+                                ? 'This trip has already been rated.'
+                                : 'Rating saved to Firebase.')),
+                          );
+                        } catch (error) {
+                          if (!dialogContext.mounted) return;
+                          setDialogState(() => isSubmitting = false);
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            SnackBar(content: Text('Unable to save rating: $error')),
+                          );
+                        }
+                      },
+                child: Text(isSubmitting ? 'Saving...' : 'Submit Rating'),
+              ),
+            ],
+          ),
+        ),
+      );
+    } finally {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        reviewController.dispose();
+      });
     }
   }
 
@@ -244,6 +375,25 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
                           ),
                         ],
                       ),
+                      if (booking.status == BookingStatus.completed) ...[
+                        const SizedBox(height: 14),
+                        if (booking.paymentStatus == 'unpaid') ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: () => _openPayment(booking),
+                              icon: const Icon(Icons.payment_rounded),
+                              label: const Text('Proceed to Payment'),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        if (booking.driverId != null)
+                          _RatingAction(
+                            bookingId: booking.id,
+                            onRate: () => _rateDriver(booking),
+                          ),
+                      ],
                     ],
                   ),
                 );
@@ -284,6 +434,51 @@ class _TripLocationRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _RatingAction extends StatelessWidget {
+  final String bookingId;
+  final VoidCallback onRate;
+
+  const _RatingAction({
+    required this.bookingId,
+    required this.onRate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = DrunkDrivePalette.of(context);
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('drunkDriveDriverRatings')
+          .doc(bookingId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Text('Unable to check rating: ${snapshot.error}',
+              style: TextStyle(color: colors.danger));
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: LinearProgressIndicator());
+        }
+        if (snapshot.data?.exists == true) {
+          return OutlinedButton.icon(
+            onPressed: null,
+            icon: const Icon(Icons.check_circle_outline_rounded),
+            label: const Text('Driver Rated'),
+          );
+        }
+        return SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: onRate,
+            icon: const Icon(Icons.star_outline_rounded),
+            label: const Text('Rate Driver'),
+          ),
+        );
+      },
     );
   }
 }

@@ -30,8 +30,61 @@ class DriverFirestoreService {
 
   Future<bool> isCurrentDriverApproved() async {
     final application = await getMyApplication();
-
     return application?.status == DriverApplicationStatus.approved;
+  }
+
+  /// Returns the driver's saved availability. Drivers without an approved
+  /// application are always treated as offline.
+  Future<bool> getMyOnlineStatus() async {
+    final doc = await _applications.doc(currentUserId).get();
+    final data = doc.data();
+    if (data == null ||
+        data['status'] != DriverApplicationStatus.approved.name) {
+      return false;
+    }
+    return data['isOnline'] == true;
+  }
+
+  /// Persists availability. The transaction checks current approval before
+  /// allowing a driver to go online (or update their existing status).
+  Future<void> setMyOnlineStatus(bool isOnline) async {
+    final reference = _applications.doc(currentUserId);
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(reference);
+      if (!snapshot.exists ||
+          snapshot.data()?['status'] != DriverApplicationStatus.approved.name) {
+        throw StateError('Only approved drivers can change availability.');
+      }
+      transaction.update(reference, {
+        'isOnline': isOnline,
+        'onlineStatusUpdatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  CollectionReference<Map<String, dynamic>> _declinedBookings(String userId) =>
+      _applications.doc(userId).collection('declinedBookings');
+
+  /// Booking IDs that this driver has declined, so they can remain hidden
+  /// even after restarting the app.
+  Future<Set<String>> getMyDeclinedBookingIds() async {
+    final snapshots = await _declinedBookings(currentUserId).get();
+    return snapshots.docs.map((doc) => doc.id).toSet();
+  }
+
+  /// Records a decline only for the signed-in driver. Other drivers can still
+  /// see and accept the booking. The dashboard must filter these IDs locally.
+  Future<void> declineBooking(String bookingId) async {
+    if (bookingId.trim().isEmpty || bookingId.contains('/')) {
+      throw ArgumentError.value(bookingId, 'bookingId', 'Invalid booking ID.');
+    }
+    if (!await isCurrentDriverApproved()) {
+      throw StateError('Only approved drivers can decline requests.');
+    }
+    await _declinedBookings(currentUserId).doc(bookingId).set({
+      'bookingId': bookingId,
+      'declinedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> submitApplication(DriverApplicationModel application) async {
@@ -57,6 +110,8 @@ class DriverFirestoreService {
       'status': DriverApplicationStatus.pending.name,
       'adminNotes': null,
       'submittedAt': FieldValue.serverTimestamp(),
+      'isOnline': false,
+      'onlineStatusUpdatedAt': FieldValue.serverTimestamp(),
     });
   }
 
