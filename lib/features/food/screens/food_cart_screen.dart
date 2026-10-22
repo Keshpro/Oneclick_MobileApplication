@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../services/food_cart_service.dart';
 import '../services/food_order_service.dart';
 import 'food_checkout_screen.dart';
@@ -371,7 +372,7 @@ class _CartItemCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 12),
 
                           child: Text(
-                            '${item.product.availableQuantity}',
+                            '${item.quantity}',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),

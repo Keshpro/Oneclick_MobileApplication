@@ -55,3 +55,4 @@ npm-debug.log*
 # Local Supabase CLI package files
 package.json
 package-lock.json
+firebase-secret.tmp

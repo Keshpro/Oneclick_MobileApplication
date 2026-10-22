@@ -48,8 +48,6 @@ class FoodCartService {
 
     if (item.quantity > 1) {
       item.quantity--;
-    } else {
-      items.removeAt(index);
     }
   }
 
