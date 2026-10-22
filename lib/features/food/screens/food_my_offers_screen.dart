@@ -193,16 +193,22 @@ class _FoodMyOffersScreenState extends State<FoodMyOffersScreen> {
                 final saverPrice = saverController.text.trim();
                 final quantity = quantityController.text.trim();
 
+                final parsedQuantity = int.tryParse(quantity);
+
                 if (name.isEmpty ||
                     originalPrice.isEmpty ||
                     saverPrice.isEmpty ||
-                    quantity.isEmpty) {
+                    parsedQuantity == null ||
+                    parsedQuantity <= 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill in all fields.')),
+                    const SnackBar(
+                      content: Text(
+                        'Enter all fields and a quantity greater than zero.',
+                      ),
+                    ),
                   );
                   return;
                 }
-
                 final oldOffer = sellerData.offers[index];
 
                 final updatedOffer = FoodOfferModel(
