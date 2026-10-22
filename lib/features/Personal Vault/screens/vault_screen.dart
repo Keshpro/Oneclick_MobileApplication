@@ -10,6 +10,8 @@ import 'dashboard.dart';
 import 'sharing_center_screen.dart';
 import 'share_record_screen.dart';
 import '../services/vault_service.dart';
+import 'dart:async';
+import '../models/vault_record.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -21,12 +23,14 @@ class VaultScreen extends StatefulWidget {
 
 class _VaultScreenState extends State<VaultScreen> {
   final VaultService _vaultService = VaultService();
+  StreamSubscription<List<VaultRecord>>? _recordsSubscription;
   static const background = Color(0xFFF8FAFC);
   static const purple = Color(0xFF4F46E5);
   static const ink = Color(0xFF0F172A);
   static const muted = Color(0xFF64748B);
 
   // Constants for Folders & Tags
+  // ignore: unused_field
   static const List<String> folders = [
     'Personal',
     'Work',
@@ -34,6 +38,7 @@ class _VaultScreenState extends State<VaultScreen> {
     'Medical',
     'Identity'
   ];
+  // ignore: unused_field
   static const List<String> tags = [
     'Important',
     'Urgent',
@@ -60,7 +65,7 @@ class _VaultScreenState extends State<VaultScreen> {
   }
 
   void _loadRecords() {
-    _vaultService.getRecords().listen((records) {
+    _recordsSubscription = _vaultService.getRecords().listen((records) {
       if (!mounted) return;
 
       setState(() {
@@ -69,9 +74,16 @@ class _VaultScreenState extends State<VaultScreen> {
             id: record.id,
             title: record.title,
             type: record.recordType,
-            details: record.fileName ?? record.notes,
+            details: record.notes,
             folder: record.category,
             tags: record.tags,
+            fileName: record.fileName,
+            filePath: record.filePath,
+            merchant: record.merchant,
+            purchaseDate: record.purchaseDate,
+            amount: record.amount,
+            renewalDate: record.renewalDate,
+            expiryNotification: record.expiryNotification,
             icon: Icons.description_outlined,
             favorite: record.isFavorite,
           );
@@ -100,6 +112,17 @@ class _VaultScreenState extends State<VaultScreen> {
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (sheetContext, setModalState) {
+            final searchText = searchController.text.trim().toLowerCase();
+
+            final matches = searchText.isEmpty
+                ? <_VaultItem>[]
+                : _items
+                    .where(
+                      (item) => item.title.toLowerCase().contains(searchText),
+                    )
+                    .take(5)
+                    .toList();
+
             return SafeArea(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -139,6 +162,9 @@ class _VaultScreenState extends State<VaultScreen> {
                     TextField(
                       controller: searchController,
                       autofocus: true,
+                      onChanged: (_) {
+                        setModalState(() {});
+                      },
                       decoration: InputDecoration(
                         hintText: 'Search Vault records...',
                         prefixIcon: const Icon(
@@ -153,6 +179,72 @@ class _VaultScreenState extends State<VaultScreen> {
                         ),
                       ),
                     ),
+                    if (searchText.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      const Text(
+                        'MATCHING RECORDS',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: muted,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (matches.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text('No matching record titles found.'),
+                        )
+                      else
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 220),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: matches.length,
+                            itemBuilder: (context, index) {
+                              final item = matches[index];
+
+                              return ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: Icon(
+                                  item.type == 'Account'
+                                      ? Icons.account_circle_outlined
+                                      : item.type == 'Receipt'
+                                          ? Icons.receipt_long_outlined
+                                          : Icons.description_outlined,
+                                  color: purple,
+                                ),
+                                title: Text(item.title),
+                                subtitle: Text(item.type),
+                                onTap: () {
+                                  Navigator.pop(sheetContext);
+
+                                  Navigator.push(
+                                    this.context,
+                                    MaterialPageRoute(
+                                      builder: (context) => RecordDetailsScreen(
+                                        recordId: item.id,
+                                        title: item.title,
+                                        category: item.folder,
+                                        type: item.type,
+                                        details: item.details,
+                                        tags: item.tags,
+                                        fileName: item.fileName,
+                                        filePath: item.filePath,
+                                        merchant: item.merchant,
+                                        purchaseDate: item.purchaseDate,
+                                        amount: item.amount,
+                                        renewalDate: item.renewalDate,
+                                        expiryNotification: item.expiryNotification,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                    ],
                     const SizedBox(height: 22),
                     const Text(
                       'FILTER',
@@ -170,6 +262,7 @@ class _VaultScreenState extends State<VaultScreen> {
                         'All',
                         'Documents',
                         'Accounts',
+                        'Receipts',
                         'Favorites',
                       ].map((filter) {
                         return ChoiceChip(
@@ -278,9 +371,10 @@ class _VaultScreenState extends State<VaultScreen> {
       ].join(' ').toLowerCase().contains(query);
 
       final matchesFilter = _filter == 'All' ||
-          (_filter == 'Documents' && item.type != 'Account') ||
-          (_filter == 'Accounts' && item.type == 'Account') ||
-          (_filter == 'Favorites' && item.favorite);
+        (_filter == 'Documents' && item.type == 'Document') ||
+        (_filter == 'Accounts' && item.type == 'Account') ||
+        (_filter == 'Receipts' && item.type == 'Receipt') ||
+        (_filter == 'Favorites' && item.favorite);
 
       final matchesFolder = _folder == null || item.folder == _folder;
       final matchesTag = _tag == null || item.tags.contains(_tag);
@@ -297,6 +391,7 @@ class _VaultScreenState extends State<VaultScreen> {
 
   void _shareRecord(_VaultItem item) {
     final shareItem = ShareRecordItem(
+      recordId: item.id,
       title: item.title,
       subtitle: '${item.type} • ${item.details}',
       icon: item.icon,
@@ -566,92 +661,47 @@ class _VaultScreenState extends State<VaultScreen> {
                     style: const TextStyle(color: muted),
                   ),
                   const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _VaultSearchSurface(
-                          padding: EdgeInsets.zero,
-                          child: TextField(
-                            onChanged: (value) {
-                              setState(() => _query = value);
-                            },
-                            decoration: const InputDecoration(
-                              hintText: 'Search items, tags, folders...',
-                              prefixIcon: _VaultReferenceIcon(
-                                Icons.search,
-                                color: muted,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.all(16),
+                  
+                  
+                  _VaultSearchSurface(
+                    padding: EdgeInsets.zero,
+                    child: InkWell(
+                      onTap: _showSearchFilterPanel,
+                      borderRadius: BorderRadius.circular(16),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 15,
+                        ),
+                        child: Row(
+                          children: [
+                            _VaultReferenceIcon(
+                              Icons.search,
+                              color: muted,
                             ),
-                          ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Search items, tags, folders...',
+                                style: TextStyle(
+                                  color: muted,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            _VaultReferenceIcon(
+                              Icons.tune,
+                              color: purple,
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      _surface(
-                        padding: const EdgeInsets.all(4),
-                        child: IconButton(
-                          tooltip: 'Filter & Search',
-                          onPressed: _showSearchFilterPanel,
-                          icon: const _VaultReferenceIcon(
-                            Icons.tune,
-                            color: purple,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  _horizontal(
-                    ['All', 'Documents', 'Accounts', 'Favorites']
-                        .map(
-                          (filter) => ChoiceChip(
-                            label: Text(filter),
-                            selected: _filter == filter,
-                            selectedColor: const Color(0xFFE0E7FE),
-                            onSelected: (_) {
-                              setState(() => _filter = filter);
-                            },
-                          ),
-                        )
-                        .toList(),
-                  ),
-                  const SizedBox(height: 24),
-                  _heading('FOLDERS & TAGS'),
-                  const SizedBox(height: 12),
-                  _horizontal(
-                    folders.map((folder) {
-                      final count = _items
-                          .where((item) => item.folder == folder)
-                          .length;
-                      return FilterChip(
-                        avatar: const _VaultReferenceIcon(
-                          Icons.folder_outlined,
-                          size: 18,
-                        ),
-                        label: Text('$folder  $count'),
-                        selected: _folder == folder,
-                        onSelected: (selected) {
-                          setState(() {
-                            _folder = selected ? folder : null;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 12),
-                  _horizontal(
-                    tags.map((tag) {
-                      return FilterChip(
-                        label: Text('#$tag'),
-                        selected: _tag == tag,
-                        onSelected: (selected) {
-                          setState(() => _tag = selected ? tag : null);
-                        },
-                      );
-                    }).toList(),
-                  ),
+
+
                   const SizedBox(height: 28),
+
                   _heading(
                     'PINNED QUICK ACCESS',
                     trailing: '${pinned.length} items',
@@ -879,12 +929,12 @@ class _VaultScreenState extends State<VaultScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                const Expanded(
-                  child: Text(
-                    'Sample record',
-                    style: TextStyle(color: muted, fontSize: 12),
-                  ),
+                Expanded(
+                child: Text(
+                  item.folder,
+                  style: const TextStyle(color: muted, fontSize: 12),
                 ),
+              ),
                 IconButton(
                   tooltip: 'Share',
                   onPressed: () => _shareRecord(item),
@@ -911,6 +961,13 @@ class _VaultScreenState extends State<VaultScreen> {
                           type: item.type,
                           details: item.details,
                           tags: item.tags,
+                          fileName: item.fileName,
+                          filePath: item.filePath,
+                          merchant: item.merchant,
+                          purchaseDate: item.purchaseDate,
+                          amount: item.amount,
+                          renewalDate: item.renewalDate,
+                          expiryNotification: item.expiryNotification,
                         ),
                       ),
                     );
@@ -943,6 +1000,13 @@ class _VaultScreenState extends State<VaultScreen> {
                 type: item.type,
                 details: item.details,
                 tags: item.tags,
+                fileName: item.fileName,
+                filePath: item.filePath,
+                merchant: item.merchant,
+                purchaseDate: item.purchaseDate,
+                amount: item.amount,
+                renewalDate: item.renewalDate,
+                expiryNotification: item.expiryNotification,
               ),
             ),
           );
@@ -1104,6 +1168,12 @@ class _VaultScreenState extends State<VaultScreen> {
   }) {
     return _VaultGlassCard(padding: padding, child: child);
   }
+
+  @override
+void dispose() {
+  _recordsSubscription?.cancel();
+  super.dispose();
+}
 }
 
 class _VaultItem {
@@ -1115,6 +1185,14 @@ class _VaultItem {
   final List<String> tags;
   final String? fileName;
   final String? filePath;
+
+  // Receipt information
+  final String? merchant;
+  final DateTime? purchaseDate;
+  final String? amount;
+  final DateTime? renewalDate;
+  final bool? expiryNotification;
+
   final IconData icon;
   bool favorite;
 
@@ -1127,6 +1205,11 @@ class _VaultItem {
     required this.tags,
     this.fileName,
     this.filePath,
+    this.merchant,
+    this.purchaseDate,
+    this.amount,
+    this.renewalDate,
+    this.expiryNotification,
     required this.icon,
     this.favorite = false,
   });
@@ -1280,6 +1363,7 @@ class _VaultPulseDot extends StatefulWidget {
     required this.color,
     required this.size,
     this.ping = false,
+    // ignore: unused_element_parameter
     this.animate = true,
   });
   final Color color;
@@ -1354,7 +1438,11 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
 }
 
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(this.icon, {this.color});
+  const _VaultNavGlyph(
+  this.icon, {
+  // ignore: unused_element_parameter
+  this.color,
+});
   final IconData icon;
   final Color? color;
 

@@ -33,32 +33,13 @@ class DocumentPackMatchesScreen extends StatelessWidget {
                   _configuration(),
                   const SizedBox(height: 28),
 
-                  const Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'CHECKLIST VALIDATION (4 ITEMS)',
-                          style: TextStyle(
-                            color: muted,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        Icons.auto_awesome,
-                        color: purple,
-                        size: 17,
-                      ),
-                      SizedBox(width: 5),
-                      Text(
-                        'AI Paired',
-                        style: TextStyle(
-                          color: purple,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
+                  const Text(
+                    'CHECKLIST VALIDATION (4 ITEMS)',
+                    style: TextStyle(
+                      color: muted,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                   ),
 
                   const SizedBox(height: 18),

@@ -77,8 +77,27 @@ final record = VaultRecord(
   }
 
 Future<void> deleteRecord(String recordId) async {
-  await _recordsCollection.doc(recordId).delete();
+  final recordRef = _recordsCollection.doc(recordId);
+
+  // Retrieve the record before deleting it.
+  final snapshot = await recordRef.get();
+
+  if (!snapshot.exists) {
+    throw Exception('Record not found.');
+  }
+
+  final data = snapshot.data();
+  final filePath = data?['filePath'] as String?;
+
+  // Delete the uploaded file from Supabase first.
+  if (filePath != null && filePath.isNotEmpty) {
+    await _storageService.deleteFile(path: filePath);
+  }
+
+  // Delete the Firestore record after successful file deletion.
+  await recordRef.delete();
 }
+
 Future<void> updateRecord({
   required String recordId,
   required String title,
@@ -86,15 +105,52 @@ Future<void> updateRecord({
   required String recordType,
   required String notes,
   required List<String> tags,
+  DateTime? renewalDate,
+  bool? expiryNotification,
+  String? merchant,
+  DateTime? purchaseDate,
+  String? amount,
 }) async {
-  await _recordsCollection.doc(recordId).update({
+  final updates = <String, dynamic>{
     'title': title,
     'category': category,
     'recordType': recordType,
     'notes': notes,
     'tags': tags,
+  };
+
+  if (renewalDate != null) {
+    updates['renewalDate'] = Timestamp.fromDate(renewalDate);
+  }
+
+  if (expiryNotification != null) {
+    updates['expiryNotification'] = expiryNotification;
+  }
+
+  if (merchant != null) {
+    updates['merchant'] = merchant;
+  }
+
+  if (purchaseDate != null) {
+    updates['purchaseDate'] = Timestamp.fromDate(purchaseDate);
+  }
+
+  if (amount != null) {
+    updates['amount'] = amount;
+  }
+
+  await _recordsCollection.doc(recordId).update(updates);
+}
+
+Future<void> updateRecordCategory({
+  required String recordId,
+  required String category,
+}) async {
+  await _recordsCollection.doc(recordId).update({
+    'category': category,
   });
 }
+
 Future<void> updateFavorite({
   required String recordId,
   required bool isFavorite,

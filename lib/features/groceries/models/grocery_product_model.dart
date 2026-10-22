@@ -7,6 +7,7 @@ class GroceryProduct {
   final double? discountPrice;
   final String imageUrl;
   final int stock;
+ 
 
   // Multi-Seller fields
   final String sellerId;

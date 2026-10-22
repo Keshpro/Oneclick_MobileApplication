@@ -5,6 +5,7 @@ class SharedRecord {
   final String ownerId;
   final String ownerEmail;
   final String recordTitle;
+  final String? recordId;
   final String recipientName;
   final String recipientEmail;
   final String permission;
@@ -17,6 +18,7 @@ class SharedRecord {
     required this.ownerId,
     required this.ownerEmail,
     required this.recordTitle,
+    this.recordId,
     required this.recipientName,
     required this.recipientEmail,
     required this.permission,
@@ -30,6 +32,7 @@ class SharedRecord {
       'ownerId': ownerId,
       'ownerEmail': ownerEmail,
       'recordTitle': recordTitle,
+      'recordId': recordId,
       'recipientName': recipientName,
       'recipientEmail': recipientEmail,
       'permission': permission,
@@ -49,6 +52,7 @@ class SharedRecord {
       ownerId: map['ownerId'] ?? '',
       ownerEmail: map['ownerEmail'] ?? map['ownerId'] ?? '',
       recordTitle: map['recordTitle'] ?? '',
+      recordId: map['recordId'] as String?,
       recipientName: map['recipientName'] ?? '',
       recipientEmail: map['recipientEmail'] ?? '',
       permission: map['permission'] ?? 'View only',

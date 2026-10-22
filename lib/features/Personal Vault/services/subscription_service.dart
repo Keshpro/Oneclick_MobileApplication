@@ -187,6 +187,17 @@ class SubscriptionService {
         .update(updateData);
   }
 
+  Future<void> updateRenewalReminders({
+  required String subscriptionId,
+  required bool enabled,
+}) async {
+  await _subscriptionsCollection
+      .doc(subscriptionId)
+      .update({
+    'renewalReminders': enabled,
+  });
+}
+
   Future<void> cancelSubscription(
   String subscriptionId,
 ) async {

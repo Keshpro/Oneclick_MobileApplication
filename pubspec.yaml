@@ -19,6 +19,8 @@ dependencies:
   flutter:
     sdk: flutter
 
+  url_launcher: 6.3.3
+
   # iOS-style icons
   cupertino_icons: ^1.0.8
 

@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
 import 'smart_upload_review_screen.dart';
-import 'add_account_screen.dart';
+import '../services/vault_service.dart';
 
 class AddRecordScreen extends StatefulWidget {
-  const AddRecordScreen({super.key});
+  final String initialRecordType;
+
+  const AddRecordScreen({
+    super.key,
+    this.initialRecordType = 'Document',
+  });
 
   @override
   State<AddRecordScreen> createState() => _AddRecordScreenState();
@@ -18,22 +23,91 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   static const ink = Color(0xFF303344);
   static const muted = Color(0xFF686C7C);
 
+  final VaultService _vaultService = VaultService();
   final _titleController = TextEditingController();
 
   final _notesController = TextEditingController();
   final _merchantController = TextEditingController();
   final _amountController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _recoveryEmailController = TextEditingController();
+  final _recoveryPhoneController = TextEditingController();
+  final _recoveryInstructionsController = TextEditingController();
+
+  bool _twoFactorEnabled = false;
+  bool _hasBackupCodes = false;
 
   DateTime _purchaseDate = DateTime.now();
 
-  String _recordType = 'Document';
+  late String _recordType;
+
+  @override
+  void initState() {
+    super.initState();
+    _recordType = widget.initialRecordType;
+    _category = _categoriesForRecordType.first;
+  }
   String _category = 'Health & Medical';
-  DateTime _renewalDate = DateTime(2025, 12, 31);
+  DateTime _renewalDate = DateTime.now();
+  bool _renewalDateSelected = false;
   bool _expiryNotification = true;
   bool _showSampleFile = false;
   String? _selectedFileName;
   PlatformFile? _selectedFile;
 
+Future<void> _saveAccount() async {
+  final title = _titleController.text.trim();
+  final username = _usernameController.text.trim();
+
+  if (title.isEmpty || username.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please enter an account name and username.'),
+      ),
+    );
+    return;
+  }
+
+  final notes = [
+    'Username: $username',
+    if (_recoveryEmailController.text.trim().isNotEmpty)
+      'Recovery Email: ${_recoveryEmailController.text.trim()}',
+    if (_recoveryPhoneController.text.trim().isNotEmpty)
+      'Recovery Phone: ${_recoveryPhoneController.text.trim()}',
+    'Two-Factor Authentication: ${_twoFactorEnabled ? 'Enabled' : 'Not enabled'}',
+    'Backup Codes: ${_hasBackupCodes ? 'Available' : 'Not available'}',
+    if (_recoveryInstructionsController.text.trim().isNotEmpty)
+      'Recovery Instructions: ${_recoveryInstructionsController.text.trim()}',
+    if (_notesController.text.trim().isNotEmpty)
+      'Notes: ${_notesController.text.trim()}',
+  ].join('\n');
+
+  try {
+    await _vaultService.addRecord(
+      title: title,
+      recordType: 'Account',
+      category: _category,
+      notes: notes,
+      tags: const ['account'],
+      renewalDate: DateTime.now(),
+      expiryNotification: false,
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Account saved to Vault')),
+    );
+
+    Navigator.pop(context);
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to save account: $e')),
+    );
+  }
+}
 
   @override
   void dispose() {
@@ -41,8 +115,14 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     _notesController.dispose();
     _merchantController.dispose();
     _amountController.dispose();
+
+    _usernameController.dispose();
+    _recoveryEmailController.dispose();
+    _recoveryPhoneController.dispose();
+    _recoveryInstructionsController.dispose();
+
     super.dispose();
-  }
+}
 
   Future<void> _pickDate() async {
     final date = await showDatePicker(
@@ -54,7 +134,10 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
 
     if (!mounted || date == null) return;
 
-    setState(() => _renewalDate = date);
+    setState(() {
+      _renewalDate = date;
+      _renewalDateSelected = true;
+    });
   }
 
   Future<void> _pickPurchaseDate() async {
@@ -73,6 +156,9 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
 }
 
   String get _formattedDate {
+    if (!_renewalDateSelected) {
+    return 'Select date';
+  }
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
@@ -166,19 +252,66 @@ setState(() {
                           ],
                         ),
 
+                        // Common title field
                         const SizedBox(height: 34),
+
+                        if (_recordType == 'Account') ...[
+                          const Text(
+                            'Account Information',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: ink,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Add the basic information used to identify this account.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: muted,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
                         _label(_titleLabel),
                         const SizedBox(height: 12),
                         _inputSurface(
-                          child: TextField(
-                            controller: _titleController,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              color: ink,
+                        child: TextField(
+                          controller: _titleController,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            color: ink,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: _recordType == 'Account'
+                                ? 'e.g. Gmail, GitHub, NSBM Portal'
+                                : null,
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 18,
                             ),
+                          ),
+                        ),
+                      ),
+
+                      // Account-specific fields
+                      if (_recordType == 'Account') ...[
+                        const SizedBox(height: 20),
+                        _categoryField(),
+                        const SizedBox(height: 24),
+
+                        _label('EMAIL OR USERNAME'),
+                        const SizedBox(height: 12),
+                        _inputSurface(
+                          child: TextField(
+                            controller: _usernameController,
                             decoration: const InputDecoration(
+                              hintText: 'e.g. name@gmail.com or username',
                               border: InputBorder.none,
-                              isDense: true,
                               contentPadding: EdgeInsets.symmetric(
                                 horizontal: 20,
                                 vertical: 18,
@@ -187,131 +320,293 @@ setState(() {
                           ),
                         ),
 
-                        if (_recordType == 'Receipt') ...[
-  const SizedBox(height: 28),
+                        const SizedBox(height: 32),
 
-  _label('MERCHANT / STORE'),
-  const SizedBox(height: 12),
-
-  _inputSurface(
-    child: TextField(
-      controller: _merchantController,
-      decoration: const InputDecoration(
-        hintText: 'Enter merchant or store name',
-        border: InputBorder.none,
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 18,
-        ),
-      ),
-    ),
-  ),
-
-  const SizedBox(height: 28),
-
-  Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _label('PURCHASE DATE'),
-            const SizedBox(height: 12),
-            _inputSurface(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(30),
-                onTap: _pickPurchaseDate,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _formattedPurchaseDate,
-                          style: const TextStyle(
+                        const Text(
+                          'Recovery Information',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
                             color: ink,
-                            fontSize: 16,
                           ),
                         ),
-                      ),
-                      const Icon(
-                        Icons.calendar_month_outlined,
-                        color: purple,
-                        size: 22,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      const SizedBox(width: 16),
-
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _label('AMOUNT'),
-            const SizedBox(height: 12),
-            _inputSurface(
-              child: TextField(
-                controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  hintText: '0.00',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 18,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ],
-  ),
-],
-
-                        const SizedBox(height: 32),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _label('DOCUMENT SCAN & FILES'),
-                            ),
-                            const SizedBox(width: 8),
-                            _aiBadge(),
-                          ],
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Keep the information you may need if you lose account access.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: muted,
+                          ),
                         ),
-                        const SizedBox(height: 14),
-                        _uploadCard(),
+                        const SizedBox(height: 24),
 
-                        const SizedBox(height: 30),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(child: _categoryField()),
-                            const SizedBox(width: 16),
-                            Expanded(child: _dateField()),
-                          ],
-                        ),
-
-                        const SizedBox(height: 26),
-                        _notificationCard(),
-
-                        const SizedBox(height: 32),
-                        _label('CONFIDENTIAL NOTES'),
+                        _label('RECOVERY EMAIL'),
                         const SizedBox(height: 12),
+                        _inputSurface(
+                          child: TextField(
+                            controller: _recoveryEmailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: const InputDecoration(
+                              hintText: 'Enter recovery email (optional)',
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 18,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        _label('RECOVERY PHONE'),
+                        const SizedBox(height: 12),
+                        _inputSurface(
+                          child: TextField(
+                            controller: _recoveryPhoneController,
+                            keyboardType: TextInputType.phone,
+                            decoration: const InputDecoration(
+                              hintText: 'Enter recovery phone (optional)',
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 18,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+
+                        // Two-Factor Authentication box
+                        _inputSurface(
+                          radius: 28,
+                          child: SwitchListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            title: const Text(
+                              'Two-Factor Authentication',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: ink,
+                              ),
+                            ),
+                            subtitle: const Text(
+                              'Is 2FA enabled for this account?',
+                              style: TextStyle(color: muted, fontSize: 13),
+                            ),
+                            value: _twoFactorEnabled,
+                            activeThumbColor: purple,
+                            onChanged: (value) {
+                              setState(() {
+                                _twoFactorEnabled = value;
+                              });
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Backup Codes box
+                        _inputSurface(
+                          radius: 28,
+                          child: SwitchListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            title: const Text(
+                              'Backup Codes',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: ink,
+                              ),
+                            ),
+                            subtitle: const Text(
+                              'Do you have backup codes stored safely?',
+                              style: TextStyle(color: muted, fontSize: 13),
+                            ),
+                            value: _hasBackupCodes,
+                            activeThumbColor: purple,
+                            onChanged: (value) {
+                              setState(() {
+                                _hasBackupCodes = value;
+                              });
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        const SizedBox(height: 20),
+
+                        _label('RECOVERY INSTRUCTIONS'),
+                        const SizedBox(height: 12),
+                        _inputSurface(
+                          radius: 28,
+                          child: TextField(
+                            controller: _recoveryInstructionsController,
+                            minLines: 3,
+                            maxLines: 5,
+                            decoration: const InputDecoration(
+                              hintText: 'Recovery steps (optional — no passwords or codes)',
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.all(20),
+                            ),
+                          ),
+                        ),
+                      ],
+
+                          // Receipt-specific fields
+                          if (_recordType == 'Receipt') ...[
+                          const SizedBox(height: 28),
+
+                          _label('MERCHANT / STORE'),
+                          const SizedBox(height: 12),
+
+                          _inputSurface(
+                            child: TextField(
+                              controller: _merchantController,
+                              decoration: const InputDecoration(
+                                hintText: 'Enter merchant or store name',
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 28),
+
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _label('PURCHASE DATE'),
+                                    const SizedBox(height: 12),
+                                    _inputSurface(
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(30),
+                                        onTap: _pickPurchaseDate,
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 14,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  _formattedPurchaseDate,
+                                                  style: const TextStyle(
+                                                    color: ink,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                              ),
+                                              const Icon(
+                                                Icons.calendar_month_outlined,
+                                                color: purple,
+                                                size: 22,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(width: 16),
+
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _label('AMOUNT'),
+                                    const SizedBox(height: 12),
+                                    _inputSurface(
+                                      child: TextField(
+                                        controller: _amountController,
+                                        keyboardType: const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
+                                        decoration: const InputDecoration(
+                                          hintText: '0.00',
+                                          border: InputBorder.none,
+                                          contentPadding: EdgeInsets.symmetric(
+                                            horizontal: 20,
+                                            vertical: 18,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+
+                        if (_recordType != 'Account') ...[
+                          const SizedBox(height: 32),
+                          _label('DOCUMENT SCAN & FILES'),
+                          const SizedBox(height: 14),
+                          _uploadCard(),
+                        ],
+
+                        if (_recordType != 'Account') ...[
+                          const SizedBox(height: 30),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: _categoryField()),
+                              const SizedBox(width: 16),
+                              Expanded(child: _dateField()),
+                            ],
+                          ),
+                        ],
+
+                        if (_recordType != 'Account') ...[
+                          const SizedBox(height: 26),
+                          _notificationCard(),
+                        ],
+
+                        const SizedBox(height: 32),
+
+                        if (_recordType == 'Account') ...[
+                          const Text(
+                            'Additional Notes',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: ink,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Add any extra information about this account (optional).',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: muted,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ] else ...[
+                          _label('CONFIDENTIAL NOTES'),
+                          const SizedBox(height: 12),
+                        ],
                         _inputSurface(
                           radius: 28,
                           child: TextField(
@@ -339,6 +634,11 @@ setState(() {
                           child: InkWell(
                             borderRadius: BorderRadius.circular(28),
                             onTap: () {
+                              if (_recordType == 'Account') {
+                                _saveAccount();
+                                return;
+                              }
+
                               if (_titleController.text.trim().isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -350,24 +650,44 @@ setState(() {
                                 return;
                               }
 
+                              if (_recordType != 'Account' && !_renewalDateSelected) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Please select a renewal or expiry date.',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => SmartUploadReviewScreen(
-                                    title: _titleController.text.trim(),
-                                    recordType: _recordType,
-                                    category: _category,
-                                    renewalDate: _renewalDate,
-                                    expiryNotification: _expiryNotification,
-                                    notes: _notesController.text.trim(),
-                                    tags: const [],
-                                    selectedFile: _selectedFile,
-                                  ),
+                                  title: _titleController.text.trim(),
+                                  recordType: _recordType,
+                                  category: _category,
+                                  renewalDate: _renewalDate,
+                                  expiryNotification: _expiryNotification,
+                                  notes: _notesController.text.trim(),
+                                  tags: const [],
+                                  selectedFile: _selectedFile,
+                                  merchant: _recordType == 'Receipt'
+                                      ? _merchantController.text.trim()
+                                      : null,
+                                  purchaseDate: _recordType == 'Receipt'
+                                      ? _purchaseDate
+                                      : null,
+                                  amount: _recordType == 'Receipt'
+                                      ? _amountController.text.trim()
+                                      : null,
+                                ),
                                 ),
                               );
                             },
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 23,
                               ),
@@ -380,17 +700,19 @@ setState(() {
                                     size: 21,
                                   ),
                                   SizedBox(width: 10),
-                                  Flexible(
-                                    child: Text(
-                                      'Continue to Smart Review',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w600,
-                                        color: purple,
-                                      ),
+                                 Flexible(
+                                  child: Text(
+                                    _recordType == 'Account'
+                                        ? 'Save Account to Vault'
+                                        : 'Continue to Review',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: purple,
                                     ),
                                   ),
+                                ),
                                   SizedBox(width: 10),
                                   Icon(
                                     Icons.arrow_forward,
@@ -487,16 +809,6 @@ Widget _header() {
       child: InkWell(
         borderRadius: BorderRadius.circular(30),
         onTap: () {
-          if (title == 'Account') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const AddAccountScreen(),
-              ),
-            );
-            return;
-          }
-
           setState(() {
             _recordType = title;
             _category = _categoriesForRecordType.first;
@@ -598,14 +910,14 @@ Widget _header() {
                   icon: Icons.camera_alt_outlined,
                   color: purple,
                   onTap: () {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text(
-        'Camera scanning is available when running OneClick on a supported mobile device.',
-      ),
-    ),
-  );
-},
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Camera scanning is available when running OneClick on a supported mobile device.',
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 12),
@@ -681,17 +993,17 @@ Widget _header() {
     );
   }
 
-List<String> get _categoriesForRecordType {
-  switch (_recordType) {
-    case 'Account':
-      return [
-        'Email',
-        'Banking',
-        'Social Media',
-        'Cloud Storage',
-        'Work',
-        'Other',
-      ];
+  List<String> get _categoriesForRecordType {
+    switch (_recordType) {
+      case 'Account':
+        return [
+          'Email',
+          'Banking',
+          'Social Media',
+          'Cloud Storage',
+          'Work',
+          'Other',
+        ];
 
     case 'Receipt':
       return [
@@ -857,32 +1169,6 @@ String get _dateLabel {
             onChanged: (value) {
               setState(() => _expiryNotification = value);
             },
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  Widget _aiBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE0DFFF),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.auto_awesome, color: purple, size: 16),
-          SizedBox(width: 5),
-          Text(
-            'Smart Review AI',
-            style: TextStyle(
-              color: purple,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
           ),
         ],
       ),
