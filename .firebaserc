@@ -1,5 +1,7 @@
 {
   "projects": {
     "default": "oneclick-026"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }

@@ -22,6 +22,7 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
   final allergenController = TextEditingController();
 
   String selectedCategory = 'Bakery';
+  bool _isSaving = false;
 
   String selectedFromTime = '5:00 PM';
   String selectedUntilTime = '8:00 PM';
@@ -52,12 +53,17 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
   // CREATE OFFER
   // ------------------------------------------------------------
 
-  void createOffer() {
+  Future<void> createOffer() async {
+    if (_isSaving) return;
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    // Create the new food offer
+    setState(() {
+      _isSaving = true;
+    });
+
     final offer = FoodOfferModel(
       foodName: foodNameController.text.trim(),
       category: selectedCategory,
@@ -70,25 +76,40 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
       allergens: allergenController.text.trim(),
     );
 
-    // ------------------------------------------------------------
-    // SAVE OFFER TO SHARED SELLER DATA
-    // ------------------------------------------------------------
+    try {
+      await FoodSellerDataService.instance.addOffer(offer);
 
-    FoodSellerDataService.instance.offers.add(offer);
+      if (!mounted) return;
 
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Food Saver offer created successfully!'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Food Saver offer created successfully!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
 
-    // Open My Offers screen
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const FoodMyOffersScreen()),
-    );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const FoodMyOffersScreen()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not save offer. Please try again.'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      debugPrint('Create food offer error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 
   @override
@@ -438,13 +459,23 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
                 height: 52,
 
                 child: ElevatedButton.icon(
-                  onPressed: createOffer,
-
-                  icon: const Icon(Icons.add_circle_outline),
-
-                  label: const Text(
-                    'Create Food Saver Offer',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  onPressed: _isSaving ? null : createOffer,
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.add_circle_outline),
+                  label: Text(
+                    _isSaving ? 'Saving Offer...' : 'Create Food Saver Offer',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),

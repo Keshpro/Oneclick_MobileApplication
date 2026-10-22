@@ -4,6 +4,10 @@ import '../models/food_product.dart';
 import '../services/food_cart_service.dart';
 import 'food_cart_screen.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../models/food_offer_model.dart' as seller_model;
+
 class SaveBiteOffer extends FoodProduct {
   final String foodName;
   final String restaurantName;
@@ -27,6 +31,7 @@ class SaveBiteOffer extends FoodProduct {
 
   const SaveBiteOffer({
     required super.id,
+    super.firestoreOfferPath,
     required this.foodName,
     required this.restaurantName,
     required this.restaurantLogo,
@@ -74,6 +79,9 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   String selectedCategory = 'All';
+  List<SaveBiteOffer> firestoreOffers = [];
+  bool isLoadingFirestoreOffers = true;
+  String? firestoreOffersError;
 
   final List<String> categories = [
     'All',
@@ -81,6 +89,9 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     'Bakery',
     'Pizza',
     'Desserts',
+    'Snacks',
+    'Beverages',
+    'Other',
   ];
 
   final List<SaveBiteOffer> offers = const [
@@ -154,6 +165,137 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     ),
   ];
 
+  Future<void> _loadFirestoreOffers() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collectionGroup('offers')
+          .get();
+
+      final List<SaveBiteOffer> loadedOffers = [];
+
+      for (final document in snapshot.docs) {
+        // Only read offers belonging to a food seller.
+        final sellerReference = document.reference.parent.parent;
+        if (sellerReference == null ||
+            sellerReference.parent.id != 'food_sellers') {
+          continue;
+        }
+
+        final sellerSnapshot = await sellerReference.get();
+        if (!sellerSnapshot.exists) continue;
+
+        final sellerData = sellerSnapshot.data() ?? <String, dynamic>{};
+
+        final role = (sellerData['role'] ?? '').toString().toLowerCase();
+        final sellerStatus = (sellerData['status'] ?? '')
+            .toString()
+            .toLowerCase();
+
+        // Only show approved, active food sellers.
+        if (role != 'foodseller' || sellerStatus != 'active') continue;
+
+        final data = document.data();
+        final offerStatus = (data['status'] ?? 'ACTIVE')
+            .toString()
+            .toUpperCase();
+
+        if (offerStatus != 'ACTIVE') continue;
+
+        final offer = seller_model.FoodOfferModel.fromFirestore(document);
+
+        final originalPrice = double.tryParse(offer.originalPrice) ?? 0;
+        final saverPrice = double.tryParse(offer.saverPrice) ?? 0;
+        final quantity = int.tryParse(offer.quantity) ?? 0;
+
+        if (offer.foodName.trim().isEmpty ||
+            originalPrice <= 0 ||
+            saverPrice < 0 ||
+            quantity <= 0) {
+          continue;
+        }
+
+        final providerDetails =
+            sellerData['providerDetails'] as Map<String, dynamic>? ?? {};
+
+        final restaurantName =
+            (providerDetails['restaurantName'] ??
+                    sellerData['storeName'] ??
+                    sellerData['businessName'] ??
+                    'Food Seller')
+                .toString();
+
+        loadedOffers.add(
+          SaveBiteOffer(
+            id: document.id,
+            foodName: offer.foodName,
+            restaurantName: restaurantName,
+            restaurantLogo:
+                'assets/images/food/restaurants/cocos_bakery_logo.webp',
+            foodImage: 'assets/images/food/dishes/bakery_pack.webp',
+            originalPrice: originalPrice,
+            saverPrice: saverPrice,
+            quantity: quantity,
+            endingTime: offer.availableUntil,
+            rating: 0.0,
+            description: offer.description,
+            category: _customerCategory(offer.category),
+            collectionTime: '${offer.availableFrom} - ${offer.availableUntil}',
+            allergens: offer.allergens,
+            firestoreOfferPath: document.reference.path,
+          ),
+        );
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        firestoreOffers = loadedOffers;
+        isLoadingFirestoreOffers = false;
+        firestoreOffersError = null;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('SaveBite Firestore load error: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (!mounted) return;
+
+      setState(() {
+        isLoadingFirestoreOffers = false;
+        firestoreOffersError = 'Could not load offers. Please try again.';
+      });
+    }
+  }
+
+  String _customerCategory(String category) {
+    switch (category.trim().toLowerCase()) {
+      case 'rice & curry':
+      case 'rice and curry':
+      case 'fast food':
+        return 'Meals';
+      case 'dessert':
+      case 'desserts':
+        return 'Desserts';
+      case 'bakery':
+        return 'Bakery';
+      case 'pizza':
+        return 'Pizza';
+      case 'snacks':
+        return 'Snacks';
+      case 'beverages':
+        return 'Beverages';
+      case 'other':
+        return 'Other';
+      default:
+        return category;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFirestoreOffers();
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -163,9 +305,12 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
   List<SaveBiteOffer> get filteredOffers {
     final search = _searchController.text.toLowerCase().trim();
 
-    return offers.where((offer) {
+    final allOffers = [...offers, ...firestoreOffers];
+
+    return allOffers.where((offer) {
       final matchesCategory =
-          selectedCategory == 'All' || offer.category == selectedCategory;
+          selectedCategory == 'All' ||
+          offer.category.toLowerCase() == selectedCategory.toLowerCase();
 
       final matchesSearch =
           search.isEmpty ||
@@ -297,7 +442,36 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
 
             const SizedBox(height: 14),
 
-            if (filtered.isEmpty)
+            if (isLoadingFirestoreOffers)
+              const Padding(
+                padding: EdgeInsets.all(30),
+                child: Center(
+                  child: CircularProgressIndicator(color: Color(0xFF2E7D32)),
+                ),
+              )
+            else if (firestoreOffersError != null)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Text(firestoreOffersError!, textAlign: TextAlign.center),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            isLoadingFirestoreOffers = true;
+                            firestoreOffersError = null;
+                          });
+                          _loadFirestoreOffers();
+                        },
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (filtered.isEmpty)
               _buildEmptyState()
             else
               ListView.separated(

@@ -12,43 +12,95 @@ class FoodMyOffersScreen extends StatefulWidget {
 
 class _FoodMyOffersScreenState extends State<FoodMyOffersScreen> {
   final sellerData = FoodSellerDataService.instance;
+  bool _isLoading = true;
+  String? _loadError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOffers();
+  }
+
+  Future<void> _loadOffers() async {
+    try {
+      await sellerData.loadOffers();
+
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _loadError = null;
+      });
+    } catch (e) {
+      debugPrint('Load offers error: $e');
+
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _loadError = 'Could not load offers. Please try again.';
+      });
+    }
+  }
 
   // ------------------------------------------------------------
   // PAUSE / RESUME OFFER
   // ------------------------------------------------------------
 
-  void toggleOfferStatus(int index) {
+  Future<void> toggleOfferStatus(int index) async {
     final offer = sellerData.offers[index];
+    final newStatus = offer.status == 'PAUSED' ? 'ACTIVE' : 'PAUSED';
 
-    setState(() {
-      if (offer.status == 'PAUSED') {
-        offer.status = 'ACTIVE';
-      } else {
-        offer.status = 'PAUSED';
-      }
-    });
+    try {
+      await sellerData.setOfferStatus(offer, newStatus);
 
-    final message = offer.status == 'PAUSED'
-        ? '${offer.foodName} paused successfully.'
-        : '${offer.foodName} resumed successfully.';
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+      setState(() {});
+
+      final message = newStatus == 'PAUSED'
+          ? '${offer.foodName} paused successfully.'
+          : '${offer.foodName} resumed successfully.';
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      debugPrint('Update offer status error: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not update offer status.')),
+      );
+    }
   }
 
   // ------------------------------------------------------------
   // DELETE OFFER
   // ------------------------------------------------------------
 
-  void deleteOffer(int index) {
-    final offerName = sellerData.offers[index].foodName;
+  Future<void> deleteOffer(int index) async {
+    final offer = sellerData.offers[index];
+    final offerName = offer.foodName;
 
-    setState(() {
-      sellerData.offers.removeAt(index);
-    });
+    try {
+      await sellerData.deleteOffer(offer);
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('$offerName deleted.')));
+      if (!mounted) return;
+
+      setState(() {});
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('$offerName deleted.')));
+    } catch (e) {
+      debugPrint('Delete offer error: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not delete offer. Please try again.'),
+        ),
+      );
+    }
   }
 
   // ------------------------------------------------------------
@@ -135,32 +187,65 @@ class _FoodMyOffersScreenState extends State<FoodMyOffersScreen> {
 
             // SAVE
             ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  final oldOffer = sellerData.offers[index];
+              onPressed: () async {
+                final name = nameController.text.trim();
+                final originalPrice = originalController.text.trim();
+                final saverPrice = saverController.text.trim();
+                final quantity = quantityController.text.trim();
 
-                  sellerData.offers[index] = FoodOfferModel(
-                    foodName: nameController.text.trim(),
-                    category: oldOffer.category,
-                    originalPrice: originalController.text.trim(),
-                    saverPrice: saverController.text.trim(),
-                    quantity: quantityController.text.trim(),
-                    availableFrom: oldOffer.availableFrom,
-                    availableUntil: oldOffer.availableUntil,
-                    description: oldOffer.description,
-                    allergens: oldOffer.allergens,
-
-                    // IMPORTANT:
-                    // Keep the existing ACTIVE / PAUSED status.
-                    status: oldOffer.status,
+                if (name.isEmpty ||
+                    originalPrice.isEmpty ||
+                    saverPrice.isEmpty ||
+                    quantity.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill in all fields.')),
                   );
-                });
+                  return;
+                }
 
-                Navigator.pop(dialogContext);
+                final oldOffer = sellerData.offers[index];
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Offer updated successfully.')),
+                final updatedOffer = FoodOfferModel(
+                  id: oldOffer.id,
+                  foodName: name,
+                  category: oldOffer.category,
+                  originalPrice: originalPrice,
+                  saverPrice: saverPrice,
+                  quantity: quantity,
+                  availableFrom: oldOffer.availableFrom,
+                  availableUntil: oldOffer.availableUntil,
+                  description: oldOffer.description,
+                  allergens: oldOffer.allergens,
+                  status: oldOffer.status,
                 );
+
+                try {
+                  await sellerData.updateOffer(updatedOffer);
+
+                  if (!mounted) return;
+
+                  setState(() {});
+
+                  Navigator.pop(dialogContext);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Offer updated successfully.'),
+                    ),
+                  );
+                } catch (e) {
+                  debugPrint('Edit offer error: $e');
+
+                  if (!mounted) return;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Could not update offer. Please try again.',
+                      ),
+                    ),
+                  );
+                }
               },
               child: const Text('Save'),
             ),
@@ -192,31 +277,49 @@ class _FoodMyOffersScreenState extends State<FoodMyOffersScreen> {
       // ------------------------------------------------------------
       // BODY
       // ------------------------------------------------------------
-      body: sellerData.offers.isEmpty
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _loadError != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_loadError!, textAlign: TextAlign.center),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _isLoading = true;
+                        });
+                        _loadOffers();
+                      },
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : sellerData.offers.isEmpty
           ? _emptyState()
           : ListView(
               padding: const EdgeInsets.all(16),
-
               children: [
                 const Text(
                   'Your Food Saver Offers',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
-
                 const SizedBox(height: 6),
-
                 Text(
                   'Manage the surplus food offers from your store.',
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                 ),
-
                 const SizedBox(height: 20),
-
-                ...List.generate(sellerData.offers.length, (index) {
-                  final offer = sellerData.offers[index];
-
-                  return _offerCard(index, offer);
-                }),
+                ...List.generate(
+                  sellerData.offers.length,
+                  (index) => _offerCard(index, sellerData.offers[index]),
+                ),
               ],
             ),
     );

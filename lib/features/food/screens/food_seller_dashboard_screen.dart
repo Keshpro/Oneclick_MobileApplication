@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../services/food_seller_data_service.dart';
 import 'food_add_surplus_screen.dart';
@@ -19,6 +21,37 @@ class FoodSellerDashboardScreen extends StatefulWidget {
 class _FoodSellerDashboardScreenState extends State<FoodSellerDashboardScreen> {
   final sellerData = FoodSellerDataService.instance;
 
+  Future<bool> _isApprovedSeller() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return false;
+    }
+
+    final sellerDoc = await FirebaseFirestore.instance
+        .collection('food_sellers')
+        .doc(user.uid)
+        .get();
+
+    if (!sellerDoc.exists) {
+      return false;
+    }
+
+    final data = sellerDoc.data();
+
+    final isApproved =
+        data?['uid'] == user.uid &&
+        data?['role'] == 'foodSeller' &&
+        data?['status']?.toString().toLowerCase() == 'active';
+
+    if (isApproved) {
+      await FoodSellerDataService.instance.loadStoreProfile();
+      await FoodSellerDataService.instance.loadOffers();
+    }
+
+    return isApproved;
+  }
+
   // ------------------------------------------------------------
   // REFRESH DASHBOARD
   // ------------------------------------------------------------
@@ -28,7 +61,68 @@ class _FoodSellerDashboardScreenState extends State<FoodSellerDashboardScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _approvalCheck ??= _isApprovedSeller(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError || snapshot.data != true) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Seller Access')),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.lock_outline, size: 64, color: Colors.red),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Seller Access Restricted',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Your seller account is not approved or active. '
+                      'Please contact the administrator.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const HomeScreen()),
+                          (route) => false,
+                        );
+                      },
+                      icon: const Icon(Icons.home),
+                      label: const Text('Return to Customer Mode'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return _buildSellerDashboard();
+      },
+    );
+  }
+
+  Future<bool>? _approvalCheck;
+
+  Widget _buildSellerDashboard() {
     // Count active offers
     final activeOffers = sellerData.offers
         .where((offer) => offer.status == 'ACTIVE')
