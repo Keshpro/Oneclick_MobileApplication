@@ -17,11 +17,11 @@ class DocumentPackRequirementsScreen extends StatefulWidget {
 
 class _DocumentPackRequirementsScreenState
     extends State<DocumentPackRequirementsScreen> {
-  static const background = Color(0xFFE9EBF2);
-  static const card = Color(0xFFEEF0F6);
-  static const purple = Color(0xFF6667FF);
-  static const ink = Color(0xFF303344);
-  static const muted = Color(0xFF707383);
+  static const background = Color(0xFFF5F3F2);
+  static const card = Color(0xFFFFFDFC);
+  static const purple = Color(0xFF725763);
+  static const ink = Color(0xFF302B31);
+  static const muted = Color(0xFF776F77);
 
   final TextEditingController _packNameController =
     TextEditingController();
@@ -78,26 +78,9 @@ class _DocumentPackRequirementsScreenState
             'Document Pack Builder',
             style: TextStyle(
               color: ink,
-              fontSize: 22,
+              fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
-          ),
-        ),
-        _circleButton(
-          Icons.more_vert,
-          () => _message('More pack options will be connected later.'),
-        ),
-        const SizedBox(width: 10),
-        Container(
-          width: 46,
-          height: 46,
-          decoration: const BoxDecoration(
-            color: purple,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.person_outline,
-            color: Colors.white,
           ),
         ),
       ],
@@ -162,7 +145,7 @@ class _DocumentPackRequirementsScreenState
                 'NEW DOCUMENT PACK',
                 style: TextStyle(
                   color: purple,
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                   letterSpacing: .5,
                 ),
@@ -173,7 +156,7 @@ class _DocumentPackRequirementsScreenState
                 textCapitalization: TextCapitalization.words,
                 style: const TextStyle(
                   color: ink,
-                  fontSize: 19,
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
                 decoration: const InputDecoration(
@@ -327,7 +310,7 @@ Future<void> _selectRequirementsPdf() async {
             'What documents are required?',
             style: TextStyle(
               color: ink,
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -336,7 +319,7 @@ Future<void> _selectRequirementsPdf() async {
             'Upload a checklist or enter the required documents manually.',
             style: TextStyle(
               color: muted,
-              fontSize: 13,
+              fontSize: 12,
               height: 1.5,
             ),
           ),
@@ -349,7 +332,7 @@ Future<void> _selectRequirementsPdf() async {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0F1F6),
+                color: const Color(0xFFECE3E8),
                 borderRadius: BorderRadius.circular(25),
                 boxShadow: _shadow(),
               ),
@@ -373,7 +356,7 @@ Future<void> _selectRequirementsPdf() async {
                     'PDF files only',
                     style: TextStyle(
                       color: muted,
-                      fontSize: 12,
+                      fontSize: 11,
                     ),
                   ),
                 ],
@@ -388,7 +371,7 @@ Future<void> _selectRequirementsPdf() async {
               'OR',
               style: TextStyle(
                 color: muted,
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -398,7 +381,7 @@ Future<void> _selectRequirementsPdf() async {
 
           Container(
             decoration: BoxDecoration(
-              color: const Color(0xFFF0F1F6),
+              color: const Color(0xFFECE3E8),
               borderRadius: BorderRadius.circular(24),
               boxShadow: _shadow(),
             ),
@@ -454,7 +437,7 @@ Future<void> _selectRequirementsPdf() async {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
-          color: const Color(0xFFF0F1F6),
+          color: const Color(0xFFECE3E8),
           borderRadius: BorderRadius.circular(30),
           boxShadow: _shadow(),
         ),
@@ -466,7 +449,7 @@ Future<void> _selectRequirementsPdf() async {
               style: TextStyle(
                 color: purple,
                 fontWeight: FontWeight.w600,
-                fontSize: 16,
+                fontSize: 14,
               ),
             ),
             SizedBox(width: 10),
@@ -544,7 +527,7 @@ Future<void> _selectRequirementsPdf() async {
         height: 56,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: const Color(0xFFF0F1F6),
+          color: const Color(0xFFECE3E8),
           boxShadow: _shadow(),
         ),
         child: Icon(icon, color: ink),

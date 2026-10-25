@@ -37,21 +37,29 @@ class DocumentPackService {
       throw ArgumentError('A pack name and requirements are required.');
     }
 
-    final document = _collection.doc();
+    final existingId = pack.savedId?.trim();
+    if (existingId != null && existingId.isNotEmpty) {
+      // Updating an existing draft must not create another pack.
+      await _collection.doc(existingId).update({
+        ...pack.toMap(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return existingId;
+    }
 
+    final document = _collection.doc();
     await document.set({
       ...pack.toMap(),
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
-
     return document.id;
   }
 
   Stream<List<DocumentPack>> getPacks() {
     return _collection.snapshots().map(
       (snapshot) => snapshot.docs
-          .map((document) => DocumentPack.fromMap(document.data()))
+          .map((document) => DocumentPack.fromMap(document.data()).copyWith(savedId: document.id))
           .toList(),
     );
   }
@@ -61,7 +69,7 @@ class DocumentPackService {
       (snapshot) => snapshot.docs.map((document) {
         return SavedDocumentPack(
           id: document.id,
-          pack: DocumentPack.fromMap(document.data()),
+          pack: DocumentPack.fromMap(document.data()).copyWith(savedId: document.id),
         );
       }).toList(),
     );

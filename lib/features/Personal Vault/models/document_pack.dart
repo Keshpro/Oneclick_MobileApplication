@@ -49,10 +49,13 @@ class DocumentRequirement {
 class DocumentPack {
   final String name;
   final List<DocumentRequirement> requirements;
+  // Firestore document ID; null for a pack that has never been saved.
+  final String? savedId;
 
   const DocumentPack({
     required this.name,
     required this.requirements,
+    this.savedId,
   });
 
   int get totalRequirements => requirements.length;
@@ -72,10 +75,12 @@ class DocumentPack {
   DocumentPack copyWith({
     String? name,
     List<DocumentRequirement>? requirements,
+    String? savedId,
   }) {
     return DocumentPack(
       name: name ?? this.name,
       requirements: requirements ?? this.requirements,
+      savedId: savedId ?? this.savedId,
     );
   }
 
