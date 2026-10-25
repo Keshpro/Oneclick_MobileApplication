@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../controllers/grocery_controller.dart';
 import '../../models/grocery_product_model.dart';
 
-class ProductDetailsScreen extends StatelessWidget {
+class ProductDetailsScreen extends StatefulWidget {
   final GroceryProduct product;
   final GroceryController controller;
 
@@ -12,6 +12,40 @@ class ProductDetailsScreen extends StatelessWidget {
     required this.product,
     required this.controller,
   });
+
+  @override
+  State<ProductDetailsScreen> createState() =>
+      _ProductDetailsScreenState();
+}
+
+class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
+  int _quantity = 1;
+
+  GroceryProduct get product => widget.product;
+  GroceryController get controller => widget.controller;
+
+  int get _alreadyInCart {
+    for (final item in controller.cartItems) {
+      if (item.product.id == product.id) {
+        return item.quantity;
+      }
+    }
+    return 0;
+  }
+
+  int get _remainingStock => product.stock - _alreadyInCart;
+
+  void _increaseQuantity() {
+    if (_quantity < _remainingStock) {
+      setState(() => _quantity++);
+    }
+  }
+
+  void _decreaseQuantity() {
+    if (_quantity > 1) {
+      setState(() => _quantity--);
+    }
+  }
 
   static const _green = Color(0xFF217A4B);
   static const _background = Color(0xFFF5F8F4);
@@ -285,66 +319,110 @@ class ProductDetailsScreen extends StatelessWidget {
       ),
 
       // Add to cart
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(24),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x0D203B2B),
-              blurRadius: 20,
-              offset: Offset(0, -4),
+     // Quantity selector and Add to Cart
+bottomNavigationBar: ListenableBuilder(
+  listenable: controller,
+  builder: (context, _) {
+    final remaining = _remainingStock;
+    final canAdd = remaining > 0;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Quantity',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: _quantity > 1
+                          ? _decreaseQuantity
+                          : null,
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                    Text(
+                      '$_quantity',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: canAdd && _quantity < remaining
+                          ? _increaseQuantity
+                          : null,
+                      icon: const Icon(Icons.add_circle_outline),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton.icon(
+                onPressed: canAdd && _quantity <= remaining
+                    ? () {
+                        for (int i = 0; i < _quantity; i++) {
+                          controller.addToCart(product);
+                        }
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '$_quantity x ${product.name} added to cart',
+                            ),
+                            backgroundColor: _green,
+                          ),
+                        );
+
+                        setState(() => _quantity = 1);
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _green,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor:
+                      const Color(0xFFEBEFE9),
+                  minimumSize: const Size(double.infinity, 54),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                icon: const Icon(Icons.add_shopping_cart_rounded),
+                label: Text(
+                  canAdd ? 'Add to Cart' : 'Out of Stock',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
-        child: SafeArea(
-          top: false,
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _green,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: const Color(0xFFEBEFE9),
-              disabledForegroundColor: _muted,
-              elevation: 0,
-              minimumSize: const Size(double.infinity, 54),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            onPressed: available
-                ? () {
-                    controller.addToCart(product);
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        backgroundColor: _green,
-                        content: Text(
-                          '${product.name} added to cart',
-                        ),
-                        duration: const Duration(seconds: 1),
-                      ),
-                    );
-                  }
-                : null,
-            icon: const Icon(Icons.add_shopping_cart_rounded),
-            label: Text(
-              available ? 'Add to Cart' : 'Out of Stock',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
       ),
+    );
+  },
+), 
     );
   }
 }

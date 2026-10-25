@@ -158,6 +158,15 @@ class MyOrdersScreen extends StatelessWidget {
                           (data['status'] ?? 'pending').toString();
 
                       final statusColor = _statusColor(status);
+                      final sellerStatuses =
+                          (data['sellerStatuses'] as Map?) ?? {};
+                      final sellerItems = <String, List<Map>>{};
+                      for (final item in items) {
+                        final sellerId =
+                            (item['sellerId'] ?? '').toString();
+                        sellerItems.putIfAbsent(sellerId, () => []).add(item);
+                      }
+
 
                       final orderDate = data['orderDate'];
                       final date = orderDate is Timestamp
@@ -217,7 +226,7 @@ class MyOrdersScreen extends StatelessWidget {
                                         BorderRadius.circular(20),
                                   ),
                                   child: Text(
-                                    status.toUpperCase(),
+                                    'ORDER: ${status.toUpperCase()}',
                                     style: TextStyle(
                                       color: statusColor,
                                       fontSize: 11,
@@ -241,23 +250,105 @@ class MyOrdersScreen extends StatelessWidget {
                               height: 28,
                               color: Color(0xFFE3EADF),
                             ),
-                            ...items.map((item) {
-                              final name =
-                                  (item['name'] ?? 'Product')
+                            ...sellerItems.entries.map((entry) {
+                              final sellerId = entry.key;
+                              final sellerStatus =
+                                  (sellerStatuses[sellerId] ?? status)
                                       .toString();
+                              final sellerColor =
+                                  _statusColor(sellerStatus);
+                              final sellerName =
+                                  (entry.value.first['sellerName'] ?? '')
+                                      .toString().trim();
+                              final sellerTotal = entry.value.fold<double>(
+                                0,
+                                (total, item) =>
+                                    total +
+                                    ((item['totalPrice'] as num?)
+                                            ?.toDouble() ??
+                                        0),
+                              );
 
-                              final quantity =
-                                  (item['quantity'] ?? 0).toString();
-
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.only(bottom: 8),
-                                child: Text(
-                                  '$name × $quantity',
-                                  style: const TextStyle(
-                                    color: _textColor,
-                                    fontSize: 14,
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: _background,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: const Color(0xFFE3EADF),
                                   ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        Text(
+                                          sellerName.isNotEmpty
+                                              ? sellerName
+                                              : 'Grocery Seller',
+                                          style: const TextStyle(
+                                            color: _textColor,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: sellerColor.withValues(
+                                              alpha: 0.1,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            sellerStatus.toUpperCase(),
+                                            style: TextStyle(
+                                              color: sellerColor,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    ...entry.value.map((item) {
+                                      final name =
+                                          (item['name'] ?? 'Product')
+                                              .toString();
+                                      final quantity =
+                                          (item['quantity'] ?? 0).toString();
+                                      return Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 6),
+                                        child: Text(
+                                          '$name × $quantity',
+                                          style: const TextStyle(
+                                            color: _textColor,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                    Text(
+                                      'Seller subtotal: Rs. ${sellerTotal.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        color: _green,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               );
                             }),

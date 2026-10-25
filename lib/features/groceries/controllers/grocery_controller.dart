@@ -177,7 +177,7 @@ void dispose() {
   List<GroceryOrder> get orders =>
       List.unmodifiable(_orders);
 
-  Future<bool> placeOrder({
+Future<bool> placeOrder({
   required DeliveryMethod deliveryMethod,
   required String paymentMethod,
   String? deliveryAddress,
@@ -192,39 +192,91 @@ void dispose() {
     return false;
   }
 
-  final orderItems = _cartItems
-      .map(
-        (item) => CartItem(
-          product: item.product,
-          quantity: item.quantity,
-        ),
-      )
-      .toList();
+  final orderItems = _cartItems.map((item) {
+    return CartItem(
+      product: item.product,
+      quantity: item.quantity,
+    );
+  }).toList();
 
+  final firestore = FirebaseFirestore.instance;
+  final orderRef = firestore.collection('grocery_orders').doc();
   final total = cartTotal;
 
   try {
-    final orderRef =
-        FirebaseFirestore.instance.collection('grocery_orders').doc();
+    await firestore.runTransaction((transaction) async {
+      // Read all products before making any writes.
+      final productSnapshots = <String, DocumentSnapshot<Map<String, dynamic>>>{};
 
-    await orderRef.set({
-      'customerId': user.uid,
-      'items': orderItems.map((item) {
-        return {
-          'productId': item.product.id,
-          'name': item.product.name,
-          'sellerId': item.product.sellerId,
-          'price': item.product.finalPrice,
-          'quantity': item.quantity,
-          'totalPrice': item.totalPrice,
-        };
-      }).toList(),
-      'totalAmount': total,
-      'deliveryMethod': deliveryMethod.name,
-      'paymentMethod': paymentMethod,
-      'deliveryAddress': deliveryAddress,
-      'status': 'pending',
-      'orderDate': FieldValue.serverTimestamp(),
+      for (final item in orderItems) {
+        final productId = item.product.id;
+
+        if (!productSnapshots.containsKey(productId)) {
+          final productRef =
+              firestore.collection('grocery_products').doc(productId);
+
+          productSnapshots[productId] =
+              await transaction.get(productRef);
+        }
+      }
+
+      // Check available stock.
+      final quantities = <String, int>{};
+
+      for (final item in orderItems) {
+        quantities.update(
+          item.product.id,
+          (value) => value + item.quantity,
+          ifAbsent: () => item.quantity,
+        );
+      }
+
+      for (final entry in quantities.entries) {
+        final snapshot = productSnapshots[entry.key];
+
+        if (snapshot == null || !snapshot.exists) {
+          throw Exception('Product not found');
+        }
+
+        final data = snapshot.data()!;
+        final availableStock = (data['stock'] as num?)?.toInt() ?? 0;
+
+        if (data['status'] != 'active' ||
+            availableStock < entry.value) {
+          throw Exception('Product unavailable or insufficient stock');
+        }
+      }
+
+      // Reduce stock for each product.
+      for (final entry in quantities.entries) {
+        final productRef =
+            firestore.collection('grocery_products').doc(entry.key);
+
+        transaction.update(productRef, {
+          'stock': FieldValue.increment(-entry.value),
+        });
+      }
+
+      // Save the order in the same transaction.
+      transaction.set(orderRef, {
+        'customerId': user.uid,
+        'items': orderItems.map((item) {
+          return {
+            'productId': item.product.id,
+            'name': item.product.name,
+            'sellerId': item.product.sellerId,
+            'price': item.product.finalPrice,
+            'quantity': item.quantity,
+            'totalPrice': item.totalPrice,
+          };
+        }).toList(),
+        'totalAmount': total,
+        'deliveryMethod': deliveryMethod.name,
+        'paymentMethod': paymentMethod,
+        'deliveryAddress': deliveryAddress,
+        'status': 'pending',
+        'orderDate': FieldValue.serverTimestamp(),
+      });
     });
 
     final order = GroceryOrder(
