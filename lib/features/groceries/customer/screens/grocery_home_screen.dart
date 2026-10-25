@@ -194,9 +194,8 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+       child: ListView(
+  children: [
             Padding(
   padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
   child: Container(
@@ -364,8 +363,9 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                 ),
               ),
             ),
-            Expanded(
-              child: _controller.productsLoading
+           Padding(
+  padding: const EdgeInsets.only(bottom: 20),
+  child: _controller.productsLoading
                   ? const Center(
                       child: CircularProgressIndicator(
                         color: _green,
@@ -405,6 +405,8 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                                         .scale(1);
 
                                 return GridView.builder(
+                                  shrinkWrap: true,
+physics: const NeverScrollableScrollPhysics(),
                                   padding: const EdgeInsets.fromLTRB(
                                     20,
                                     12,
