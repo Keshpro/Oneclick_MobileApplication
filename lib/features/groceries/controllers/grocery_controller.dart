@@ -5,6 +5,8 @@ import '../models/grocery_order_model.dart';
 import '../models/grocery_product_model.dart';
 import '../services/grocery_service.dart';
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class GroceryController extends ChangeNotifier {
   final GroceryService _groceryService = GroceryService();
@@ -175,32 +177,112 @@ void dispose() {
   List<GroceryOrder> get orders =>
       List.unmodifiable(_orders);
 
-  bool placeOrder({
-    required DeliveryMethod deliveryMethod,
-    required String paymentMethod,
-    String? deliveryAddress,
-  }) {
-    if (_cartItems.isEmpty) {
-      return false;
-    }
+Future<bool> placeOrder({
+  required DeliveryMethod deliveryMethod,
+  required String paymentMethod,
+  String? deliveryAddress,
+}) async {
+  if (_cartItems.isEmpty) return false;
 
-    if (deliveryMethod == DeliveryMethod.delivery &&
-        (deliveryAddress == null ||
-            deliveryAddress.trim().isEmpty)) {
-      return false;
-    }
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return false;
+
+  if (deliveryMethod == DeliveryMethod.delivery &&
+      (deliveryAddress == null || deliveryAddress.trim().isEmpty)) {
+    return false;
+  }
+
+  final orderItems = _cartItems.map((item) {
+    return CartItem(
+      product: item.product,
+      quantity: item.quantity,
+    );
+  }).toList();
+
+  final firestore = FirebaseFirestore.instance;
+  final orderRef = firestore.collection('grocery_orders').doc();
+  final total = cartTotal;
+
+  try {
+    await firestore.runTransaction((transaction) async {
+      // Read all products before making any writes.
+      final productSnapshots = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+
+      for (final item in orderItems) {
+        final productId = item.product.id;
+
+        if (!productSnapshots.containsKey(productId)) {
+          final productRef =
+              firestore.collection('grocery_products').doc(productId);
+
+          productSnapshots[productId] =
+              await transaction.get(productRef);
+        }
+      }
+
+      // Check available stock.
+      final quantities = <String, int>{};
+
+      for (final item in orderItems) {
+        quantities.update(
+          item.product.id,
+          (value) => value + item.quantity,
+          ifAbsent: () => item.quantity,
+        );
+      }
+
+      for (final entry in quantities.entries) {
+        final snapshot = productSnapshots[entry.key];
+
+        if (snapshot == null || !snapshot.exists) {
+          throw Exception('Product not found');
+        }
+
+        final data = snapshot.data()!;
+        final availableStock = (data['stock'] as num?)?.toInt() ?? 0;
+
+        if (data['status'] != 'active' ||
+            availableStock < entry.value) {
+          throw Exception('Product unavailable or insufficient stock');
+        }
+      }
+
+      // Reduce stock for each product.
+      for (final entry in quantities.entries) {
+        final productRef =
+            firestore.collection('grocery_products').doc(entry.key);
+
+        transaction.update(productRef, {
+          'stock': FieldValue.increment(-entry.value),
+        });
+      }
+
+      // Save the order in the same transaction.
+      transaction.set(orderRef, {
+        'customerId': user.uid,
+        'items': orderItems.map((item) {
+          return {
+            'productId': item.product.id,
+            'name': item.product.name,
+            'sellerId': item.product.sellerId,
+            'price': item.product.finalPrice,
+            'quantity': item.quantity,
+            'totalPrice': item.totalPrice,
+          };
+        }).toList(),
+        'totalAmount': total,
+        'deliveryMethod': deliveryMethod.name,
+        'paymentMethod': paymentMethod,
+        'deliveryAddress': deliveryAddress,
+        'status': 'pending',
+        'orderDate': FieldValue.serverTimestamp(),
+      });
+    });
 
     final order = GroceryOrder(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      items: _cartItems
-          .map(
-            (item) => CartItem(
-              product: item.product,
-              quantity: item.quantity,
-            ),
-          )
-          .toList(),
-      totalAmount: cartTotal,
+      id: orderRef.id,
+      items: orderItems,
+      totalAmount: total,
       deliveryMethod: deliveryMethod,
       paymentMethod: paymentMethod,
       deliveryAddress: deliveryAddress,
@@ -209,9 +291,12 @@ void dispose() {
 
     _orders.insert(0, order);
     _cartItems.clear();
-
     notifyListeners();
 
     return true;
+  } catch (e) {
+    debugPrint('Failed to place grocery order: $e');
+    return false;
   }
+}
 }

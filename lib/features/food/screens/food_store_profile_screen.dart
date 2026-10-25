@@ -36,6 +36,31 @@ class _FoodStoreProfileScreenState extends State<FoodStoreProfileScreen> {
     addressController = TextEditingController(text: sellerData.address);
 
     descriptionController = TextEditingController(text: sellerData.description);
+
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      await sellerData.loadStoreProfile();
+
+      if (!mounted) return;
+
+      setState(() {
+        storeNameController.text = sellerData.storeName;
+        ownerNameController.text = sellerData.ownerName;
+        phoneController.text = sellerData.phone;
+        emailController.text = sellerData.email;
+        addressController.text = sellerData.address;
+        descriptionController.text = sellerData.description;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not load store profile: $e')),
+      );
+    }
   }
 
   @override
@@ -54,28 +79,35 @@ class _FoodStoreProfileScreenState extends State<FoodStoreProfileScreen> {
   // SAVE PROFILE
   // ------------------------------------------------------------
 
-  void saveProfile() {
+  Future<void> saveProfile() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    setState(() {
-      sellerData.storeName = storeNameController.text.trim();
+    try {
+      await sellerData.saveStoreProfile(
+        newStoreName: storeNameController.text,
+        newOwnerName: ownerNameController.text,
+        newPhone: phoneController.text,
+        newEmail: emailController.text,
+        newAddress: addressController.text,
+        newDescription: descriptionController.text,
+      );
 
-      sellerData.ownerName = ownerNameController.text.trim();
+      if (!mounted) return;
 
-      sellerData.phone = phoneController.text.trim();
+      setState(() {});
 
-      sellerData.email = emailController.text.trim();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Store profile updated successfully.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
 
-      sellerData.address = addressController.text.trim();
-
-      sellerData.description = descriptionController.text.trim();
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Store profile updated successfully.')),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save store profile: $e')),
+      );
+    }
   }
 
   @override

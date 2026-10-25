@@ -4,6 +4,7 @@ enum FoodFulfillmentOption { pickup, delivery }
 
 abstract class FoodProduct {
   final String id;
+  final String? firestoreOfferPath;
   final String name;
   final String sellerName;
   final String foodImage;
@@ -18,6 +19,7 @@ abstract class FoodProduct {
 
   const FoodProduct({
     required this.id,
+    this.firestoreOfferPath,
     required this.name,
     required this.sellerName,
     required this.foodImage,

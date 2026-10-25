@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/food_cart_service.dart';
 import '../services/food_order_service.dart';
 import 'food_order_confirmation_screen.dart';
+import '../services/save_bite_stock_service.dart';
 
 class FoodCheckoutScreen extends StatefulWidget {
   const FoodCheckoutScreen({super.key});
@@ -33,11 +34,13 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
     '7:30 PM',
   ];
 
-  final List<String> paymentMethods = [
-    'Cash on Delivery',
-    'Card / Online Payment',
-    'Oneclick Wallet',
-  ];
+  List<String> get paymentMethods {
+    if (fulfillmentType == FoodFulfillmentType.pickup) {
+      return ['Pay at Counter', 'Card / Online Payment'];
+    }
+
+    return ['Cash on Delivery', 'Card / Online Payment', 'Oneclick Wallet'];
+  }
 
   @override
   void dispose() {
@@ -311,10 +314,8 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
     );
   }
 
-  void _placeOrder() {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+  Future<void> _placeOrder() async {
+    if (!_formKey.currentState!.validate()) return;
 
     final cart = FoodCartService.instance;
 
@@ -324,24 +325,42 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
       return;
     }
 
-    final order = FoodOrderService.instance.placeOrder(
-      fulfillmentType: fulfillmentType,
-      customerName: nameController.text.trim(),
-      phone: phoneController.text.trim(),
-      address: addressController.text.trim(),
-      deliveryNote: noteController.text.trim(),
-      pickupTime: pickupTime,
-      paymentMethod: paymentMethod,
-    );
+    try {
+      await SaveBiteStockService.instance.validateAndReserveStock(cart.items);
 
-    cart.clearCart();
+      if (!mounted) return;
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => FoodOrderConfirmationScreen(order: order),
-      ),
-    );
+      final order = FoodOrderService.instance.placeOrder(
+        fulfillmentType: fulfillmentType,
+        customerName: nameController.text.trim(),
+        phone: phoneController.text.trim(),
+        address: addressController.text.trim(),
+        deliveryNote: noteController.text.trim(),
+        pickupTime: pickupTime,
+        paymentMethod: paymentMethod,
+      );
+
+      cart.clearCart();
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => FoodOrderConfirmationScreen(order: order),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      final message = error.toString().replaceFirst('Exception: ', '');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   Widget _sectionTitle(String title) {
