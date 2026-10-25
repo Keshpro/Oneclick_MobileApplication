@@ -11,36 +11,38 @@ class ManageOrdersScreen extends StatelessWidget {
   static const _muted = Color(0xFF748074);
 
   Future<void> _updateOrderStatus(
-    BuildContext context,
-    String orderId,
-    String newStatus,
-  ) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('grocery_orders')
-          .doc(orderId)
-          .update({
-        'status': newStatus,
-      });
+  BuildContext context,
+  String orderId,
+  String newStatus,
+) async {
+  final user = FirebaseAuth.instance.currentUser;
 
-      if (!context.mounted) return;
+  if (user == null) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: _green,
-          content: Text('Order updated to $newStatus'),
-        ),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
+  try {
+    await FirebaseFirestore.instance
+        .collection('grocery_orders')
+        .doc(orderId)
+        .update({
+      'sellerStatuses.${user.uid}': newStatus,
+    });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update order: $e'),
-        ),
-      );
-    }
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: _green,
+        content: Text('Your order status updated to $newStatus'),
+      ),
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to update order: $e')),
+    );
   }
+}
 
   Widget _statusBadge(String status) {
     final normalized = status.toLowerCase();
@@ -300,8 +302,11 @@ class ManageOrdersScreen extends StatelessWidget {
                                 0),
                       );
 
-                      final status =
-                          (data['status'] ?? 'pending').toString();
+                      final sellerStatuses =
+    data['sellerStatuses'] as Map<String, dynamic>? ?? {};
+
+final status =
+    (sellerStatuses[user.uid] ?? 'pending').toString();
 
                       final normalizedStatus =
                           status.toLowerCase();
