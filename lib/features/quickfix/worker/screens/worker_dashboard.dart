@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'worker_edit_profile_screen.dart';
+import '../../notifications/widgets/notification_bell.dart';
 
 class WorkerDashboard extends StatefulWidget {
   const WorkerDashboard({super.key});
@@ -26,16 +27,19 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
       FirebaseAuth.instance.currentUser;
 
   bool _updatingAvailability = false;
+  final Set<String> _updatingJobs = {};
 
-  // ================================
-  // UPDATE ONLINE / OFFLINE STATUS
-  // ================================
+  // =====================================
+  // ONLINE / OFFLINE AVAILABILITY
+  // =====================================
 
   Future<void> _updateAvailability(
     String uid,
     bool value,
   ) async {
-    setState(() => _updatingAvailability = true);
+    setState(() {
+      _updatingAvailability = true;
+    });
 
     try {
       await _firestore
@@ -58,26 +62,74 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
       );
     } finally {
       if (mounted) {
-        setState(() => _updatingAvailability = false);
+        setState(() {
+          _updatingAvailability = false;
+        });
       }
     }
   }
 
-  // ================================
-  // UPDATE JOB STATUS
-  // ================================
+  // =====================================
+  // ACCEPT / REJECT / COMPLETE JOB
+  // =====================================
 
   Future<void> _updateJobStatus(
     String appointmentId,
+    String currentStatus,
     String newStatus,
   ) async {
+    if (_updatingJobs.contains(appointmentId)) return;
+
+    setState(() {
+      _updatingJobs.add(appointmentId);
+    });
+
     try {
-      await _firestore
+      final uid = _currentUser?.uid;
+
+      if (uid == null) {
+        throw Exception('Worker not logged in');
+      }
+
+      final appointmentRef = _firestore
           .collection('work_appointments')
-          .doc(appointmentId)
-          .update({
-        'status': newStatus,
-        'updatedAt': FieldValue.serverTimestamp(),
+          .doc(appointmentId);
+
+      await _firestore.runTransaction((transaction) async {
+        final snapshot =
+            await transaction.get(appointmentRef);
+
+        if (!snapshot.exists) {
+          throw Exception('Appointment not found');
+        }
+
+        final data = snapshot.data()!;
+
+        if (data['workerId'] != uid) {
+          throw Exception('This job is not assigned to you');
+        }
+
+        if (data['status'] != currentStatus) {
+          throw Exception(
+            'Job status has already changed',
+          );
+        }
+
+        final allowed =
+            (currentStatus == 'Pending' &&
+                (newStatus == 'Accepted' ||
+                    newStatus == 'Rejected')) ||
+            (currentStatus == 'Accepted' &&
+                newStatus == 'Completed');
+
+        if (!allowed) {
+          throw Exception('Invalid job status change');
+        }
+
+        transaction.update(appointmentRef, {
+          'status': newStatus,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       });
 
       if (!mounted) return;
@@ -88,10 +140,9 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
             'Job status updated to $newStatus',
           ),
           backgroundColor:
-              newStatus == 'Accepted' ||
-                      newStatus == 'Completed'
-                  ? Colors.green
-                  : Colors.red,
+              newStatus == 'Rejected'
+                  ? Colors.red
+                  : Colors.green,
         ),
       );
     } catch (e) {
@@ -99,18 +150,22 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Failed to update status: $e',
-          ),
+          content: Text('Failed to update job: $e'),
           backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _updatingJobs.remove(appointmentId);
+        });
+      }
     }
   }
 
-  // ================================
-  // OPEN EDIT PROFILE SCREEN
-  // ================================
+  // =====================================
+  // EDIT PROFILE NAVIGATION
+  // =====================================
 
   void _openEditProfile() {
     Navigator.push(
@@ -122,9 +177,9 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     );
   }
 
-  // ================================
+  // =====================================
   // MAIN DASHBOARD
-  // ================================
+  // =====================================
 
   @override
   Widget build(BuildContext context) {
@@ -145,6 +200,10 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
         elevation: 0,
 
         actions: [
+          // NEW: QUICKFIX NOTIFICATION BELL
+          NotificationBell(),
+
+          // EXISTING: ONLINE / OFFLINE SWITCH
           if (uid != null)
             StreamBuilder<
                 DocumentSnapshot<Map<String, dynamic>>>(
@@ -154,6 +213,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                   .snapshots(),
               builder: (context, snapshot) {
                 final worker = snapshot.data?.data();
+
                 final isOnline =
                     worker?['isAvailable'] == true;
 
@@ -163,59 +223,57 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                     Text(
                       isOnline ? 'ONLINE' : 'OFFLINE',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: FontWeight.bold,
                         color: isOnline
                             ? const Color(0xFF4ADE80)
                             : Colors.grey,
                       ),
                     ),
+
                     Switch(
                       value: isOnline,
                       activeColor:
                           const Color(0xFF4ADE80),
-                      onChanged:
-                          _updatingAvailability ||
-                                  !snapshot.hasData ||
-                                  !snapshot.data!.exists
-                              ? null
-                              : (value) =>
-                                  _updateAvailability(
-                                    uid,
-                                    value,
-                                  ),
+                      onChanged: _updatingAvailability ||
+                              !snapshot.hasData ||
+                              !snapshot.data!.exists
+                          ? null
+                          : (value) =>
+                              _updateAvailability(
+                                uid,
+                                value,
+                              ),
                     ),
-                    const SizedBox(width: 8),
                   ],
                 );
               },
             ),
+
+          const SizedBox(width: 4),
         ],
       ),
 
       body: uid == null
           ? const Center(
               child: Text(
-                'Please log in as a worker.',
+                'Please login as a worker.',
               ),
             )
           : CustomScrollView(
               physics:
                   const BouncingScrollPhysics(),
               slivers: [
-                // WORKER PROFILE HEADER
                 SliverToBoxAdapter(
                   child: _buildWorkerProfileHeader(
                     uid,
                   ),
                 ),
 
-                // METRICS
                 SliverToBoxAdapter(
                   child: _buildMetricsSummary(uid),
                 ),
 
-                // SECTION TITLE
                 const SliverPadding(
                   padding: EdgeInsets.fromLTRB(
                     20,
@@ -235,20 +293,17 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                   ),
                 ),
 
-                // REAL-TIME APPOINTMENTS
                 _buildAppointmentsList(uid),
               ],
             ),
     );
   }
 
-  // ================================
+  // =====================================
   // WORKER PROFILE HEADER
-  // ================================
+  // =====================================
 
-  Widget _buildWorkerProfileHeader(
-    String uid,
-  ) {
+  Widget _buildWorkerProfileHeader(String uid) {
     return StreamBuilder<
         DocumentSnapshot<Map<String, dynamic>>>(
       stream: _firestore
@@ -288,7 +343,6 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           ),
           child: Row(
             children: [
-              // PROFILE AVATAR
               CircleAvatar(
                 radius: 28,
                 backgroundColor:
@@ -307,7 +361,6 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
               const SizedBox(width: 14),
 
-              // WORKER DETAILS
               Expanded(
                 child: Column(
                   crossAxisAlignment:
@@ -340,7 +393,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                 ),
               ),
 
-              // NEW EDIT PROFILE BUTTON
+              // EDIT PROFILE BUTTON
               IconButton(
                 tooltip: 'Edit Profile',
                 onPressed: _openEditProfile,
@@ -357,13 +410,11 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     );
   }
 
-  // ================================
-  // METRICS SUMMARY
-  // ================================
+  // =====================================
+  // DASHBOARD METRICS
+  // =====================================
 
-  Widget _buildMetricsSummary(
-    String uid,
-  ) {
+  Widget _buildMetricsSummary(String uid) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         20,
@@ -418,10 +469,6 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     );
   }
 
-  // ================================
-  // METRIC CARD
-  // ================================
-
   Widget _metricCard({
     required String title,
     required Stream<
@@ -434,8 +481,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius:
-            BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: const Color(0xFFE2E8F0),
         ),
@@ -467,6 +513,10 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                         Map<String, dynamic>>>(
                   stream: stream,
                   builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return const Text('—');
+                    }
+
                     final count =
                         snapshot.data?.docs.length ?? 0;
 
@@ -496,13 +546,11 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     );
   }
 
-  // ================================
+  // =====================================
   // APPOINTMENTS LIST
-  // ================================
+  // =====================================
 
-  Widget _buildAppointmentsList(
-    String uid,
-  ) {
+  Widget _buildAppointmentsList(String uid) {
     return StreamBuilder<
         QuerySnapshot<Map<String, dynamic>>>(
       stream: _firestore
@@ -538,35 +586,29 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           );
         }
 
-        final docs =
-            snapshot.data?.docs ?? [];
+        final docs = snapshot.data?.docs ?? [];
 
         if (docs.isEmpty) {
-          return SliverToBoxAdapter(
+          return const SliverToBoxAdapter(
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(
-                vertical: 40,
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons
-                        .assignment_turned_in_outlined,
-                    size: 56,
-                    color: Colors.grey.shade400,
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  const Text(
-                    'No assigned appointments yet.',
-                    style: TextStyle(
-                      color: _textMuted,
-                      fontSize: 14,
+              padding: EdgeInsets.all(40),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.assignment_outlined,
+                      size: 55,
+                      color: Colors.grey,
                     ),
-                  ),
-                ],
+                    SizedBox(height: 12),
+                    Text(
+                      'No assigned appointments yet.',
+                      style: TextStyle(
+                        color: _textMuted,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -631,12 +673,13 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                       const Color(0xFFEF4444);
                 }
 
+                final isUpdating =
+                    _updatingJobs.contains(doc.id);
+
                 return Card(
                   elevation: 0,
                   margin:
-                      const EdgeInsets.only(
-                    bottom: 12,
-                  ),
+                      const EdgeInsets.only(bottom: 12),
                   shape:
                       RoundedRectangleBorder(
                     borderRadius:
@@ -652,7 +695,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                       crossAxisAlignment:
                           CrossAxisAlignment.start,
                       children: [
-                        // CUSTOMER & STATUS
+                        // CUSTOMER AND STATUS
                         Row(
                           children: [
                             Expanded(
@@ -722,7 +765,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
                         const SizedBox(height: 4),
 
-                        // DATE & TIME
+                        // DATE AND TIME
                         Row(
                           children: [
                             const Icon(
@@ -775,16 +818,19 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                         const SizedBox(height: 14),
 
                         // PENDING JOB ACTIONS
-                        if (status == 'Pending') ...[
+                        if (status == 'Pending')
                           Row(
                             children: [
                               Expanded(
                                 child: OutlinedButton(
-                                  onPressed: () =>
-                                      _updateJobStatus(
-                                    doc.id,
-                                    'Rejected',
-                                  ),
+                                  onPressed: isUpdating
+                                      ? null
+                                      : () =>
+                                          _updateJobStatus(
+                                            doc.id,
+                                            'Pending',
+                                            'Rejected',
+                                          ),
                                   style:
                                       OutlinedButton
                                           .styleFrom(
@@ -793,12 +839,6 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                                     side:
                                         const BorderSide(
                                       color: Colors.red,
-                                    ),
-                                    shape:
-                                        RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius
-                                              .circular(10),
                                     ),
                                   ),
                                   child:
@@ -810,11 +850,14 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
                               Expanded(
                                 child: ElevatedButton(
-                                  onPressed: () =>
-                                      _updateJobStatus(
-                                    doc.id,
-                                    'Accepted',
-                                  ),
+                                  onPressed: isUpdating
+                                      ? null
+                                      : () =>
+                                          _updateJobStatus(
+                                            doc.id,
+                                            'Pending',
+                                            'Accepted',
+                                          ),
                                   style:
                                       ElevatedButton
                                           .styleFrom(
@@ -823,12 +866,6 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                                             0xFF10B981),
                                     foregroundColor:
                                         Colors.white,
-                                    shape:
-                                        RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius
-                                              .circular(10),
-                                    ),
                                   ),
                                   child: const Text(
                                     'Accept Job',
@@ -836,19 +873,21 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                                 ),
                               ),
                             ],
-                          ),
-                        ]
+                          )
 
                         // ACCEPTED JOB ACTION
-                        else if (status == 'Accepted') ...[
+                        else if (status == 'Accepted')
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: () =>
-                                  _updateJobStatus(
-                                doc.id,
-                                'Completed',
-                              ),
+                              onPressed: isUpdating
+                                  ? null
+                                  : () =>
+                                      _updateJobStatus(
+                                        doc.id,
+                                        'Accepted',
+                                        'Completed',
+                                      ),
                               style:
                                   ElevatedButton
                                       .styleFrom(
@@ -856,19 +895,12 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                                     _primaryNavy,
                                 foregroundColor:
                                     Colors.white,
-                                shape:
-                                    RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius
-                                          .circular(10),
-                                ),
                               ),
                               child: const Text(
                                 'Mark as Completed',
                               ),
                             ),
                           ),
-                        ],
                       ],
                     ),
                   ),

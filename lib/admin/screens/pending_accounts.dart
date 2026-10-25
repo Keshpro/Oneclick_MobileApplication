@@ -81,7 +81,7 @@ if (userId != null && userId.isNotEmpty) {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5, // Updated length for 4 Provider Roles
+      length: 6, // Existing provider tabs + Drunk & Drive
       child: Scaffold(
         backgroundColor: const Color(0xFFF4F6FB),
         appBar: AppBar(
@@ -103,6 +103,7 @@ if (userId != null && userId.isNotEmpty) {
               Tab(text: 'Doctors'),
               Tab(text: 'Drivers'),
               Tab(text: 'Grocery Sellers'),
+              Tab(text: 'Drunk & Drive'),
             ],
           ),
         ),
@@ -113,6 +114,7 @@ if (userId != null && userId.isNotEmpty) {
             _buildPendingList(context, 'doctors'),
             _buildPendingList(context, 'drivers'),
             _buildPendingList(context, 'seller_applications'),
+            _buildDrunkDrivePendingList(context),
           ],
         ),
       ),
@@ -348,4 +350,148 @@ final businessAddress =
       },
     );
   }
+  // Drunk & Drive uses a separate application collection and approval status.
+  // Do not update users.status: it is shared by other OneClick modules.
+  Future<void> _updateDrunkDriveStatus(
+    BuildContext context,
+    String applicationId,
+    String name,
+    String newStatus,
+  ) async {
+    if (newStatus != 'approved' && newStatus != 'rejected') return;
+
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final applicationRef = firestore
+          .collection('drunkDriveDriverApplications')
+          .doc(applicationId);
+      final logRef = firestore.collection('activity_logs').doc();
+
+      await firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(applicationRef);
+        if (!snapshot.exists || snapshot.data()?['status'] != 'pending') {
+          throw StateError('Application is no longer pending.');
+        }
+
+        transaction.update(applicationRef, {
+          'status': newStatus,
+          'adminNotes': null,
+        });
+        transaction.set(logRef, {
+          'action': newStatus == 'approved'
+              ? 'Drunk & Drive Driver Approved'
+              : 'Drunk & Drive Driver Rejected',
+          'details': '$name (Drunk & Drive) was marked as $newStatus.',
+          'performedBy': 'Admin',
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      });
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$name marked as $newStatus'),
+          backgroundColor: newStatus == 'approved' ? Colors.green : Colors.red,
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to update driver application: $error')),
+      );
+    }
+  }
+
+  Widget _buildDrunkDrivePendingList(BuildContext context) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('drunkDriveDriverApplications')
+          .where('status', isEqualTo: 'pending')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Text('Unable to load Drunk & Drive applications: ${snapshot.error}'),
+          );
+        }
+
+        final applications = snapshot.data?.docs ?? [];
+        if (applications.isEmpty) {
+          return const Center(child: Text('No pending Drunk & Drive applications'));
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(15),
+          itemCount: applications.length,
+          itemBuilder: (context, index) {
+            final doc = applications[index];
+            final data = doc.data();
+            final name = (data['fullName'] as String?)?.trim().isNotEmpty == true
+                ? data['fullName'] as String
+                : 'Unnamed Applicant';
+            final phone = data['phone'] as String? ?? 'Not provided';
+            final licenceType = data['licenceType'] as String? ?? 'Not provided';
+            final expiry = data['licenceExpiry'] as String? ?? 'Not provided';
+            final experience = data['drivingExperienceYears'] as num? ?? 0;
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.bold,
+                    )),
+                    const SizedBox(height: 10),
+                    Text('Phone: $phone'),
+                    Text('Licence type: $licenceType'),
+                    Text('Licence expiry: $expiry'),
+                    Text('Driving experience: $experience years'),
+                    Text('Manual: ${data['canDriveManual'] == true ? 'Yes' : 'No'}'),
+                    Text('Automatic: ${data['canDriveAutomatic'] == true ? 'Yes' : 'No'}'),
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => _updateDrunkDriveStatus(
+                            context, doc.id, name, 'rejected',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                          ),
+                          child: const Text('Reject'),
+                        ),
+                        const SizedBox(width: 10),
+                        ElevatedButton(
+                          onPressed: () => _updateDrunkDriveStatus(
+                            context, doc.id, name, 'approved',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Approve'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
 }
