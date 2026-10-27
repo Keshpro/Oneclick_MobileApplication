@@ -12,7 +12,8 @@ import '../../models/booking_status.dart';
 
 import '../../models/vehicle_model.dart';
 
-import '../../services/vehicle_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../services/driver_rating_service.dart';
 
@@ -45,6 +46,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   StreamSubscription<BookingModel?>? _activeTripSubscription;
 
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _paymentsSubscription;
+
   final DriverRatingService _driverRatingService = DriverRatingService();
 
   bool _isOnline = false;
@@ -66,6 +69,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   double _weeklyEarnings = 0;
 
+  double _pendingCash = 0;
+  double _unpaidPayments = 0;
+  double _simulatedPayments = 0;
+  double _confirmedPayments = 0;
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +86,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _requestsSubscription?.cancel();
 
     _activeTripSubscription?.cancel();
+
+    _paymentsSubscription?.cancel();
 
     _pinController.dispose();
 
@@ -172,72 +182,112 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         );
   }
 
-  String get _driverRatingText {
-    final average = _driverRatingService.getAverageRating(
-      VehicleService.currentUserId,
-    );
-
-    final count = _driverRatingService.getRatingCount(
-      VehicleService.currentUserId,
-    );
-
-    if (average == null || count == 0) {
-      return 'No ratings';
+  Widget _buildDriverRatingCard() {
+    final driverId = FirebaseAuth.instance.currentUser?.uid;
+    if (driverId == null) {
+      return _statCard('Driver Rating', 'Sign in required',
+          Icons.star_rounded, Colors.amber);
     }
 
-    return '${average.toStringAsFixed(1)} ★ ($count)';
+    return StreamBuilder(
+      stream: _driverRatingService.watchRatingsForDriver(driverId),
+      builder: (context, snapshot) {
+        String text;
+        if (snapshot.hasError) {
+          text = 'Unable to load';
+        } else if (!snapshot.hasData) {
+          text = 'Loading...';
+        } else {
+          final ratings = snapshot.data!;
+          if (ratings.isEmpty) {
+            text = 'No ratings';
+          } else {
+            final total = ratings.fold<int>(
+              0,
+              (sum, item) => sum + item.rating,
+            );
+            final average = total / ratings.length;
+            text = '${average.toStringAsFixed(1)} ★ (${ratings.length})';
+          }
+        }
+        return _statCard('Driver Rating', text,
+            Icons.star_rounded, Colors.amber);
+      },
+    );
   }
 
-  Future<void> _loadDriverStats() async {
-    try {
-      final completedTrips = await _firestoreService.getCompletedDriverTrips();
+  // Listen to all bookings assigned to this driver. Payment changes can occur
+  // after a trip ends, so a one-time completed-trip fetch is not sufficient.
+  void _loadDriverStats() {
+    _paymentsSubscription?.cancel();
+    final driverId = FirebaseAuth.instance.currentUser?.uid;
+    if (driverId == null) return;
 
-      if (!mounted) return;
+    _paymentsSubscription = FirebaseFirestore.instance
+        .collection('drunkDriveBookings')
+        .where('driverId', isEqualTo: driverId)
+        .snapshots()
+        .listen((snapshot) {
+          if (!mounted) return;
+          final now = DateTime.now();
+          final startOfToday = DateTime(now.year, now.month, now.day);
+          final startOfWeek = startOfToday.subtract(
+            Duration(days: now.weekday - 1),
+          );
 
-      final now = DateTime.now();
+          int todayTrips = 0;
+          double todayEarnings = 0;
+          double weeklyEarnings = 0;
+          double confirmed = 0;
+          double pending = 0;
+          double unpaid = 0;
+          double simulated = 0;
 
-      final startOfToday = DateTime(now.year, now.month, now.day);
+          for (final document in snapshot.docs) {
+            final booking = BookingModel.fromMap(document.id, document.data());
+            if (booking.status != BookingStatus.completed) continue;
 
-      final startOfWeek = startOfToday.subtract(
-        Duration(days: now.weekday - 1),
-      );
+            final amount = booking.customerAmountDue;
+            final completedAt = booking.completedAt;
+            final completedToday = completedAt != null &&
+                !completedAt.isBefore(startOfToday);
+            final completedThisWeek = completedAt != null &&
+                !completedAt.isBefore(startOfWeek);
 
-      int todayTrips = 0;
+            if (completedToday) todayTrips++;
 
-      double todayEarnings = 0;
+            switch (booking.paymentStatus) {
+              case 'paid':
+                confirmed += amount;
+                if (completedToday) todayEarnings += amount;
+                if (completedThisWeek) weeklyEarnings += amount;
+                break;
+              case 'pending':
+                pending += amount;
+                break;
+              case 'simulated':
+                simulated += amount;
+                break;
+              default:
+                unpaid += amount;
+            }
+          }
 
-      double weeklyEarnings = 0;
-
-      for (final booking in completedTrips) {
-        final completedAt = booking.completedAt;
-
-        if (completedAt == null) continue;
-
-        if (!completedAt.isBefore(startOfToday)) {
-          todayTrips++;
-
-          todayEarnings += booking.fareEstimate.total;
-        }
-
-        if (!completedAt.isBefore(startOfWeek)) {
-          weeklyEarnings += booking.fareEstimate.total;
-        }
-      }
-
-      setState(() {
-        _todayTrips = todayTrips;
-
-        _todayEarnings = todayEarnings;
-
-        _weeklyEarnings = weeklyEarnings;
-      });
-    } catch (error) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to load driver statistics: $error')),
-      );
-    }
+          setState(() {
+            _todayTrips = todayTrips;
+            _todayEarnings = todayEarnings;
+            _weeklyEarnings = weeklyEarnings;
+            _confirmedPayments = confirmed;
+            _pendingCash = pending;
+            _unpaidPayments = unpaid;
+            _simulatedPayments = simulated;
+          });
+        }, onError: (Object error) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Unable to load payment summary: $error')),
+          );
+        });
   }
 
   Future<void> _onStartHeading() async {
@@ -810,7 +860,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
             Expanded(
               child: _statCard(
-                "Today's Earnings",
+                "Today's Confirmed",
 
                 _rs(_todayEarnings),
 
@@ -827,22 +877,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         Row(
           children: [
             Expanded(
-              child: _statCard(
-                'Driver Rating',
-
-                _driverRatingText,
-
-                Icons.star_rounded,
-
-                Colors.amber,
-              ),
+              child: _buildDriverRatingCard(),
             ),
 
             const SizedBox(width: 12),
 
             Expanded(
               child: _statCard(
-                'Weekly Total',
+                'Weekly Confirmed',
 
                 _rs(_weeklyEarnings),
 
@@ -853,6 +895,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             ),
           ],
         ),
+
+        const SizedBox(height: 20),
+
+        _buildPaymentSummary(),
 
         const SizedBox(height: 16),
 
@@ -1030,6 +1076,82 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               ),
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _buildPaymentSummary() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.surfaceBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Payment Summary',
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'All completed trips • amounts in LKR',
+            style: TextStyle(color: colors.textMuted, fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          _paymentRow('Confirmed cash received', _confirmedPayments,
+              Icons.check_circle_outline, colors.success),
+          const SizedBox(height: 12),
+          _paymentRow('Cash awaiting confirmation', _pendingCash,
+              Icons.hourglass_empty_rounded, colors.accent),
+          const SizedBox(height: 12),
+          _paymentRow('Unpaid', _unpaidPayments,
+              Icons.pending_actions_rounded, colors.danger),
+          const SizedBox(height: 12),
+          _paymentRow('Simulated card payments', _simulatedPayments,
+              Icons.credit_card_rounded, colors.textMuted),
+          const SizedBox(height: 12),
+          Text(
+            'Card payments are simulations and are not counted as real earnings. '
+            'Daily and weekly earnings reflect confirmed payments for trips '
+            'completed in those periods.',
+            style: TextStyle(color: colors.textMuted, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _paymentRow(
+    String label,
+    double amount,
+    IconData icon,
+    Color iconColor,
+  ) {
+    return Row(
+      children: [
+        Icon(icon, color: iconColor, size: 18),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(color: colors.textPrimary, fontSize: 12),
+          ),
+        ),
+        Text(
+          _rs(amount),
+          style: TextStyle(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w800,
+            fontSize: 13,
+          ),
+        ),
       ],
     );
   }

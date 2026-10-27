@@ -194,7 +194,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         secondary: const Icon(Icons.notifications_active_outlined,
                             color: _primary),
                         value: _notifications,
-                        activeColor: _primary,
+                        activeThumbColor: _primary,
                         onChanged: (value) {
                           setState(() => _notifications = value);
                           _updateSetting('notificationsEnabled', value);
@@ -209,7 +209,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         secondary: const Icon(Icons.dark_mode_outlined,
                             color: _primary),
                         value: _darkMode,
-                        activeColor: _primary,
+                        activeThumbColor: _primary,
                         onChanged: (value) {
                           setState(() => _darkMode = value);
                           _updateSetting('darkModeEnabled', value);
@@ -245,7 +245,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     secondary:
                         const Icon(Icons.verified_outlined, color: Colors.green),
                     value: _autoApproval,
-                    activeColor: Colors.green,
+                    activeThumbColor: Colors.green,
                     onChanged: (value) {
                       setState(() => _autoApproval = value);
                       _updateSetting('autoApprovalEnabled', value);

@@ -24,6 +24,20 @@ class BookingFirestoreService {
   CollectionReference<Map<String, dynamic>> get _bookings =>
       _firestore.collection('drunkDriveBookings');
 
+  CollectionReference<Map<String, dynamic>> get _driverApplications =>
+      _firestore.collection('drunkDriveDriverApplications');
+
+  // Compatibility with driver assignments created before activeBookingId existed.
+  static const Set<BookingStatus> _activeDriverStatuses = {
+    BookingStatus.driverAssigned,
+    BookingStatus.driverAccepted,
+    BookingStatus.driverArriving,
+    BookingStatus.driverArrived,
+    BookingStatus.verification,
+    BookingStatus.tripStarted,
+    BookingStatus.tripInProgress,
+  };
+
   Future<String> createBooking(Map<String, dynamic> bookingData) async {
     final document = _bookings.doc();
 
@@ -132,6 +146,19 @@ class BookingFirestoreService {
     });
   }
 
+  /// Release the driver's reservation only when it belongs to this booking.
+  /// Must be called after all transaction reads and before transaction writes.
+  void _releaseDriverBookingLock(
+    Transaction transaction,
+    DocumentSnapshot<Map<String, dynamic>>? driverSnapshot,
+    String bookingId,
+  ) {
+    if (driverSnapshot == null || !driverSnapshot.exists) return;
+    if (driverSnapshot.data()?['activeBookingId'] == bookingId) {
+      transaction.update(driverSnapshot.reference, {'activeBookingId': null});
+    }
+  }
+
   Future<BookingModel?> cancelBookingByPassenger(String bookingId) async {
     final bookingRef = _bookings.doc(bookingId);
 
@@ -146,6 +173,10 @@ class BookingFirestoreService {
       }
 
       final booking = BookingModel.fromMap(snapshot.id, data);
+      final assignedDriverId = data['driverId'] as String?;
+      final driverSnapshot = assignedDriverId == null
+          ? null
+          : await transaction.get(_driverApplications.doc(assignedDriverId));
 
       const cancellableStatuses = {
         BookingStatus.requested,
@@ -161,6 +192,7 @@ class BookingFirestoreService {
         return null;
       }
 
+      _releaseDriverBookingLock(transaction, driverSnapshot, bookingId);
       transaction.update(bookingRef, {
         'status': BookingStatus.cancelledByUser.name,
       });
@@ -264,28 +296,50 @@ class BookingFirestoreService {
   Future<BookingModel?> acceptBookingByDriver(String bookingId) async {
     final driverId = currentUserId;
     final bookingRef = _bookings.doc(bookingId);
+    final driverRef = _driverApplications.doc(driverId);
+
+    // Legacy bookings may predate the activeBookingId field. Do a conservative
+    // check before locking; the transaction below serializes NEW acceptances.
+    final existing = await _bookings
+        .where('driverId', isEqualTo: driverId)
+        .get();
+    if (existing.docs.any((doc) =>
+        doc.id != bookingId &&
+        _activeDriverStatuses.contains(
+          BookingModel.fromMap(doc.id, doc.data()).status,
+        ))) {
+      return null;
+    }
 
     return _firestore.runTransaction((transaction) async {
+      // Firestore transactions require all reads before any writes.
+      final driverSnapshot = await transaction.get(driverRef);
       final snapshot = await transaction.get(bookingRef);
 
-      if (!snapshot.exists) return null;
-
+      if (!driverSnapshot.exists || !snapshot.exists) return null;
+      final driverData = driverSnapshot.data();
       final data = snapshot.data();
-      if (data == null) return null;
+      if (driverData == null || data == null) return null;
 
-      // A driver cannot accept their own passenger booking.
-      if (data['passengerId'] == driverId) return null;
+      if (driverData['status'] != 'approved' ||
+          driverData['isOnline'] != true) {
+        return null;
+      }
+      final lockedBookingId = driverData['activeBookingId'] as String?;
+      if (lockedBookingId != null && lockedBookingId.isNotEmpty) {
+        return null;
+      }
 
-      // Reject bookings that another driver has already accepted.
-      if (data['driverId'] != null) return null;
-
+      if (data['passengerId'] == driverId || data['driverId'] != null) {
+        return null;
+      }
       final booking = BookingModel.fromMap(snapshot.id, data);
-
       if (booking.status != BookingStatus.requested &&
           booking.status != BookingStatus.searchingDriver) {
         return null;
       }
 
+      transaction.update(driverRef, {'activeBookingId': bookingId});
       transaction.update(bookingRef, {
         'driverId': driverId,
         'status': BookingStatus.driverAssigned.name,
@@ -483,6 +537,7 @@ class BookingFirestoreService {
 
       if (!snapshot.exists) return null;
 
+      final driverSnapshot = await transaction.get(_driverApplications.doc(driverId));
       final data = snapshot.data();
 
       if (data == null || data['driverId'] != driverId) {
@@ -503,6 +558,7 @@ class BookingFirestoreService {
         return null;
       }
 
+      _releaseDriverBookingLock(transaction, driverSnapshot, bookingId);
       transaction.update(bookingRef, {
         'status': BookingStatus.cancelledByDriver.name,
       });
@@ -523,6 +579,7 @@ class BookingFirestoreService {
 
       if (!snapshot.exists) return null;
 
+      final driverSnapshot = await transaction.get(_driverApplications.doc(driverId));
       final data = snapshot.data();
 
       if (data == null || data['driverId'] != driverId) {
@@ -548,6 +605,7 @@ class BookingFirestoreService {
         'paymentMethod': null,
         'paidAt': null,
       };
+      _releaseDriverBookingLock(transaction, driverSnapshot, bookingId);
       transaction.update(bookingRef, changes);
 
       return BookingModel.fromMap(snapshot.id, {...data, ...changes});

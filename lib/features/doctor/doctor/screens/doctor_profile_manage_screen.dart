@@ -234,7 +234,7 @@ class _DoctorProfileManageScreenState extends State<DoctorProfileManageScreen> {
                             fontWeight: FontWeight.bold, fontSize: 13)),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
-                      value: _selectedCategory,
+                      initialValue: _selectedCategory,
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.medical_services,
                             color: _primary),
