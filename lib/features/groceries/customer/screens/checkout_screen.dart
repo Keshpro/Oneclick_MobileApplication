@@ -23,6 +23,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   DeliveryMethod _deliveryMethod = DeliveryMethod.delivery;
   String _paymentMethod = 'Cash on Delivery';
+    bool _isPlacing = false;
 
   final TextEditingController _addressController =
       TextEditingController();
@@ -34,6 +35,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _placeOrder() async {
+    if (_isPlacing) return;
+    setState(() => _isPlacing = true);
     final success = await widget.controller.placeOrder(
       deliveryMethod: _deliveryMethod,
       paymentMethod: _paymentMethod,
@@ -43,12 +46,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
 
     if (!mounted) return;
+     setState(() => _isPlacing = false);
 
     if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Please check your cart and delivery address.',
+                        'Could not place the order. Please check your delivery '
+            'address, and make sure the items are still in stock.',
           ),
         ),
       );
@@ -492,7 +497,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                onPressed: _placeOrder,
+                                onPressed: _isPlacing ? null : _placeOrder,
                 icon: const Icon(
                   Icons.check_circle_outline_rounded,
                 ),

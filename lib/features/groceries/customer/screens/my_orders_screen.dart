@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../controllers/grocery_controller.dart';
 
 class MyOrdersScreen extends StatelessWidget {
   const MyOrdersScreen({super.key});
@@ -21,6 +22,121 @@ class MyOrdersScreen extends StatelessWidget {
       default:
         return const Color(0xFF946B17);
     }
+  }
+    Widget _timeline(String status) {
+    final s = status.toLowerCase();
+
+    if (s == 'cancelled' || s == 'rejected') {
+      return const Row(
+        children: [
+          Icon(
+            Icons.cancel_outlined,
+            color: Color(0xFFB83D3D),
+            size: 18,
+          ),
+          SizedBox(width: 6),
+          Text(
+            'Order cancelled',
+            style: TextStyle(
+              color: Color(0xFFB83D3D),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      );
+    }
+
+    const steps = ['pending', 'processing', 'completed'];
+    const labels = ['Pending', 'Processing', 'Completed'];
+    final found = steps.indexOf(s);
+    final current = found < 0 ? 0 : found;
+
+    return Row(
+      children: [
+        for (var i = 0; i < steps.length; i++) ...[
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                i <= current
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
+                size: 20,
+                color: i <= current
+                    ? _green
+                    : const Color(0xFFB8C4B8),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                labels[i],
+                style: TextStyle(
+                  fontSize: 10,
+                  color: i <= current
+                      ? _textColor
+                      : const Color(0xFF748074),
+                ),
+              ),
+            ],
+          ),
+          if (i < steps.length - 1)
+            Expanded(
+              child: Container(
+                height: 2,
+                margin: const EdgeInsets.only(
+                  bottom: 16,
+                  left: 4,
+                  right: 4,
+                ),
+                color: i < current
+                    ? _green
+                    : const Color(0xFFE3EADF),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _confirmCancel(
+    BuildContext context,
+    String orderId,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel order?'),
+        content: const Text(
+          'The items will be returned to stock. '
+          'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep order'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFB83D3D),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Cancel order'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+    if (!context.mounted) return;
+
+    final error = await GroceryController.cancelOrder(orderId);
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error ?? 'Order cancelled. Stock restored.'),
+      ),
+    );
   }
 
   Widget _message(
@@ -182,6 +298,13 @@ class MyOrdersScreen extends StatelessWidget {
 
                       final paymentMethod =
                           (data['paymentMethod'] ?? '').toString();
+                                                final canCancel =
+                          status.toLowerCase() != 'cancelled' &&
+                              sellerItems.keys.every((id) =>
+                                  (sellerStatuses[id] ?? 'pending')
+                                      .toString()
+                                      .toLowerCase() ==
+                                  'pending');
 
                       return Container(
                         padding: const EdgeInsets.all(18),
@@ -322,6 +445,8 @@ class MyOrdersScreen extends StatelessWidget {
                                       ],
                                     ),
                                     const SizedBox(height: 10),
+                                                                        _timeline(sellerStatus),
+                                    const SizedBox(height: 12),
                                     ...entry.value.map((item) {
                                       final name =
                                           (item['name'] ?? 'Product')
@@ -382,6 +507,28 @@ class MyOrdersScreen extends StatelessWidget {
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
+                                                        if (canCancel) ...[
+                              const SizedBox(height: 14),
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor:
+                                      const Color(0xFFB83D3D),
+                                  side: const BorderSide(
+                                    color: Color(0xFFB83D3D),
+                                  ),
+                                  minimumSize:
+                                      const Size(double.infinity, 46),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(14),
+                                  ),
+                                ),
+                                onPressed: () =>
+                                    _confirmCancel(context, doc.id),
+                                icon: const Icon(Icons.cancel_outlined),
+                                label: const Text('Cancel Order'),
+                              ),
+                            ],
                           ],
                         ),
                       );

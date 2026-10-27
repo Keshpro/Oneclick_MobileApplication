@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'add_product_screen.dart';
@@ -93,6 +95,9 @@ class SellerDashboard extends StatelessWidget {
                   ],
                 ),
               ),
+                            const SizedBox(height: 24),
+
+              const _SellerStats(),
               const SizedBox(height: 28),
 
               const Text(
@@ -231,6 +236,193 @@ class SellerDashboard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+class _SellerStats extends StatefulWidget {
+  const _SellerStats();
+
+  @override
+  State<_SellerStats> createState() => _SellerStatsState();
+}
+
+class _SellerStatsState extends State<_SellerStats> {
+  static const int _lowStockLimit = 5;
+
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _ordersStream;
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _productsStream;
+  String? _uid;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    _uid = user.uid;
+    _ordersStream = FirebaseFirestore.instance
+        .collection('grocery_orders')
+        .snapshots();
+    _productsStream = FirebaseFirestore.instance
+        .collection('grocery_products')
+        .where('sellerId', isEqualTo: user.uid)
+        .snapshots();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final uid = _uid;
+    if (uid == null || _ordersStream == null || _productsStream == null) {
+      return const SizedBox.shrink();
+    }
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _ordersStream,
+      builder: (context, orderSnap) {
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: _productsStream,
+          builder: (context, productSnap) {
+            if (orderSnap.hasError || productSnap.hasError) {
+              return Text(
+                'Unable to load statistics: '
+                '${orderSnap.error ?? productSnap.error}',
+                style: const TextStyle(color: Color(0xFFB83D3D)),
+              );
+            }
+
+            final loading = !orderSnap.hasData || !productSnap.hasData;
+
+            double totalSales = 0;
+            int pending = 0;
+            int completed = 0;
+            int lowStock = 0;
+
+            if (!loading) {
+              for (final doc in orderSnap.data!.docs) {
+                final data = doc.data();
+                final items = (data['items'] as List? ?? [])
+                    .whereType<Map>()
+                    .where((item) => item['sellerId'] == uid)
+                    .toList();
+                if (items.isEmpty) continue;
+
+                final statuses =
+                    data['sellerStatuses'] as Map<String, dynamic>? ?? {};
+                final status =
+                    (statuses[uid] ?? 'pending').toString().toLowerCase();
+
+                if (status == 'pending') pending++;
+                if (status == 'completed') {
+                  completed++;
+                  for (final item in items) {
+                    totalSales +=
+                        (item['totalPrice'] as num?)?.toDouble() ?? 0;
+                  }
+                }
+              }
+
+              for (final doc in productSnap.data!.docs) {
+                final stock = (doc.data()['stock'] as num?)?.toInt() ?? 0;
+                if (stock <= _lowStockLimit) lowStock++;
+              }
+            }
+
+            String v(String value) => loading ? '...' : value;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Shop overview',
+                  style: TextStyle(
+                    color: SellerDashboard._textColor,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _statCard(
+                        Icons.payments_outlined,
+                        'Total Sales',
+                        v('Rs. ${totalSales.toStringAsFixed(2)}'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _statCard(
+                        Icons.hourglass_empty_rounded,
+                        'Pending Orders',
+                        v('$pending'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _statCard(
+                        Icons.check_circle_outline_rounded,
+                        'Completed Orders',
+                        v('$completed'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _statCard(
+                        Icons.warning_amber_rounded,
+                        'Low Stock Products',
+                        v('$lowStock'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _statCard(IconData icon, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE3EADF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: SellerDashboard._green, size: 24),
+          const SizedBox(height: 12),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: SellerDashboard._textColor,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: SellerDashboard._muted,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ),
     );
   }
