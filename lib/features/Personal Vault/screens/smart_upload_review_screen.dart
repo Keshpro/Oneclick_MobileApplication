@@ -44,6 +44,7 @@ class _SmartUploadReviewScreenState
   bool _isSaving = false;
 
   bool renewalReminder = true;
+  late DateTime _selectedRenewalDate;
 
 late String selectedCategory;
 late TextEditingController titleController;
@@ -65,6 +66,7 @@ void initState() {
   );
 
   renewalReminder = widget.expiryNotification;
+  _selectedRenewalDate = widget.renewalDate;
 }
 
   @override
@@ -646,36 +648,60 @@ Widget _buildKeyDates() {
   );
 }
 
+  Future<void> _pickRenewalDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedRenewalDate,
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2300),
+    );
+
+    if (!mounted || picked == null) return;
+
+    setState(() {
+      _selectedRenewalDate = picked;
+    });
+  }
+
   Widget _dateBox(String label, String date) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F9),
+    return Material(
+      color: const Color(0xFFF3F4F9),
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: _pickRenewalDate,
         borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: secondaryText,
-              fontWeight: FontWeight.w600,
-            ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: secondaryText,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    date,
+                    style: const TextStyle(
+                      color: textColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 16),
+              const Icon(Icons.calendar_month_outlined, color: primaryColor),
+            ],
           ),
-
-          const SizedBox(height: 5),
-
-          Text(
-            date,
-            style: const TextStyle(
-              color: textColor,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -695,9 +721,9 @@ Widget _buildKeyDates() {
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
 
-  return '${months[widget.renewalDate.month - 1]} '
-      '${widget.renewalDate.day}, '
-      '${widget.renewalDate.year}';
+  return '${months[_selectedRenewalDate.month - 1]} '
+      '${_selectedRenewalDate.day}, '
+      '${_selectedRenewalDate.year}';
 }
   
   Widget _buildRenewalReminder() {
@@ -818,7 +844,7 @@ await _vaultService.addRecord(
   category: selectedCategory,
   notes: widget.notes,
   tags: const [],
-  renewalDate: widget.renewalDate,
+  renewalDate: _selectedRenewalDate,
   expiryNotification: renewalReminder,
   fileName: widget.selectedFile?.name,
   filePath: filePath,
