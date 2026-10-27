@@ -541,6 +541,8 @@ final status =
                                     ),
                                   ],
                                   onChanged: (newStatus) {
+                                    if (normalizedStatus == 'cancelled') return;
+                                    
                                     if (newStatus != null &&
                                         newStatus !=
                                             normalizedStatus) {

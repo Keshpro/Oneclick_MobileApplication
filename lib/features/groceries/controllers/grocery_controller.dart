@@ -265,6 +265,8 @@ Future<bool> placeOrder({
             'productId': item.product.id,
             'name': item.product.name,
             'sellerId': item.product.sellerId,
+                        
+            'sellerName': item.product.sellerName,
             'price': item.product.finalPrice,
             'quantity': item.quantity,
             'totalPrice': item.totalPrice,
@@ -299,4 +301,94 @@ Future<bool> placeOrder({
     return false;
   }
 }
+  /// Cancels a customer's order and restores stock.
+  /// Returns null on success, otherwise an error message.
+  static Future<String?> cancelOrder(String orderId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return 'Please log in.';
+
+    final firestore = FirebaseFirestore.instance;
+    final orderRef = firestore.collection('grocery_orders').doc(orderId);
+
+    try {
+      await firestore.runTransaction((transaction) async {
+        // 1. Read the order.
+        final orderSnap = await transaction.get(orderRef);
+        if (!orderSnap.exists) throw Exception('Order not found');
+
+        final data = orderSnap.data()!;
+        if (data['customerId'] != user.uid) {
+          throw Exception('This is not your order');
+        }
+
+        final status =
+            (data['status'] ?? 'pending').toString().toLowerCase();
+        if (status == 'cancelled') {
+          throw Exception('Order is already cancelled');
+        }
+
+        final items =
+            (data['items'] as List? ?? []).whereType<Map>().toList();
+        final sellerStatuses = (data['sellerStatuses'] as Map?) ?? {};
+        final sellerIds = items
+            .map((item) => (item['sellerId'] ?? '').toString())
+            .toSet();
+
+        // 2. Every seller must still be pending.
+        for (final sellerId in sellerIds) {
+          final s = (sellerStatuses[sellerId] ?? 'pending')
+              .toString()
+              .toLowerCase();
+          if (s != 'pending') {
+            throw Exception(
+              'A seller has already started this order, so it '
+              'cannot be cancelled.',
+            );
+          }
+        }
+
+        // 3. Total quantity to restore per product.
+        final quantities = <String, int>{};
+        for (final item in items) {
+          final productId = (item['productId'] ?? '').toString();
+          final qty = (item['quantity'] as num?)?.toInt() ?? 0;
+          if (productId.isEmpty || qty <= 0) continue;
+          quantities.update(productId, (v) => v + qty,
+              ifAbsent: () => qty);
+        }
+
+        // 4. Read all products BEFORE any write.
+        final productSnaps =
+            <String, DocumentSnapshot<Map<String, dynamic>>>{};
+        for (final productId in quantities.keys) {
+          productSnaps[productId] = await transaction.get(
+            firestore.collection('grocery_products').doc(productId),
+          );
+        }
+
+        // 5. Writes: restore stock (skip deleted products).
+        for (final entry in quantities.entries) {
+          final snap = productSnaps[entry.key];
+          if (snap == null || !snap.exists) continue;
+
+          transaction.update(snap.reference, {
+            'stock': FieldValue.increment(entry.value),
+          });
+        }
+
+        transaction.update(orderRef, {
+          'status': 'cancelled',
+          'sellerStatuses': {
+            for (final sellerId in sellerIds) sellerId: 'cancelled',
+          },
+          'cancelledAt': FieldValue.serverTimestamp(),
+        });
+      });
+
+      return null;
+    } catch (e) {
+      debugPrint('Failed to cancel grocery order: $e');
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
 }
