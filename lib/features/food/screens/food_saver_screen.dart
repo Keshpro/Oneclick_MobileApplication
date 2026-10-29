@@ -1728,7 +1728,21 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                         return;
                       }
 
-                      FoodCartService.instance.addProduct(offer, quantity);
+                      final added = FoodCartService.instance.addProduct(
+                        offer,
+                        quantity,
+                      );
+
+                      if (!added) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'This offer has expired or is no longer available.',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
