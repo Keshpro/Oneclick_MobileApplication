@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'document_pack_export_screen.dart';
+import '../models/document_pack.dart';
 
 class DocumentPackGapsScreen extends StatefulWidget {
-  const DocumentPackGapsScreen({super.key});
+  const DocumentPackGapsScreen({
+    super.key,
+    required this.pack,
+  });
+
+  final DocumentPack pack;
 
   @override
   State<DocumentPackGapsScreen> createState() =>
@@ -21,10 +27,11 @@ class _DocumentPackGapsScreenState
   static const green = Color(0xFF00A978);
 
   bool accommodationResolved = false;
-  bool bankResolved = false;
+bool bankResolved = false;
 
-  bool get allResolved =>
-      accommodationResolved && bankResolved;
+bool get allResolved =>
+    widget.pack.totalRequirements > 0 &&
+    widget.pack.missingRequirements == 0;
 
   @override
   Widget build(BuildContext context) {
@@ -66,11 +73,14 @@ class _DocumentPackGapsScreenState
 
                   const SizedBox(height: 24),
 
-                  _accommodationGap(),
-
-                  const SizedBox(height: 20),
-
-                  _bankGap(),
+                  if (widget.pack.missingRequirements == 0)
+                    _allMatchedCard()
+                  else
+                    for (final requirement in widget.pack.requirements)
+                      if (!requirement.isMatched) ...[
+                        _actualGapCard(requirement.name),
+                        const SizedBox(height: 20),
+                      ],
 
                   const SizedBox(height: 24),
 
@@ -152,6 +162,119 @@ class _DocumentPackGapsScreenState
       ),
     );
   }
+
+  Widget _allMatchedCard() {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(24),
+    decoration: BoxDecoration(
+      color: card,
+      borderRadius: BorderRadius.circular(30),
+      border: const Border(
+        left: BorderSide(color: green, width: 6),
+      ),
+      boxShadow: _shadow(),
+    ),
+    child: const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.check_circle_outline, color: green, size: 32),
+        SizedBox(height: 14),
+        Text(
+          'All Requirements Matched',
+          style: TextStyle(
+            color: ink,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: 8),
+        Text(
+          'Every checklist requirement has a confirmed Vault record. '
+          'You can continue to review your document pack.',
+          style: TextStyle(
+            color: muted,
+            fontSize: 13,
+            height: 1.5,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _actualGapCard(String requirementName) {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(22),
+    decoration: BoxDecoration(
+      color: card,
+      borderRadius: BorderRadius.circular(30),
+      border: const Border(
+        left: BorderSide(color: orange, width: 6),
+      ),
+      boxShadow: _shadow(),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.description_outlined, color: ink),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                requirementName,
+                style: const TextStyle(
+                  color: ink,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            _gapStatus(),
+          ],
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'No Vault document has been confirmed for this requirement.',
+          style: TextStyle(
+            color: muted,
+            fontSize: 13,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 14),
+        TextButton.icon(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_rounded),
+          label: const Text('Return to Matches'),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _gapStatus() {
+  return Container(
+    padding: const EdgeInsets.symmetric(
+      horizontal: 10,
+      vertical: 7,
+    ),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF0F1F6),
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: const Text(
+      'Not Matched',
+      style: TextStyle(
+        color: orange,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
+}
 
   Widget _accommodationGap() {
     final resolved = accommodationResolved;
@@ -392,70 +515,67 @@ class _DocumentPackGapsScreenState
   }
 
   Widget _readiness() {
-    final resolvedCount =
-        2 +
-        (accommodationResolved ? 1 : 0) +
-        (bankResolved ? 1 : 0);
+  final total = widget.pack.totalRequirements;
+  final matched = widget.pack.matchedRequirements;
+  final remaining = widget.pack.missingRequirements;
 
-    return _surface(
-      child: Row(
-        children: [
-          SizedBox(
-            width: 72,
-            height: 72,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CircularProgressIndicator(
-                  value: resolvedCount / 4,
-                  strokeWidth: 6,
-                  color: allResolved ? green : purple,
-                  backgroundColor: const Color(0xFFD5D7E0),
+  return _surface(
+    child: Row(
+      children: [
+        SizedBox(
+          width: 72,
+          height: 72,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CircularProgressIndicator(
+                value: total == 0 ? 0 : matched / total,
+                strokeWidth: 6,
+                color: allResolved ? green : purple,
+                backgroundColor: const Color(0xFFD5D7E0),
+              ),
+              Text(
+                '$matched/$total',
+                style: const TextStyle(
+                  color: ink,
+                  fontWeight: FontWeight.w600,
                 ),
-                Text(
-                  '$resolvedCount/4',
-                  style: const TextStyle(
-                    color: ink,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-
-          const SizedBox(width: 18),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  allResolved
-                      ? 'All Requirements Satisfied'
-                      : '$resolvedCount of 4 Requirements Ready',
-                  style: const TextStyle(
-                    color: ink,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                  ),
+        ),
+        const SizedBox(width: 18),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                allResolved
+                    ? 'All Requirements Matched'
+                    : '$matched of $total Requirements Matched',
+                style: const TextStyle(
+                  color: ink,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
                 ),
-                const SizedBox(height: 5),
-                Text(
-                  allResolved
-                      ? 'Your document pack is ready for final review.'
-                      : '${4 - resolvedCount} item(s) still require attention.',
-                  style: const TextStyle(
-                    color: muted,
-                    fontSize: 13,
-                  ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                allResolved
+                    ? 'All requirements have confirmed Vault records.'
+                    : '$remaining requirement(s) still need a confirmed document.',
+                style: const TextStyle(
+                  color: muted,
+                  fontSize: 13,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _continue() {
     return Opacity(
@@ -466,8 +586,9 @@ class _DocumentPackGapsScreenState
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        const DocumentPackExportScreen(),
+                    builder: (_) => DocumentPackExportScreen(
+                      pack: widget.pack,
+                    ),
                   ),
                 );
               }
