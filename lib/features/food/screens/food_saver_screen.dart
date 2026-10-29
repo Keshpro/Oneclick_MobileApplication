@@ -8,6 +8,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/food_offer_model.dart' as seller_model;
 
+import 'dart:async';
+
 class SaveBiteOffer extends FoodProduct {
   final String foodName;
   final String restaurantName;
@@ -22,6 +24,9 @@ class SaveBiteOffer extends FoodProduct {
   final int quantity;
 
   final String endingTime;
+
+  final DateTime? expiresAt;
+
   @override
   final double rating;
   final String description;
@@ -40,6 +45,7 @@ class SaveBiteOffer extends FoodProduct {
     required this.saverPrice,
     required this.quantity,
     required this.endingTime,
+    required this.expiresAt,
     required this.rating,
     required this.description,
     required this.category,
@@ -92,7 +98,47 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     'Snacks',
     'Beverages',
     'Other',
+    'Sold Out',
   ];
+  DateTime? _calculateExpiry(Map<String, dynamic> data, String endingTime) {
+    final createdAt = data['createdAt'];
+
+    DateTime? createdDate;
+
+    if (createdAt is Timestamp) {
+      createdDate = createdAt.toDate();
+    } else if (createdAt is DateTime) {
+      createdDate = createdAt;
+    }
+
+    if (createdDate == null) return null;
+
+    final match = RegExp(
+      r'^(\d{1,2}):(\d{2})\s*(AM|PM)$',
+      caseSensitive: false,
+    ).firstMatch(endingTime.trim());
+
+    if (match == null) return null;
+
+    var hour = int.parse(match.group(1)!);
+    final minute = int.parse(match.group(2)!);
+    final period = match.group(3)!.toUpperCase();
+
+    if (hour < 1 || hour > 12 || minute < 0 || minute > 59) {
+      return null;
+    }
+
+    if (period == 'PM' && hour != 12) hour += 12;
+    if (period == 'AM' && hour == 12) hour = 0;
+
+    return DateTime(
+      createdDate.year,
+      createdDate.month,
+      createdDate.day,
+      hour,
+      minute,
+    );
+  }
 
   final List<SaveBiteOffer> offers = const [
     SaveBiteOffer(
@@ -105,6 +151,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
       saverPrice: 390,
       quantity: 5,
       endingTime: '7:00 PM',
+      expiresAt: null,
       rating: 4.7,
       description: 'A delicious Sri Lankan rice and curry meal available at a special SaveBite price before closing time.',
       category: 'Meals',
@@ -122,6 +169,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
       saverPrice: 450,
       quantity: 3,
       endingTime: '6:30 PM',
+      expiresAt: null,
       rating: 4.9,
       description: 'A selection of freshly baked bakery items that are available at a discounted SaveBite price.',
       category: 'Bakery',
@@ -139,6 +187,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
       saverPrice: 500,
       quantity: 4,
       endingTime: '8:00 PM',
+      expiresAt: null,
       rating: 4.6,
       description: 'Fresh pizza slices available near the end of the restaurant service at a reduced price.',
       category: 'Pizza',
@@ -156,6 +205,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
       saverPrice: 350,
       quantity: 6,
       endingTime: '7:30 PM',
+      expiresAt: null,
       rating: 4.9,
       description:
           'Rich chocolate brownies rescued from the end-of-day bakery stock.',
@@ -167,9 +217,14 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
 
   Future<void> _loadFirestoreOffers() async {
     try {
+      debugPrint('SaveBite: Starting Firestore query');
+
       final snapshot = await FirebaseFirestore.instance
           .collectionGroup('offers')
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 15));
+
+      debugPrint('SaveBite: Found ${snapshot.docs.length} offer documents');
 
       final List<SaveBiteOffer> loadedOffers = [];
 
@@ -203,6 +258,19 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
 
         final offer = seller_model.FoodOfferModel.fromFirestore(document);
 
+        final rawExpiry = data['expiresAt'];
+
+        final DateTime? expiresAt = rawExpiry is Timestamp
+            ? rawExpiry.toDate()
+            : rawExpiry is DateTime
+            ? rawExpiry
+            : null;
+
+        // Do not display offers with missing or expired deadlines.
+        if (expiresAt == null || !expiresAt.isAfter(DateTime.now())) {
+          continue;
+        }
+
         final originalPrice = double.tryParse(offer.originalPrice) ?? 0;
         final saverPrice = double.tryParse(offer.saverPrice) ?? 0;
         final quantity = int.tryParse(offer.quantity) ?? 0;
@@ -210,7 +278,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
         if (offer.foodName.trim().isEmpty ||
             originalPrice <= 0 ||
             saverPrice < 0 ||
-            quantity <= 0) {
+            quantity < 0) {
           continue;
         }
 
@@ -236,6 +304,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
             saverPrice: saverPrice,
             quantity: quantity,
             endingTime: offer.availableUntil,
+            expiresAt: expiresAt,
             rating: 0.0,
             description: offer.description,
             category: _customerCategory(offer.category),
@@ -290,6 +359,17 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     }
   }
 
+  Future<void> _refreshFirestoreOffers() async {
+    if (!mounted) return;
+
+    setState(() {
+      isLoadingFirestoreOffers = true;
+      firestoreOffersError = null;
+    });
+
+    await _loadFirestoreOffers();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -308,9 +388,11 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     final allOffers = [...offers, ...firestoreOffers];
 
     return allOffers.where((offer) {
-      final matchesCategory =
-          selectedCategory == 'All' ||
-          offer.category.toLowerCase() == selectedCategory.toLowerCase();
+      final matchesCategory = selectedCategory == 'All'
+          ? true
+          : selectedCategory == 'Sold Out'
+          ? offer.quantity == 0
+          : offer.category.toLowerCase() == selectedCategory.toLowerCase();
 
       final matchesSearch =
           search.isEmpty ||
@@ -364,8 +446,10 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
                         MaterialPageRoute(
                           builder: (_) => const FoodCartScreen(),
                         ),
-                      ).then((_) {
-                        setState(() {});
+                      ).then((_) async {
+                        if (!mounted) return;
+
+                        await _refreshFirestoreOffers();
                       });
                     },
                   ),
@@ -744,6 +828,117 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
   }
 }
 
+class _ExpiryCountdown extends StatefulWidget {
+  final DateTime expiresAt;
+
+  const _ExpiryCountdown({required this.expiresAt});
+
+  @override
+  State<_ExpiryCountdown> createState() => _ExpiryCountdownState();
+}
+
+class _ExpiryCountdownState extends State<_ExpiryCountdown> {
+  Timer? _timer;
+  late Duration _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateRemaining();
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _updateRemaining(),
+    );
+  }
+
+  void _updateRemaining() {
+    final remaining = widget.expiresAt.difference(DateTime.now());
+
+    if (!mounted) return;
+
+    setState(() {
+      _remaining = remaining.isNegative ? Duration.zero : remaining;
+    });
+
+    if (_remaining == Duration.zero) {
+      _timer?.cancel();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _twoDigits(int value) => value.toString().padLeft(2, '0');
+
+  @override
+  Widget build(BuildContext context) {
+    final totalSeconds = _remaining.inSeconds;
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+
+    final urgent = totalSeconds <= 600;
+
+    final color = urgent ? const Color(0xFFD32F2F) : const Color(0xFF2E7D32);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 500),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            urgent ? Icons.timer_rounded : Icons.hourglass_bottom_rounded,
+            color: color,
+            size: 22,
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  totalSeconds == 0
+                      ? 'Collection time ended'
+                      : urgent
+                      ? 'Hurry! Time is running out'
+                      : 'Rescue this food before',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${_twoDigits(hours)}:'
+                  '${_twoDigits(minutes)}:'
+                  '${_twoDigits(seconds)}',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SaveBiteCard extends StatelessWidget {
   final SaveBiteOffer offer;
   final VoidCallback onTap;
@@ -952,12 +1147,16 @@ class _SaveBiteCard extends StatelessWidget {
 
                   Text(
                     offer.foodName,
-
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+
+                  if (offer.expiresAt != null) ...[
+                    const SizedBox(height: 12),
+                    _ExpiryCountdown(expiresAt: offer.expiresAt!),
+                  ],
 
                   const SizedBox(height: 9),
 
@@ -999,15 +1198,24 @@ class _SaveBiteCard extends StatelessWidget {
 
                       const SizedBox(width: 5),
 
-                      Text(
-                        '${offer.quantity} portions left',
-
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: offer.quantity <= 3
-                              ? Colors.red
-                              : Colors.orange.shade800,
-                          fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Text(
+                          offer.quantity == 0
+                              ? 'Out of Stock'
+                              : offer.quantity == 1
+                              ? 'Last Portion!'
+                              : '${offer.quantity} portions left',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: offer.quantity == 0
+                                ? Colors.grey
+                                : offer.quantity == 1
+                                ? Colors.red
+                                : offer.quantity <= 3
+                                ? Colors.red
+                                : Colors.orange.shade800,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
 
@@ -1354,7 +1562,11 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                   _InfoRow(
                     icon: Icons.inventory_2_outlined,
                     title: 'Availability',
-                    value: '${offer.quantity} portions left',
+                    value: offer.quantity == 0
+                        ? 'Out of Stock'
+                        : offer.quantity == 1
+                        ? 'Last Portion available'
+                        : '${offer.quantity} portions left',
                   ),
 
                   const SizedBox(height: 12),
@@ -1439,9 +1651,8 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                     children: [
                       _QuantityButton(
                         icon: Icons.remove,
-
                         onTap: () {
-                          if (quantity > 1) {
+                          if (offer.quantity > 0 && quantity > 1) {
                             setState(() {
                               quantity--;
                             });
@@ -1466,7 +1677,7 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                         icon: Icons.add,
 
                         onTap: () {
-                          if (quantity < offer.quantity) {
+                          if (offer.quantity > 0 && quantity < offer.quantity) {
                             setState(() {
                               quantity++;
                             });
@@ -1505,30 +1716,41 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
             width: double.infinity,
 
             child: ElevatedButton(
-              onPressed: () {
-                FoodCartService.instance.addProduct(offer, quantity);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '$quantity × ${offer.foodName} added to cart',
-                    ),
-                    behavior: SnackBarBehavior.floating,
-
-                    action: SnackBarAction(
-                      label: 'VIEW CART',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const FoodCartScreen(),
+              onPressed: offer.quantity <= 0
+                  ? null
+                  : () {
+                      if (quantity > offer.quantity) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Not enough portions are available.'),
                           ),
                         );
-                      },
-                    ),
-                  ),
-                );
-              },
+                        return;
+                      }
+
+                      FoodCartService.instance.addProduct(offer, quantity);
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '$quantity × ${offer.foodName} added to cart',
+                          ),
+                          behavior: SnackBarBehavior.floating,
+
+                          action: SnackBarAction(
+                            label: 'VIEW CART',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const FoodCartScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    },
 
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2E7D32),

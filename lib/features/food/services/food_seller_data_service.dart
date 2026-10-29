@@ -77,6 +77,7 @@ class FoodSellerDataService {
       description: offer.description,
       allergens: offer.allergens,
       status: offer.status,
+      expiresAt: offer.expiresAt,
     );
 
     final index = offers.indexWhere((item) => item.id == savedOffer.id);
