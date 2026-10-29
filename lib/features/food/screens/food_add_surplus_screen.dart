@@ -26,6 +26,7 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
 
   String selectedFromTime = '5:00 PM';
   String selectedUntilTime = '8:00 PM';
+  DateTime selectedCollectionDate = DateTime.now();
 
   final List<String> categories = [
     'Bakery',
@@ -49,6 +50,45 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
     super.dispose();
   }
 
+  DateTime _dateTimeForTime(DateTime date, String time) {
+    final parts = time.split(' ');
+    final timeParts = parts[0].split(':');
+
+    int hour = int.parse(timeParts[0]);
+    final int minute = int.parse(timeParts[1]);
+    final String period = parts[1];
+
+    if (period == 'PM' && hour != 12) {
+      hour += 12;
+    } else if (period == 'AM' && hour == 12) {
+      hour = 0;
+    }
+
+    return DateTime(date.year, date.month, date.day, hour, minute);
+  }
+
+  Future<void> _selectCollectionDate() async {
+    final now = DateTime.now();
+
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate:
+          selectedCollectionDate.isBefore(
+            DateTime(now.year, now.month, now.day),
+          )
+          ? DateTime(now.year, now.month, now.day)
+          : selectedCollectionDate,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(now.year + 2, now.month, now.day),
+    );
+
+    if (pickedDate != null && mounted) {
+      setState(() {
+        selectedCollectionDate = pickedDate;
+      });
+    }
+  }
+
   // ------------------------------------------------------------
   // CREATE OFFER
   // ------------------------------------------------------------
@@ -57,6 +97,34 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
     if (_isSaving) return;
 
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    final now = DateTime.now();
+
+    final collectionStart = _dateTimeForTime(
+      selectedCollectionDate,
+      selectedFromTime,
+    );
+
+    final expiry = _dateTimeForTime(selectedCollectionDate, selectedUntilTime);
+
+    if (!expiry.isAfter(collectionStart)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'The collection end time must be after the start time.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (!expiry.isAfter(now)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please choose a future collection end date and time.'),
+        ),
+      );
       return;
     }
 
@@ -85,6 +153,7 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
       availableUntil: selectedUntilTime,
       description: descriptionController.text.trim(),
       allergens: allergenController.text.trim(),
+      expiresAt: expiry,
     );
 
     try {
@@ -316,6 +385,42 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
 
                   return null;
                 },
+              ),
+
+              const SizedBox(height: 20),
+              const Text(
+                'Collection Date',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 8),
+
+              InkWell(
+                onTap: _selectCollectionDate,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade400),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_month_outlined),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          '${selectedCollectionDate.day.toString().padLeft(2, '0')}/'
+                          '${selectedCollectionDate.month.toString().padLeft(2, '0')}/'
+                          '${selectedCollectionDate.year}',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                      const Icon(Icons.edit_calendar_outlined),
+                    ],
+                  ),
+                ),
               ),
 
               const SizedBox(height: 20),

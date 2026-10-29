@@ -8,6 +8,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/food_offer_model.dart' as seller_model;
 
+import 'dart:async';
+
 class SaveBiteOffer extends FoodProduct {
   final String foodName;
   final String restaurantName;
@@ -256,9 +258,16 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
 
         final offer = seller_model.FoodOfferModel.fromFirestore(document);
 
-        final expiresAt = _calculateExpiry(data, offer.availableUntil);
+        final rawExpiry = data['expiresAt'];
 
-        if (expiresAt != null && !expiresAt.isAfter(DateTime.now())) {
+        final DateTime? expiresAt = rawExpiry is Timestamp
+            ? rawExpiry.toDate()
+            : rawExpiry is DateTime
+            ? rawExpiry
+            : null;
+
+        // Do not display offers with missing or expired deadlines.
+        if (expiresAt == null || !expiresAt.isAfter(DateTime.now())) {
           continue;
         }
 
@@ -819,6 +828,117 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
   }
 }
 
+class _ExpiryCountdown extends StatefulWidget {
+  final DateTime expiresAt;
+
+  const _ExpiryCountdown({required this.expiresAt});
+
+  @override
+  State<_ExpiryCountdown> createState() => _ExpiryCountdownState();
+}
+
+class _ExpiryCountdownState extends State<_ExpiryCountdown> {
+  Timer? _timer;
+  late Duration _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateRemaining();
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _updateRemaining(),
+    );
+  }
+
+  void _updateRemaining() {
+    final remaining = widget.expiresAt.difference(DateTime.now());
+
+    if (!mounted) return;
+
+    setState(() {
+      _remaining = remaining.isNegative ? Duration.zero : remaining;
+    });
+
+    if (_remaining == Duration.zero) {
+      _timer?.cancel();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _twoDigits(int value) => value.toString().padLeft(2, '0');
+
+  @override
+  Widget build(BuildContext context) {
+    final totalSeconds = _remaining.inSeconds;
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+
+    final urgent = totalSeconds <= 600;
+
+    final color = urgent ? const Color(0xFFD32F2F) : const Color(0xFF2E7D32);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 500),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            urgent ? Icons.timer_rounded : Icons.hourglass_bottom_rounded,
+            color: color,
+            size: 22,
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  totalSeconds == 0
+                      ? 'Collection time ended'
+                      : urgent
+                      ? 'Hurry! Time is running out'
+                      : 'Rescue this food before',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${_twoDigits(hours)}:'
+                  '${_twoDigits(minutes)}:'
+                  '${_twoDigits(seconds)}',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SaveBiteCard extends StatelessWidget {
   final SaveBiteOffer offer;
   final VoidCallback onTap;
@@ -1027,12 +1147,16 @@ class _SaveBiteCard extends StatelessWidget {
 
                   Text(
                     offer.foodName,
-
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+
+                  if (offer.expiresAt != null) ...[
+                    const SizedBox(height: 12),
+                    _ExpiryCountdown(expiresAt: offer.expiresAt!),
+                  ],
 
                   const SizedBox(height: 9),
 
