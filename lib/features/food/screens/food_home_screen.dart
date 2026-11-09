@@ -1,41 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../auth/screens/provider_rules_screen.dart';
-import '../../auth/screens/provider_register_screen.dart';
 
-import 'food_seller_application_screen.dart';
 import 'food_saver_screen.dart';
 import 'mystery_bites_screen.dart';
 import 'sweet_craft_screen.dart';
 
-class FoodHomeScreen extends StatefulWidget {
+class FoodHomeScreen extends StatelessWidget {
   const FoodHomeScreen({super.key});
-
-  @override
-  State<FoodHomeScreen> createState() => _FoodHomeScreenState();
-}
-
-class _FoodHomeScreenState extends State<FoodHomeScreen> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  Future<String> _getSellerStatus() async {
-    final user = _auth.currentUser;
-
-    if (user == null) {
-      return 'none';
-    }
-
-    final doc = await _firestore.collection('food_sellers').doc(user.uid).get();
-
-    if (!doc.exists) {
-      return 'none';
-    }
-
-    return (doc.data()?['status'] ?? 'none').toString().toLowerCase();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -210,116 +182,111 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
 
             const SizedBox(height: 28),
 
-            // Become a Food Seller / Seller Status
-            FutureBuilder<String>(
-              future: _getSellerStatus(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const SizedBox.shrink();
-                }
-
-                final status = snapshot.data ?? 'none';
-
-                // Approved sellers should use Seller Mode.
-                if (status == 'active') {
-                  return const SizedBox.shrink();
-                }
-
-                // Applicants waiting for approval should not apply again.
-                if (status == 'pending') {
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.hourglass_top_rounded, color: Colors.orange),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Your Food Seller application is pending approval.',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                // Show the application card to users who have not applied
-                // or whose previous application was rejected.
-                return Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+            // Become a Food Seller
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
                     children: [
-                      const Row(
-                        children: [
-                          Icon(
-                            Icons.storefront_rounded,
-                            color: Color(0xFF2E7D32),
-                            size: 26,
-                          ),
-                          SizedBox(width: 10),
-                          Text(
-                            'Own a food business?',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                      Icon(
+                        Icons.storefront_rounded,
+                        color: Color(0xFF2E7D32),
+                        size: 26,
                       ),
-                      const SizedBox(height: 6),
+
+                      SizedBox(width: 10),
+
                       Text(
-                        status == 'rejected'
-                            ? 'Your previous application was rejected. You can review and reapply.'
-                            : 'Join OneClick and sell your food.',
+                        'Own a food business?',
                         style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 44,
-                        child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ProviderRulesScreen(),
-                              ),
-                            );
-                          },
-                          child: Text(
-                            status == 'rejected'
-                                ? 'Update and Reapply'
-                                : 'Become a Food Seller',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                );
-              },
+
+                  const SizedBox(height: 6),
+
+                  Text(
+                    'Join Oneclick and sell your surplus food.',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ProviderRulesScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'Become a Food Seller',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 28),
+
+            // Impact
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF66BB6A), Color(0xFF2E7D32)],
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.eco_rounded, color: Colors.white, size: 30),
+
+                  SizedBox(height: 10),
+
+                  Text(
+                    'Every meal saved makes a difference 🌱',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  SizedBox(height: 6),
+
+                  Text(
+                    'Help reduce food waste while enjoying great food.',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: 20),
