@@ -21,9 +21,9 @@ class _DocumentRequirementsEditorState
   final TextEditingController _inputController =
       TextEditingController();
 
-  static const Color purple = Color(0xFF6667FF);
-  static const Color ink = Color(0xFF303344);
-  static const Color muted = Color(0xFF707383);
+  static const Color purple = Color(0xFF725763);
+static const Color ink = Color(0xFF302B31);
+static const Color muted = Color(0xFF776F77);
 
   @override
   void dispose() {
@@ -151,7 +151,7 @@ class _DocumentRequirementsEditorState
       children: [
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFF0F1F6),
+            color: const Color(0xFFF7F3F4),
             borderRadius: BorderRadius.circular(22),
           ),
           child: TextField(
@@ -160,7 +160,7 @@ class _DocumentRequirementsEditorState
             maxLines: 8,
             maxLength: 4000,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               color: ink,
               height: 1.6,
             ),
@@ -187,6 +187,10 @@ class _DocumentRequirementsEditorState
             icon: const Icon(Icons.add_rounded),
             label: const Text('Add to Checklist'),
             style: FilledButton.styleFrom(
+              textStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
               backgroundColor: purple,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -204,7 +208,7 @@ class _DocumentRequirementsEditorState
                 'YOUR CHECKLIST',
                 style: TextStyle(
                   color: ink,
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.5,
                 ),
@@ -214,7 +218,7 @@ class _DocumentRequirementsEditorState
               '${widget.requirements.length} documents',
               style: const TextStyle(
                 color: purple,
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -226,7 +230,7 @@ class _DocumentRequirementsEditorState
             width: double.infinity,
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              color: const Color(0xFFF7F7FB),
+              color: const Color(0xFFF7F3F4),
               borderRadius: BorderRadius.circular(18),
             ),
             child: const Text(
@@ -235,7 +239,7 @@ class _DocumentRequirementsEditorState
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: muted,
-                fontSize: 13,
+                fontSize: 12,
                 height: 1.6,
               ),
             ),
@@ -255,7 +259,7 @@ class _DocumentRequirementsEditorState
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(17),
                   border: Border.all(
-                    color: const Color(0xFFE8E8F2),
+                    color: const Color(0xFFECE3E8),
                   ),
                 ),
                 child: Row(
@@ -265,7 +269,7 @@ class _DocumentRequirementsEditorState
                       height: 30,
                       alignment: Alignment.center,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFF0EEFF),
+                        color: Color(0xFFECE3E8),
                         shape: BoxShape.circle,
                       ),
                       child: Text(
@@ -273,7 +277,7 @@ class _DocumentRequirementsEditorState
                         style: const TextStyle(
                           color: purple,
                           fontWeight: FontWeight.w800,
-                          fontSize: 12,
+                          fontSize: 11,
                         ),
                       ),
                     ),
@@ -283,7 +287,7 @@ class _DocumentRequirementsEditorState
                         widget.requirements[index],
                         style: const TextStyle(
                           color: ink,
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -302,7 +306,7 @@ class _DocumentRequirementsEditorState
                       onPressed: () => _removeRequirement(index),
                       icon: const Icon(
                         Icons.close_rounded,
-                        color: Color(0xFFEF7894),
+                        color: Color(0xFF9A6C75),
                         size: 20,
                       ),
                     ),

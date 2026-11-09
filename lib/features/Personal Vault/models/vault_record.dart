@@ -91,7 +91,7 @@ class VaultRecord {
       merchant: map['merchant'],
       purchaseDate:
           (map['purchaseDate'] as Timestamp?)?.toDate(),
-      amount: map['amount'],
+      amount: map['amount'], 
     );
   }
 }

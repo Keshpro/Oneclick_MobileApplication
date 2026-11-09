@@ -36,12 +36,12 @@ class _DocumentPackExportScreenState
     pack = widget.pack;
   }
 
-  static const background = Color(0xFFE9EBF2);
-  static const card = Color(0xFFEEF0F6);
-  static const purple = Color(0xFF6667FF);
-  static const ink = Color(0xFF303344);
-  static const muted = Color(0xFF707383);
-  static const green = Color(0xFF00A978);
+  static const background = Color(0xFFF5F3F2);
+  static const card = Color(0xFFFFFDFC);
+  static const purple = Color(0xFF725763);
+  static const ink = Color(0xFF302B31);
+  static const muted = Color(0xFF776F77);
+  static const green = Color(0xFF47866D);
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +67,7 @@ class _DocumentPackExportScreenState
                     'Pack Contents',
                     style: TextStyle(
                       color: ink,
-                      fontSize: 20,
+                      fontSize: 17,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -133,7 +133,7 @@ class _DocumentPackExportScreenState
                     'Export Options',
                     style: TextStyle(
                       color: ink,
-                      fontSize: 20,
+                      fontSize: 17,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -195,12 +195,11 @@ class _DocumentPackExportScreenState
             'Document Pack Builder',
             style: TextStyle(
               color: ink,
-              fontSize: 22,
+              fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),
         ),
-        _circle(Icons.more_vert, () {}),
       ],
     );
   }
@@ -212,7 +211,7 @@ class _DocumentPackExportScreenState
           const Row(
             children: [
               Text(
-                '● Step 4 of 4',
+                'â— Step 4 of 4',
                 style: TextStyle(
                   color: purple,
                   fontWeight: FontWeight.w600,
@@ -233,11 +232,11 @@ class _DocumentPackExportScreenState
 
           Row(
             children: [
-              _step('✓', 'Requisite', false),
+              _step('1', 'Requisite', false),
               _line(),
-              _step('✓', 'Matches', false),
+              _step('2', 'Matches', false),
               _line(),
-              _step('✓', 'Gaps', false),
+              _step('3', 'Gaps', false),
               _line(),
               _step('4', 'Export', true),
             ],
@@ -259,8 +258,8 @@ Widget _readyCard() {
         CircleAvatar(
           radius: 28,
           backgroundColor: allMatched
-              ? const Color(0xFFE2F7F0)
-              : const Color(0xFFFFF2DE),
+              ? const Color(0xFFE5F2EB)
+              : const Color(0xFFF5EADD),
           child: Icon(
             allMatched
                 ? Icons.check_circle_outline
@@ -280,7 +279,7 @@ Widget _readyCard() {
                     : '$matched of $total Requirements Matched',
                 style: const TextStyle(
                   color: ink,
-                  fontSize: 18,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -291,7 +290,7 @@ Widget _readyCard() {
                     : 'Some requirements still need matching.',
                 style: const TextStyle(
                   color: muted,
-                  fontSize: 13,
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -313,13 +312,13 @@ Widget _readyCard() {
         children: [
           CircleAvatar(
             backgroundColor: available
-                ? const Color(0xFFE2F7F0)
-                : const Color(0xFFFFE8ED),
+                ? const Color(0xFFE5F2EB)
+                : const Color(0xFFF5E7E9),
             child: Icon(
               available
                   ? Icons.check_rounded
                   : Icons.error_outline,
-              color: available ? green : const Color(0xFFFF3B62),
+              color: available ? green : const Color(0xFFB96C75),
             ),
           ),
 
@@ -385,7 +384,7 @@ Widget _readyCard() {
                   pack.name,
                   style: const TextStyle(
                     color: ink,
-                    fontSize: 17,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -453,7 +452,7 @@ Widget _readyCard() {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F2F7),
+                  color: const Color(0xFFECE3E8),
                   shape: BoxShape.circle,
                   boxShadow: _shadow(),
                 ),
@@ -510,7 +509,7 @@ Widget _readyCard() {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0F1F6),
+                color: const Color(0xFFF7F3F4),
                 borderRadius: BorderRadius.circular(25),
                 boxShadow: _shadow(),
               ),
@@ -520,6 +519,7 @@ Widget _readyCard() {
                 style: const TextStyle(
                   color: purple,
                   fontWeight: FontWeight.w600,
+                  fontSize: 13,
                 ),
               ),
             ),
@@ -574,13 +574,13 @@ Widget _saveButton(BuildContext context) {
 
   return InkWell(
     onTap: (_isSaving || saved) ? null : _savePack,
-    borderRadius: BorderRadius.circular(30),
+    borderRadius: BorderRadius.circular(24),
     child: Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 18),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F1F6),
-        borderRadius: BorderRadius.circular(30),
+        color: const Color(0xFFF7F3F4),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: _shadow(),
       ),
       child: Row(
@@ -612,7 +612,7 @@ Widget _saveButton(BuildContext context) {
             style: TextStyle(
               color: saved ? green : purple,
               fontWeight: FontWeight.w600,
-              fontSize: 15,
+              fontSize: 14,
             ),
           ),
         ],
@@ -637,16 +637,18 @@ Widget _saveButton(BuildContext context) {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color:
-                  active ? purple : const Color(0xFFF1F2F7),
+                  active ? purple : const Color(0xFFECE3E8),
               boxShadow: _shadow(),
             ),
-            child: Text(
-              number,
-              style: TextStyle(
-                color: active ? Colors.white : purple,
-                fontWeight: FontWeight.w600,
+            child: number == '1' || number == '2' || number == '3'
+            ? const Icon(Icons.check_rounded, color: purple, size: 20)
+            : Text(
+                number,
+                style: TextStyle(
+                  color: active ? Colors.white : purple,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -675,7 +677,7 @@ Widget _saveButton(BuildContext context) {
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: card,
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: _shadow(),
       ),
       child: child,
@@ -690,10 +692,10 @@ Widget _saveButton(BuildContext context) {
       onTap: onTap,
       borderRadius: BorderRadius.circular(50),
       child: Container(
-        width: 56,
-        height: 56,
+        width: 46,
+        height: 46,
         decoration: BoxDecoration(
-          color: const Color(0xFFF0F1F6),
+          color: const Color(0xFFF7F3F4),
           shape: BoxShape.circle,
           boxShadow: _shadow(),
         ),
@@ -710,7 +712,7 @@ Widget _saveButton(BuildContext context) {
         blurRadius: 8,
       ),
       BoxShadow(
-        color: Color(0xFFD5D7E0),
+        color: Color(0xFFE5DADF),
         offset: Offset(4, 4),
         blurRadius: 9,
       ),
