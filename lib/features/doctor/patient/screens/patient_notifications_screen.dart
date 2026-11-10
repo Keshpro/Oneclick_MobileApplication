@@ -141,7 +141,7 @@ class PatientNotificationsScreen extends StatelessWidget {
                                     Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: _primary.withOpacity(0.1),
+                                        color: Colors.teal.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Icon(
