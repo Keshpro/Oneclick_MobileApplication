@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:oneclick/features/auth/screens/home_screen.dart';
 
 class LogoutScreen extends StatefulWidget {
   const LogoutScreen({super.key});
@@ -23,11 +22,7 @@ class _LogoutScreenState extends State<LogoutScreen> {
 
       if (!mounted) return;
 
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-        (Route<dynamic> route) => false,
-      );
+      Navigator.of(context).popUntil((Route<dynamic> route) => route.isFirst);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);

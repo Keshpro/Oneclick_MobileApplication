@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-import 'activity_logs.dart' hide PendingAccounts;
+import 'activity_logs.dart';
 import 'database_management.dart';
 import 'doctor_audit.dart';
 import 'drunk_drive_audit.dart';

@@ -6,8 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:oneclick/features/groceries/customer/screens/grocery_home_screen.dart';
 
-import 'services_screen.dart';
-import 'explore_screen.dart';
+import 'offers_screen.dart';
+import 'activity_screen.dart';
+import 'profile_screen.dart';
 import '../../doctor/patient/screens/doctor_entry_screen.dart';
 import '../../doctor/doctor/screens/doctor_dashboard.dart';
 import '../../../admin/screens/admin_dashboard.dart';
@@ -481,30 +482,25 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    if (index == 1) {
-      setState(() => _selectedIndex = 1);
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ServicesScreen()),
-      ).then((_) {
-        if (mounted) setState(() => _selectedIndex = 0);
-      });
+    if (index == 3 && !_isLoggedIn) {
+      Navigator.pushNamed(context, '/login');
       return;
     }
 
-    if (index == 2) {
-      setState(() => _selectedIndex = 2);
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ExploreScreen()),
-      ).then((_) {
-        if (mounted) setState(() => _selectedIndex = 0);
-      });
-      return;
-    }
+    final Widget screen = switch (index) {
+      1 => const OffersScreen(),
+      2 => const ActivityScreen(),
+      3 => const ProfileScreen(),
+      _ => const OffersScreen(),
+    };
 
-    setState(() => _selectedIndex = 3);
-    _showAccountOptions();
+    setState(() => _selectedIndex = index);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => screen),
+    ).then((_) {
+      if (mounted) setState(() => _selectedIndex = 0);
+    });
   }
 
   void _showLoginRequired(String serviceName) {
@@ -997,12 +993,14 @@ class _FloatingNavBar extends StatelessWidget {
     required this.onSelected,
   });
 
-  static const _items = [
-    (Icons.home_outlined, Icons.home_rounded, 'Home'),
-    (Icons.grid_view_outlined, Icons.grid_view_rounded, 'Services'),
-    (Icons.explore_outlined, Icons.explore_rounded, 'Explore'),
-    (Icons.person_outline_rounded, Icons.person_rounded, 'Account'),
+  static const _icons = [
+    Icons.home_rounded,
+    Icons.local_offer_rounded,
+    Icons.history_rounded,
+    Icons.person_rounded,
   ];
+
+  static const _labels = ['Home', 'Offers', 'Activity', 'Profile'];
 
   @override
   Widget build(BuildContext context) {
@@ -1011,60 +1009,49 @@ class _FloatingNavBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         child: Container(
-          height: 64,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          height: 68,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: _Palette.ink,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: _Palette.line),
             boxShadow: [
               BoxShadow(
-                color: _Palette.ink.withValues(alpha: .25),
-                blurRadius: 24,
+                color: Colors.black.withValues(alpha: 0.10),
+                blurRadius: 22,
                 offset: const Offset(0, 8),
               ),
             ],
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(_items.length, (index) {
+            children: List.generate(_icons.length, (index) {
               final selected = index == selectedIndex;
-              final item = _items[index];
               return Expanded(
-                child: InkWell(
-                  onTap: () => onSelected(index),
-                  borderRadius: BorderRadius.circular(16),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOut,
-                    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                    padding: EdgeInsets.symmetric(horizontal: selected ? 12 : 0),
-                    decoration: BoxDecoration(
-                      color: selected ? _Palette.primary : Colors.transparent,
+                child: Semantics(
+                  label: _labels[index],
+                  button: true,
+                  selected: selected,
+                  child: Tooltip(
+                    message: _labels[index],
+                    child: InkWell(
+                      onTap: () => onSelected(index),
                       borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          selected ? item.$2 : item.$1,
-                          color: selected ? Colors.white : Colors.white.withValues(alpha: .60),
-                          size: 24,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? _Palette.primary.withValues(alpha: 0.12)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        if (selected) ...[
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              item.$3,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                            ),
+                        child: Center(
+                          child: Icon(
+                            _icons[index],
+                            size: 26,
+                            color: selected ? _Palette.primary : _Palette.inkSoft,
                           ),
-                        ],
-                      ],
+                        ),
+                      ),
                     ),
                   ),
                 ),

@@ -1,27 +1,31 @@
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
-import 'package:oneclick/shared/models/user_model.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'firebase_options.dart';
-import 'features/auth/screens/splash_screen.dart';
-import 'features/auth/screens/home_screen.dart';
-import 'features/auth/screens/login_screen.dart';
-import 'features/auth/screens/register_screen.dart';
-import 'features/food/screens/food_home_screen.dart';
+import 'app/app.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  const supabasePublishableKey = String.fromEnvironment(
-    'SUPABASE_PUBLISHABLE_KEY',
+  // 1. Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // 2. Supabase Configuration
+  const supabaseUrl =
+      'https://ptustmvvlnddubqqowmp.supabase.co';
+
+  const supabasePublishableKey =
+      'sb_publishable_XSwpu4rj_ZBjMS-GKdo1rA_S0Nga1A9';
+
+  // 3. Initialize Supabase
   await Supabase.initialize(
     url: supabaseUrl,
     publishableKey: supabasePublishableKey,
@@ -30,60 +34,31 @@ void main() async {
     },
   );
 
-  // Initialize App Check with both Android and Web providers
-  // This prevents the app from crashing when accidentally run on Chrome
-  await FirebaseAppCheck.instance.activate(
-    androidProvider: AndroidProvider.debug,
-    webProvider: ReCaptchaV3Provider('dummy-key'),
-  );
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-@override
-Widget build(BuildContext context) {
-
-  return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'OneClick',
-
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF5B4DFF)),
-      ),
-
-      initialRoute: '/',
-
-      routes: {
-        // Splash Screen
-        '/': (context) => const SplashScreen(),
-
-        // Guest Home Screen
-        '/home': (context) => const HomeScreen(),
-
-        // Login Screen
-        '/login': (context) => const LoginScreen(),
-        '/food-test': (context) => const FoodHomeScreen(),
-      },
-
-      onGenerateRoute: (settings) {
-        // Normal User Registration
-        if (settings.name == '/register') {
-          return MaterialPageRoute(
-            builder: (context) => RegisterScreen(role: UserRole.user),
-          );
-        }
-
-        return null;
-      },
-
-      onUnknownRoute: (settings) {
-        debugPrint('UNKNOWN ROUTE: ${settings.name}');
-
-        return MaterialPageRoute(builder: (context) => const HomeScreen());
-      },
+  // 4. Initialize Firebase App Check
+  if (!kIsWeb) {
+    await FirebaseAppCheck.instance.activate(
+      providerAndroid: kDebugMode
+          ? const AndroidDebugProvider()
+          : const AndroidPlayIntegrityProvider(),
+      providerApple: kDebugMode
+          ? const AppleDebugProvider()
+          : const AppleAppAttestProvider(),
     );
+  } else {
+    // Configure a real reCAPTCHA v3 site key
+    // before enabling Web App Check.
+    const recaptchaSiteKey =
+        String.fromEnvironment('RECAPTCHA_V3_SITE_KEY');
+
+    if (recaptchaSiteKey.isNotEmpty) {
+      await FirebaseAppCheck.instance.activate(
+        providerWeb: ReCaptchaV3Provider(
+          recaptchaSiteKey,
+        ),
+      );
+    }
   }
+
+  // 5. Launch OneClick Application
+  runApp(const MyApp());
 }
