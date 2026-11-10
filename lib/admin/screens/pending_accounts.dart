@@ -14,13 +14,12 @@ class PendingAccounts extends StatelessWidget {
     try {
       // 1. Update account status in Provider Collection (workers, food_sellers, doctors, drivers)
       await FirebaseFirestore.instance
-          .collection(collection)
-          .doc(docId)
-          .update({
+    .collection(collection)
+    .doc(docId)
+    .update({
+  'status': newStatus,
   if (collection == 'seller_applications')
-    'grocerySellerStatus': newStatus
-  else
-    'status': newStatus,
+    'grocerySellerStatus': newStatus,
 });
 
       // 2. Also update account status in main 'users' collection

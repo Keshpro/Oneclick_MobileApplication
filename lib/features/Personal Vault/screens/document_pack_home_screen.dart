@@ -7,11 +7,13 @@ import 'saved_document_packs_screen.dart';
 class DocumentPackHomeScreen extends StatelessWidget {
   const DocumentPackHomeScreen({super.key});
 
-  static const background = Color(0xFFE9EBF2);
-  static const card = Color(0xFFEEF0F6);
-  static const purple = Color(0xFF6667FF);
-  static const ink = Color(0xFF303344);
-  static const muted = Color(0xFF707383);
+  static const background = Color(0xFFF5F3F2);
+  static const surface = Color(0xFFFFFDFC);
+  static const mauve = Color(0xFFA58E9C);
+  static const darkMauve = Color(0xFF725763);
+  static const softMauve = Color(0xFFECE3E8);
+  static const ink = Color(0xFF302B31);
+  static const muted = Color(0xFF776F77);
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +21,7 @@ class DocumentPackHomeScreen extends StatelessWidget {
       backgroundColor: background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 600),
@@ -28,47 +30,116 @@ class DocumentPackHomeScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          color: ink,
+                      Material(
+                        color: surface,
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
+                          onTap: () => Navigator.pop(context),
+                          borderRadius: BorderRadius.circular(16),
+                          child: const SizedBox(
+                            width: 46,
+                            height: 46,
+                            child: Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: ink,
+                              size: 19,
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 14),
                       const Expanded(
                         child: Text(
                           'Document Pack Builder',
                           style: TextStyle(
                             color: ink,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.4,
                           ),
                         ),
                       ),
                     ],
                   ),
+
+                  const SizedBox(height: 28),
+
+                  // Introductory card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFFF1EAE6),
+                          Color(0xFFE8D9D8),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Organize your\nimportant documents',
+                                style: TextStyle(
+                                  color: ink,
+                                  fontSize: 20,
+                                  height: 1.2,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.6,
+                                ),
+                              ),
+                              SizedBox(height: 12),
+                              Text(
+                                'Create checklists and match files '
+                                'from your Vault in one place.',
+                                style: TextStyle(
+                                  color: muted,
+                                  fontSize: 12,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 72,
+                          height: 82,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(
+                            Icons.folder_copy_outlined,
+                            color: darkMauve,
+                            size: 40,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   const SizedBox(height: 32),
+
                   const Text(
-                    'Manage Your Document Packs',
+                    'What would you like to do?',
                     style: TextStyle(
                       color: ink,
-                      fontSize: 21,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Create a new document pack or access your previously saved packs.',
-                    style: TextStyle(
-                      color: muted,
-                      fontSize: 14,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 16),
+
                   _optionCard(
-                    context,
                     icon: Icons.create_new_folder_outlined,
                     title: 'Create New Pack',
                     description:
@@ -83,13 +154,14 @@ class DocumentPackHomeScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 18),
+
+                  const SizedBox(height: 16),
+
                   _optionCard(
-                    context,
                     icon: Icons.folder_open_outlined,
                     title: 'My Saved Packs',
                     description:
-                        'View document packs you have already saved.',
+                        'View and manage your previously saved document packs.',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -100,6 +172,39 @@ class DocumentPackHomeScreen extends StatelessWidget {
                       );
                     },
                   ),
+
+                  const SizedBox(height: 28),
+
+                  // Informational footer, not a new feature.
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: softMauve.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          color: darkMauve,
+                          size: 22,
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Your document packs help you keep track '
+                            'of required files and missing documents.',
+                            style: TextStyle(
+                              color: darkMauve,
+                              fontSize: 11,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -109,31 +214,40 @@ class DocumentPackHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _optionCard(
-    BuildContext context, {
+  Widget _optionCard({
     required IconData icon,
     required String title,
     required String description,
     required VoidCallback onTap,
   }) {
     return Material(
-      color: card,
-      borderRadius: BorderRadius.circular(28),
+      color: surface,
+      borderRadius: BorderRadius.circular(24),
       child: InkWell(
-        borderRadius: BorderRadius.circular(28),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(22),
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: const Color(0xFFEDE6E9),
+            ),
+          ),
           child: Row(
             children: [
               Container(
                 width: 56,
                 height: 56,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE5E5FF),
-                  shape: BoxShape.circle,
+                decoration: BoxDecoration(
+                  color: softMauve,
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                child: Icon(icon, color: purple, size: 28),
+                child: Icon(
+                  icon,
+                  color: darkMauve,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -144,25 +258,35 @@ class DocumentPackHomeScreen extends StatelessWidget {
                       title,
                       style: const TextStyle(
                         color: ink,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 6),
                     Text(
                       description,
                       style: const TextStyle(
                         color: muted,
-                        fontSize: 13,
-                        height: 1.4,
+                        fontSize: 12,
+                        height: 1.5,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: purple,
+              const SizedBox(width: 8),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: softMauve,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: darkMauve,
+                  size: 22,
+                ),
               ),
             ],
           ),
