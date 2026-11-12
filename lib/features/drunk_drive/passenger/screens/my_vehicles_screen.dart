@@ -43,7 +43,7 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
       if (!mounted) return;
 
       setState(() {
-        _errorMessage = 'Unable to load vehicles: $error';
+        _errorMessage = 'Unable to load your vehicles. Check your connection and try again.';
         _isLoading = false;
       });
     }
@@ -84,9 +84,22 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
   }
 
   Future<void> _onSetDefault(VehicleModel vehicle) async {
-    await _vehicleService.setDefaultVehicle(vehicle.id);
-    if (!mounted) return;
-    await _loadVehicles();
+    try {
+      await _vehicleService.setDefaultVehicle(vehicle.id);
+      if (!mounted) return;
+      await _loadVehicles();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Default vehicle updated')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not update the default vehicle. Please try again.'),
+        ),
+      );
+    }
   }
 
   Future<void> _onDeleteVehicle(VehicleModel vehicle) async {
@@ -118,14 +131,20 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    await _vehicleService.deleteVehicle(vehicle.id);
-    if (!mounted) return;
-    await _loadVehicles();
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Vehicle removed')),
-    );
+    try {
+      await _vehicleService.deleteVehicle(vehicle.id);
+      if (!mounted) return;
+      await _loadVehicles();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vehicle removed')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not remove the vehicle. Please try again.')),
+      );
+    }
   }
 
   @override

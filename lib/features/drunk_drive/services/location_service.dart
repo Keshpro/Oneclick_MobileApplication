@@ -69,7 +69,7 @@ class LocationService {
         a.longitude == null ||
         b.latitude == null ||
         b.longitude == null) {
-      return 10; // fallback mock distance if coordinates are missing
+      throw ArgumentError('Pickup and destination coordinates are required.');
     }
     const earthRadiusKm = 6371.0;
     final dLat = _degToRad(b.latitude! - a.latitude!);
