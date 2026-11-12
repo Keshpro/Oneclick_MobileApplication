@@ -94,6 +94,10 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
                     onTap: () {
                       setState(() {
                         fulfillmentType = FoodFulfillmentType.delivery;
+
+                        if (paymentMethod == 'Pay at Counter') {
+                          paymentMethod = 'Cash on Delivery';
+                        }
                       });
                     },
                   ),
@@ -107,6 +111,11 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
                     onTap: () {
                       setState(() {
                         fulfillmentType = FoodFulfillmentType.pickup;
+
+                        if (paymentMethod == 'Cash on Delivery' ||
+                            paymentMethod == 'Oneclick Wallet') {
+                          paymentMethod = 'Pay at Counter';
+                        }
                       });
                     },
                   ),
@@ -351,13 +360,68 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
     } catch (error) {
       if (!mounted) return;
 
-      final message = error.toString().replaceFirst('Exception: ', '');
+      final errorText = error.toString();
+      String title = 'Unable to place your order';
+      String message;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+      if (errorText.contains('Not enough portions')) {
+        title = 'Not enough portions available';
+
+        final match = RegExp(
+          r'Available:\s*(\d+);\s*requested:\s*(\d+)',
+          caseSensitive: false,
+        ).firstMatch(errorText);
+
+        if (match != null) {
+          message =
+              'Sorry, only ${match.group(1)} portions are available. '
+              'You requested ${match.group(2)}. '
+              'Please adjust the quantity in your cart to continue.';
+        } else {
+          message =
+              'There are not enough portions available for your order. '
+              'Please review your cart and try a smaller quantity.';
+        }
+      } else if (errorText.contains('no longer available')) {
+        message =
+            'Sorry, this food offer is no longer available. '
+            'Please review your cart and choose another offer.';
+      } else if (errorText.contains('unavailable') ||
+          errorText.contains('Unable to resolve host') ||
+          errorText.contains('SocketException') ||
+          errorText.contains('network')) {
+        message =
+            'We couldn’t connect to place your order. '
+            'Please check your internet connection and try again.';
+      } else {
+        message =
+            'Something went wrong while placing your order. '
+            'Please try again. If the problem continues, contact support.';
+      }
+
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          icon: const Icon(
+            Icons.shopping_bag_outlined,
+            color: Colors.orange,
+            size: 40,
+          ),
+          title: Text(title),
           content: Text(message),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 4),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('No Thanks'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                Navigator.pop(context);
+              },
+              child: const Text('Review Cart'),
+            ),
+          ],
         ),
       );
     }

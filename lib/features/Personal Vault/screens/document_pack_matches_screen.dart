@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'document_pack_gaps_screen.dart';
+import 'document_pack_home_screen.dart';
+import '../services/document_pack_service.dart';
 import '../models/document_pack.dart';
 import '../models/vault_record.dart';
 import 'document_pack_vault_picker.dart';
@@ -20,6 +22,7 @@ class DocumentPackMatchesScreen extends StatefulWidget {
 class _DocumentPackMatchesScreenState
     extends State<DocumentPackMatchesScreen> {
   late DocumentPack pack;
+  bool _savingDraft = false;
 
   @override
   void initState() {
@@ -27,14 +30,16 @@ class _DocumentPackMatchesScreenState
     pack = widget.pack;
   }
 
-  static const background = Color(0xFFE9EBF2);
-  static const card = Color(0xFFEEF0F6);
-  static const purple = Color(0xFF6667FF);
-  static const ink = Color(0xFF303344);
-  static const muted = Color(0xFF707383);
-  static const green = Color(0xFF00A978);
-  static const orange = Color(0xFFFF9800);
-  static const red = Color(0xFFFF3B62);
+static const background = Color(0xFFF5F3F2);
+static const card = Color(0xFFFFFDFC);
+static const purple = Color(0xFF725763);
+static const ink = Color(0xFF302B31);
+static const muted = Color(0xFF776F77);
+
+// Muted semantic colors for document status.
+static const green = Color(0xFF47866D);
+static const orange = Color(0xFFBA8754);
+static const red = Color(0xFFB96C75);
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +66,7 @@ class _DocumentPackMatchesScreenState
                     style: const TextStyle(
                       color: muted,
                       fontWeight: FontWeight.w600,
-                      fontSize: 13,
+                      fontSize: 12,
                     ),
                   ),
 
@@ -84,13 +89,7 @@ class _DocumentPackMatchesScreenState
 
                   Center(
                     child: TextButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Pack draft saved for this demo.'),
-                          ),
-                        );
-                      },
+                      onPressed: _savingDraft ? null : _saveDraftAndExit,
                       child: const Text(
                         'Save Pack Draft & Exit',
                         style: TextStyle(color: muted),
@@ -106,6 +105,27 @@ class _DocumentPackMatchesScreenState
     );
   }
 
+  Future<void> _saveDraftAndExit() async {
+    if (_savingDraft) return;
+    setState(() => _savingDraft = true);
+    try {
+      final savedId = await DocumentPackService().savePack(pack);
+      if (!mounted) return;
+      setState(() => pack = pack.copyWith(savedId: savedId));
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const DocumentPackHomeScreen()),
+        (route) => route.isFirst,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to save pack: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _savingDraft = false);
+    }
+  }
+
   Widget _header(BuildContext context) {
     return Row(
       children: [
@@ -119,23 +139,9 @@ class _DocumentPackMatchesScreenState
             'Document Pack Builder',
             style: TextStyle(
               color: ink,
-              fontSize: 22,
+              fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
-          ),
-        ),
-        _circle(Icons.more_vert, () {}),
-        const SizedBox(width: 10),
-        Container(
-          width: 46,
-          height: 46,
-          decoration: const BoxDecoration(
-            color: purple,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.person_outline,
-            color: Colors.white,
           ),
         ),
       ],
@@ -203,7 +209,7 @@ Widget _configuration() {
                     'PACK CONFIGURATION',
                     style: TextStyle(
                       color: purple,
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -212,7 +218,7 @@ Widget _configuration() {
                     pack.name,
                     style: const TextStyle(
                       color: ink,
-                      fontSize: 19,
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -239,7 +245,7 @@ Widget _configuration() {
                 TextSpan(
                   style: TextStyle(
                     color: muted,
-                    fontSize: 13,
+                    fontSize: 12,
                   ),
                   children: [
                     TextSpan(text: 'Source: '),
@@ -282,7 +288,7 @@ Widget _configuration() {
                   style: const TextStyle(
                     color: ink,
                     fontWeight: FontWeight.w600,
-                    fontSize: 16,
+                    fontSize: 15,
                   ),
                 ),
               ),
@@ -345,7 +351,7 @@ Widget _configuration() {
                   style: TextStyle(
                     color: ink,
                     fontWeight: FontWeight.w600,
-                    fontSize: 16,
+                    fontSize: 15,
                   ),
                 ),
               ),
@@ -363,7 +369,7 @@ Widget _configuration() {
             width: double.infinity,
             padding: const EdgeInsets.all(17),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0F1F6),
+              color: const Color(0xFFF7F3F4),
               borderRadius: BorderRadius.circular(24),
             ),
             child: const Row(
@@ -380,7 +386,7 @@ Widget _configuration() {
                     'Lease renewal date is 2 months prior to the requested visa return date.',
                     style: TextStyle(
                       color: muted,
-                      fontSize: 13,
+                      fontSize: 12,
                       height: 1.5,
                     ),
                   ),
@@ -429,25 +435,69 @@ Widget _configuration() {
 
   if (!mounted || selected == null) return;
 
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('Confirm Document Match'),
-      content: Text(
-        'Use "${selected.title}" for "${requirement.name}"?',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext, false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(dialogContext, true),
-          child: const Text('Confirm Match'),
-        ),
-      ],
+  
+final confirmed = await showDialog<bool>(
+  context: context,
+  builder: (dialogContext) => AlertDialog(
+    backgroundColor: const Color(0xFFFFFDFC),
+    surfaceTintColor: Colors.transparent,
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(24),
     ),
-  );
+    title: const Text(
+      'Confirm Document Match',
+      style: TextStyle(
+        color: Color(0xFF302B31),
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+    content: Text(
+      'Use "${selected.title}" for "${requirement.name}"?',
+      style: const TextStyle(
+        color: Color(0xFF776F77),
+        fontSize: 13,
+        height: 1.5,
+      ),
+    ),
+    actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(dialogContext, false),
+        style: TextButton.styleFrom(
+          foregroundColor: const Color(0xFF725763),
+        ),
+        child: const Text(
+          'Cancel',
+          style: TextStyle(fontSize: 13),
+        ),
+      ),
+      FilledButton(
+        onPressed: () => Navigator.pop(dialogContext, true),
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFF725763),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 12,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        child: const Text(
+          'Confirm Match',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    ],
+  ),
+);
+
 
   if (!mounted || confirmed != true) return;
 
@@ -491,7 +541,7 @@ Widget _configuration() {
                 style: const TextStyle(
                   color: ink,
                   fontWeight: FontWeight.w600,
-                  fontSize: 16,
+                  fontSize: 15,
                 ),
               ),
             ),
@@ -502,7 +552,7 @@ Widget _configuration() {
           'Not matched yet. Select a document from your Vault in the next integration step.',
           style: TextStyle(
             color: muted,
-            fontSize: 13,
+            fontSize: 12,
             height: 1.5,
           ),
         ),
@@ -551,7 +601,7 @@ Widget _configuration() {
                   style: TextStyle(
                     color: ink,
                     fontWeight: FontWeight.w600,
-                    fontSize: 16,
+                    fontSize: 15,
                   ),
                 ),
               ),
@@ -579,7 +629,7 @@ Widget _configuration() {
                     'No statements found in Vault matching the required 90-day window.',
                     style: TextStyle(
                       color: muted,
-                      fontSize: 13,
+                      fontSize: 12,
                       height: 1.5,
                     ),
                   ),
@@ -641,7 +691,7 @@ Widget _configuration() {
                 style: const TextStyle(
                   color: ink,
                   fontWeight: FontWeight.w600,
-                  fontSize: 17,
+                  fontSize: 15,
                 ),
               ),
               const SizedBox(height: 5),
@@ -649,7 +699,7 @@ Widget _configuration() {
                 'Select and confirm documents from your Vault to complete this pack.',
                 style: TextStyle(
                   color: muted,
-                  fontSize: 13,
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -682,14 +732,14 @@ Widget _configuration() {
         vertical: 7,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F2F7),
+        color: const Color(0xFFECE3E8),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Text(
         text,
         style: TextStyle(
           color: color,
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -731,7 +781,7 @@ Widget _configuration() {
                   subtitle,
                   style: const TextStyle(
                     color: muted,
-                    fontSize: 12,
+                    fontSize: 11,
                   ),
                 ),
               ],
@@ -770,7 +820,7 @@ Widget _configuration() {
               label,
               style: TextStyle(
                 color: color,
-                fontSize: 13,
+                fontSize: 12,
               ),
             ),
           ],
@@ -809,7 +859,7 @@ Widget _configuration() {
               style: const TextStyle(
                 color: purple,
                 fontWeight: FontWeight.w600,
-                fontSize: 14,
+                fontSize: 13,
               ),
             ),
           ],
@@ -864,7 +914,7 @@ Widget _configuration() {
             height: 42,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFFF1F2F7),
+              color: const Color(0xFFECE3E8),
               boxShadow: _shadow(),
             ),
             child: Icon(
@@ -928,7 +978,7 @@ Widget _configuration() {
     return Container(
       width: 18,
       height: 3,
-      color: active ? purple : const Color(0xFFD7D9E4),
+      color: active ? purple : const Color(0xFFE5DADF),
     );
   }
 
@@ -940,7 +990,7 @@ Widget _configuration() {
         blurRadius: 8,
       ),
       BoxShadow(
-        color: Color(0xFFD5D7E0),
+        color: Color(0xFFE5DADF),
         offset: Offset(4, 4),
         blurRadius: 9,
       ),

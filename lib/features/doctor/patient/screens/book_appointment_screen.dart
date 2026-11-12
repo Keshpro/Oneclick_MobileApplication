@@ -1,36 +1,46 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'appointment_success_screen.dart';
+
 class BookAppointmentScreen extends StatefulWidget {
   final Map<String, dynamic> doctor;
+
+  // Connect the common PayHere Sandbox service here.
+  final DoctorPaymentHandler? onStartPayment;
 
   const BookAppointmentScreen({
     super.key,
     required this.doctor,
+    this.onStartPayment,
   });
 
   @override
-  State<BookAppointmentScreen> createState() => _BookAppointmentScreenState();
+  State<BookAppointmentScreen> createState() =>
+      _BookAppointmentScreenState();
 }
 
-class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
-  static const Color _primary = Color(0xFF059669);
-  static const Color _background = Color(0xFFF8FAFC);
-  static const Color _surface = Colors.white;
-  static const Color _textPrimary = Color(0xFF0F172A);
-  static const Color _textMuted = Color(0xFF64748B);
-  static const Color _border = Color(0xFFE2E8F0);
-  static const Color _lightGreen = Color(0xFFECFDF5);
+class _BookAppointmentScreenState
+    extends State<BookAppointmentScreen> {
+  static const Color primary = Color(0xFF059669);
+  static const Color background = Color(0xFFF8FAFC);
+  static const Color dark = Color(0xFF0F172A);
+  static const Color muted = Color(0xFF64748B);
+  static const Color border = Color(0xFFE2E8F0);
+  static const Color lightGreen = Color(0xFFECFDF5);
 
   DateTime? _selectedDate;
   String? _selectedTime;
   String _consultationType = 'In-person';
+
   bool _isSaving = false;
 
-  final TextEditingController _reasonController = TextEditingController();
+  final TextEditingController _reasonController =
+      TextEditingController();
 
-  final List<String> _timeSlots = [
+  final List<String> _timeSlots = const [
     '9:00 AM',
     '9:30 AM',
     '10:00 AM',
@@ -48,8 +58,14 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   @override
   void initState() {
     super.initState();
+
     final now = DateTime.now();
-    _selectedDate = DateTime(now.year, now.month, now.day);
+
+    _selectedDate = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
   }
 
   @override
@@ -58,65 +74,169 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     super.dispose();
   }
 
+  String get _doctorName {
+    return widget.doctor['name']?.toString() ?? 'Doctor';
+  }
+
+  String get _specialty {
+    return (widget.doctor['specialtyLabel'] ??
+            widget.doctor['specialization'] ??
+            widget.doctor['specialty'])
+        ?.toString() ?? 'General';
+  }
+
+  String get _hospital {
+    return widget.doctor['hospital']?.toString() ??
+        'General Clinic';
+  }
+
+  String get _doctorId {
+    return (widget.doctor['uid'] ??
+            widget.doctor['id'])
+        ?.toString()
+        .trim() ?? '';
+  }
+
+  // LKR minor units: 2500.00 => 250000
+  // Invalid or unavailable fees are not guessed.
+  int? get _consultationFeeMinor {
+    final raw = widget.doctor['fee'];
+
+    if (raw == null) return null;
+
+    final normalized = raw
+        .toString()
+        .replaceAll(',', '')
+        .replaceAll(
+          RegExp(r'(?i:lkr|rs\.?)'),
+          '',
+        )
+        .trim();
+
+    final match = RegExp(
+      r'^(\d+)(?:\.(\d{1,2}))?$',
+    ).firstMatch(normalized);
+
+    if (match == null) return null;
+
+    final whole =
+        int.tryParse(match.group(1) ?? '');
+
+    if (whole == null) return null;
+
+    final fraction = (match.group(2) ?? '')
+        .padRight(2, '0');
+
+    final cents = int.tryParse(fraction) ?? 0;
+    final result = whole * 100 + cents;
+
+    return result > 0 ? result : null;
+  }
+
+  String get _formattedFee {
+    final amount = _consultationFeeMinor;
+
+    if (amount == null) return 'Fee unavailable';
+
+    final whole = amount ~/ 100;
+    final cents =
+        (amount % 100).toString().padLeft(2, '0');
+
+    return 'LKR $whole.$cents';
+  }
+
   List<DateTime> get _availableDates {
     final now = DateTime.now();
+
     return List.generate(
       7,
-      (index) => DateTime(now.year, now.month, now.day + index),
+      (index) => DateTime(
+        now.year,
+        now.month,
+        now.day + index,
+      ),
     );
   }
 
   String _dayName(DateTime date) {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const days = [
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun',
+    ];
+
     return days[date.weekday - 1];
   }
 
   String _monthName(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
+
     return months[date.month - 1];
   }
 
   String _fullDate(DateTime date) {
-    return '${_dayName(date)}, ${date.day} ${_monthName(date)} ${date.year}';
+    return '${_dayName(date)}, '
+        '${date.day} '
+        '${_monthName(date)} '
+        '${date.year}';
   }
 
-  bool _sameDate(DateTime first, DateTime second) {
-    return first.year == second.year &&
-        first.month == second.month &&
-        first.day == second.day;
+  bool _sameDate(DateTime a, DateTime b) {
+    return a.year == b.year &&
+        a.month == b.month &&
+        a.day == b.day;
   }
 
   void _showMessage(String message) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
   Future<void> _pickCustomDate() async {
+    final now = DateTime.now();
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 60)),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(primary: _primary),
-          ),
-          child: child!,
-        );
-      },
+      initialDate: _selectedDate ?? now,
+      firstDate: DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ),
+      lastDate: now.add(
+        const Duration(days: 60),
+      ),
     );
-    if (picked != null) {
-      setState(() => _selectedDate = picked);
-    }
+
+    if (!mounted || picked == null) return;
+
+    setState(() {
+      _selectedDate = picked;
+      _selectedTime = null;
+    });
   }
 
   void _continueBooking() {
@@ -126,173 +246,350 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     }
 
     if (_selectedTime == null) {
-      _showMessage('Please select an available time slot.');
+      _showMessage('Please select an appointment time.');
+      return;
+    }
+
+    if (_doctorId.isEmpty) {
+      _showMessage('Doctor information is incomplete.');
+      return;
+    }
+
+    if (_consultationFeeMinor == null) {
+      _showMessage(
+        'A valid consultation fee is required.',
+      );
       return;
     }
 
     _showReviewSheet();
   }
 
-  Future<void> _saveAppointmentToFirestore(BuildContext sheetContext) async {
-    final currentUser = FirebaseAuth.instance.currentUser;
+  // This creates an UNCONFIRMED draft only.
+  // The server must confirm it after verified payment.
+  Future<void> _confirmAndOpenPayment(
+    BuildContext sheetContext,
+  ) async {
+    if (_isSaving) return;
 
-    if (currentUser == null) {
-      _showMessage('User not logged in. Please login first.');
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      _showMessage('Please log in first.');
+      return;
+    }
+
+    final date = _selectedDate;
+    final time = _selectedTime;
+    final amountMinor = _consultationFeeMinor;
+
+    if (date == null ||
+        time == null ||
+        amountMinor == null ||
+        _doctorId.isEmpty) {
+      _showMessage('Missing appointment details.');
       return;
     }
 
     setState(() => _isSaving = true);
 
     try {
-      final docRef = FirebaseFirestore.instance.collection('appointments').doc();
-      final appointmentId = 'OC-${docRef.id.substring(0, 5).toUpperCase()}';
+      final db = FirebaseFirestore.instance;
 
-      final doctorData = widget.doctor;
-      final doctorUid = doctorData['uid'] ?? doctorData['id'] ?? 'unknown_doc';
-      final doctorName = doctorData['name'] ?? 'Dr. Specialist';
-      final specialty = doctorData['specialtyLabel'] ?? doctorData['specialization'] ?? 'General Physician';
-      final hospital = doctorData['hospital'] ?? 'General Clinic';
-      final fee = doctorData['fee'] ?? 2500;
-      final formattedDate = '${_selectedDate!.day} ${_monthName(_selectedDate!)} ${_selectedDate!.year}';
-      final patientName = currentUser.displayName ?? currentUser.email?.split('@').first ?? 'Patient';
+      final docRef = db
+          .collection('appointments')
+          .doc();
 
-      // 1. Save Appointment Record
+      final patientName =
+          user.displayName?.trim().isNotEmpty == true
+              ? user.displayName!
+              : (user.email?.split('@').first ??
+                  'Patient');
+
+      // Amount, doctor ownership and slot availability
+      // must also be validated by the trusted backend.
       await docRef.set({
-        'id': appointmentId,
+        'id':
+            'OC-${docRef.id.substring(0, 5).toUpperCase()}',
         'docId': docRef.id,
-        'userId': currentUser.uid,
-        'patientId': currentUser.uid,
+        'userId': user.uid,
+        'patientId': user.uid,
         'userName': patientName,
-        'userEmail': currentUser.email ?? 'Patient',
-        'doctorId': doctorUid,
-        'doctorName': doctorName,
-        'specialty': specialty,
-        'hospital': hospital,
-        'date': formattedDate,
-        'day': _dayName(_selectedDate!),
-        'time': _selectedTime,
+        'userEmail': user.email ?? '',
+        'doctorId': _doctorId,
+        'doctorName': _doctorName,
+        'specialty': _specialty,
+        'hospital': _hospital,
+        'date':
+            '${date.day} ${_monthName(date)} ${date.year}',
+        'day': _dayName(date),
+        'appointmentDate': Timestamp.fromDate(date),
+        'time': time,
         'type': _consultationType,
-        'fee': fee,
-        'status': 'Approved',
+        'fee': amountMinor / 100,
+        'amountMinor': amountMinor,
+        'currency': 'LKR',
         'reason': _reasonController.text.trim(),
+
+        // Never mark a booking approved before payment.
+        'status': 'awaiting_payment',
+        'paymentStatus': 'unpaid',
+        'paymentId': null,
+
         'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // 2. Dispatch Real-time Notification to Doctor
-      if (doctorUid.isNotEmpty) {
-        await FirebaseFirestore.instance.collection('notifications').add({
-          'userId': doctorUid,
-          'type': 'NEW_APPOINTMENT',
-          'title': 'New Appointment Booking! 📅',
-          'message': '$patientName booked an appointment for $formattedDate at $_selectedTime.',
-          'isRead': false,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-      }
+      if (!mounted || !sheetContext.mounted) return;
+      Navigator.of(sheetContext).pop();
 
-      if (!mounted) return;
-      Navigator.pop(sheetContext);
-      _confirmAppointmentSuccess();
-    } catch (e) {
-      if (!mounted) return;
-      _showMessage('Error saving appointment: $e');
+      // Checkout + success logic lives in this screen.
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AppointmentSuccessScreen(
+            doctor: widget.doctor,
+            appointmentDate: date,
+            appointmentTime: time,
+            consultationType: _consultationType,
+            appointmentId: docRef.id,
+            amountMinor: amountMinor,
+            onStartPayment: widget.onStartPayment,
+          ),
+        ),
+      );
+    } on FirebaseException catch (error) {
+      _showMessage(
+        'Unable to prepare booking: ${error.message ?? error.code}',
+      );
+    } catch (_) {
+      _showMessage(
+        'Unable to prepare your appointment.',
+      );
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
-  void _showReviewSheet() {
-    showModalBottomSheet(
+  Future<void> _showReviewSheet() async {
+    await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (sheetContext) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(22, 14, 22, 28),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 44,
-                  height: 5,
-                  decoration: BoxDecoration(color: _border, borderRadius: BorderRadius.circular(20)),
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context)
+                    .viewInsets.bottom,
+              ),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(
+                  22,
+                  14,
+                  22,
+                  28,
                 ),
-                const SizedBox(height: 22),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Review Appointment', style: TextStyle(color: _textPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(20), border: Border.all(color: _border)),
-                  child: Column(
-                    children: [
-                      _reviewRow(Icons.person_outline_rounded, 'Doctor', widget.doctor['name'].toString()),
-                      _reviewDivider(),
-                      _reviewRow(Icons.calendar_month_outlined, 'Date', _fullDate(_selectedDate!)),
-                      _reviewDivider(),
-                      _reviewRow(Icons.schedule_rounded, 'Time', _selectedTime!),
-                      _reviewDivider(),
-                      _reviewRow(Icons.health_and_safety_outlined, 'Consultation Mode', _consultationType),
-                      if (_reasonController.text.trim().isNotEmpty) ...[
-                        _reviewDivider(),
-                        _reviewRow(Icons.notes_rounded, 'Reason / Notes', _reasonController.text.trim()),
-                      ],
-                      _reviewDivider(),
-                      _reviewRow(Icons.payments_outlined, 'Consultation Fee', 'LKR ${widget.doctor['fee'] ?? 2500}'),
-                    ],
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(30),
                   ),
                 ),
-                const SizedBox(height: 22),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _isSaving ? null : () => _saveAppointmentToFirestore(sheetContext),
-                    icon: _isSaving
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Icon(Icons.check_circle_outline_rounded),
-                    label: Text(_isSaving ? 'Processing Booking...' : 'Confirm Booking', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 0,
+                child: SafeArea(
+                  top: false,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: border,
+                            borderRadius:
+                                BorderRadius.circular(20),
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Review Appointment',
+                            style: TextStyle(
+                              color: dark,
+                              fontSize: 21,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: background,
+                            borderRadius:
+                                BorderRadius.circular(20),
+                            border: Border.all(color: border),
+                          ),
+                          child: Column(
+                            children: [
+                              _reviewRow(
+                                Icons.person_outline_rounded,
+                                'Doctor',
+                                _doctorName,
+                              ),
+                              _reviewDivider(),
+                              _reviewRow(
+                                Icons.calendar_month_outlined,
+                                'Date',
+                                _fullDate(_selectedDate!),
+                              ),
+                              _reviewDivider(),
+                              _reviewRow(
+                                Icons.schedule_rounded,
+                                'Time',
+                                _selectedTime!,
+                              ),
+                              _reviewDivider(),
+                              _reviewRow(
+                                Icons.health_and_safety_outlined,
+                                'Consultation Mode',
+                                _consultationType,
+                              ),
+                              if (_reasonController.text
+                                  .trim()
+                                  .isNotEmpty) ...[
+                                _reviewDivider(),
+                                _reviewRow(
+                                  Icons.notes_rounded,
+                                  'Reason / Notes',
+                                  _reasonController.text.trim(),
+                                ),
+                              ],
+                              _reviewDivider(),
+                              _reviewRow(
+                                Icons.payments_outlined,
+                                'Consultation Fee',
+                                _formattedFee,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        const Text(
+                          'Next you will review and pay through '
+                          'OneClick Payment. Your appointment '
+                          'is confirmed only after payment verification.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: muted,
+                            fontSize: 12,
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _isSaving
+                                ? null
+                                : () async {
+                                    setSheetState(() {});
+                                    await _confirmAndOpenPayment(
+                                      sheetContext,
+                                    );
+                                  },
+                            icon: _isSaving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.arrow_forward_rounded,
+                                  ),
+                            label: Text(
+                              _isSaving
+                                  ? 'Preparing Checkout...'
+                                  : 'Confirm Booking',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primary,
+                              foregroundColor: Colors.white,
+                              padding:
+                                  const EdgeInsets.symmetric(
+                                vertical: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(16),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _reviewRow(IconData icon, String title, String value) {
+  Widget _reviewRow(
+    IconData icon,
+    String title,
+    String value,
+  ) {
     return Row(
       children: [
         Container(
           width: 38,
           height: 38,
-          decoration: BoxDecoration(color: _lightGreen, borderRadius: BorderRadius.circular(12)),
-          child: Icon(icon, color: _primary, size: 20),
+          decoration: BoxDecoration(
+            color: lightGreen,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            color: primary,
+            size: 20,
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(color: _textMuted, fontSize: 11)),
-              const SizedBox(height: 2),
-              Text(value, style: const TextStyle(color: _textPrimary, fontSize: 13, fontWeight: FontWeight.w700)),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: muted,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: dark,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
             ],
           ),
         ),
@@ -301,73 +598,30 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   }
 
   Widget _reviewDivider() {
-    return const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: Divider(height: 1, color: _border));
-  }
-
-  void _confirmAppointmentSuccess() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28)),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 76,
-                  height: 76,
-                  decoration: const BoxDecoration(color: _lightGreen, shape: BoxShape.circle),
-                  child: const Icon(Icons.check_rounded, color: _primary, size: 42),
-                ),
-                const SizedBox(height: 20),
-                const Text('Appointment Confirmed! 🎉', textAlign: TextAlign.center, style: TextStyle(color: _textPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 8),
-                Text('Your appointment with ${widget.doctor['name']} has been successfully scheduled. The doctor has been notified.', textAlign: TextAlign.center, style: const TextStyle(color: _textMuted, fontSize: 13, height: 1.5)),
-                const SizedBox(height: 22),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(dialogContext);
-                      Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
-                    ),
-                    child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w700)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 10),
+      child: Divider(
+        height: 1,
+        color: border,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final doctorName = widget.doctor['name'] ?? 'Doctor';
-    final specialty = widget.doctor['specialtyLabel'] ?? widget.doctor['specialty'] ?? 'Specialist';
-    final hospital = widget.doctor['hospital'] ?? 'General Clinic';
-    final fee = widget.doctor['fee'] ?? 2500;
-
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: background,
+        foregroundColor: dark,
         elevation: 0,
-        foregroundColor: _textPrimary,
-        title: const Text('Book Appointment', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+        title: const Text(
+          'Book Appointment',
+          style: TextStyle(
+            fontSize: 19,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
       body: Column(
         children: [
@@ -375,207 +629,406 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
-                  // Doctor Info Header
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: _surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: _border)),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 58,
-                          height: 58,
-                          decoration: BoxDecoration(color: _lightGreen, borderRadius: BorderRadius.circular(16)),
-                          child: const Icon(Icons.person_rounded, color: _primary, size: 34),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(doctorName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: _textPrimary)),
-                              const SizedBox(height: 2),
-                              Text('$specialty • $hospital', style: const TextStyle(fontSize: 12, color: _textMuted)),
-                              const SizedBox(height: 6),
-                              Text('Fee: LKR $fee', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: _primary)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _doctorHeader(),
+                  const SizedBox(height: 25),
 
-                  const SizedBox(height: 24),
+                  _heading('Consultation Mode'),
+                  const SizedBox(height: 12),
+                  _consultationModeSelector(),
 
-                  // Consultation Mode Selector
-                  const Text('Consultation Mode', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _textPrimary)),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 25),
+
                   Row(
-                    children: ['In-person', 'Video Call'].map((mode) {
-                      final isSelected = _consultationType == mode;
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: InkWell(
-                            onTap: () => setState(() => _consultationType = mode),
-                            borderRadius: BorderRadius.circular(14),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: isSelected ? _primary : _surface,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: isSelected ? _primary : _border),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(mode == 'In-person' ? Icons.local_hospital_outlined : Icons.videocam_outlined, size: 18, color: isSelected ? Colors.white : _primary),
-                                  const SizedBox(width: 8),
-                                  Text(mode, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: isSelected ? Colors.white : _textPrimary)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Date Selection
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Select Date', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _textPrimary)),
+                      _heading('Select Date'),
                       TextButton.icon(
                         onPressed: _pickCustomDate,
-                        icon: const Icon(Icons.calendar_month_rounded, size: 16, color: _primary),
-                        label: const Text('Pick Date', style: TextStyle(color: _primary, fontWeight: FontWeight.bold, fontSize: 12)),
+                        icon: const Icon(
+                          Icons.calendar_month_rounded,
+                          size: 16,
+                        ),
+                        label: const Text('Pick Date'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: primary,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 88,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _availableDates.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 9),
-                      itemBuilder: (context, index) {
-                        final date = _availableDates[index];
-                        final selected = _selectedDate != null && _sameDate(_selectedDate!, date);
 
-                        return InkWell(
-                          onTap: () => setState(() => _selectedDate = date),
-                          borderRadius: BorderRadius.circular(16),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            width: 68,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: selected ? _primary : _surface,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: selected ? _primary : _border),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(_dayName(date), style: TextStyle(color: selected ? Colors.white : _textMuted, fontSize: 11, fontWeight: FontWeight.w600)),
-                                const SizedBox(height: 4),
-                                Text('${date.day}', style: TextStyle(color: selected ? Colors.white : _textPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                  const SizedBox(height: 8),
+                  _dateSelector(),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 25),
 
-                  // Time Slots Grid
-                  const Text('Available Time Slots', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _textPrimary)),
+                  _heading('Select Time Slot'),
                   const SizedBox(height: 12),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _timeSlots.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      childAspectRatio: 2.4,
-                    ),
-                    itemBuilder: (context, index) {
-                      final time = _timeSlots[index];
-                      final selected = _selectedTime == time;
+                  _timeSelector(),
 
-                      return InkWell(
-                        onTap: () => setState(() => _selectedTime = time),
-                        borderRadius: BorderRadius.circular(12),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: selected ? _primary : _surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: selected ? _primary : _border),
-                          ),
-                          child: Text(time, style: TextStyle(color: selected ? Colors.white : _textPrimary, fontSize: 12, fontWeight: FontWeight.w700)),
-                        ),
-                      );
-                    },
-                  ),
+                  const SizedBox(height: 25),
 
-                  const SizedBox(height: 24),
+                  _heading('Reason for Visit (Optional)'),
+                  const SizedBox(height: 12),
 
-                  // Reason Note Field
-                  const Text('Reason for Visit (Optional)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _textPrimary)),
-                  const SizedBox(height: 10),
                   TextField(
                     controller: _reasonController,
                     maxLines: 2,
                     decoration: InputDecoration(
-                      hintText: 'e.g. Fever, Sore Throat, Routine Checkup...',
-                      hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
+                      hintText:
+                          'e.g. Fever, routine checkup...',
+                      hintStyle: const TextStyle(
+                        color: muted,
+                        fontSize: 13,
+                      ),
                       filled: true,
-                      fillColor: _surface,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _border)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _border)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _primary)),
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(14),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(14),
+                        borderSide:
+                            const BorderSide(color: border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(14),
+                        borderSide:
+                            const BorderSide(color: primary),
+                      ),
                     ),
                   ),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
           ),
 
-          // Bottom Button
           SafeArea(
-            child: Padding(
+            top: false,
+            child: Container(
               padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  top: BorderSide(color: border),
+                ),
+              ),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _continueBooking,
+                  onPressed:
+                      _isSaving ? null : _continueBooking,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _primary,
+                    backgroundColor: primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(16),
+                    ),
                   ),
-                  child: const Text('Review Appointment', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                  child: const Text(
+                    'Review Appointment',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _heading(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        color: dark,
+        fontSize: 16,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+
+  Widget _doctorHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: lightGreen,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.person_rounded,
+              color: primary,
+              size: 34,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _doctorName,
+                  style: const TextStyle(
+                    color: dark,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$_specialty • $_hospital',
+                  style: const TextStyle(
+                    color: muted,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  _formattedFee,
+                  style: const TextStyle(
+                    color: primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _consultationModeSelector() {
+    return Row(
+      children: [
+        for (final mode in const [
+          'In-person',
+          'Video Call',
+        ])
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _consultationType = mode;
+                  });
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: AnimatedContainer(
+                  duration: const Duration(
+                    milliseconds: 200,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _consultationType == mode
+                        ? primary
+                        : Colors.white,
+                    borderRadius:
+                        BorderRadius.circular(14),
+                    border: Border.all(
+                      color: _consultationType == mode
+                          ? primary
+                          : border,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment:
+                        MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        mode == 'In-person'
+                            ? Icons.local_hospital_outlined
+                            : Icons.videocam_outlined,
+                        color: _consultationType == mode
+                            ? Colors.white
+                            : primary,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 7),
+                      Flexible(
+                        child: Text(
+                          mode,
+                          style: TextStyle(
+                            color: _consultationType == mode
+                                ? Colors.white
+                                : dark,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _dateSelector() {
+    return SizedBox(
+      height: 88,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _availableDates.length,
+        separatorBuilder: (_, index) =>
+            const SizedBox(width: 9),
+        itemBuilder: (context, index) {
+          final date = _availableDates[index];
+
+          final selected = _selectedDate != null &&
+              _sameDate(_selectedDate!, date);
+
+          return InkWell(
+            onTap: () {
+              setState(() {
+                _selectedDate = date;
+                _selectedTime = null;
+              });
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: AnimatedContainer(
+              duration: const Duration(
+                milliseconds: 200,
+              ),
+              width: 68,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: selected
+                    ? primary
+                    : Colors.white,
+                borderRadius:
+                    BorderRadius.circular(16),
+                border: Border.all(
+                  color: selected ? primary : border,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment:
+                    MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _dayName(date),
+                    style: TextStyle(
+                      color: selected
+                          ? Colors.white
+                          : muted,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    '${date.day}',
+                    style: TextStyle(
+                      color: selected
+                          ? Colors.white
+                          : dark,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    _monthName(date),
+                    style: TextStyle(
+                      color: selected
+                          ? Colors.white70
+                          : muted,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _timeSelector() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics:
+          const NeverScrollableScrollPhysics(),
+      itemCount: _timeSlots.length,
+      gridDelegate:
+          const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 2.4,
+      ),
+      itemBuilder: (context, index) {
+        final time = _timeSlots[index];
+        final selected = _selectedTime == time;
+
+        return InkWell(
+          onTap: () {
+            setState(() {
+              _selectedTime = time;
+            });
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(
+              milliseconds: 200,
+            ),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected
+                  ? primary
+                  : Colors.white,
+              borderRadius:
+                  BorderRadius.circular(12),
+              border: Border.all(
+                color: selected ? primary : border,
+              ),
+            ),
+            child: Text(
+              time,
+              style: TextStyle(
+                color: selected
+                    ? Colors.white
+                    : dark,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

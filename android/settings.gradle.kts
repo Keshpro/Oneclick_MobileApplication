@@ -1,10 +1,14 @@
+
 pluginManagement {
     val flutterSdkPath =
         run {
             val properties = java.util.Properties()
-            file("local.properties").inputStream().use { properties.load(it) }
+            file("local.properties").inputStream().use {
+                properties.load(it)
+            }
 
-            val flutterSdkPath = properties.getProperty("flutter.sdk")
+            val flutterSdkPath =
+                properties.getProperty("flutter.sdk")
 
             require(flutterSdkPath != null) {
                 "flutter.sdk not set in local.properties"
@@ -19,6 +23,29 @@ pluginManagement {
         google()
         mavenCentral()
         gradlePluginPortal()
+    }
+}
+
+// PayHere Android SDK repository
+dependencyResolutionManagement {
+    repositoriesMode.set(
+        RepositoriesMode.PREFER_SETTINGS
+    )
+
+    repositories {
+        google()
+        mavenCentral()
+        mavenLocal()
+
+        maven {
+            url = uri(
+                "https://repo.repsy.io/mvn/payhere/payhere-mobilesdk-android/"
+            )
+        }
+
+        maven {
+            url = uri("https://jitpack.io")
+        }
     }
 }
 
