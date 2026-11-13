@@ -920,7 +920,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 width: 43,
                 height: 43,
                 decoration: BoxDecoration(
-                  color: color..withValues(alpha: 0.2),
+                  color: color.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(13),
                 ),
                 child: Icon(icon, color: color, size: 22),

@@ -2,6 +2,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+import '../../../payment/models/payment_request.dart';
+import '../../../payment/screens/checkout_screen.dart';
 
 import 'my_appointments_screen.dart';
 
@@ -156,7 +160,9 @@ class _AppointmentSuccessScreenState
     final paymentVerified =
         payment['status'] == 'paid' &&
         payment['userId'] == user.uid &&
-        payment['orderId'] == widget.appointmentId &&
+        payment['orderId'] == paymentId &&
+        payment['bookingId'] == widget.appointmentId &&
+        payment['amountMinor'] == widget.amountMinor &&
         payment['module'] == 'doctor' &&
         payment['currency'] == 'LKR';
 
@@ -177,20 +183,99 @@ class _AppointmentSuccessScreenState
     final appointmentConfirmed =
         appointment['userId'] == user.uid &&
         appointment['status'] == 'confirmed' &&
-        appointment['paymentId'] == paymentId;
+        appointment['paymentId'] == paymentId &&
+        appointment['paymentStatus'] == 'paid';
 
     return appointmentConfirmed;
   }
 
+  String _field(Map<String, dynamic> values, String key) =>
+      values[key]?.toString().trim() ?? '';
+
+  /// Uses existing booking/contact data; never invents personal details.
+  Future<PaymentRequest> _paymentRequest() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw StateError('Please log in before making a payment.');
+    }
+
+    final bookingSnap = await FirebaseFirestore.instance
+        .collection('appointments')
+        .doc(widget.appointmentId)
+        .get(const GetOptions(source: Source.server));
+
+    if (!bookingSnap.exists) {
+      throw StateError('Appointment was not found.');
+    }
+
+    final booking = bookingSnap.data()!;
+    if (booking['userId'] != user.uid) {
+      throw StateError('This appointment does not belong to you.');
+    }
+    if (booking['status'] != 'awaiting_payment') {
+      throw StateError('This appointment is not awaiting payment.');
+    }
+    if (booking['amountMinor'] != widget.amountMinor) {
+      throw StateError('Appointment amount has changed. Please refresh.');
+    }
+
+    final rawCustomer = booking['customer'];
+    final customer = rawCustomer is Map
+        ? Map<String, dynamic>.from(rawCustomer)
+        : <String, dynamic>{};
+
+    String getValue(String key) {
+      final nested = _field(customer, key);
+      return nested.isNotEmpty ? nested : _field(booking, key);
+    }
+
+    final displayName = user.displayName?.trim() ?? '';
+    final nameParts = displayName.split(RegExp(r'\s+'));
+    final firstName = getValue('firstName').isNotEmpty
+        ? getValue('firstName')
+        : (displayName.isNotEmpty ? nameParts.first : '');
+    final lastName = getValue('lastName').isNotEmpty
+        ? getValue('lastName')
+        : (nameParts.length > 1 ? nameParts.skip(1).join(' ') : '');
+    final email = getValue('email').isNotEmpty
+        ? getValue('email')
+        : (user.email ?? '');
+    final phone = getValue('phone').isNotEmpty
+        ? getValue('phone')
+        : (user.phoneNumber ?? '');
+    final address = getValue('address');
+    final city = getValue('city');
+
+    if ([firstName, lastName, email, phone, address, city]
+        .any((field) => field.trim().isEmpty)) {
+      throw StateError(
+        'Complete your first name, last name, email, phone, '
+        'address and city in your appointment details before payment.',
+      );
+    }
+
+    return PaymentRequest(
+      bookingId: widget.appointmentId,
+      module: 'doctor',
+      title: 'Doctor Consultation - $_doctorName',
+      amountMinor: widget.amountMinor,
+      firstName: firstName,
+      lastName: lastName,
+      email: email,
+      phone: phone,
+      address: address,
+      city: city,
+    );
+  }
+
   Future<void> _startPayment() async {
-    if (_view != _PaymentView.checkout) return;
+    if (_view != _PaymentView.checkout || _paymentId != null) return;
 
-    final handler = widget.onStartPayment;
-
-    if (handler == null) {
+    if (kIsWeb && widget.onStartPayment == null) {
       setState(() {
         _errorMessage =
-            'PayHere Sandbox is not connected yet.';
+            'PayHere Mobile SDK requires Android or iOS. '
+            'Run the mobile app to make a Sandbox payment.';
       });
       return;
     }
@@ -201,34 +286,65 @@ class _AppointmentSuccessScreenState
     });
 
     try {
-      // Gateway integration is provided by the caller.
-      final paymentId =
-          await handler(widget.appointmentId);
+      final handler = widget.onStartPayment;
+      if (handler != null) {
+        // Preserve compatibility with existing caller-supplied handlers.
+        final paymentId = await handler(widget.appointmentId);
+        if (!mounted) return;
+        if (paymentId == null || paymentId.trim().isEmpty) {
+          setState(() {
+            _view = _PaymentView.checkout;
+            _errorMessage = 'Payment was not completed.';
+          });
+          return;
+        }
+        _paymentId = paymentId;
+        await _checkConfirmation();
+        return;
+      }
 
+      final paymentRequest = await _paymentRequest();
       if (!mounted) return;
 
-      if (paymentId == null || paymentId.trim().isEmpty) {
+      final verified = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => CheckoutScreen(request: paymentRequest),
+        ),
+      );
+      if (!mounted) return;
+      if (verified != true) {
         setState(() {
           _view = _PaymentView.checkout;
-          _errorMessage =
-              'Payment was not completed. No appointment '
-              'has been confirmed.';
+          _errorMessage = 'Payment is not verified. Check My Appointments '
+              'before attempting another payment.';
+        });
+        return;
+      }
+
+      // Checkout only returns true when the backend marks payment paid.
+      // Obtain the actual payment ID from the confirmed appointment.
+      final bookingSnap = await FirebaseFirestore.instance
+          .collection('appointments')
+          .doc(widget.appointmentId)
+          .get(const GetOptions(source: Source.server));
+      if (!mounted) return;
+      final paymentId = bookingSnap.data()?['paymentId']?.toString();
+      if (paymentId == null || paymentId.isEmpty) {
+        setState(() {
+          _view = _PaymentView.checkout;
+          _errorMessage = 'Payment notification is pending. '
+              'Check your appointments before paying again.';
         });
         return;
       }
 
       _paymentId = paymentId;
-
-      // A gateway callback does not prove payment success.
       await _checkConfirmation();
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-
       setState(() {
         _view = _PaymentView.checkout;
-        _errorMessage =
-            'Could not complete the payment request. '
-            'Check your payment history before retrying.';
+        _errorMessage = 'Unable to start payment: $error';
       });
     }
   }
@@ -660,11 +776,7 @@ class _AppointmentSuccessScreenState
   }
 
   Widget _checkoutBottomBar() {
-    final gatewayReady =
-        widget.onStartPayment != null;
-
-    final canPay =
-        gatewayReady && _paymentId == null;
+    final canPay = _paymentId == null;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(
@@ -722,9 +834,7 @@ class _AppointmentSuccessScreenState
                 label: Text(
                   _paymentId != null
                       ? 'Check Confirmation'
-                      : gatewayReady
-                          ? 'Pay Securely'
-                          : 'Gateway Setup Required',
+                      : 'Pay Securely with PayHere',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -741,16 +851,11 @@ class _AppointmentSuccessScreenState
                 ),
               ),
             ),
-            if (!gatewayReady) ...[
-              const SizedBox(height: 8),
-              const Text(
-                'Connect PayHere Sandbox to enable payment.',
-                style: TextStyle(
-                  color: muted,
-                  fontSize: 11,
-                ),
-              ),
-            ],
+            const SizedBox(height: 8),
+            const Text(
+              'PayHere Sandbox • Test payments only',
+              style: TextStyle(color: muted, fontSize: 11),
+            ),
             const SizedBox(height: 5),
             TextButton(
               onPressed: _openMyAppointments,
