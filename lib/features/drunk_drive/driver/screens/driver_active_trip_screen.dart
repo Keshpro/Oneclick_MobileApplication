@@ -38,8 +38,8 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
         await _locationService.start(widget.booking.id);
       }
       if (mounted) setState(() => _locationSharing = _locationService.isSharing);
-    } catch (error) {
-      if (mounted) _showMessage('Location sharing: $error');
+    } catch (_) {
+      if (mounted) _showMessage('Could not update location sharing. Check your GPS permissions and connection, then try again.');
     } finally {
       if (mounted) setState(() => _locationBusy = false);
     }
@@ -62,10 +62,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
   @override
   void initState() {
     super.initState();
-    _locationService.onError = (error) async {
+    _locationService.onError = (_) async {
       if (!mounted) return;
       setState(() => _locationSharing = false);
-      _showMessage('Location sharing stopped: $error');
+      _showMessage('Location sharing stopped unexpectedly. Check your GPS and connection before restarting.');
     };
     _bookingStream = FirebaseFirestore.instance
         .collection('drunkDriveBookings')
@@ -107,9 +107,9 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
       }
       if (mounted) setState(() => _locationSharing = false);
       if (mounted) _showMessage('Trip completed. Payment has not been confirmed yet.');
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
-      _showMessage('Error completing trip: $error');
+      _showMessage('Could not complete the trip. Check your connection and trip status before trying again.');
     } finally {
       if (mounted) setState(() => _isEnding = false);
     }
@@ -162,9 +162,9 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
             ? 'Payment could not be confirmed. Check its current status.'
             : 'Cash received. Payment recorded in Firebase.',
       );
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
-      _showMessage('Unable to confirm payment: $error');
+      _showMessage('Could not confirm the payment. Check the payment status before trying again.');
     } finally {
       if (mounted) setState(() => _isConfirmingCash = false);
     }

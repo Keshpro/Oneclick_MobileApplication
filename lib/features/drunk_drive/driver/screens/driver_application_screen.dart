@@ -15,6 +15,7 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
   final _formKey = GlobalKey<FormState>();
   DriverApplicationModel? _application;
   bool _isLoading = true;
+  bool _loadFailed = false;
   // Form controllers
   final _nameController = TextEditingController();
   final _dobController = TextEditingController();
@@ -49,19 +50,25 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
     super.dispose();
   }
   Future<void> _loadApplication() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _loadFailed = false;
+    });
     try {
       final application = await _driverService.getMyApplication();
       if (!mounted) return;
       setState(() {
         _application = application;
         _isLoading = false;
+        _loadFailed = false;
       });
     } catch (error) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to load application: $error')),
-      );
+      setState(() {
+        _isLoading = false;
+        _loadFailed = true;
+      });
     }
   }
   Future<void> _onSubmitForm() async {
@@ -121,12 +128,50 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
                   color: _palette.accent,
                 ),
               )
+            : _loadFailed
+            ? _buildLoadError()
             : _application != null
             ? _buildStatusView()
             : _buildApplicationForm(),
       ),
     );
   }
+  Widget _buildLoadError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_rounded, color: _palette.textMuted, size: 46),
+            const SizedBox(height: 12),
+            Text(
+              'Unable to load your driver application',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _palette.textPrimary,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Please check your internet connection and try again. Your existing application has not been changed.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: _palette.textMuted),
+            ),
+            const SizedBox(height: 18),
+            ElevatedButton.icon(
+              onPressed: _loadApplication,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildStatusView() {
     final status = _application!.status;
     Color statusColor;

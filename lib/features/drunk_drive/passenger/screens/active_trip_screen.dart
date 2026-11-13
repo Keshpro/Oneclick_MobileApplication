@@ -15,7 +15,6 @@ import '../../services/booking_firestore_service.dart';
 
 import '../../services/driver_rating_service.dart';
 
-
 import '../../theme/drunk_drive_colors.dart';
 
 import 'payment_screen.dart';
@@ -43,7 +42,6 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
 
   late BookingModel _booking;
 
-  Timer? _driverSearchTimer;
   Timer? _locationFreshnessTimer;
 
   StreamSubscription<BookingModel?>? _bookingSubscription;
@@ -53,10 +51,9 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
     super.initState();
 
     _booking = widget.booking;
-    _locationFreshnessTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) { if (mounted) setState(() {}); },
-    );
+    _locationFreshnessTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
 
     _bookingSubscription = _bookingService
         .watchBooking(_booking.id)
@@ -67,10 +64,6 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
             setState(() {
               _booking = updated;
             });
-
-            if (_booking.status != BookingStatus.searchingDriver) {
-              _driverSearchTimer?.cancel();
-            }
           },
 
           onError: (Object error) {
@@ -81,54 +74,15 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
             );
           },
         );
-
-    _startDriverSearchTimerIfNeeded();
   }
 
   @override
   void dispose() {
     _bookingSubscription?.cancel();
 
-    _driverSearchTimer?.cancel();
     _locationFreshnessTimer?.cancel();
 
     super.dispose();
-  }
-
-  void _startDriverSearchTimerIfNeeded() {
-    _driverSearchTimer?.cancel();
-
-    if (_booking.status != BookingStatus.searchingDriver) {
-      return;
-    }
-
-    _driverSearchTimer = Timer(Duration(seconds: 30), () async {
-      if (!mounted) return;
-
-      try {
-        final latest = await _bookingService.watchBooking(_booking.id).first;
-
-        if (latest == null ||
-            latest.status != BookingStatus.searchingDriver ||
-            latest.driverId != null) {
-          return;
-        }
-
-        final updated = await _bookingService.markDriverNotFound(_booking.id);
-
-        if (updated == null || !mounted) return;
-
-        setState(() {
-          _booking = updated;
-        });
-      } catch (error) {
-        if (!mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unable to update driver search: $error')),
-        );
-      }
-    });
   }
 
   Future<void> _refreshBooking() async {
@@ -140,10 +94,6 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
       setState(() {
         _booking = updated;
       });
-
-      if (_booking.status != BookingStatus.searchingDriver) {
-        _driverSearchTimer?.cancel();
-      }
     } catch (error) {
       if (!mounted) return;
 
@@ -177,7 +127,7 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
         return 'Looking for an available driver...';
 
       case BookingStatus.searchingDriver:
-        return 'Searching for a verified driver near you...';
+        return 'Looking for a verified driver. Your request remains active until a driver accepts or you cancel.';
 
       case BookingStatus.driverAssigned:
         return 'A driver has accepted your booking.';
@@ -310,8 +260,6 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
         _booking = updated;
       });
 
-      _startDriverSearchTimerIfNeeded();
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Searching for a driver again...')),
       );
@@ -409,7 +357,10 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
                 onPressed: isSubmitting
                     ? null
                     : () => Navigator.pop(dialogContext),
-                child: Text('Skip', style: TextStyle(color: _palette.textMuted)),
+                child: Text(
+                  'Skip',
+                  style: TextStyle(color: _palette.textMuted),
+                ),
               ),
               ElevatedButton(
                 onPressed: selectedRating == 0 || isSubmitting
@@ -428,16 +379,20 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(saved == null
-                                  ? 'This trip has already been rated.'
-                                  : 'Rating saved to Firebase.'),
+                              content: Text(
+                                saved == null
+                                    ? 'This trip has already been rated.'
+                                    : 'Rating saved to Firebase.',
+                              ),
                             ),
                           );
                         } catch (error) {
                           if (!dialogContext.mounted) return;
                           setDialogState(() => isSubmitting = false);
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            SnackBar(content: Text('Unable to save rating: $error')),
+                            SnackBar(
+                              content: Text('Unable to save rating: $error'),
+                            ),
                           );
                         }
                       },
@@ -497,11 +452,7 @@ Registration: ${_booking.vehicle.registrationNumber}
 
 Distance: ${_booking.distanceKm.toStringAsFixed(1)} km
 
-Status: ${_booking.status.label}
-
-
-
-Booking ID: ${_booking.id}
+Status: $_passengerStatusLabel
 
 ''';
 
@@ -643,7 +594,9 @@ Booking ID: ${_booking.id}
           data['userId'] != driverId ||
           data['status'] != 'approved') {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Approved driver contact details are unavailable.')),
+          const SnackBar(
+            content: Text('Approved driver contact details are unavailable.'),
+          ),
         );
         return;
       }
@@ -652,156 +605,160 @@ Booking ID: ${_booking.id}
       final driverPhone = (data['phone'] as String? ?? '').trim();
       if (driverPhone.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Driver phone number is not available.')),
+          const SnackBar(
+            content: Text('Driver phone number is not available.'),
+          ),
         );
         return;
       }
 
-    showModalBottomSheet<void>(
-      context: context,
+      showModalBottomSheet<void>(
+        context: context,
 
-      backgroundColor: _palette.surface,
+        backgroundColor: _palette.surface,
 
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
 
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(20),
+        builder: (sheetContext) {
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.all(20),
 
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
 
-              crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
 
-              children: [
-                Text(
-                  'Contact Driver',
-
-                  style: TextStyle(
-                    color: _palette.textPrimary,
-
-                    fontSize: 20,
-
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-
-                SizedBox(height: 18),
-
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-
-                  leading: CircleAvatar(
-                    backgroundColor: _palette.accent,
-
-                    child: Icon(Icons.person_rounded, color: _onAccent),
-                  ),
-
-                  title: Text(
-                    driverName.isEmpty ? 'Assigned Driver' : driverName,
+                children: [
+                  Text(
+                    'Contact Driver',
 
                     style: TextStyle(
                       color: _palette.textPrimary,
+
+                      fontSize: 20,
 
                       fontWeight: FontWeight.w800,
                     ),
                   ),
 
-                  subtitle: Text(
-                    'Assigned Driver',
+                  SizedBox(height: 18),
 
-                    style: TextStyle(color: _palette.textMuted),
-                  ),
-                ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
 
-                SizedBox(height: 8),
-
-                Container(
-                  width: double.infinity,
-
-                  padding: EdgeInsets.all(16),
-
-                  decoration: BoxDecoration(
-                    color: _onAccent,
-
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-
-                  child: Row(
-                    children: [
-                      Icon(Icons.phone_rounded, color: _palette.accent),
-
-                      SizedBox(width: 12),
-
-                      Expanded(
-                        child: Text(
-                          driverPhone,
-
-                          style: TextStyle(
-                            color: _palette.textPrimary,
-
-                            fontSize: 16,
-
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                SizedBox(height: 16),
-
-                SizedBox(
-                  width: double.infinity,
-
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      await Clipboard.setData(
-                        ClipboardData(text: driverPhone),
-                      );
-
-                      if (!sheetContext.mounted) return;
-
-                      Navigator.pop(sheetContext);
-
-                      if (!mounted) return;
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Driver phone number copied.')),
-                      );
-                    },
-
-                    icon: Icon(Icons.copy_rounded),
-
-                    label: Text(
-                      'Copy Phone Number',
-
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-
-                    style: ElevatedButton.styleFrom(
+                    leading: CircleAvatar(
                       backgroundColor: _palette.accent,
 
-                      foregroundColor: _onAccent,
+                      child: Icon(Icons.person_rounded, color: _onAccent),
+                    ),
 
-                      padding: EdgeInsets.symmetric(vertical: 15),
+                    title: Text(
+                      driverName.isEmpty ? 'Assigned Driver' : driverName,
 
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                      style: TextStyle(
+                        color: _palette.textPrimary,
+
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+
+                    subtitle: Text(
+                      'Assigned Driver',
+
+                      style: TextStyle(color: _palette.textMuted),
+                    ),
+                  ),
+
+                  SizedBox(height: 8),
+
+                  Container(
+                    width: double.infinity,
+
+                    padding: EdgeInsets.all(16),
+
+                    decoration: BoxDecoration(
+                      color: _onAccent,
+
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+
+                    child: Row(
+                      children: [
+                        Icon(Icons.phone_rounded, color: _palette.accent),
+
+                        SizedBox(width: 12),
+
+                        Expanded(
+                          child: Text(
+                            driverPhone,
+
+                            style: TextStyle(
+                              color: _palette.textPrimary,
+
+                              fontSize: 16,
+
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: 16),
+
+                  SizedBox(
+                    width: double.infinity,
+
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await Clipboard.setData(
+                          ClipboardData(text: driverPhone),
+                        );
+
+                        if (!sheetContext.mounted) return;
+
+                        Navigator.pop(sheetContext);
+
+                        if (!mounted) return;
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Driver phone number copied.'),
+                          ),
+                        );
+                      },
+
+                      icon: Icon(Icons.copy_rounded),
+
+                      label: Text(
+                        'Copy Phone Number',
+
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _palette.accent,
+
+                        foregroundColor: _onAccent,
+
+                        padding: EdgeInsets.symmetric(vertical: 15),
+
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1069,6 +1026,23 @@ Status: ${_booking.status.label}
 
             children: [
               _buildStatusCard(),
+              if (_booking.status == BookingStatus.searchingDriver) ...[
+                const SizedBox(height: 10),
+                Text(
+                  'Still waiting? You can keep this booking active or cancel it below. We will update this screen when a driver accepts.',
+                  style: TextStyle(
+                    color: _palette.textMuted,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+
+              if (_booking.driverId != null &&
+                  _booking.driverId!.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _buildAssignedDriverCard(),
+              ],
 
               SizedBox(height: 16),
 
@@ -1204,6 +1178,33 @@ Status: ${_booking.status.label}
     );
   }
 
+  // Passenger-friendly labels. Firestore status values remain unchanged.
+  String get _passengerStatusLabel {
+    switch (_booking.status) {
+      case BookingStatus.requested:
+      case BookingStatus.searchingDriver:
+        return 'Finding Driver';
+      case BookingStatus.driverAssigned:
+      case BookingStatus.driverAccepted:
+        return 'Driver Assigned';
+      case BookingStatus.driverArriving:
+        return 'Driver Arriving';
+      case BookingStatus.driverArrived:
+      case BookingStatus.verification:
+        return 'Ready to Start';
+      case BookingStatus.tripStarted:
+      case BookingStatus.tripInProgress:
+        return 'On Trip';
+      case BookingStatus.tripCompleted:
+      case BookingStatus.payment:
+        return 'Trip Finished';
+      case BookingStatus.completed:
+        return 'Completed';
+      default:
+        return _booking.status.label;
+    }
+  }
+
   Widget _buildStatusCard() {
     return Container(
       width: double.infinity,
@@ -1242,7 +1243,7 @@ Status: ${_booking.status.label}
 
               children: [
                 Text(
-                  _booking.status.label,
+                  _passengerStatusLabel,
 
                   style: TextStyle(
                     color: _statusColor,
@@ -1271,6 +1272,110 @@ Status: ${_booking.status.label}
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAssignedDriverCard() {
+    final driverId = _booking.driverId!;
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      key: ValueKey('assigned-driver-$driverId'),
+      stream: FirebaseFirestore.instance
+          .collection('drunkDriveDriverApplications')
+          .doc(driverId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data();
+        final approved =
+            data != null &&
+            data['userId'] == driverId &&
+            data['status'] == 'approved';
+        final fullName = approved
+            ? (data['fullName'] as String? ?? '').trim()
+            : '';
+        final displayName = fullName.isNotEmpty
+            ? fullName
+            : 'Your assigned driver';
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _palette.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: _palette.surfaceBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'YOUR DRIVER',
+                style: TextStyle(
+                  color: _palette.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 23,
+                    backgroundColor: _palette.accent.withValues(alpha: 0.13),
+                    child: Icon(Icons.person_rounded, color: _palette.accent),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          displayName,
+                          style: TextStyle(
+                            color: _palette.textPrimary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          snapshot.hasError
+                              ? 'Driver information unavailable'
+                              : !snapshot.hasData
+                              ? 'Loading driver details...'
+                              : approved
+                              ? 'Verified driver'
+                              : 'Driver details unavailable',
+                          style: TextStyle(
+                            color: _palette.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (approved) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _contactDriver,
+                    icon: const Icon(Icons.phone_rounded),
+                    label: const Text('Contact Driver'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _palette.accent,
+                      side: BorderSide(color: _palette.accent),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1341,13 +1446,17 @@ Status: ${_booking.status.label}
     final pickupLng = _booking.pickup.longitude;
     final destinationLat = _booking.destination.latitude;
     final destinationLng = _booking.destination.longitude;
-    if (pickupLat == null || pickupLng == null ||
-        destinationLat == null || destinationLng == null) {
+    if (pickupLat == null ||
+        pickupLng == null ||
+        destinationLat == null ||
+        destinationLng == null) {
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Text('Map unavailable: this booking has no saved coordinates.',
-              style: TextStyle(color: _palette.textMuted)),
+          child: Text(
+            'Map unavailable: this booking has no saved coordinates.',
+            style: TextStyle(color: _palette.textMuted),
+          ),
         ),
       );
     }
@@ -1374,10 +1483,12 @@ Status: ${_booking.status.label}
             final updatedAt = location['updatedAt'];
             final lat = location['latitude'];
             final lng = location['longitude'];
-            final fresh = updatedAt is Timestamp &&
+            final fresh =
+                updatedAt is Timestamp &&
                 DateTime.now().difference(updatedAt.toDate()).inSeconds < 90;
             final tracking = location['trackingActive'] == true;
-            final running = data['status'] == 'tripStarted' ||
+            final running =
+                data['status'] == 'tripStarted' ||
                 data['status'] == 'tripInProgress';
             if (tracking && fresh && running && lat is num && lng is num) {
               driverPosition = LatLng(lat.toDouble(), lng.toDouble());
@@ -1392,19 +1503,26 @@ Status: ${_booking.status.label}
         final markers = <Marker>[
           Marker(
             point: pickup,
-            width: 44, height: 44,
+            width: 44,
+            height: 44,
             child: const Icon(Icons.trip_origin, color: Colors.green, size: 34),
           ),
           Marker(
             point: destination,
-            width: 44, height: 44,
+            width: 44,
+            height: 44,
             child: const Icon(Icons.location_on, color: Colors.red, size: 38),
           ),
           if (driverPosition != null)
             Marker(
               point: driverPosition,
-              width: 48, height: 48,
-              child: const Icon(Icons.directions_car, color: Colors.blue, size: 36),
+              width: 48,
+              height: 48,
+              child: const Icon(
+                Icons.directions_car,
+                color: Colors.blue,
+                size: 36,
+              ),
             ),
         ];
         return Container(
@@ -1416,10 +1534,13 @@ Status: ${_booking.status.label}
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Trip map', style: TextStyle(
-                color: _palette.textPrimary,
-                fontWeight: FontWeight.w800,
-              )),
+              Text(
+                'Trip map',
+                style: TextStyle(
+                  color: _palette.textPrimary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               const SizedBox(height: 10),
               ClipRRect(
                 borderRadius: BorderRadius.circular(14),
@@ -1429,7 +1550,8 @@ Status: ${_booking.status.label}
                     options: MapOptions(initialCenter: pickup, initialZoom: 13),
                     children: [
                       TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                         userAgentPackageName: 'oneclick',
                       ),
                       MarkerLayer(markers: markers),
@@ -1438,12 +1560,19 @@ Status: ${_booking.status.label}
                 ),
               ),
               const SizedBox(height: 8),
-              Text(label, style: TextStyle(color: _palette.textMuted, fontSize: 12)),
+              Text(
+                label,
+                style: TextStyle(color: _palette.textMuted, fontSize: 12),
+              ),
               const SizedBox(height: 4),
-              Text('Green: pickup  •  Red: destination  •  Blue: driver',
-                  style: TextStyle(color: _palette.textMuted, fontSize: 11)),
-              Text('© OpenStreetMap contributors',
-                  style: TextStyle(color: _palette.textMuted, fontSize: 11)),
+              Text(
+                'Green: pickup  •  Red: destination  •  Blue: driver',
+                style: TextStyle(color: _palette.textMuted, fontSize: 11),
+              ),
+              Text(
+                '© OpenStreetMap contributors',
+                style: TextStyle(color: _palette.textMuted, fontSize: 11),
+              ),
             ],
           ),
         );
