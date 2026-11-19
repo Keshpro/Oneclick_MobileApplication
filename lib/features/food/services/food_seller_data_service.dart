@@ -77,6 +77,7 @@ class FoodSellerDataService {
       description: offer.description,
       allergens: offer.allergens,
       status: offer.status,
+      startsAt: offer.startsAt,
       expiresAt: offer.expiresAt,
     );
 

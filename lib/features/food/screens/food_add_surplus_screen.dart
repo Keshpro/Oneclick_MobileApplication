@@ -24,9 +24,8 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
   String selectedCategory = 'Bakery';
   bool _isSaving = false;
 
-  String selectedFromTime = '5:00 PM';
-  String selectedUntilTime = '8:00 PM';
-  DateTime selectedCollectionDate = DateTime.now();
+  DateTime? selectedStartDateTime;
+  DateTime? selectedEndDateTime;
 
   final List<String> categories = [
     'Bakery',
@@ -50,43 +49,54 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
     super.dispose();
   }
 
-  DateTime _dateTimeForTime(DateTime date, String time) {
-    final parts = time.split(' ');
-    final timeParts = parts[0].split(':');
-
-    int hour = int.parse(timeParts[0]);
-    final int minute = int.parse(timeParts[1]);
-    final String period = parts[1];
-
-    if (period == 'PM' && hour != 12) {
-      hour += 12;
-    } else if (period == 'AM' && hour == 12) {
-      hour = 0;
-    }
-
-    return DateTime(date.year, date.month, date.day, hour, minute);
-  }
-
-  Future<void> _selectCollectionDate() async {
+  Future<DateTime?> _pickDateTime({
+    required String title,
+    required DateTime initialDateTime,
+  }) async {
     final now = DateTime.now();
 
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate:
-          selectedCollectionDate.isBefore(
-            DateTime(now.year, now.month, now.day),
-          )
+      initialDate: initialDateTime.isBefore(now)
           ? DateTime(now.year, now.month, now.day)
-          : selectedCollectionDate,
+          : initialDateTime,
       firstDate: DateTime(now.year, now.month, now.day),
       lastDate: DateTime(now.year + 2, now.month, now.day),
+      helpText: title,
     );
 
-    if (pickedDate != null && mounted) {
-      setState(() {
-        selectedCollectionDate = pickedDate;
-      });
-    }
+    if (pickedDate == null || !mounted) return null;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initialDateTime),
+      helpText: title,
+    );
+
+    if (pickedTime == null) return null;
+
+    return DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+  }
+
+  String _formatDateTime(DateTime? dateTime) {
+    if (dateTime == null) return 'Choose date and time';
+
+    final date =
+        '${dateTime.day.toString().padLeft(2, '0')}/'
+        '${dateTime.month.toString().padLeft(2, '0')}/'
+        '${dateTime.year}';
+
+    final hour = dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12;
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    final period = dateTime.hour >= 12 ? 'PM' : 'AM';
+
+    return '$date • $hour:$minute $period';
   }
 
   // ------------------------------------------------------------
@@ -100,29 +110,29 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
       return;
     }
     final now = DateTime.now();
+    final startAt = selectedStartDateTime;
+    final endAt = selectedEndDateTime;
 
-    final collectionStart = _dateTimeForTime(
-      selectedCollectionDate,
-      selectedFromTime,
-    );
-
-    final expiry = _dateTimeForTime(selectedCollectionDate, selectedUntilTime);
-
-    if (!expiry.isAfter(collectionStart)) {
+    if (startAt == null || endAt == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'The collection end time must be after the start time.',
-          ),
+          content: Text('Please select both the offer start and end times.'),
         ),
       );
       return;
     }
 
-    if (!expiry.isAfter(now)) {
+    if (!startAt.isAfter(now)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The offer start must be in the future.')),
+      );
+      return;
+    }
+
+    if (!endAt.isAfter(startAt)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please choose a future collection end date and time.'),
+          content: Text('The offer end must be later than its start.'),
         ),
       );
       return;
@@ -149,11 +159,12 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
       originalPrice: originalPriceController.text.trim(),
       saverPrice: saverPriceController.text.trim(),
       quantity: quantityController.text.trim(),
-      availableFrom: selectedFromTime,
-      availableUntil: selectedUntilTime,
+      availableFrom: _formatDateTime(startAt),
+      availableUntil: _formatDateTime(endAt),
       description: descriptionController.text.trim(),
       allergens: allergenController.text.trim(),
-      expiresAt: expiry,
+      startsAt: startAt,
+      expiresAt: endAt,
     );
 
     try {
@@ -387,136 +398,73 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
                 },
               ),
 
-              const SizedBox(height: 20),
+              // OFFER SCHEDULE
               const Text(
-                'Collection Date',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                'Offer Schedule',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
 
-              InkWell(
-                onTap: _selectCollectionDate,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade400),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_month_outlined),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          '${selectedCollectionDate.day.toString().padLeft(2, '0')}/'
-                          '${selectedCollectionDate.month.toString().padLeft(2, '0')}/'
-                          '${selectedCollectionDate.year}',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                      const Icon(Icons.edit_calendar_outlined),
-                    ],
-                  ),
-                ),
+              Text(
+                'Choose exactly when customers can start buying and when the offer expires.',
+                style: TextStyle(color: Colors.grey.shade600),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // ------------------------------------------------------------
-              // COLLECTION TIME
-              // ------------------------------------------------------------
-              const Text(
-                'Collection Time',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              // START DATE AND TIME
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.play_circle_outline),
+                title: const Text('Offer starts'),
+                subtitle: Text(_formatDateTime(selectedStartDateTime)),
+                trailing: const Icon(Icons.calendar_month),
+                onTap: () async {
+                  final now = DateTime.now();
+
+                  final picked = await _pickDateTime(
+                    title: 'Select offer start',
+                    initialDateTime:
+                        selectedStartDateTime ??
+                        now.add(const Duration(minutes: 5)),
+                  );
+
+                  if (picked != null && mounted) {
+                    setState(() {
+                      selectedStartDateTime = picked;
+                    });
+                  }
+                },
               ),
 
-              const SizedBox(height: 8),
+              const Divider(),
 
-              Row(
-                children: [
-                  // FROM
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: selectedFromTime,
+              // END DATE AND TIME
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.event_available_outlined),
+                title: const Text('Offer ends'),
+                subtitle: Text(_formatDateTime(selectedEndDateTime)),
+                trailing: const Icon(Icons.calendar_month),
+                onTap: () async {
+                  final now = DateTime.now();
 
-                      decoration: const InputDecoration(
-                        labelText: 'From',
-                        border: OutlineInputBorder(),
-                      ),
-
-                      items: const [
-                        DropdownMenuItem(
-                          value: '4:00 PM',
-                          child: Text('4:00 PM'),
+                  final picked = await _pickDateTime(
+                    title: 'Select offer end',
+                    initialDateTime:
+                        selectedEndDateTime ??
+                        (selectedStartDateTime ?? now).add(
+                          const Duration(hours: 2),
                         ),
-                        DropdownMenuItem(
-                          value: '5:00 PM',
-                          child: Text('5:00 PM'),
-                        ),
-                        DropdownMenuItem(
-                          value: '6:00 PM',
-                          child: Text('6:00 PM'),
-                        ),
-                        DropdownMenuItem(
-                          value: '7:00 PM',
-                          child: Text('7:00 PM'),
-                        ),
-                      ],
+                  );
 
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() {
-                            selectedFromTime = value;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  // UNTIL
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: selectedUntilTime,
-
-                      decoration: const InputDecoration(
-                        labelText: 'Until',
-                        border: OutlineInputBorder(),
-                      ),
-
-                      items: const [
-                        DropdownMenuItem(
-                          value: '6:00 PM',
-                          child: Text('6:00 PM'),
-                        ),
-                        DropdownMenuItem(
-                          value: '7:00 PM',
-                          child: Text('7:00 PM'),
-                        ),
-                        DropdownMenuItem(
-                          value: '8:00 PM',
-                          child: Text('8:00 PM'),
-                        ),
-                        DropdownMenuItem(
-                          value: '9:00 PM',
-                          child: Text('9:00 PM'),
-                        ),
-                      ],
-
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() {
-                            selectedUntilTime = value;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                ],
+                  if (picked != null && mounted) {
+                    setState(() {
+                      selectedEndDateTime = picked;
+                    });
+                  }
+                },
               ),
 
               const SizedBox(height: 20),

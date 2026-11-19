@@ -75,6 +75,19 @@ class SaveBiteStockService {
         final status = '${data['status'] ?? 'ACTIVE'}'.toUpperCase();
         final sellerSnapshot = sellerSnapshots[sellerRefs[path]!.path]!;
         final sellerData = sellerSnapshot.data();
+        final rawExpiry = data['expiresAt'];
+
+        final DateTime? expiresAt = rawExpiry is Timestamp
+            ? rawExpiry.toDate()
+            : rawExpiry is DateTime
+            ? rawExpiry
+            : null;
+
+        if (expiresAt == null || !expiresAt.isAfter(DateTime.now())) {
+          throw Exception(
+            '${product.name} has expired and is no longer available.',
+          );
+        }
 
         if (!sellerSnapshot.exists ||
             sellerData == null ||

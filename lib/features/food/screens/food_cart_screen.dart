@@ -4,6 +4,8 @@ import '../services/food_cart_service.dart';
 import '../services/food_order_service.dart';
 import 'food_checkout_screen.dart';
 
+import 'dart:async';
+
 class FoodCartScreen extends StatefulWidget {
   const FoodCartScreen({super.key});
 
@@ -13,6 +15,29 @@ class FoodCartScreen extends StatefulWidget {
 
 class _FoodCartScreenState extends State<FoodCartScreen> {
   final cart = FoodCartService.instance;
+  Timer? _expiryTimer;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _expiryTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+
+      final previousCount = cart.items.length;
+      cart.removeExpiredOffers();
+
+      if (cart.items.length != previousCount) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _expiryTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

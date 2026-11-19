@@ -382,6 +382,11 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
               'There are not enough portions available for your order. '
               'Please review your cart and try a smaller quantity.';
         }
+      } else if (errorText.contains('has expired')) {
+        title = 'SaveBite offer expired';
+        message =
+            'Sorry, this food offer has expired. '
+            'Please return to your cart and choose another available offer.';
       } else if (errorText.contains('no longer available')) {
         message =
             'Sorry, this food offer is no longer available. '
