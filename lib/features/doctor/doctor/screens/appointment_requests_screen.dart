@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -12,345 +13,1027 @@ class AppointmentRequestsScreen extends StatefulWidget {
 
 class _AppointmentRequestsScreenState
     extends State<AppointmentRequestsScreen> {
-  static const Color _primary = Color(0xff032744);
+  static const Color _green = Color(0xFF059669);
+  static const Color _darkGreen = Color(0xFF064E3B);
+  static const Color _background = Color(0xFFF7FAF9);
+  static const Color _text = Color(0xFF0F172A);
+  static const Color _muted = Color(0xFF64748B);
+  static const Color _border = Color(0xFFE2E8F0);
+  static const Color _blue = Color(0xFF0284C7);
+  static const Color _orange = Color(0xFFD97706);
+  static const Color _purple = Color(0xFF7C3AED);
+  static const Color _red = Color(0xFFDC2626);
 
-  User? get _currentDoctor => FirebaseAuth.instance.currentUser;
+  final TextEditingController _searchController =
+      TextEditingController();
+
+  String _search = '';
+  String _filter = 'All';
+  String? _processingId;
+
+  User? get _doctor => FirebaseAuth.instance.currentUser;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _message(String message, {bool error = false}) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: error ? _red : _darkGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  bool _isPending(String status) {
+    return [
+      'pending',
+      'upcoming',
+      'requested',
+    ].contains(status.toLowerCase());
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return _green;
+      case 'cancelled':
+        return _red;
+      case 'rescheduled':
+        return _purple;
+      case 'upcoming':
+        return _blue;
+      default:
+        return _orange;
+    }
+  }
+
+  String _dateText(dynamic value) {
+    if (value is Timestamp) {
+      final date = value.toDate();
+      return '${date.year}-'
+          '${date.month.toString().padLeft(2, '0')}-'
+          '${date.day.toString().padLeft(2, '0')}';
+    }
+
+    if (value == null) return 'Not scheduled';
+    return value.toString();
+  }
 
   Future<void> _updateAppointmentStatus(
-    String docId,
-    String appointmentId,
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
     String newStatus,
-    String patientEmail,
   ) async {
-    try {
-      // 1. Update appointment status in Firestore
-      await FirebaseFirestore.instance
-          .collection('appointments')
-          .doc(docId)
-          .update({
-        'status': newStatus,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+    if (_processingId != null) return;
 
-      // 2. Add entry to activity logs
-      await FirebaseFirestore.instance.collection('activity_logs').add({
-        'action': 'Appointment $newStatus',
-        'details':
-            'Appointment $appointmentId for $patientEmail was set to $newStatus.',
-        'performedBy': _currentDoctor?.email ?? 'Doctor',
-        'timestamp': FieldValue.serverTimestamp(),
-      });
+    final data = doc.data();
+    final appointmentId =
+        (data['id'] ?? doc.id).toString();
+    final patientEmail =
+        (data['userEmail'] ?? 'Patient').toString();
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Appointment $newStatus successfully'),
-          backgroundColor:
-              newStatus == 'Approved' ? Colors.green : Colors.red,
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
         ),
+        title: Row(
+          children: [
+            Icon(
+              newStatus == 'Approved'
+                  ? Icons.check_circle_rounded
+                  : Icons.cancel_rounded,
+              color: newStatus == 'Approved'
+                  ? _green
+                  : _red,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                newStatus == 'Approved'
+                    ? 'Accept booking?'
+                    : 'Decline booking?',
+                style: const TextStyle(fontSize: 19),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          newStatus == 'Approved'
+              ? 'Confirm appointment $appointmentId '
+                  'for $patientEmail?'
+              : 'Are you sure you want to decline '
+                  'appointment $appointmentId?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, false),
+            child: const Text('Go Back'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: newStatus == 'Approved'
+                  ? _green
+                  : _red,
+            ),
+            onPressed: () =>
+                Navigator.pop(dialogContext, true),
+            child: Text(
+              newStatus == 'Approved'
+                  ? 'Accept'
+                  : 'Decline',
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _processingId = doc.id);
+
+    try {
+      final firestore = FirebaseFirestore.instance;
+
+      // Atomic appointment update and activity log.
+      // The transaction checks the current status to
+      // avoid accepting an already processed request.
+      await firestore.runTransaction((transaction) async {
+        final latest = await transaction.get(doc.reference);
+
+        if (!latest.exists) {
+          throw StateError('Appointment no longer exists.');
+        }
+
+        final latestStatus =
+            (latest.data()?['status'] ?? '')
+                .toString();
+
+        if (!_isPending(latestStatus)) {
+          throw StateError(
+            'This appointment has already been processed.',
+          );
+        }
+
+        transaction.update(doc.reference, {
+          'status': newStatus,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        final logRef =
+            firestore.collection('activity_logs').doc();
+
+        transaction.set(logRef, {
+          'action': 'Appointment $newStatus',
+          'details':
+              'Appointment $appointmentId for '
+              '$patientEmail was set to $newStatus.',
+          'performedBy': _doctor?.email ?? 'Doctor',
+          'doctorId': _doctor?.uid,
+          'appointmentId': doc.id,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      });
+
+      _message(
+        newStatus == 'Approved'
+            ? 'Appointment accepted successfully!'
+            : 'Appointment declined successfully.',
       );
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update status: $e'),
-          backgroundColor: Colors.red,
-        ),
+      _message(
+        'Unable to update appointment: $e',
+        error: true,
       );
+    } finally {
+      if (mounted) {
+        setState(() => _processingId = null);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final uid = _currentDoctor?.uid;
-
-    if (uid == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Appointment Requests'),
-          backgroundColor: _primary,
-          foregroundColor: Colors.white,
-        ),
-        body: const Center(
-          child: Text('No logged-in doctor found.'),
-        ),
-      );
-    }
+    final uid = _doctor?.uid;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: _background,
       appBar: AppBar(
-        title: const Text('Appointment Requests'),
-        backgroundColor: _primary,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        foregroundColor: _text,
         elevation: 0,
-      ),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        // Fetch appointments strictly belonging to THIS logged-in doctor
-        stream: FirebaseFirestore.instance
-            .collection('appointments')
-            .where('doctorId', isEqualTo: uid)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Error loading requests: ${snapshot.error}'),
-            );
-          }
-
-          final docs = snapshot.data?.docs ?? [];
-
-          if (docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.event_busy_rounded,
-                    size: 60,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No appointment requests found.',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
+        toolbarHeight: 66,
+        titleSpacing: 0,
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Appointments',
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
               ),
-            );
-          }
+            ),
+            Text(
+              'Doctor workspace',
+              style: TextStyle(
+                color: _muted,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: const Color(0xFFECFDF5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.calendar_month_rounded,
+              color: _green,
+              size: 23,
+            ),
+          ),
+        ],
+      ),
+      body: uid == null
+          ? _emptyState(
+              'Doctor account required',
+              'Please sign in to manage appointments.',
+            )
+          : StreamBuilder<
+              QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('appointments')
+                  .where('doctorId', isEqualTo: uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return _emptyState(
+                    'Unable to load appointments',
+                    '${snapshot.error}',
+                  );
+                }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final doc = docs[index];
-              final data = doc.data();
-              final docId = doc.id;
+                if (!snapshot.hasData) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: _green,
+                    ),
+                  );
+                }
 
-              final apptId = data['id'] ?? 'N/A';
-              final patientEmail = data['userEmail'] ?? 'Patient';
-              final date = data['date'] ?? 'N/A';
-              final time = data['time'] ?? 'N/A';
-              final type = data['type'] ?? 'In-person';
-              final status = data['status'] ?? 'Upcoming';
-              final reason = data['reason'] ?? 'No reason specified';
+                final docs = snapshot.data!.docs;
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: Color(0xFFE5E7EB)),
-                ),
-                elevation: 0,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: _primary.withValues(alpha: 0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.person_outline_rounded,
-                                  color: _primary,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    patientEmail,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Booking #$apptId',
-                                    style: const TextStyle(
-                                      color: Color(0xFF6B7280),
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _getStatusBgColor(status),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              status,
-                              style: TextStyle(
-                                color: _getStatusTextColor(status),
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      const Divider(height: 1, color: Color(0xFFE5E7EB)),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.calendar_month_outlined,
-                            size: 16,
-                            color: Color(0xFF6B7280),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '$date at $time',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF3F4F6),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              type,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF374151),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (reason.toString().trim().isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Note: $reason',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                            fontStyle: FontStyle.italic,
-                          ),
+                final pending = docs.where((doc) {
+                  return _isPending(
+                    (doc.data()['status'] ?? '')
+                        .toString(),
+                  );
+                }).length;
+
+                final approved = docs.where((doc) {
+                  return (doc.data()['status'] ?? '')
+                          .toString()
+                          .toLowerCase() ==
+                      'approved';
+                }).length;
+
+                final cancelled = docs.where((doc) {
+                  return (doc.data()['status'] ?? '')
+                          .toString()
+                          .toLowerCase() ==
+                      'cancelled';
+                }).length;
+
+                final filtered = docs.where((doc) {
+                  final data = doc.data();
+                  final status =
+                      (data['status'] ?? 'Upcoming')
+                          .toString();
+
+                  final matchesFilter = _filter == 'All' ||
+                      (_filter == 'Pending'
+                          ? _isPending(status)
+                          : status.toLowerCase() ==
+                              _filter.toLowerCase());
+
+                  final query = _search.trim().toLowerCase();
+
+                  final name =
+                      (data['patientName'] ?? '')
+                          .toString()
+                          .toLowerCase();
+
+                  final email =
+                      (data['userEmail'] ?? '')
+                          .toString()
+                          .toLowerCase();
+
+                  final bookingId =
+                      (data['id'] ?? doc.id)
+                          .toString()
+                          .toLowerCase();
+
+                  return matchesFilter &&
+                      (query.isEmpty ||
+                          name.contains(query) ||
+                          email.contains(query) ||
+                          bookingId.contains(query));
+                }).toList();
+
+                filtered.sort((a, b) {
+                  final dateA =
+                      _dateText(a.data()['date']);
+                  final dateB =
+                      _dateText(b.data()['date']);
+                  return dateA.compareTo(dateB);
+                });
+
+                return CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          18, 20, 18, 0,
                         ),
-                      ],
-                      if (status == 'Upcoming' || status == 'Pending') ...[
-                        const SizedBox(height: 16),
-                        Row(
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => _updateAppointmentStatus(
-                                  docId,
-                                  apptId,
-                                  'Cancelled',
-                                  patientEmail,
+                            _hero(pending),
+                            const SizedBox(height: 24),
+                            _sectionTitle(
+                              'Booking Overview',
+                              'Real-time appointment summary',
+                            ),
+                            const SizedBox(height: 13),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _statCard(
+                                    'Pending',
+                                    '$pending',
+                                    Icons.hourglass_top_rounded,
+                                    _orange,
+                                  ),
                                 ),
-                                icon: const Icon(
-                                  Icons.close_rounded,
-                                  size: 18,
+                                const SizedBox(width: 9),
+                                Expanded(
+                                  child: _statCard(
+                                    'Approved',
+                                    '$approved',
+                                    Icons.verified_rounded,
+                                    _green,
+                                  ),
                                 ),
-                                label: const Text('Decline'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.red,
-                                  side: const BorderSide(color: Colors.red),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                                const SizedBox(width: 9),
+                                Expanded(
+                                  child: _statCard(
+                                    'Declined',
+                                    '$cancelled',
+                                    Icons.cancel_outlined,
+                                    _red,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 26),
+                            _sectionTitle(
+                              'Patient Requests',
+                              'Review and manage appointments',
+                            ),
+                            const SizedBox(height: 14),
+                            TextField(
+                              controller: _searchController,
+                              onChanged: (value) {
+                                setState(() => _search = value);
+                              },
+                              decoration: InputDecoration(
+                                hintText:
+                                    'Search patient or booking ID',
+                                prefixIcon: const Icon(
+                                  Icons.search_rounded,
+                                  color: _green,
+                                ),
+                                suffixIcon: _search.isNotEmpty
+                                    ? IconButton(
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(
+                                            () => _search = '',
+                                          );
+                                        },
+                                        icon: const Icon(
+                                          Icons.close_rounded,
+                                        ),
+                                      )
+                                    : null,
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(16),
+                                  borderSide: const BorderSide(
+                                    color: _border,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(16),
+                                  borderSide: const BorderSide(
+                                    color: _border,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(16),
+                                  borderSide: const BorderSide(
+                                    color: _green,
+                                    width: 1.5,
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () => _updateAppointmentStatus(
-                                  docId,
-                                  apptId,
+                            const SizedBox(height: 13),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  'All',
+                                  'Pending',
                                   'Approved',
-                                  patientEmail,
-                                ),
-                                icon: const Icon(
-                                  Icons.check_rounded,
-                                  size: 18,
-                                ),
-                                label: const Text('Accept'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
+                                  'Rescheduled',
+                                  'Cancelled',
+                                ].map((filter) {
+                                  final selected =
+                                      _filter == filter;
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(
+                                      right: 8,
+                                    ),
+                                    child: ChoiceChip(
+                                      label: Text(filter),
+                                      selected: selected,
+                                      showCheckmark: false,
+                                      selectedColor:
+                                          const Color(0xFFD1FAE5),
+                                      backgroundColor:
+                                          Colors.white,
+                                      side: BorderSide(
+                                        color: selected
+                                            ? _green
+                                            : _border,
+                                      ),
+                                      labelStyle: TextStyle(
+                                        color: selected
+                                            ? _darkGreen
+                                            : _muted,
+                                        fontWeight:
+                                            FontWeight.w700,
+                                      ),
+                                      onSelected: (_) {
+                                        setState(
+                                          () => _filter = filter,
+                                        );
+                                      },
+                                    ),
+                                  );
+                                }).toList(),
                               ),
                             ),
+                            const SizedBox(height: 17),
+                            Text(
+                              '${filtered.length} appointments found',
+                              style: const TextStyle(
+                                color: _muted,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 13),
                           ],
                         ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                      ),
+                    ),
+                    if (filtered.isEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: _emptyState(
+                            'No matching appointments',
+                            'Try another search or filter.',
+                          ),
+                        ),
+                      )
+                    else
+                      SliverList.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              18, 0, 18, 12,
+                            ),
+                            child: _appointmentCard(
+                              filtered[index],
+                            ),
+                          );
+                        },
+                      ),
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: 30),
+                    ),
+                  ],
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _hero(int pending) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(23),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _darkGreen,
+            _green,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(26),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: const Icon(
+              Icons.event_available_rounded,
+              color: Colors.white,
+              size: 29,
+            ),
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'Manage your\npatient bookings.',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 25,
+              height: 1.2,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            pending == 0
+                ? 'You are all caught up!'
+                : '$pending appointment requests need your attention.',
+            style: const TextStyle(
+              color: Color(0xFFD1FAE5),
+              fontSize: 13,
+              height: 1.5,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Color _getStatusBgColor(String status) {
-    switch (status) {
-      case 'Approved':
-        return Colors.green.withValues(alpha: 0.1);
-      case 'Upcoming':
-        return Colors.blue.withValues(alpha: 0.1);
-      case 'Cancelled':
-        return Colors.red.withValues(alpha: 0.1);
-      default:
-        return Colors.orange.withValues(alpha: 0.1);
-    }
+  Widget _statCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 11,
+        vertical: 15,
+      ),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.11),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 21,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              color: _text,
+              fontSize: 23,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          Text(
+            title,
+            style: const TextStyle(
+              color: _muted,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  Color _getStatusTextColor(String status) {
-    switch (status) {
-      case 'Approved':
-        return Colors.green;
-      case 'Upcoming':
-        return Colors.blue;
-      case 'Cancelled':
-        return Colors.red;
-      default:
-        return Colors.orange;
-    }
+  Widget _appointmentCard(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = doc.data();
+
+    final patientName =
+        (data['patientName'] ?? data['userEmail'] ?? 'Patient')
+            .toString();
+
+    final patientEmail =
+        (data['userEmail'] ?? '').toString();
+
+    final appointmentId =
+        (data['id'] ?? doc.id).toString();
+
+    final date = _dateText(data['date']);
+    final time = (data['time'] ?? 'Not set').toString();
+    final type = (data['type'] ?? 'In-person').toString();
+    final status = (data['status'] ?? 'Upcoming').toString();
+    final reason =
+        (data['reason'] ?? '').toString().trim();
+
+    final color = _statusColor(status);
+    final pending = _isPending(status);
+    final processing = _processingId == doc.id;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.person_rounded,
+                  color: _green,
+                  size: 25,
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      patientName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _text,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Booking #$appointmentId',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _muted,
+                        fontSize: 11,
+                      ),
+                    ),
+                    if (patientEmail.isNotEmpty &&
+                        patientEmail != patientName) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        patientEmail,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: _muted,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _statusChip(status, color),
+              _statusChip(type, _blue),
+            ],
+          ),
+          const SizedBox(height: 15),
+          const Divider(height: 1, color: _border),
+          const SizedBox(height: 14),
+          _detailRow(
+            Icons.calendar_today_rounded,
+            'Date',
+            date,
+            _blue,
+          ),
+          const SizedBox(height: 10),
+          _detailRow(
+            Icons.access_time_rounded,
+            'Time',
+            time,
+            _purple,
+          ),
+          if (reason.isNotEmpty) ...[
+            const SizedBox(height: 13),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.notes_rounded,
+                    color: _orange,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      reason,
+                      style: const TextStyle(
+                        color: _text,
+                        fontSize: 12,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (pending) ...[
+            const SizedBox(height: 17),
+            if (processing)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(10),
+                  child: CircularProgressIndicator(
+                    color: _green,
+                  ),
+                ),
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _processingId != null
+                          ? null
+                          : () => _updateAppointmentStatus(
+                                doc,
+                                'Cancelled',
+                              ),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                      ),
+                      label: const Text('Decline'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _red,
+                        side: const BorderSide(
+                          color: _red,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 13,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(13),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _processingId != null
+                          ? null
+                          : () => _updateAppointmentStatus(
+                                doc,
+                                'Approved',
+                              ),
+                      icon: const Icon(
+                        Icons.check_rounded,
+                        size: 18,
+                      ),
+                      label: const Text('Accept'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _green,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 13,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(13),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _statusChip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 11,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+  ) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 18,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          '$label:',
+          style: const TextStyle(
+            color: _muted,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              color: _text,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sectionTitle(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: _text,
+            fontSize: 19,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: const TextStyle(
+            color: _muted,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: _border),
+    );
+  }
+
+  Widget _emptyState(String title, String subtitle) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(25),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(17),
+              decoration: const BoxDecoration(
+                color: Color(0xFFECFDF5),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.event_busy_rounded,
+                color: _green,
+                size: 34,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: _text,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: _muted,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
