@@ -6,7 +6,17 @@ import '../services/doctor_appointment_service.dart';
 import 'doctor_patient_detail_screen.dart';
 
 class DoctorDashboardScreen extends StatefulWidget {
-  const DoctorDashboardScreen({super.key});
+  /// Optional. Called after the doctor signs out (for example to open
+  /// your login screen). If null, the app returns to its first route.
+  final VoidCallback? onSignedOut;
+  /// Parent router opens the existing normal-user home without signing out.
+  final VoidCallback? onSwitchToUserMode;
+
+  const DoctorDashboardScreen({
+    super.key,
+    this.onSignedOut,
+    this.onSwitchToUserMode,
+  });
 
   @override
   State<DoctorDashboardScreen> createState() =>
@@ -1601,6 +1611,223 @@ class _DoctorDashboardScreenState
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Account: switch account / log out
+  // ---------------------------------------------------------------------------
+
+  Future<void> _switchToUserMode() async {
+    final confirmed = await _confirm(
+      title: 'Switch to User Mode?',
+      message: 'Continue using OneClick services with your current '
+          'account. Your doctor profile and appointments stay unchanged.',
+      action: 'Switch Mode',
+    );
+    if (!confirmed || !mounted) return;
+
+    // Switching mode must NOT call FirebaseAuth.signOut() or alter roles.
+    final navigate = widget.onSwitchToUserMode;
+    if (navigate != null) {
+      navigate();
+    } else {
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/home',
+        (route) => false,
+      );
+    }
+  }
+
+  Future<void> _signOut({required bool switching}) async {
+    if (switching) {
+      await _switchToUserMode();
+      return;
+    }
+
+    final confirmed = await _confirm(
+      title: 'Log out?',
+      message: 'You will need to sign in again to manage appointments.',
+      action: 'Log out',
+    );
+    if (!confirmed || !mounted) return;
+
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (!mounted) return;
+      final callback = widget.onSignedOut;
+      if (callback != null) {
+        callback();
+      } else {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/login',
+          (route) => false,
+        );
+      }
+    } catch (error) {
+      _message('Could not sign out: $error');
+    }
+  }
+
+  Widget _accountAction({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        child: Row(
+          children: [
+            Container(
+              height: 42,
+              width: 42,
+              decoration: BoxDecoration(
+                color: color == danger ? dangerSoft : brandSoft,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 21, color: color),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: color == danger ? danger : ink,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle,
+                      style: const TextStyle(color: muted, fontSize: 13),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAccountSheet() {
+    final user = FirebaseAuth.instance.currentUser;
+    final email = user?.email ?? '';
+    final displayName = user?.displayName?.trim() ?? '';
+    final name = displayName.isNotEmpty
+        ? displayName
+        : (email.isNotEmpty ? email : 'Doctor');
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    height: 4,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      color: line,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      height: 52,
+                      width: 52,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: brandSoft,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        name.trim().characters.first.toUpperCase(),
+                        style: const TextStyle(
+                          color: brand,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: ink,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (email.isNotEmpty && email != name)
+                            Text(
+                              email,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: muted,
+                                fontSize: 13,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const Divider(height: 1, color: line),
+                const SizedBox(height: 6),
+                _accountAction(
+                  icon: Icons.swap_horiz_rounded,
+                  title: 'Switch account',
+                  subtitle: 'Continue in User Mode',
+                  color: brand,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _signOut(switching: true);
+                  },
+                ),
+                _accountAction(
+                  icon: Icons.logout_rounded,
+                  title: 'Log out',
+                  color: danger,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _signOut(switching: false);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (uid.isEmpty) {
@@ -1638,6 +1865,11 @@ class _DoctorDashboardScreenState
             onPressed: () {
               setState(() => _tab = 2);
             },
+          ),
+          IconButton(
+            tooltip: 'Account',
+            icon: const Icon(Icons.account_circle_outlined, color: ink),
+            onPressed: _showAccountSheet,
           ),
           const SizedBox(width: 4),
         ],
