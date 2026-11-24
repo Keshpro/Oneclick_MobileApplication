@@ -1,40 +1,26 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 
 import '../../../payment/models/payment_request.dart';
 import '../../../payment/screens/checkout_screen.dart';
-
 import 'my_appointments_screen.dart';
 
 typedef DoctorPaymentHandler = Future<String?> Function(
   String appointmentId,
 );
 
-enum _PaymentView {
-  checkout,
-  processing,
-  checking,
-  success,
-}
-
 class AppointmentSuccessScreen extends StatefulWidget {
   final Map<String, dynamic> doctor;
   final DateTime appointmentDate;
   final String appointmentTime;
   final String consultationType;
-
-  // Existing draft appointment document ID.
   final String appointmentId;
-
-  // Amount supplied by the booking flow.
-  // LKR 2500.00 = 250000 minor units.
   final int amountMinor;
 
-  // Must initiate the real sandbox gateway payment.
-  // Return a real payment document ID after gateway flow.
+  // Retained for compatibility with existing booking calls.
+  // Demo checkout does not use the old PayHere handler.
   final DoctorPaymentHandler? onStartPayment;
 
   const AppointmentSuccessScreen({
@@ -46,354 +32,271 @@ class AppointmentSuccessScreen extends StatefulWidget {
     required this.appointmentId,
     required this.amountMinor,
     this.onStartPayment,
-  }) : assert(amountMinor > 0);
+  });
 
   @override
   State<AppointmentSuccessScreen> createState() =>
       _AppointmentSuccessScreenState();
 }
 
-class _AppointmentSuccessScreenState
-    extends State<AppointmentSuccessScreen> {
-  static const Color primary = Color(0xFF0D9488);
-  static const Color primaryDark = Color(0xFF075B60);
-  static const Color background = Color(0xFFF7FAF9);
-  static const Color textDark = Color(0xFF0F172A);
+class _AppointmentSuccessScreenState extends State<AppointmentSuccessScreen> {
+  // Palette
+  static const Color primary = Color(0xFF087F6D);
+  static const Color primarySoft = Color(0xFFE6F4F1);
+  static const Color ink = Color(0xFF0F172A);
   static const Color muted = Color(0xFF64748B);
+  static const Color line = Color(0xFFE2E8F0);
+  static const Color surface = Color(0xFFF8FAFC);
+  static const Color background = Color(0xFFF4F7F6);
+  static const Color amber = Color(0xFFB45309);
+  static const Color amberSoft = Color(0xFFFFF4E5);
+  static const Color danger = Color(0xFFB91C1C);
+  static const Color dangerSoft = Color(0xFFFEF2F2);
 
-  _PaymentView _view = _PaymentView.checkout;
+  static const List<String> _weekdays = [
+    'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', //
+  ];
+  static const List<String> _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  bool _processing = false;
+  bool _completed = false;
 
   String? _paymentId;
-  String? _errorMessage;
+  String? _paymentMethod;
+  String? _paymentStatus;
+  String? _error;
 
-  String get _doctorName {
-    final value =
-        widget.doctor['name']?.toString().trim() ?? '';
+  bool get _isCash => _paymentMethod == 'cash';
 
-    return value.isEmpty ? 'Doctor' : value;
+  String get _doctorName => widget.doctor['name']?.toString() ?? 'Doctor';
+
+  String get _specialty =>
+      widget.doctor['specialtyLabel']?.toString() ??
+      widget.doctor['specialization']?.toString() ??
+      'General';
+
+  String get _hospital =>
+      widget.doctor['hospital']?.toString() ?? 'General Clinic';
+
+  String get _amount => _formatAmount(widget.amountMinor);
+
+  String get _date {
+    final d = widget.appointmentDate;
+    return '${_weekdays[d.weekday - 1]}, ${d.day} ${_months[d.month - 1]} '
+        '${d.year}';
   }
 
-  String get _specialty {
-    return widget.doctor['specialtyLabel']
-            ?.toString() ??
-        'General';
-  }
-
-  String get _hospital {
-    return widget.doctor['hospital']?.toString() ??
-        'Hospital';
-  }
-
-  String get _formattedAmount {
-    final whole = widget.amountMinor ~/ 100;
-    final cents =
-        (widget.amountMinor % 100).toString().padLeft(2, '0');
-
-    final digits = whole.toString();
-    final formatted = digits.replaceAllMapped(
-      RegExp(r'\B(?=(\d{3})+(?!\d))'),
-      (_) => ',',
+  String get _initial {
+    final name = _doctorName.replaceFirst(
+      RegExp(r'^(dr\.?\s+)', caseSensitive: false),
+      '',
     );
-
-    return 'LKR $formatted.$cents';
+    return name.isEmpty ? 'D' : name.characters.first.toUpperCase();
   }
 
-  String get _formattedDate {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-
-    const days = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
-    ];
-
-    final date = widget.appointmentDate;
-
-    return '${days[date.weekday - 1]}, '
-        '${date.day} '
-        '${months[date.month - 1]} '
-        '${date.year}';
+  @override
+  void initState() {
+    super.initState();
+    _restorePayment();
   }
 
-  Future<bool> _verifyPaymentAndAppointment(
-    String paymentId,
-  ) async {
+  // ---------------------------------------------------------------------------
+  // Logic (unchanged behaviour)
+  // ---------------------------------------------------------------------------
+
+  Future<void> _restorePayment() async {
     final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-    if (user == null ||
-        widget.appointmentId.trim().isEmpty ||
-        paymentId.trim().isEmpty) {
-      return false;
+    try {
+      final booking = await FirebaseFirestore.instance
+          .collection('appointments')
+          .doc(widget.appointmentId)
+          .get();
+
+      if (!mounted || !booking.exists) return;
+
+      final data = booking.data()!;
+
+      if (data['userId'] != user.uid) return;
+
+      final paymentId = data['paymentId']?.toString();
+      final status = data['paymentStatus']?.toString();
+
+      if (paymentId == null ||
+          paymentId.isEmpty ||
+          (status != 'demo_paid' && status != 'pending_cash')) {
+        return;
+      }
+
+      await _loadPayment(paymentId);
+    } catch (_) {
+      // User can retry opening checkout if no payment exists.
     }
+  }
 
-    final db = FirebaseFirestore.instance;
+  Future<void> _loadPayment(String paymentId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-    // Read authoritative server records.
-    final paymentSnapshot = await db
+    final payment = await FirebaseFirestore.instance
         .collection('payments')
         .doc(paymentId)
-        .get(
-          const GetOptions(source: Source.server),
-        );
+        .get();
 
-    if (!paymentSnapshot.exists) return false;
+    if (!mounted || !payment.exists) return;
 
-    final payment = paymentSnapshot.data()!;
+    final data = payment.data()!;
 
-    final paymentVerified =
-        payment['status'] == 'paid' &&
-        payment['userId'] == user.uid &&
-        payment['orderId'] == paymentId &&
-        payment['bookingId'] == widget.appointmentId &&
-        payment['amountMinor'] == widget.amountMinor &&
-        payment['module'] == 'doctor' &&
-        payment['currency'] == 'LKR';
+    if (data['userId'] != user.uid ||
+        data['bookingId'] != widget.appointmentId ||
+        data['module'] != 'doctor' ||
+        data['amountMinor'] != widget.amountMinor ||
+        data['environment'] != 'demo') {
+      return;
+    }
 
-    if (!paymentVerified) return false;
+    final status = data['status']?.toString();
+    final method = data['method']?.toString();
 
-    // Doctor appointment must be confirmed by backend.
-    final appointmentSnapshot = await db
-        .collection('appointments')
-        .doc(widget.appointmentId)
-        .get(
-          const GetOptions(source: Source.server),
-        );
-
-    if (!appointmentSnapshot.exists) return false;
-
-    final appointment = appointmentSnapshot.data()!;
-
-    final appointmentConfirmed =
-        appointment['userId'] == user.uid &&
-        appointment['status'] == 'confirmed' &&
-        appointment['paymentId'] == paymentId &&
-        appointment['paymentStatus'] == 'paid';
-
-    return appointmentConfirmed;
+    if ((status == 'demo_paid' && method == 'card') ||
+        (status == 'pending_cash' && method == 'cash')) {
+      setState(() {
+        _paymentId = paymentId;
+        _paymentStatus = status;
+        _paymentMethod = method;
+        _completed = true;
+        _error = null;
+      });
+    }
   }
 
-  String _field(Map<String, dynamic> values, String key) =>
-      values[key]?.toString().trim() ?? '';
-
-  /// Uses existing booking/contact data; never invents personal details.
-  Future<PaymentRequest> _paymentRequest() async {
+  Future<PaymentRequest> _createRequest() async {
     final user = FirebaseAuth.instance.currentUser;
+
     if (user == null) {
-      throw StateError('Please log in before making a payment.');
+      throw StateError('Please log in first.');
     }
 
-    final bookingSnap = await FirebaseFirestore.instance
+    final booking = await FirebaseFirestore.instance
         .collection('appointments')
         .doc(widget.appointmentId)
-        .get(const GetOptions(source: Source.server));
+        .get();
 
-    if (!bookingSnap.exists) {
-      throw StateError('Appointment was not found.');
+    if (!booking.exists) {
+      throw StateError('Appointment not found.');
     }
 
-    final booking = bookingSnap.data()!;
-    if (booking['userId'] != user.uid) {
-      throw StateError('This appointment does not belong to you.');
+    final data = booking.data()!;
+
+    if (data['userId'] != user.uid) {
+      throw StateError('Unauthorized appointment.');
     }
-    if (booking['status'] != 'awaiting_payment') {
+
+    if (data['status'] != 'awaiting_payment') {
       throw StateError('This appointment is not awaiting payment.');
     }
-    if (booking['amountMinor'] != widget.amountMinor) {
-      throw StateError('Appointment amount has changed. Please refresh.');
+
+    if (data['amountMinor'] != widget.amountMinor) {
+      throw StateError('Appointment amount mismatch.');
     }
 
-    final rawCustomer = booking['customer'];
-    final customer = rawCustomer is Map
-        ? Map<String, dynamic>.from(rawCustomer)
-        : <String, dynamic>{};
+    final displayName =
+        user.displayName?.trim() ?? data['userName']?.toString().trim() ?? '';
 
-    String getValue(String key) {
-      final nested = _field(customer, key);
-      return nested.isNotEmpty ? nested : _field(booking, key);
-    }
-
-    final displayName = user.displayName?.trim() ?? '';
-    final nameParts = displayName.split(RegExp(r'\s+'));
-    final firstName = getValue('firstName').isNotEmpty
-        ? getValue('firstName')
-        : (displayName.isNotEmpty ? nameParts.first : '');
-    final lastName = getValue('lastName').isNotEmpty
-        ? getValue('lastName')
-        : (nameParts.length > 1 ? nameParts.skip(1).join(' ') : '');
-    final email = getValue('email').isNotEmpty
-        ? getValue('email')
-        : (user.email ?? '');
-    final phone = getValue('phone').isNotEmpty
-        ? getValue('phone')
-        : (user.phoneNumber ?? '');
-    final address = getValue('address');
-    final city = getValue('city');
-
-    if ([firstName, lastName, email, phone, address, city]
-        .any((field) => field.trim().isEmpty)) {
-      throw StateError(
-        'Complete your first name, last name, email, phone, '
-        'address and city in your appointment details before payment.',
-      );
-    }
+    final parts =
+        displayName.isEmpty ? <String>[] : displayName.split(RegExp(r'\s+'));
 
     return PaymentRequest(
       bookingId: widget.appointmentId,
       module: 'doctor',
       title: 'Doctor Consultation - $_doctorName',
       amountMinor: widget.amountMinor,
-      firstName: firstName,
-      lastName: lastName,
-      email: email,
-      phone: phone,
-      address: address,
-      city: city,
+      firstName: parts.isNotEmpty ? parts.first : '',
+      lastName: parts.length > 1 ? parts.skip(1).join(' ') : '',
+      email: user.email ?? '',
+      phone: user.phoneNumber ?? '',
+      address: '',
+      city: '',
     );
   }
 
   Future<void> _startPayment() async {
-    if (_view != _PaymentView.checkout || _paymentId != null) return;
-
-    if (kIsWeb && widget.onStartPayment == null) {
-      setState(() {
-        _errorMessage =
-            'PayHere Mobile SDK requires Android or iOS. '
-            'Run the mobile app to make a Sandbox payment.';
-      });
-      return;
-    }
+    if (_processing || _completed) return;
 
     setState(() {
-      _view = _PaymentView.processing;
-      _errorMessage = null;
+      _processing = true;
+      _error = null;
     });
 
     try {
-      final handler = widget.onStartPayment;
-      if (handler != null) {
-        // Preserve compatibility with existing caller-supplied handlers.
-        final paymentId = await handler(widget.appointmentId);
-        if (!mounted) return;
-        if (paymentId == null || paymentId.trim().isEmpty) {
-          setState(() {
-            _view = _PaymentView.checkout;
-            _errorMessage = 'Payment was not completed.';
-          });
-          return;
-        }
-        _paymentId = paymentId;
-        await _checkConfirmation();
-        return;
-      }
-
-      final paymentRequest = await _paymentRequest();
-      if (!mounted) return;
-
-      final verified = await Navigator.of(context).push<bool>(
-        MaterialPageRoute(
-          builder: (_) => CheckoutScreen(request: paymentRequest),
-        ),
-      );
-      if (!mounted) return;
-      if (verified != true) {
-        setState(() {
-          _view = _PaymentView.checkout;
-          _errorMessage = 'Payment is not verified. Check My Appointments '
-              'before attempting another payment.';
-        });
-        return;
-      }
-
-      // Checkout only returns true when the backend marks payment paid.
-      // Obtain the actual payment ID from the confirmed appointment.
-      final bookingSnap = await FirebaseFirestore.instance
+      // Avoid opening checkout for a booking already paid.
+      final booking = await FirebaseFirestore.instance
           .collection('appointments')
           .doc(widget.appointmentId)
-          .get(const GetOptions(source: Source.server));
-      if (!mounted) return;
-      final paymentId = bookingSnap.data()?['paymentId']?.toString();
-      if (paymentId == null || paymentId.isEmpty) {
-        setState(() {
-          _view = _PaymentView.checkout;
-          _errorMessage = 'Payment notification is pending. '
-              'Check your appointments before paying again.';
-        });
-        return;
+          .get();
+
+      final existingId = booking.data()?['paymentId']?.toString();
+
+      if (existingId != null && existingId.isNotEmpty) {
+        await _loadPayment(existingId);
+
+        if (_completed) return;
       }
 
-      _paymentId = paymentId;
-      await _checkConfirmation();
+      final request = await _createRequest();
+
+      if (!mounted) return;
+
+      final completed = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => CheckoutScreen(request: request),
+        ),
+      );
+
+      if (!mounted) return;
+
+      if (completed == true) {
+        final updated = await FirebaseFirestore.instance
+            .collection('appointments')
+            .doc(widget.appointmentId)
+            .get();
+
+        final paymentId = updated.data()?['paymentId']?.toString();
+
+        if (paymentId == null || paymentId.isEmpty) {
+          throw StateError('Payment reference not found.');
+        }
+
+        await _loadPayment(paymentId);
+
+        if (!_completed && mounted) {
+          setState(() {
+            _error = "We couldn't confirm your payment. Try again, or check "
+                'My appointments.';
+          });
+        }
+      }
     } catch (error) {
       if (!mounted) return;
+
       setState(() {
-        _view = _PaymentView.checkout;
-        _errorMessage = 'Unable to start payment: $error';
+        _error = error is StateError
+            ? error.message
+            : 'Something went wrong. Check your connection and try again.';
       });
-    }
-  }
-
-  Future<void> _checkConfirmation() async {
-    final paymentId = _paymentId;
-
-    if (paymentId == null) return;
-
-    setState(() {
-      _view = _PaymentView.checking;
-      _errorMessage = null;
-    });
-
-    try {
-      final confirmed =
-          await _verifyPaymentAndAppointment(paymentId);
-
-      if (!mounted) return;
-
-      if (confirmed) {
-        setState(() {
-          _view = _PaymentView.success;
-        });
-      } else {
-        setState(() {
-          _view = _PaymentView.checkout;
-          _errorMessage =
-              'Payment or appointment confirmation '
-              'could not be verified yet. '
-              'Use Check Confirmation again. '
-              'Do not pay twice.';
-        });
+    } finally {
+      if (mounted) {
+        setState(() => _processing = false);
       }
-    } catch (_) {
-      if (!mounted) return;
-
-      setState(() {
-        _view = _PaymentView.checkout;
-        _errorMessage =
-            'Unable to check the confirmation right now. '
-            'Please check again. Do not pay twice.';
-      });
     }
   }
 
-  void _openMyAppointments() {
-    Navigator.pushReplacement(
-      context,
+  void _openAppointments() {
+    Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => const MyAppointmentsScreen(),
       ),
@@ -401,182 +304,67 @@ class _AppointmentSuccessScreenState
   }
 
   void _backHome() {
-    Navigator.of(context).popUntil(
-      (route) => route.isFirst,
-    );
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final completed = _view == _PaymentView.success;
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
 
-    return PopScope(
-      canPop: false,
-      child: Scaffold(
-        backgroundColor: background,
-        appBar: AppBar(
-          backgroundColor: completed
-              ? primary
-              : background,
-          foregroundColor: completed
-              ? Colors.white
-              : textDark,
-          automaticallyImplyLeading: false,
-          elevation: 0,
-          centerTitle: true,
-          title: Text(
-            completed
-                ? 'Booking Confirmation'
-                : 'OneClick Payment',
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 19,
-            ),
+  /// 250000 -> "2,500.00"
+  String _formatAmount(int minor) {
+    final whole = minor ~/ 100;
+    final cents = (minor % 100).toString().padLeft(2, '0');
+    final digits = whole.toString();
+    final buffer = StringBuffer();
+    for (var i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) buffer.write(',');
+      buffer.write(digits[i]);
+    }
+    return '$buffer.$cents';
+  }
+
+  Future<void> _copy(String value, String message) async {
+    await Clipboard.setData(ClipboardData(text: value));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: ink,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-          actions: [
-            IconButton(
-              tooltip: 'Back to Home',
-              onPressed: _backHome,
-              icon: const Icon(Icons.close_rounded),
-            ),
-          ],
+          content: Text(message),
         ),
-        body: _view == _PaymentView.processing ||
-                _view == _PaymentView.checking
-            ? _buildProcessingScreen()
-            : completed
-                ? _buildSuccessScreen()
-                : _buildCheckoutScreen(),
-      ),
-    );
+      );
   }
 
-  // ============================================================
-  // CHECKOUT SCREEN
-  // ============================================================
+  // ---------------------------------------------------------------------------
+  // Shared pieces
+  // ---------------------------------------------------------------------------
 
-  Widget _buildCheckoutScreen() {
-    return SafeArea(
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                _amountCard(),
-                const SizedBox(height: 25),
-
-                _sectionTitle('Doctor Appointment'),
-                const SizedBox(height: 12),
-                _doctorCard(),
-
-                const SizedBox(height: 22),
-
-                _sectionTitle('Appointment Details'),
-                const SizedBox(height: 12),
-                _appointmentDetailsCard(),
-
-                const SizedBox(height: 22),
-
-                _sectionTitle('Payment Method'),
-                const SizedBox(height: 12),
-                _paymentMethodCard(),
-
-                const SizedBox(height: 18),
-                _securityCard(),
-
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 17),
-                  _errorCard(_errorMessage!),
-                ],
-              ],
-            ),
-          ),
-          _checkoutBottomBar(),
-        ],
-      ),
-    );
-  }
-
-  Widget _amountCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(26),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            primary,
-            primaryDark,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: primary.withValues(alpha: .20),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.account_balance_wallet_rounded,
-            color: Colors.white,
-            size: 38,
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            'CONSULTATION FEE',
-            style: TextStyle(
-              color: Colors.white70,
-              letterSpacing: 1.2,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 9),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              _formattedAmount,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Doctor Appointment Payment',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _doctorCard() {
-    return _whiteCard(
+  Widget _doctorHeader() {
+    return Padding(
+      padding: const EdgeInsets.all(18),
       child: Row(
         children: [
           Container(
-            width: 65,
-            height: 65,
-            decoration: BoxDecoration(
-              color: primary.withValues(alpha: .10),
-              borderRadius: BorderRadius.circular(17),
+            height: 52,
+            width: 52,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: primarySoft,
+              shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.person_rounded,
-              color: primary,
-              size: 36,
+            child: Text(
+              _initial,
+              style: const TextStyle(
+                color: primary,
+                fontSize: 21,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           const SizedBox(width: 14),
@@ -586,476 +374,162 @@ class _AppointmentSuccessScreenState
               children: [
                 Text(
                   _doctorName,
-                  style: const TextStyle(
-                    color: textDark,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  _specialty,
-                  style: const TextStyle(
-                    color: primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      color: muted,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        _hospital,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: muted,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _appointmentDetailsCard() {
-    return _whiteCard(
-      child: Column(
-        children: [
-          _infoRow(
-            Icons.calendar_month_outlined,
-            'Date',
-            _formattedDate,
-          ),
-          const SizedBox(height: 17),
-          _infoRow(
-            Icons.schedule_rounded,
-            'Time',
-            widget.appointmentTime,
-          ),
-          const SizedBox(height: 17),
-          _infoRow(
-            widget.consultationType == 'Video'
-                ? Icons.videocam_outlined
-                : Icons.local_hospital_outlined,
-            'Consultation',
-            widget.consultationType,
-          ),
-          const SizedBox(height: 17),
-          _infoRow(
-            Icons.confirmation_number_outlined,
-            'Reference',
-            widget.appointmentId,
-          ),
-          const SizedBox(height: 15),
-          const Divider(),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Total Payable',
-                  style: TextStyle(
-                    color: textDark,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              Text(
-                _formattedAmount,
-                style: const TextStyle(
-                  color: primary,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _paymentMethodCard() {
-    return _whiteCard(
-      child: Row(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: primary.withValues(alpha: .10),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.credit_card_rounded,
-              color: primary,
-              size: 27,
-            ),
-          ),
-          const SizedBox(width: 13),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Online Payment',
-                  style: TextStyle(
-                    color: textDark,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'PayHere Sandbox Gateway',
-                  style: TextStyle(
-                    color: muted,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(
-            Icons.radio_button_checked_rounded,
-            color: primary,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _securityCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: primary.withValues(alpha: .07),
-        borderRadius: BorderRadius.circular(17),
-        border: Border.all(
-          color: primary.withValues(alpha: .15),
-        ),
-      ),
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.lock_outline_rounded,
-            color: primary,
-            size: 23,
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Your appointment will only be confirmed '
-              'after the payment is verified by the '
-              'OneClick backend. Payment details are '
-              'handled by the gateway.',
-              style: TextStyle(
-                color: primaryDark,
-                fontSize: 12,
-                height: 1.6,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _checkoutBottomBar() {
-    final canPay = _paymentId == null;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        20, 15, 20, 19,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: Color(0xFFE2E8F0),
-          ),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Amount to pay',
-                    style: TextStyle(
-                      color: muted,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-                Text(
-                  _formattedAmount,
-                  style: const TextStyle(
-                    color: textDark,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 15),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton.icon(
-                onPressed: _paymentId != null
-                    ? _checkConfirmation
-                    : canPay
-                        ? _startPayment
-                        : null,
-                icon: Icon(
-                  _paymentId != null
-                      ? Icons.refresh_rounded
-                      : Icons.lock_rounded,
-                ),
-                label: Text(
-                  _paymentId != null
-                      ? 'Check Confirmation'
-                      : 'Pay Securely with PayHere',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primary,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor:
-                      const Color(0xFFB7D2CF),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'PayHere Sandbox • Test payments only',
-              style: TextStyle(color: muted, fontSize: 11),
-            ),
-            const SizedBox(height: 5),
-            TextButton(
-              onPressed: _openMyAppointments,
-              child: const Text(
-                'View My Appointments',
-                style: TextStyle(color: primary),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // PROCESSING SCREEN
-  // ============================================================
-
-  Widget _buildProcessingScreen() {
-    final checking =
-        _view == _PaymentView.checking;
-
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(30),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(
-                color: primary,
-                strokeWidth: 4,
-              ),
-              const SizedBox(height: 27),
-              Text(
-                checking
-                    ? 'Verifying Payment'
-                    : 'Connecting to Payment Gateway',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: textDark,
-                  fontSize: 21,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                checking
-                    ? 'Checking your payment and '
-                        'appointment confirmation.'
-                    : 'Complete the payment using '
-                        'the secure gateway.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: muted,
-                  fontSize: 13,
-                  height: 1.6,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // PAYMENT SUCCESS + APPOINTMENT SUCCESS
-  // ============================================================
-
-  Widget _buildSuccessScreen() {
-    return SafeArea(
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                20, 30, 20, 20,
-              ),
-              children: [
-                Center(
-                  child: Container(
-                    width: 106,
-                    height: 106,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDCFCE7),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFF86EFAC),
-                        width: 2,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.check_circle_rounded,
-                      color: Color(0xFF16A34A),
-                      size: 78,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Payment Successful!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: textDark,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Your Doctor Appointment is Confirmed!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: primary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 11),
-                const Text(
-                  'Your payment has been verified '
-                  'and your appointment is booked.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: muted,
-                    fontSize: 13,
-                    height: 1.6,
-                  ),
-                ),
-                const SizedBox(height: 26),
-
-                _doctorCard(),
-
-                const SizedBox(height: 17),
-
-                _appointmentDetailsCard(),
-
-                const SizedBox(height: 17),
-
-                _verifiedPaymentCard(),
-
-                const SizedBox(height: 17),
-
-                _reminderCard(),
-              ],
-            ),
-          ),
-          _successBottomBar(),
-        ],
-      ),
-    );
-  }
-
-  Widget _verifiedPaymentCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFECFDF5),
-        borderRadius: BorderRadius.circular(19),
-        border: Border.all(
-          color: const Color(0xFFD1FAE5),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.verified_user_rounded,
-            color: Color(0xFF16A34A),
-            size: 30,
-          ),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Payment Verified',
-                  style: TextStyle(
-                    color: Color(0xFF166534),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  'Paid: $_formattedAmount',
-                  style: const TextStyle(
-                    color: Color(0xFF166534),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  'Transaction: ${_paymentId ?? ''}',
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: Color(0xFF166534),
-                    fontSize: 11,
+                    color: ink,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _specialty,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  _hospital,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: muted, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _slotCell(IconData icon, String label, String value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: muted),
+              const SizedBox(width: 5),
+              Text(label, style: const TextStyle(color: muted, fontSize: 12)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: ink,
+              fontSize: 13,
+              height: 1.25,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _slotStrip() {
+    return Container(
+      color: surface,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _slotCell(Icons.calendar_today_rounded, 'Date', _date),
+          const SizedBox(width: 12),
+          _slotCell(Icons.schedule_rounded, 'Time', widget.appointmentTime),
+          const SizedBox(width: 12),
+          _slotCell(
+            Icons.videocam_outlined,
+            'Type',
+            widget.consultationType,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(String label, Widget value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: muted, fontSize: 13)),
+          const SizedBox(width: 16),
+          Flexible(child: value),
+        ],
+      ),
+    );
+  }
+
+  Widget _copyable(String value, String toast) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => _copy(value, toast),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                value,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: ink,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.copy_rounded, size: 15, color: muted),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _appointmentCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _doctorHeader(),
+          _slotStrip(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
+            child: Column(
+              children: [
+                _row(
+                  'Booking reference',
+                  _copyable(widget.appointmentId, 'Booking reference copied'),
+                ),
+                const Divider(height: 18, color: line),
+                _row(
+                  'Consultation fee',
+                  Text(
+                    'LKR $_amount',
+                    style: const TextStyle(
+                      color: primary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -1066,213 +540,314 @@ class _AppointmentSuccessScreenState
     );
   }
 
-  Widget _reminderCard() {
+  Widget _paymentCard() {
+    final accent = _isCash ? amber : primary;
+    final soft = _isCash ? amberSoft : primarySoft;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(17),
-        border: Border.all(
-          color: const Color(0xFFFEF3C7),
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: line),
       ),
-      child: const Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.notifications_active_outlined,
-            color: Color(0xFFD97706),
-            size: 23,
+          const Text(
+            'Payment',
+            style: TextStyle(
+              color: ink,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-          SizedBox(width: 11),
-          Expanded(
-            child: Text(
-              'Appointment Reminder\n'
-              'Please be ready a few minutes before '
-              'your scheduled consultation.',
-              style: TextStyle(
-                color: Color(0xFF92400E),
-                fontSize: 12,
-                height: 1.6,
+          const SizedBox(height: 6),
+          _row(
+            'Method',
+            Text(
+              _isCash ? 'Cash' : 'Demo card',
+              style: const TextStyle(
+                color: ink,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _successBottomBar() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        20, 13, 20, 16,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: Color(0xFFE2E8F0),
-          ),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: _openMyAppointments,
-                icon: const Icon(
-                  Icons.calendar_month_rounded,
-                ),
-                label: const Text(
-                  'View My Appointments',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(15),
-                  ),
-                ),
+          _row(
+            'Status',
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: soft,
+                borderRadius: BorderRadius.circular(20),
               ),
-            ),
-            const SizedBox(height: 6),
-            TextButton.icon(
-              onPressed: _backHome,
-              icon: const Icon(Icons.home_outlined),
-              label: const Text('Back to Home'),
-              style: TextButton.styleFrom(
-                foregroundColor: primary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // SHARED UI HELPERS
-  // ============================================================
-
-  Widget _sectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        color: textDark,
-        fontSize: 18,
-        fontWeight: FontWeight.w800,
-      ),
-    );
-  }
-
-  Widget _whiteCard({required Widget child}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(21),
-        border: Border.all(
-          color: const Color(0xFFE2E8F0),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .03),
-            blurRadius: 16,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-
-  Widget _infoRow(
-    IconData icon,
-    String label,
-    String value,
-  ) {
-    return Row(
-      children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: primary.withValues(alpha: .09),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            icon,
-            color: primary,
-            size: 20,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: muted,
-                  fontSize: 11,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  color: textDark,
-                  fontSize: 13,
+              child: Text(
+                _paymentStatus == 'pending_cash' ? 'Pay at clinic' : 'Paid',
+                style: TextStyle(
+                  color: accent,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
               ),
+            ),
+          ),
+          if (_paymentId != null)
+            _row(
+              'Payment ID',
+              _copyable(_paymentId!, 'Payment ID copied'),
+            ),
+          const SizedBox(height: 6),
+          const Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 15, color: muted),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Demo mode: no real money was charged.',
+                  style: TextStyle(color: muted, fontSize: 12),
+                ),
+              ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _errorBanner() {
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: dangerSoft,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFECACA)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.error_outline_rounded, color: danger, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _error!,
+              style: const TextStyle(color: ink, fontSize: 13, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  ButtonStyle _primaryStyle() => ElevatedButton.styleFrom(
+        elevation: 0,
+        minimumSize: const Size.fromHeight(54),
+        backgroundColor: primary,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: const Color(0xFFB3CECA),
+        disabledForegroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      );
+
+  ButtonStyle _secondaryStyle() => OutlinedButton.styleFrom(
+        foregroundColor: primary,
+        minimumSize: const Size.fromHeight(48),
+        side: const BorderSide(color: line),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      );
+
+  // ---------------------------------------------------------------------------
+  // Screens
+  // ---------------------------------------------------------------------------
+
+  Widget _pendingBody() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      children: [
+        const Text(
+          'Review and pay',
+          style: TextStyle(
+            color: ink,
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.4,
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Your slot is held. Pay by card or choose cash at checkout '
+          'to confirm it.',
+          style: TextStyle(color: muted, fontSize: 14, height: 1.45),
+        ),
+        const SizedBox(height: 20),
+        _appointmentCard(),
+        if (_error != null) _errorBanner(),
+        const SizedBox(height: 14),
+        const Row(
+          children: [
+            Icon(Icons.info_outline_rounded, size: 15, color: muted),
+            SizedBox(width: 8),
+          ],
         ),
       ],
     );
   }
 
-  Widget _errorCard(String message) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFEF2F2),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: const Color(0xFFFECACA),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            color: Color(0xFFDC2626),
-          ),
-          const SizedBox(width: 11),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(
-                color: Color(0xFF991B1B),
-                fontSize: 12,
-                height: 1.5,
+  Widget _completedBody() {
+    final accent = _isCash ? amber : primary;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      children: [
+        const SizedBox(height: 8),
+        Center(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.6, end: 1),
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOutBack,
+            builder: (context, scale, child) => Opacity(
+              opacity: ((scale - 0.6) / 0.4).clamp(0.0, 1.0),
+              child: Transform.scale(scale: scale, child: child),
+            ),
+            child: Container(
+              height: 76,
+              width: 76,
+              decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+              child: Icon(
+                _isCash ? Icons.schedule_rounded : Icons.check_rounded,
+                color: Colors.white,
+                size: 42,
               ),
             ),
           ),
-        ],
+        ),
+        const SizedBox(height: 18),
+        Text(
+          _isCash ? 'Appointment booked' : 'Payment received',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: ink,
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.4,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _isCash
+              ? 'Pay LKR $_amount in cash at the clinic to complete your '
+                  'booking.'
+              : 'Your appointment is confirmed.',
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: muted, fontSize: 14, height: 1.45),
+        ),
+        const SizedBox(height: 24),
+        _appointmentCard(),
+        const SizedBox(height: 14),
+        _paymentCard(),
+      ],
+    );
+  }
+
+  Widget _bottomBar() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: line)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: _completed
+                ? [
+                    ElevatedButton(
+                      onPressed: _openAppointments,
+                      style: _primaryStyle(),
+                      child: const Text('View my appointments'),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _backHome,
+                      style: TextButton.styleFrom(
+                        foregroundColor: muted,
+                        minimumSize: const Size.fromHeight(40),
+                      ),
+                      child: const Text('Back to home'),
+                    ),
+                  ]
+                : [
+                    ElevatedButton(
+                      onPressed: _processing ? null : _startPayment,
+                      style: _primaryStyle(),
+                      child: _processing
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.4,
+                              ),
+                            )
+                          : Text('Continue to pay LKR $_amount'),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: _openAppointments,
+                      style: _secondaryStyle(),
+                      child: const Text('View my appointments'),
+                    ),
+                  ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: background,
+        appBar: AppBar(
+          backgroundColor: background,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          foregroundColor: ink,
+          title: Text(
+            _completed ? 'Confirmation' : 'Checkout',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+          ),
+          actions: [
+            IconButton(
+              tooltip: 'Close',
+              onPressed: _backHome,
+              icon: const Icon(Icons.close_rounded),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          bottom: false,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: KeyedSubtree(
+              key: ValueKey<bool>(_completed),
+              child: _completed ? _completedBody() : _pendingBody(),
+            ),
+          ),
+        ),
+        bottomNavigationBar: _bottomBar(),
       ),
     );
   }

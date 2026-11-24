@@ -1,187 +1,243 @@
 
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
-import 'package:payhere_mobilesdk_flutter/payhere_mobilesdk_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/payment_request.dart';
 
 class PaymentService {
-  PaymentService._();
+  static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  static final FirebaseFunctions _functions =
-      FirebaseFunctions.instanceFor(
-    region: 'asia-south1',
-  );
+  static Future<String> processDemoPayment({
+    required PaymentRequest request,
+    required String method,
+  }) async {
+    final user = _auth.currentUser;
 
-  static final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance;
-
-  /// Start a PayHere Sandbox payment.
-  ///
-  /// Returns the internal Firestore payment ID
-  /// after the PayHere SDK reports completion.
-  ///
-  /// IMPORTANT:
-  /// This does NOT mean the payment is verified.
-  /// The backend must confirm the payment status.
-  static Future<String> startPayment(
-    PaymentRequest request,
-  ) async {
-    if (request.module != 'doctor') {
-      throw UnsupportedError(
-        'Payment is not enabled for this module yet.',
-      );
-    }
-
-    if (request.bookingId.trim().isEmpty) {
-      throw ArgumentError(
-        'Booking ID cannot be empty.',
-      );
-    }
-
-    // Step 1: Create payment session using Firebase.
-    final callable = _functions.httpsCallable(
-      'createPayHerePayment',
-    );
-
-    final response = await callable.call(
-      <String, dynamic>{
-        'bookingId': request.bookingId,
-        'customer': request.customer,
-      },
-    );
-
-    final data = Map<String, dynamic>.from(
-      response.data as Map,
-    );
-
-    final paymentId = data['paymentId']?.toString() ?? '';
-    final merchantId = data['merchantId']?.toString() ?? '';
-    final merchantSecret =
-        data['merchantSecret']?.toString() ?? '';
-    final orderId = data['orderId']?.toString() ?? '';
-    final amount = data['amount']?.toString() ?? '';
-    final currency = data['currency']?.toString() ?? 'LKR';
-    final notifyUrl = data['notifyUrl']?.toString() ?? '';
-
-    if (paymentId.isEmpty ||
-        merchantId.isEmpty ||
-        merchantSecret.isEmpty ||
-        orderId.isEmpty ||
-        amount.isEmpty ||
-        notifyUrl.isEmpty) {
+    if (user == null) {
       throw StateError(
-        'Incomplete PayHere payment configuration.',
+        'Please log in before making a payment.',
       );
     }
 
-    // Step 2: Prepare PayHere Sandbox payment.
-    //
-    // Sandbox only: The official SDK requires
-    // merchant_secret in its payment object.
-    // Never use a production secret this way.
-    final paymentObject = <String, dynamic>{
-      'sandbox': true,
-      'merchant_id': merchantId,
-      'merchant_secret': merchantSecret,
-      'notify_url': notifyUrl,
-      'order_id': orderId,
-      'items': request.title,
-      'amount': amount,
-      'currency': currency,
-      'first_name': request.firstName,
-      'last_name': request.lastName,
-      'email': request.email,
-      'phone': request.phone,
-      'address': request.address,
-      'city': request.city,
-      'country': 'Sri Lanka',
-      'delivery_address': request.address,
-      'delivery_city': request.city,
-      'delivery_country': 'Sri Lanka',
-      'custom_1': request.module,
-      'custom_2': request.bookingId,
-    };
+    if (request.amountMinor <= 0) {
+      throw StateError('Invalid payment amount.');
+    }
 
-    // Step 3: Launch PayHere payment gateway.
-    final completer = Completer<void>();
+    if (method != 'card' && method != 'cash') {
+      throw StateError('Invalid payment method.');
+    }
 
-    try {
-      PayHere.startPayment(
-        paymentObject,
-        (gatewayPaymentId) {
-          // SDK success does not mean that the
-          // backend has verified the payment.
-          if (!completer.isCompleted) {
-            completer.complete();
-          }
-        },
-        (error) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              Exception('PayHere payment failed: $error'),
-            );
-          }
-        },
-        () {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              StateError('Payment was cancelled.'),
-            );
-          }
-        },
+    // Doctor payments require an atomic transaction so
+    // payment, appointment and notification stay consistent.
+    if (request.module == 'doctor') {
+      return _processDoctorPayment(
+        request: request,
+        method: method,
+        user: user,
       );
-    } catch (error) {
-      if (!completer.isCompleted) {
-        completer.completeError(error);
+    }
+
+    // Keep the existing payment flow for all other modules.
+    final paymentRef = _db.collection('payments').doc();
+
+    final status =
+        method == 'card' ? 'demo_paid' : 'pending_cash';
+
+    await paymentRef.set({
+      'paymentId': paymentRef.id,
+      'bookingId': request.bookingId,
+      'module': request.module,
+      'title': request.title,
+      'userId': user.uid,
+      'userEmail': user.email ?? '',
+      'amountMinor': request.amountMinor,
+      'amount': request.amountMinor / 100,
+      'currency': 'LKR',
+      'method': method,
+      'status': status,
+      'provider': 'oneclick_demo',
+      'environment': 'demo',
+      'isRealPayment': false,
+      'customer': request.customer,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    return paymentRef.id;
+  }
+
+  // ------------------------------------------------------
+  // DOCTOR PAYMENT + APPOINTMENT + NOTIFICATION
+  // ------------------------------------------------------
+
+  static Future<String> _processDoctorPayment({
+    required PaymentRequest request,
+    required String method,
+    required User user,
+  }) async {
+    final appointmentRef =
+        _db.collection('appointments').doc(request.bookingId);
+
+    final paymentRef = _db.collection('payments').doc();
+
+    final notificationRef = _db
+        .collection('notifications')
+        .doc('doctor_booking_${request.bookingId}');
+
+    final paymentStatus =
+        method == 'card' ? 'demo_paid' : 'pending_cash';
+
+    await _db.runTransaction((transaction) async {
+      // All reads must happen before transaction writes.
+      final appointmentSnapshot =
+          await transaction.get(appointmentRef);
+
+      if (!appointmentSnapshot.exists) {
+        throw StateError('Doctor appointment not found.');
       }
-    }
 
-    await completer.future;
+      final appointment = appointmentSnapshot.data()!;
 
-    // Return payment ID for server verification.
-    return paymentId;
+      // Validate ownership.
+      if (appointment['userId'] != user.uid) {
+        throw StateError(
+          'You cannot pay for this appointment.',
+        );
+      }
+
+      final appointmentStatus =
+          (appointment['status'] ?? '').toString();
+
+      if (appointmentStatus != 'awaiting_payment') {
+        throw StateError(
+          'This appointment is not awaiting payment.',
+        );
+      }
+
+      final existingPaymentId = appointment['paymentId'];
+
+      if (existingPaymentId != null &&
+          existingPaymentId.toString().isNotEmpty) {
+        throw StateError(
+          'This appointment already has a payment.',
+        );
+      }
+
+      final doctorId =
+          (appointment['doctorId'] ?? '').toString();
+
+      if (doctorId.isEmpty) {
+        throw StateError(
+          'Doctor ID is missing from the appointment.',
+        );
+      }
+
+      // The amount must match the stored appointment fee.
+      final storedAmount = appointment['amountMinor'];
+
+      if (storedAmount is! num ||
+          storedAmount.toInt() != request.amountMinor ||
+          storedAmount.toInt() <= 0) {
+        throw StateError(
+          'Payment amount does not match the appointment.',
+        );
+      }
+
+      final patientName =
+          (appointment['patientName'] ??
+                  appointment['userName'] ??
+                  user.displayName ??
+                  user.email ??
+                  'Patient')
+              .toString();
+
+      final doctorName =
+          (appointment['doctorName'] ?? 'Doctor')
+              .toString();
+
+      // 1. Create payment record.
+      transaction.set(paymentRef, {
+        'paymentId': paymentRef.id,
+        'bookingId': request.bookingId,
+        'module': 'doctor',
+        'title': request.title,
+
+        // Patient information
+        'userId': user.uid,
+        'patientId': user.uid,
+        'patientName': patientName,
+        'userEmail': user.email ?? '',
+
+        // Doctor information
+        'doctorId': doctorId,
+        'doctorName': doctorName,
+
+        // Payment information
+        'amountMinor': request.amountMinor,
+        'amount': request.amountMinor / 100,
+        'currency': 'LKR',
+        'method': method,
+        'status': paymentStatus,
+
+        // Demo payment information
+        'provider': 'oneclick_demo',
+        'environment': 'demo',
+        'isRealPayment': false,
+        'customer': request.customer,
+
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // 2. Automatically confirm appointment.
+      transaction.update(appointmentRef, {
+        'status': 'confirmed',
+        'paymentId': paymentRef.id,
+        'paymentStatus': paymentStatus,
+        'paymentMethod': method,
+        'confirmedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // 3. Create doctor's in-app notification.
+      transaction.set(notificationRef, {
+        'userId': doctorId,
+        'doctorId': doctorId,
+        'patientId': user.uid,
+        'appointmentId': request.bookingId,
+        'paymentId': paymentRef.id,
+        'type': 'new_appointment',
+        'title': 'New Appointment Confirmed',
+        'message':
+            '$patientName booked an appointment '
+            'for ${appointment['date'] ?? 'the selected date'} '
+            'at ${appointment['time'] ?? 'the selected time'}.',
+        'paymentMethod': method,
+        'isRead': false,
+        'timestamp': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    });
+
+    return paymentRef.id;
   }
 
-  /// Listen to payment status changes in Firestore.
-  static Stream<DocumentSnapshot<Map<String, dynamic>>>
-      watchPayment(String paymentId) {
-    if (paymentId.trim().isEmpty) {
-      throw ArgumentError(
-        'Payment ID cannot be empty.',
-      );
+  // ------------------------------------------------------
+  // USER PAYMENT HISTORY
+  // ------------------------------------------------------
+
+  static Stream<QuerySnapshot<Map<String, dynamic>>>
+      userPaymentHistory() {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      throw StateError('User not logged in.');
     }
 
-    return _firestore
+    return _db
         .collection('payments')
-        .doc(paymentId)
+        .where('userId', isEqualTo: user.uid)
         .snapshots();
-  }
-
-  /// Check whether a payment has been verified
-  /// by the backend.
-  static Future<bool> isPaymentVerified(
-    String paymentId,
-  ) async {
-    if (paymentId.trim().isEmpty) {
-      return false;
-    }
-
-    final payment = await _firestore
-        .collection('payments')
-        .doc(paymentId)
-        .get();
-
-    if (!payment.exists) {
-      return false;
-    }
-
-    final data = payment.data();
-
-    return data?['status'] == 'paid' &&
-        data?['provider'] == 'payhere' &&
-        data?['environment'] == 'sandbox';
   }
 }
