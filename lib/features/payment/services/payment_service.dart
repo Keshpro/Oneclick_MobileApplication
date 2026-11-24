@@ -1,187 +1,100 @@
 
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
-import 'package:payhere_mobilesdk_flutter/payhere_mobilesdk_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/payment_request.dart';
 
 class PaymentService {
-  PaymentService._();
+  static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  static final FirebaseFunctions _functions =
-      FirebaseFunctions.instanceFor(
-    region: 'asia-south1',
-  );
+  static Future<String> processDemoPayment({
+    required PaymentRequest request,
+    required String method,
+  }) async {
+    final user = _auth.currentUser;
 
-  static final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance;
-
-  /// Start a PayHere Sandbox payment.
-  ///
-  /// Returns the internal Firestore payment ID
-  /// after the PayHere SDK reports completion.
-  ///
-  /// IMPORTANT:
-  /// This does NOT mean the payment is verified.
-  /// The backend must confirm the payment status.
-  static Future<String> startPayment(
-    PaymentRequest request,
-  ) async {
-    if (request.module != 'doctor') {
-      throw UnsupportedError(
-        'Payment is not enabled for this module yet.',
-      );
+    if (user == null) {
+      throw Exception('Please log in before making a payment.');
     }
 
-    if (request.bookingId.trim().isEmpty) {
-      throw ArgumentError(
-        'Booking ID cannot be empty.',
-      );
+    if (request.amountMinor <= 0) {
+      throw Exception('Invalid payment amount.');
     }
 
-    // Step 1: Create payment session using Firebase.
-    final callable = _functions.httpsCallable(
-      'createPayHerePayment',
-    );
-
-    final response = await callable.call(
-      <String, dynamic>{
-        'bookingId': request.bookingId,
-        'customer': request.customer,
-      },
-    );
-
-    final data = Map<String, dynamic>.from(
-      response.data as Map,
-    );
-
-    final paymentId = data['paymentId']?.toString() ?? '';
-    final merchantId = data['merchantId']?.toString() ?? '';
-    final merchantSecret =
-        data['merchantSecret']?.toString() ?? '';
-    final orderId = data['orderId']?.toString() ?? '';
-    final amount = data['amount']?.toString() ?? '';
-    final currency = data['currency']?.toString() ?? 'LKR';
-    final notifyUrl = data['notifyUrl']?.toString() ?? '';
-
-    if (paymentId.isEmpty ||
-        merchantId.isEmpty ||
-        merchantSecret.isEmpty ||
-        orderId.isEmpty ||
-        amount.isEmpty ||
-        notifyUrl.isEmpty) {
-      throw StateError(
-        'Incomplete PayHere payment configuration.',
-      );
+    if (method != 'card' && method != 'cash') {
+      throw Exception('Invalid payment method.');
     }
 
-    // Step 2: Prepare PayHere Sandbox payment.
-    //
-    // Sandbox only: The official SDK requires
-    // merchant_secret in its payment object.
-    // Never use a production secret this way.
-    final paymentObject = <String, dynamic>{
-      'sandbox': true,
-      'merchant_id': merchantId,
-      'merchant_secret': merchantSecret,
-      'notify_url': notifyUrl,
-      'order_id': orderId,
-      'items': request.title,
-      'amount': amount,
-      'currency': currency,
-      'first_name': request.firstName,
-      'last_name': request.lastName,
-      'email': request.email,
-      'phone': request.phone,
-      'address': request.address,
-      'city': request.city,
-      'country': 'Sri Lanka',
-      'delivery_address': request.address,
-      'delivery_city': request.city,
-      'delivery_country': 'Sri Lanka',
-      'custom_1': request.module,
-      'custom_2': request.bookingId,
-    };
+    final paymentRef = _db.collection('payments').doc();
 
-    // Step 3: Launch PayHere payment gateway.
-    final completer = Completer<void>();
+    final status = method == 'card'
+        ? 'demo_paid'
+        : 'pending_cash';
 
-    try {
-      PayHere.startPayment(
-        paymentObject,
-        (gatewayPaymentId) {
-          // SDK success does not mean that the
-          // backend has verified the payment.
-          if (!completer.isCompleted) {
-            completer.complete();
-          }
-        },
-        (error) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              Exception('PayHere payment failed: $error'),
-            );
-          }
-        },
-        () {
-          if (!completer.isCompleted) {
-            completer.completeError(
-              StateError('Payment was cancelled.'),
-            );
-          }
-        },
-      );
-    } catch (error) {
-      if (!completer.isCompleted) {
-        completer.completeError(error);
+    await paymentRef.set({
+      'paymentId': paymentRef.id,
+      'bookingId': request.bookingId,
+      'module': request.module,
+      'title': request.title,
+      'userId': user.uid,
+      'userEmail': user.email ?? '',
+      'amountMinor': request.amountMinor,
+      'amount': request.amountMinor / 100,
+      'currency': 'LKR',
+      'method': method,
+      'status': status,
+      'provider': 'oneclick_demo',
+      'environment': 'demo',
+      'isRealPayment': false,
+      'customer': request.customer,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    // Demo-only: no real payment gateway is contacted.
+    // Link the payment to an existing doctor appointment.
+    if (request.module == 'doctor') {
+      final appointmentRef =
+          _db.collection('appointments').doc(request.bookingId);
+
+      final appointment = await appointmentRef.get();
+
+      if (!appointment.exists) {
+        throw Exception('Appointment not found.');
       }
+
+      final data = appointment.data()!;
+
+      if (data['userId'] != user.uid) {
+        throw Exception('Unauthorized appointment.');
+      }
+
+      await appointmentRef.update({
+        'paymentId': paymentRef.id,
+        'paymentStatus': status,
+        'paymentMethod': method,
+        'status': method == 'card'
+            ? 'confirmed'
+            : 'pending_cash',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     }
 
-    await completer.future;
-
-    // Return payment ID for server verification.
-    return paymentId;
+    return paymentRef.id;
   }
 
-  /// Listen to payment status changes in Firestore.
-  static Stream<DocumentSnapshot<Map<String, dynamic>>>
-      watchPayment(String paymentId) {
-    if (paymentId.trim().isEmpty) {
-      throw ArgumentError(
-        'Payment ID cannot be empty.',
-      );
+  static Stream<QuerySnapshot<Map<String, dynamic>>>
+      userPaymentHistory() {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      throw Exception('User not logged in.');
     }
 
-    return _firestore
+    return _db
         .collection('payments')
-        .doc(paymentId)
+        .where('userId', isEqualTo: user.uid)
         .snapshots();
-  }
-
-  /// Check whether a payment has been verified
-  /// by the backend.
-  static Future<bool> isPaymentVerified(
-    String paymentId,
-  ) async {
-    if (paymentId.trim().isEmpty) {
-      return false;
-    }
-
-    final payment = await _firestore
-        .collection('payments')
-        .doc(paymentId)
-        .get();
-
-    if (!payment.exists) {
-      return false;
-    }
-
-    final data = payment.data();
-
-    return data?['status'] == 'paid' &&
-        data?['provider'] == 'payhere' &&
-        data?['environment'] == 'sandbox';
   }
 }
