@@ -154,32 +154,6 @@ class _FoodHomeScreenState extends State<FoodHomeScreen> {
                     color: const Color(0xFFFF8A65),
                   ),
                 ),
-
-                // Home Chef
-                _FoodServiceCard(
-                  icon: Icons.restaurant_rounded,
-                  title: 'Home Chef',
-                  subtitle: 'Homemade meals',
-                  color: const Color(0xFFFFB300),
-                ),
-
-                // SweetCraft
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const SweetCraftScreen(),
-                      ),
-                    );
-                  },
-                  child: _FoodServiceCard(
-                    icon: Icons.cake_rounded,
-                    title: 'Sweet craft',
-                    subtitle: 'Post what you want, get it made',
-                    color: const Color(0xFFE91E63),
-                  ),
-                ),
               ],
             ),
 
