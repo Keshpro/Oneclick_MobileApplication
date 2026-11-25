@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import '../models/food_product.dart';
 import '../services/food_cart_service.dart';
 import 'food_cart_screen.dart';
+import 'food_checkout_screen.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/food_offer_model.dart' as seller_model;
+import 'food_checkout_screen.dart';
 
 import 'dart:async';
 
@@ -1899,75 +1901,121 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
         ),
         child: SafeArea(
           child: SizedBox(
-            height: 58,
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: offer.quantity <= 0
-                  ? null
-                  : () {
-                      if (quantity > offer.quantity) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Not enough portions are available.'),
-                          ),
-                        );
-                        return;
-                      }
-
-                      final added = FoodCartService.instance.addProduct(
-                        offer,
-                        quantity,
-                      );
-
-                      if (!added) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'This offer has expired or is no longer available.',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            '$quantity × ${offer.foodName} added to cart',
-                          ),
-                          behavior: SnackBarBehavior.floating,
-                          action: SnackBarAction(
-                            label: 'VIEW CART',
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const FoodCartScreen(),
+            height: 54,
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: offer.quantity <= 0
+                        ? null
+                        : () {
+                            if (quantity > offer.quantity) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Not enough portions are available.',
+                                  ),
                                 ),
                               );
-                            },
-                          ),
-                        ),
-                      );
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: orange,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.grey.shade300,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(19),
+                              return;
+                            }
+
+                            final added = FoodCartService.instance.addProduct(
+                              offer,
+                              quantity,
+                            );
+
+                            if (!added) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'This offer has expired or is no longer available.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '$quantity × ${offer.foodName} added to cart',
+                                ),
+                                behavior: SnackBarBehavior.floating,
+                                action: SnackBarAction(
+                                  label: 'VIEW CART',
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const FoodCartScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2E7D32),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(17),
+                      ),
+                    ),
+                    child: Text(
+                      'Add to Cart • Rs. ${(offer.saverPrice * quantity).toStringAsFixed(0)}',
+                    ),
+                  ),
                 ),
-              ),
-              child: Text(
-                offer.quantity <= 0
-                    ? 'Out of Stock'
-                    : 'Add to Cart  •  Rs. ${(offer.saverPrice * quantity).toStringAsFixed(0)}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
+
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: offer.quantity <= 0
+                        ? null
+                        : () {
+                            if (quantity > offer.quantity) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Not enough portions are available.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => FoodCheckoutScreen(
+                                  directItems: [
+                                    FoodCartItem(
+                                      product: offer,
+                                      quantity: quantity,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(17),
+                      ),
+                    ),
+                    child: Text(
+                      'Buy Now • Rs. ${(offer.saverPrice * quantity).toStringAsFixed(0)}',
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),

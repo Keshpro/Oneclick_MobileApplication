@@ -21,6 +21,8 @@ import 'package:oneclick/core/theme/app_theme.dart';
 import 'package:oneclick/core/widgets/teal_header.dart';
 import 'package:oneclick/features/food/screens/food_saver_screen.dart';
 
+import '../../food/screens/food_seller_dashboard_screen.dart';
+
 class _Palette {
   static const bg = AppColors.background;
   static const surface = AppColors.surface;
@@ -636,12 +638,40 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Account Options with Dynamic Role Switcher
-  void _showAccountOptions() {
+
+  // Account Options with Food Seller Mode Switching
+  Future<void> _showAccountOptions() async {
     if (!_isLoggedIn) {
       Navigator.pushNamed(context, '/login');
       if (mounted) setState(() => _selectedIndex = 0);
       return;
     }
+
+    // Check whether the current user is an approved Food Seller
+    bool isActiveFoodSeller = false;
+
+    try {
+      final user = _auth.currentUser;
+
+      if (user != null) {
+        final sellerDoc = await _firestore
+            .collection('food_sellers')
+            .doc(user.uid)
+            .get();
+
+        final sellerData = sellerDoc.data();
+
+        isActiveFoodSeller =
+            sellerDoc.exists &&
+            sellerData?['uid'] == user.uid &&
+            sellerData?['role'] == 'foodSeller' &&
+            sellerData?['status']?.toString().toLowerCase() == 'active';
+      }
+    } catch (e) {
+      debugPrint('Food seller mode check failed: $e');
+    }
+
+    if (!mounted) return;
 
     showModalBottomSheet<void>(
       context: context,
@@ -653,6 +683,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             _bottomSheetHandle(),
             const SizedBox(height: 24),
+
             CircleAvatar(
               radius: 34,
               backgroundColor: _Palette.primary,
@@ -665,7 +696,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+
             const SizedBox(height: 12),
+
             Text(
               _userName.isEmpty ? 'OneClick User' : _userName,
               style: const TextStyle(
@@ -674,15 +707,60 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontWeight: FontWeight.w700,
               ),
             ),
+
             const SizedBox(height: 4),
+
             Text(
               _userEmail,
               style: const TextStyle(color: _Palette.inkSoft, fontSize: 13),
             ),
+
             const SizedBox(height: 16),
 
-            // DYNAMIC ROLE SWITCHER (Shows ONLY for Providers/Admins)
-            if (_userRole == 'doctor') ...[
+            // FOOD SELLER MODE
+            if (isActiveFoodSeller)
+              Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  border: Border.all(
+                    color: Colors.orange.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: ListTile(
+                  leading: const Icon(
+                    Icons.storefront_rounded,
+                    color: Colors.orange,
+                  ),
+                  title: const Text(
+                    'Switch to Seller Mode',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                    color: Colors.orange,
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FoodSellerDashboardScreen(),
+                      ),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ),
+
+            // DOCTOR MODE
+            if (_userRole == 'doctor')
               Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
@@ -721,7 +799,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
-            ] else if (_userRole == 'admin') ...[
+
+            // ADMIN MODE
+            if (_userRole == 'admin')
               Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
@@ -758,8 +838,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
-            ],
 
+            // PROFILE
             ListTile(
               leading: const Icon(
                 Icons.person_outline_rounded,
@@ -769,6 +849,8 @@ class _HomeScreenState extends State<HomeScreen> {
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => Navigator.pop(sheetContext),
             ),
+
+            // ACTIVITY
             ListTile(
               leading: const Icon(
                 Icons.history_rounded,
@@ -778,7 +860,10 @@ class _HomeScreenState extends State<HomeScreen> {
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => Navigator.pop(sheetContext),
             ),
+
             const Divider(),
+
+            // LOGOUT
             ListTile(
               leading: const Icon(Icons.logout_rounded, color: Colors.red),
               title: const Text(
@@ -790,8 +875,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               onTap: () async {
                 Navigator.pop(sheetContext);
+
                 await _auth.signOut();
+
                 if (!mounted) return;
+
                 setState(() {
                   _userName = '';
                   _userEmail = '';
@@ -799,6 +887,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _isLoadingUser = false;
                   _selectedIndex = 0;
                 });
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Logged out successfully')),
                 );

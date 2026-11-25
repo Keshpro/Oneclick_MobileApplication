@@ -1,4 +1,3 @@
-
 import 'food_cart_service.dart';
 
 enum FoodFulfillmentType { delivery, pickup }
@@ -100,10 +99,13 @@ class FoodOrderService {
     required String deliveryNote,
     required String pickupTime,
     required String paymentMethod,
+    List<FoodCartItem>? checkoutItems,
   }) {
     final cart = FoodCartService.instance;
 
-    final orderItems = cart.items.map((item) {
+    final selectedItems = checkoutItems ?? cart.items;
+
+    final orderItems = selectedItems.map((item) {
       return FoodOrderItem(
         foodName: item.product.name,
         restaurantName: item.product.sellerName,
@@ -114,7 +116,10 @@ class FoodOrderService {
       );
     }).toList();
 
-    final subtotal = cart.subtotal;
+    final subtotal = selectedItems.fold<double>(
+      0,
+      (sum, item) => sum + item.total,
+    );
 
     final deliveryFee = fulfillmentType == FoodFulfillmentType.delivery
         ? 150.0
