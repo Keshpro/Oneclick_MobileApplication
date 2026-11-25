@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 
 import 'package:oneclick/core/theme/app_theme.dart';
 import 'package:oneclick/core/widgets/teal_header.dart';
-import 'package:oneclick/features/food/screens/food_saver_screen.dart';
 
 class NotificationScreen extends StatelessWidget {
   const NotificationScreen({super.key});
@@ -414,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
 
       case 'Food':
-        screen = const FoodSaverScreen();
+        screen = const FoodHomeScreen();
         break;
 
       case 'Groceries':
