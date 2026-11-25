@@ -5,8 +5,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/payment_request.dart';
 
 class PaymentService {
-  static final FirebaseFirestore _db = FirebaseFirestore.instance;
-  static final FirebaseAuth _auth = FirebaseAuth.instance;
+  static final FirebaseFirestore _db =
+      FirebaseFirestore.instance;
+
+  static final FirebaseAuth _auth =
+      FirebaseAuth.instance;
+
+  // ======================================================
+  // COMMON PAYMENT PROCESS
+  // ======================================================
 
   static Future<String> processDemoPayment({
     required PaymentRequest request,
@@ -28,8 +35,7 @@ class PaymentService {
       throw StateError('Invalid payment method.');
     }
 
-    // Doctor payments require an atomic transaction so
-    // payment, appointment and notification stay consistent.
+    // Doctor module
     if (request.module == 'doctor') {
       return _processDoctorPayment(
         request: request,
@@ -38,7 +44,18 @@ class PaymentService {
       );
     }
 
-    // Keep the existing payment flow for all other modules.
+    // QuickFix module
+    if (request.module == 'quickfix') {
+      return _processQuickFixPayment(
+        request: request,
+        method: method,
+        user: user,
+      );
+    }
+
+    // Existing generic payment flow
+    // Grocery, Food, Drink & Drive and other modules
+
     final paymentRef = _db.collection('payments').doc();
 
     final status =
@@ -67,19 +84,22 @@ class PaymentService {
     return paymentRef.id;
   }
 
-  // ------------------------------------------------------
-  // DOCTOR PAYMENT + APPOINTMENT + NOTIFICATION
-  // ------------------------------------------------------
+  // ======================================================
+  // DOCTOR PAYMENT
+  // EXISTING LOGIC PRESERVED
+  // ======================================================
 
   static Future<String> _processDoctorPayment({
     required PaymentRequest request,
     required String method,
     required User user,
   }) async {
-    final appointmentRef =
-        _db.collection('appointments').doc(request.bookingId);
+    final appointmentRef = _db
+        .collection('appointments')
+        .doc(request.bookingId);
 
-    final paymentRef = _db.collection('payments').doc();
+    final paymentRef =
+        _db.collection('payments').doc();
 
     final notificationRef = _db
         .collection('notifications')
@@ -89,17 +109,18 @@ class PaymentService {
         method == 'card' ? 'demo_paid' : 'pending_cash';
 
     await _db.runTransaction((transaction) async {
-      // All reads must happen before transaction writes.
       final appointmentSnapshot =
           await transaction.get(appointmentRef);
 
       if (!appointmentSnapshot.exists) {
-        throw StateError('Doctor appointment not found.');
+        throw StateError(
+          'Doctor appointment not found.',
+        );
       }
 
-      final appointment = appointmentSnapshot.data()!;
+      final appointment =
+          appointmentSnapshot.data()!;
 
-      // Validate ownership.
       if (appointment['userId'] != user.uid) {
         throw StateError(
           'You cannot pay for this appointment.',
@@ -115,7 +136,8 @@ class PaymentService {
         );
       }
 
-      final existingPaymentId = appointment['paymentId'];
+      final existingPaymentId =
+          appointment['paymentId'];
 
       if (existingPaymentId != null &&
           existingPaymentId.toString().isNotEmpty) {
@@ -133,8 +155,8 @@ class PaymentService {
         );
       }
 
-      // The amount must match the stored appointment fee.
-      final storedAmount = appointment['amountMinor'];
+      final storedAmount =
+          appointment['amountMinor'];
 
       if (storedAmount is! num ||
           storedAmount.toInt() != request.amountMinor ||
@@ -156,7 +178,8 @@ class PaymentService {
           (appointment['doctorName'] ?? 'Doctor')
               .toString();
 
-      // 1. Create payment record.
+      // Create payment record
+
       transaction.set(paymentRef, {
         'paymentId': paymentRef.id,
         'bookingId': request.bookingId,
@@ -180,7 +203,7 @@ class PaymentService {
         'method': method,
         'status': paymentStatus,
 
-        // Demo payment information
+        // Demo information
         'provider': 'oneclick_demo',
         'environment': 'demo',
         'isRealPayment': false,
@@ -190,7 +213,8 @@ class PaymentService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // 2. Automatically confirm appointment.
+      // Confirm doctor appointment
+
       transaction.update(appointmentRef, {
         'status': 'confirmed',
         'paymentId': paymentRef.id,
@@ -200,7 +224,8 @@ class PaymentService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // 3. Create doctor's in-app notification.
+      // Notify doctor
+
       transaction.set(notificationRef, {
         'userId': doctorId,
         'doctorId': doctorId,
@@ -223,9 +248,322 @@ class PaymentService {
     return paymentRef.id;
   }
 
-  // ------------------------------------------------------
-  // USER PAYMENT HISTORY
-  // ------------------------------------------------------
+  // ======================================================
+  // QUICKFIX PAYMENT
+  // ======================================================
+
+  static Future<String> _processQuickFixPayment({
+    required PaymentRequest request,
+    required String method,
+    required User user,
+  }) async {
+    final bookingId = request.bookingId.trim();
+
+    if (bookingId.isEmpty ||
+        bookingId.contains('/')) {
+      throw StateError('Invalid QuickFix booking ID.');
+    }
+
+    final bookingRef = _db
+        .collection('work_appointments')
+        .doc(bookingId);
+
+    // Deterministic payment ID.
+    // One payment record per QuickFix booking.
+
+    final paymentRef = _db
+        .collection('payments')
+        .doc('quickfix_$bookingId');
+
+    final notificationRef = _db
+        .collection('quickfix_notifications')
+        .doc('payment_$bookingId');
+
+    final paymentStatus =
+        method == 'card'
+            ? 'demo_paid'
+            : 'pending_cash';
+
+    return _db.runTransaction<String>(
+      (transaction) async {
+        // ------------------------------------------------
+        // 1. AUTHENTICATION VALIDATION
+        // ------------------------------------------------
+
+        if (_auth.currentUser?.uid != user.uid) {
+          throw StateError(
+            'Your session has changed. Please try again.',
+          );
+        }
+
+        // ------------------------------------------------
+        // 2. READ BOOKING
+        // ------------------------------------------------
+
+        final bookingSnapshot =
+            await transaction.get(bookingRef);
+
+        if (!bookingSnapshot.exists) {
+          throw StateError(
+            'QuickFix booking not found.',
+          );
+        }
+
+        final booking = bookingSnapshot.data()!;
+
+        // ------------------------------------------------
+        // 3. CUSTOMER OWNERSHIP VALIDATION
+        // ------------------------------------------------
+
+        final customerId =
+            (booking['customerId'] ?? '')
+                .toString()
+                .trim();
+
+        if (customerId.isEmpty ||
+            customerId != user.uid) {
+          throw StateError(
+            'You cannot pay for this booking.',
+          );
+        }
+
+        // ------------------------------------------------
+        // 4. SERVICE VALIDATION
+        // ------------------------------------------------
+
+        if (booking['serviceType'] != 'quickfix') {
+          throw StateError(
+            'Invalid or outdated QuickFix booking.',
+          );
+        }
+
+        // ------------------------------------------------
+        // 5. DUPLICATE PAYMENT PREVENTION
+        // ------------------------------------------------
+
+        final existingPaymentId =
+            (booking['paymentId'] ?? '')
+                .toString()
+                .trim();
+
+        final existingPaymentStatus =
+            (booking['paymentStatus'] ?? '')
+                .toString()
+                .trim()
+                .toLowerCase();
+
+        if (existingPaymentId.isNotEmpty ||
+            existingPaymentStatus == 'demo_paid' ||
+            existingPaymentStatus == 'pending_cash' ||
+            existingPaymentStatus == 'paid') {
+          throw StateError(
+            'This booking already has a payment record.',
+          );
+        }
+
+        // ------------------------------------------------
+        // 6. BOOKING STATUS VALIDATION
+        // ------------------------------------------------
+
+        final bookingStatus =
+            (booking['status'] ?? '')
+                .toString()
+                .trim()
+                .toLowerCase();
+
+        if (bookingStatus != 'accepted' &&
+            bookingStatus != 'approved') {
+          throw StateError(
+            'The worker must approve your booking '
+            'before you can make a payment.',
+          );
+        }
+
+        // ------------------------------------------------
+        // 7. WORKER VALIDATION
+        // ------------------------------------------------
+
+        final workerId =
+            (booking['workerId'] ?? '')
+                .toString()
+                .trim();
+
+        if (workerId.isEmpty) {
+          throw StateError(
+            'Worker information is missing.',
+          );
+        }
+
+        if (workerId == user.uid) {
+          throw StateError(
+            'You cannot pay for your own worker booking.',
+          );
+        }
+
+        // ------------------------------------------------
+        // 8. PAYMENT AMOUNT VALIDATION
+        // ------------------------------------------------
+
+        final storedAmount =
+            booking['amountMinor'];
+
+        if (storedAmount is! num ||
+            !storedAmount.isFinite ||
+            storedAmount <= 0 ||
+            storedAmount != storedAmount.toInt()) {
+          throw StateError(
+            'The booking does not have a valid payment amount.',
+          );
+        }
+
+        final amountMinor =
+            storedAmount.toInt();
+
+        if (amountMinor != request.amountMinor) {
+          throw StateError(
+            'Payment amount does not match the booking.',
+          );
+        }
+
+        // ------------------------------------------------
+        // 9. BOOKING INFORMATION
+        // ------------------------------------------------
+
+        final workerName =
+            (booking['workerName'] ?? 'Worker')
+                .toString();
+
+        final customerName =
+            (booking['customerName'] ??
+                    user.displayName ??
+                    user.email ??
+                    'Customer')
+                .toString();
+
+        final category =
+            (booking['category'] ?? 'QuickFix Service')
+                .toString();
+
+        final title = 'QuickFix - $category';
+
+        // ------------------------------------------------
+        // 10. CREATE PAYMENT RECORD
+        // ------------------------------------------------
+
+        transaction.set(paymentRef, {
+          // Payment identification
+          'paymentId': paymentRef.id,
+          'bookingId': bookingId,
+          'appointmentId': bookingId,
+
+          // Service information
+          'module': 'quickfix',
+          'serviceType': 'quickfix',
+          'title': title,
+          'category': category,
+
+          // Customer information
+          // userId is required for Personal Vault
+
+          'userId': user.uid,
+          'customerId': user.uid,
+          'customerName': customerName,
+          'userEmail': user.email ?? '',
+
+          // Worker information
+          // workerId is required for Worker Income
+
+          'workerId': workerId,
+          'workerName': workerName,
+
+          // Payment information
+
+          'amountMinor': amountMinor,
+          'amount': amountMinor / 100,
+          'currency': 'LKR',
+          'method': method,
+          'status': paymentStatus,
+
+          // Demo payment information
+
+          'provider': 'oneclick_demo',
+          'environment': 'demo',
+          'isRealPayment': false,
+
+          // Timestamps
+
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+
+          if (method == 'card')
+            'paidAt': FieldValue.serverTimestamp(),
+        });
+
+        // ------------------------------------------------
+        // 11. UPDATE EXISTING BOOKING
+        // ------------------------------------------------
+
+        // Preserve Accepted / Approved appointment status.
+        // Payment does not mean the service is completed.
+
+        transaction.update(bookingRef, {
+          'paymentId': paymentRef.id,
+          'paymentStatus': paymentStatus,
+          'paymentMethod': method,
+          'paymentEnvironment': 'demo',
+          'isRealPayment': false,
+          'updatedAt': FieldValue.serverTimestamp(),
+
+          if (method == 'card')
+            'paidAt': FieldValue.serverTimestamp(),
+
+          if (method == 'cash')
+            'cashSelectedAt':
+                FieldValue.serverTimestamp(),
+        });
+
+        // ------------------------------------------------
+        // 12. WORKER PAYMENT NOTIFICATION
+        // ------------------------------------------------
+
+        transaction.set(notificationRef, {
+          'receiverId': workerId,
+          'senderId': user.uid,
+          'appointmentId': bookingId,
+          'paymentId': paymentRef.id,
+
+          'title': method == 'card'
+              ? 'Demo Payment Received'
+              : 'Cash Payment Selected',
+
+          'message': method == 'card'
+              ? 'A demo card payment of '
+                  'LKR ${(amountMinor / 100).toStringAsFixed(2)} '
+                  'was recorded for your QuickFix booking.'
+              : 'The customer has selected cash payment '
+                  'for your QuickFix booking.',
+
+          'type': method == 'card'
+              ? 'payment_received'
+              : 'cash_payment_selected',
+
+          'paymentStatus': paymentStatus,
+          'paymentMethod': method,
+          'amountMinor': amountMinor,
+          'isRead': false,
+
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        return paymentRef.id;
+      },
+    );
+  }
+
+  // ======================================================
+  // LOGGED-IN USER PAYMENT HISTORY
+  // PERSONAL VAULT
+  // ======================================================
 
   static Stream<QuerySnapshot<Map<String, dynamic>>>
       userPaymentHistory() {
@@ -237,7 +575,35 @@ class PaymentService {
 
     return _db
         .collection('payments')
-        .where('userId', isEqualTo: user.uid)
+        .where(
+          'userId',
+          isEqualTo: user.uid,
+        )
+        .snapshots();
+  }
+
+  // ======================================================
+  // QUICKFIX WORKER PAYMENT HISTORY
+  // ======================================================
+
+  static Stream<QuerySnapshot<Map<String, dynamic>>>
+      workerPaymentHistory() {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      throw StateError('Worker not logged in.');
+    }
+
+    return _db
+        .collection('payments')
+        .where(
+          'workerId',
+          isEqualTo: user.uid,
+        )
+        .where(
+          'module',
+          isEqualTo: 'quickfix',
+        )
         .snapshots();
   }
 }
