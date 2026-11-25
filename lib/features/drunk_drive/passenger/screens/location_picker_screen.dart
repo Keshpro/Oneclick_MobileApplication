@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -36,7 +38,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
     try {
       if (!await Geolocator.isLocationServiceEnabled()) {
-        throw StateError('Location services are disabled. Tap the map instead.');
+        throw StateError('Turn on Location Services in your device settings, or tap the map to select a place.');
       }
 
       var permission = await Geolocator.checkPermission();
@@ -45,7 +47,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        throw StateError('Location permission is unavailable. Tap the map instead.');
+        throw StateError('Location permission is unavailable. Allow location access in Settings, or tap the map to select a place.');
       }
 
       final position = await Geolocator.getCurrentPosition(
@@ -61,9 +63,17 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       _mapController.move(point, 16);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to get current location: $error')),
-      );
+      final String message;
+      if (error is StateError) {
+        message = error.message;
+      } else if (error is TimeoutException) {
+        message = 'Finding your location took too long. Try again or tap the map to choose a place.';
+      } else {
+        message = 'Could not get your location. Check your connection and location settings, then try again or select a place on the map.';
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) setState(() => _locating = false);
     }

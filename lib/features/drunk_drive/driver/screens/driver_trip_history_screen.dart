@@ -17,6 +17,8 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
   final BookingFirestoreService _firestoreService = BookingFirestoreService();
 
   List<BookingModel> _trips = [];
+  bool _isLoading = true;
+  String? _loadError;
 
   @override
   void initState() {
@@ -25,20 +27,25 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
   }
 
   Future<void> _loadTrips() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+
     try {
       final trips = await _firestoreService.getCompletedDriverTrips();
-
       if (!mounted) return;
-
       setState(() {
         _trips = trips;
+        _isLoading = false;
       });
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to load driver trip history: $error')),
-      );
+      setState(() {
+        _loadError = 'Could not load your trip history. Check your connection and try again.';
+        _isLoading = false;
+      });
     }
   }
 
@@ -104,49 +111,71 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
           ),
         ),
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadTrips,
-        color: colors.accent,
-        backgroundColor: colors.surface,
-        child: _trips.isEmpty
-            ? ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  const SizedBox(height: 180),
-                  Icon(
-                    Icons.history_rounded,
-                    size: 56,
-                    color: colors.textMuted,
-                  ),
-                  const SizedBox(height: 16),
-                  Center(
-                    child: Text(
-                      'No driver trips yet.',
-                      style: TextStyle(
-                        color: colors.textMuted,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator(color: colors.accent))
+          : _loadError != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.wifi_off_rounded, size: 48, color: colors.textMuted),
+                        const SizedBox(height: 12),
+                        Text(
+                          _loadError!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: colors.textMuted, fontSize: 14),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _loadTrips,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('Retry'),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              )
-            : ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(20),
-                itemCount: _trips.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final booking = _trips[index];
-                  return _TripHistoryCard(
-                    booking: booking,
-                    statusLabel: _statusLabel(booking.status),
-                    statusColor: _statusColor(booking.status, colors),
-                    dateText: _formatDate(booking),
-                  );
-                },
-              ),
-      ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadTrips,
+                  color: colors.accent,
+                  backgroundColor: colors.surface,
+                  child: _trips.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            const SizedBox(height: 180),
+                            Icon(Icons.history_rounded, size: 56, color: colors.textMuted),
+                            const SizedBox(height: 16),
+                            Center(
+                              child: Text(
+                                'No driver trips yet.',
+                                style: TextStyle(
+                                  color: colors.textMuted,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(20),
+                          itemCount: _trips.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final booking = _trips[index];
+                            return _TripHistoryCard(
+                              booking: booking,
+                              statusLabel: _statusLabel(booking.status),
+                              statusColor: _statusColor(booking.status, colors),
+                              dateText: _formatDate(booking),
+                            );
+                          },
+                        ),
+                ),
     );
   }
 }

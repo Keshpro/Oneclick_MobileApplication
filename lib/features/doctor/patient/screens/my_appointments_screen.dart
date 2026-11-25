@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -6,26 +7,31 @@ class MyAppointmentsScreen extends StatefulWidget {
   const MyAppointmentsScreen({super.key});
 
   @override
-  State<MyAppointmentsScreen> createState() => _MyAppointmentsScreenState();
+  State<MyAppointmentsScreen> createState() =>
+      _MyAppointmentsScreenState();
 }
 
-class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
+class _MyAppointmentsScreenState
+    extends State<MyAppointmentsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  static const Color _primary = Color(0xFF059669);
-  static const Color _bg = Color(0xFFF8FAFC);
-  static const Color _surface = Colors.white;
-  static const Color _textPrimary = Color(0xFF0F172A);
-  static const Color _textMuted = Color(0xFF64748B);
-  static const Color _border = Color(0xFFE2E8F0);
+  static const Color primary = Color(0xFF059669);
+  static const Color bg = Color(0xFFF8FAFC);
+  static const Color dark = Color(0xFF0F172A);
+  static const Color muted = Color(0xFF64748B);
+  static const Color border = Color(0xFFE2E8F0);
 
-  User? get _currentUser => FirebaseAuth.instance.currentUser;
+  String? _cancellingId;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+
+    _tabController = TabController(
+      length: 4,
+      vsync: this,
+    );
   }
 
   @override
@@ -34,24 +40,225 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
     super.dispose();
   }
 
+  String _status(Map<String, dynamic> data) {
+    return data['status']?.toString() ?? '';
+  }
+
+  bool _isUnpaidDraft(Map<String, dynamic> data) {
+    return _status(data).toLowerCase() ==
+        'awaiting_payment';
+  }
+
+  // Legacy Approved bookings are preserved for compatibility.
+  // New confirmed bookings must originate from verified payments.
+  bool _matchesTab(
+    Map<String, dynamic> data,
+    int tab,
+  ) {
+    if (_isUnpaidDraft(data)) return false;
+
+    final status = _status(data).toLowerCase();
+
+    switch (tab) {
+      case 0:
+        return status == 'approved' ||
+            status == 'confirmed';
+
+      case 1:
+        return status == 'upcoming' ||
+            status == 'rescheduled';
+
+      case 2:
+        return status == 'completed';
+
+      case 3:
+        return status == 'cancelled';
+
+      default:
+        return false;
+    }
+  }
+
+  String _displayStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+        return 'Confirmed';
+      case 'approved':
+        return 'Approved';
+      case 'upcoming':
+        return 'Upcoming';
+      case 'rescheduled':
+        return 'Rescheduled';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status;
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+      case 'confirmed':
+      case 'completed':
+        return primary;
+
+      case 'cancelled':
+        return const Color(0xFFDC2626);
+
+      default:
+        return const Color(0xFFD97706);
+    }
+  }
+
+  Future<void> _cancelAppointment(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) async {
+    if (_cancellingId != null) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cancel Appointment?'),
+        content: const Text(
+          'Are you sure you want to cancel this appointment? '
+          'Any payment refund must be handled separately '
+          'according to the service refund policy.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, false),
+            child: const Text('Keep Appointment'),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, true),
+            child: const Text(
+              'Cancel Appointment',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _cancellingId = doc.id);
+
+    try {
+      final data = doc.data();
+
+      if (data['userId'] != user.uid) {
+        throw StateError(
+          'Appointment does not belong to this user.',
+        );
+      }
+
+      // For paid bookings, cancellation/refund
+      // should be handled by a trusted backend.
+      final paid = data['paymentStatus'] == 'paid' ||
+          (data['paymentId'] != null &&
+              data['paymentId']
+                  .toString()
+                  .isNotEmpty);
+
+      if (paid) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Paid appointments require the cancellation '
+              'and refund workflow. Please contact support.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Legacy unpaid bookings only.
+      await doc.reference.update({
+        'status': 'Cancelled',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      final doctorId =
+          data['doctorId']?.toString() ?? '';
+
+      if (doctorId.isNotEmpty) {
+        try {
+          await FirebaseFirestore.instance
+              .collection('notifications')
+              .add({
+            'userId': doctorId,
+            'type': 'APPOINTMENT_CANCELLED',
+            'title': 'Appointment Cancelled',
+            'message':
+                '${data['userName'] ?? 'Patient'} '
+                'cancelled an appointment.',
+            'isRead': false,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+        } catch (_) {
+          // Appointment update already succeeded.
+        }
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Appointment cancelled.'),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Unable to cancel appointment.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _cancellingId = null);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final uid = _currentUser?.uid;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: bg,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: bg,
+        foregroundColor: dark,
         elevation: 0,
-        foregroundColor: _textPrimary,
         title: const Text(
           'My Appointments',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+          ),
         ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(50),
+          preferredSize: const Size.fromHeight(52),
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            margin: const EdgeInsets.fromLTRB(
+              16, 0, 16, 8,
+            ),
             decoration: BoxDecoration(
               color: const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(14),
@@ -62,13 +269,15 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
               indicator: BoxDecoration(
-                color: _primary,
+                color: primary,
                 borderRadius: BorderRadius.circular(12),
               ),
               labelColor: Colors.white,
-              unselectedLabelColor: _textMuted,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+              unselectedLabelColor: muted,
+              labelStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
               tabs: const [
                 Tab(text: 'Approved'),
                 Tab(text: 'Upcoming'),
@@ -79,108 +288,157 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
           ),
         ),
       ),
-      body: SafeArea(
-        child: uid == null
-            ? const Center(child: Text('Please login to view appointments.'))
-            : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance
-                    .collection('appointments')
-                    .where('userId', isEqualTo: uid)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  final docs = snapshot.data?.docs ?? [];
-
-                  if (docs.isEmpty) {
-                    return _buildEmptyState('No appointments found.');
-                  }
-
-                  return TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildAppointmentsList(docs, ['Approved']),
-                      _buildAppointmentsList(docs, ['Upcoming', 'Rescheduled']),
-                      _buildAppointmentsList(docs, ['Completed']),
-                      _buildAppointmentsList(docs, ['Cancelled']),
-                    ],
+      body: uid == null
+          ? _emptyState('Please log in to view appointments.')
+          : StreamBuilder<
+              QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('appointments')
+                  .where('userId', isEqualTo: uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return _emptyState(
+                    'Unable to load appointments. '
+                    'Please check Firestore permissions.',
                   );
-                },
-              ),
-      ),
+                }
+
+                if (!snapshot.hasData) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: primary,
+                    ),
+                  );
+                }
+
+                final docs = snapshot.data!.docs;
+
+                return TabBarView(
+                  controller: _tabController,
+                  children: List.generate(
+                    4,
+                    (tab) {
+                      final filtered = docs.where((doc) {
+                        return _matchesTab(
+                          doc.data(),
+                          tab,
+                        );
+                      }).toList();
+
+                      return _appointmentsList(filtered);
+                    },
+                  ),
+                );
+              },
+            ),
     );
   }
 
-  Widget _buildAppointmentsList(
-      List<QueryDocumentSnapshot<Map<String, dynamic>>> allDocs,
-      List<String> statuses) {
-    final filteredDocs = allDocs.where((doc) {
-      final status = doc.data()['status'] ?? 'Upcoming';
-      return statuses.contains(status);
-    }).toList();
-
-    if (filteredDocs.isEmpty) {
-      return _buildEmptyState('No appointments in this category.');
+  Widget _appointmentsList(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) {
+    if (docs.isEmpty) {
+      return _emptyState(
+        'No appointments in this category.',
+      );
     }
+
+    docs.sort((a, b) {
+      final aTime = a.data()['createdAt'];
+      final bTime = b.data()['createdAt'];
+
+      final aDate = aTime is Timestamp
+          ? aTime.toDate()
+          : DateTime(1970);
+
+      final bDate = bTime is Timestamp
+          ? bTime.toDate()
+          : DateTime(1970);
+
+      return bDate.compareTo(aDate);
+    });
 
     return ListView.builder(
       padding: const EdgeInsets.all(20),
-      itemCount: filteredDocs.length,
+      itemCount: docs.length,
       itemBuilder: (context, index) {
-        final doc = filteredDocs[index];
+        final doc = docs[index];
         final data = doc.data();
-        final docId = doc.id;
-        final doctorName = data['doctorName'] ?? 'Doctor';
-        final specialty = data['specialty'] ?? 'Specialist';
-        final date = data['date'] ?? 'N/A';
-        final time = data['time'] ?? 'N/A';
-        final type = data['type'] ?? 'In-person';
-        final status = data['status'] ?? 'Upcoming';
-        final hospital = data['hospital'] ?? 'General Clinic';
-        final doctorUid = data['doctorId'] ?? '';
-        final patientName = data['userName'] ?? 'Patient';
+
+        final doctorName =
+            data['doctorName']?.toString() ?? 'Doctor';
+
+        final specialty =
+            data['specialty']?.toString() ??
+                'Specialist';
+
+        final date =
+            data['date']?.toString() ?? '-';
+
+        final time =
+            data['time']?.toString() ?? '-';
+
+        final type =
+            data['type']?.toString() ?? 'In-person';
+
+        final hospital =
+            data['hospital']?.toString() ?? '-';
+
+        final status =
+            _displayStatus(_status(data));
+
+        final active =
+            status != 'Cancelled' &&
+            status != 'Completed';
+
+        final paid = data['paymentStatus'] == 'paid' ||
+            (data['paymentId'] != null &&
+                data['paymentId']
+                    .toString()
+                    .isNotEmpty);
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 16),
+          margin: const EdgeInsets.only(bottom: 15),
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: _surface,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: _border),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x0A0F172A),
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
+            border: Border.all(color: border),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  const CircleAvatar(
+                    backgroundColor: Color(0xFFECFDF5),
+                    child: Icon(
+                      Icons.medical_services_rounded,
+                      color: primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
                       children: [
                         Text(
                           doctorName,
                           style: const TextStyle(
-                            fontWeight: FontWeight.w800,
+                            color: dark,
                             fontSize: 16,
-                            color: _textPrimary,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Text(
                           specialty,
                           style: const TextStyle(
+                            color: primary,
                             fontSize: 12,
-                            color: _primary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -188,99 +446,77 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: _getStatusBg(status),
-                      borderRadius: BorderRadius.circular(10),
+                      color: _statusColor(status)
+                          .withValues(alpha: .10),
+                      borderRadius:
+                          BorderRadius.circular(10),
                     ),
                     child: Text(
                       status,
                       style: TextStyle(
-                        color: _getStatusText(status),
+                        color: _statusColor(status),
                         fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
                 ],
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 14),
-                child: Divider(height: 1, color: _border),
+
+              const SizedBox(height: 16),
+              const Divider(color: border),
+              const SizedBox(height: 12),
+
+              _detailRow(
+                Icons.calendar_month_outlined,
+                '$date at $time',
               ),
-              Row(
-                children: [
-                  const Icon(Icons.calendar_today_rounded, size: 16, color: _textMuted),
-                  const SizedBox(width: 8),
-                  Text('$date at $time',
-                      style: const TextStyle(
-                          fontSize: 13,
-                          color: _textPrimary,
-                          fontWeight: FontWeight.w600)),
-                ],
+
+              const SizedBox(height: 11),
+
+              _detailRow(
+                Icons.location_on_outlined,
+                hospital,
               ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Icon(Icons.location_on_outlined, size: 16, color: _textMuted),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(hospital,
-                        style: const TextStyle(fontSize: 12, color: _textMuted)),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      type,
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _textMuted),
-                    ),
-                  ),
-                ],
+
+              const SizedBox(height: 11),
+
+              _detailRow(
+                Icons.health_and_safety_outlined,
+                type,
               ),
-              // Cancel Button for Active/Approved/Upcoming appointments
-              if (status != 'Cancelled' && status != 'Completed') ...[
-                const SizedBox(height: 14),
+
+              if (paid) ...[
+                const SizedBox(height: 11),
+                _detailRow(
+                  Icons.verified_rounded,
+                  'Payment recorded',
+                  color: primary,
+                ),
+              ],
+
+              if (active && !paid) ...[
+                const SizedBox(height: 16),
                 Align(
                   alignment: Alignment.centerRight,
                   child: OutlinedButton.icon(
-                    onPressed: () async {
-                      // 1. Update status to Cancelled
-                      await FirebaseFirestore.instance
-                          .collection('appointments')
-                          .doc(docId)
-                          .update({'status': 'Cancelled'});
-
-                      // 2. Notify Doctor
-                      if (doctorUid.isNotEmpty) {
-                        await FirebaseFirestore.instance.collection('notifications').add({
-                          'userId': doctorUid,
-                          'type': 'APPOINTMENT_CANCELLED',
-                          'title': 'Appointment Cancelled ⚠️',
-                          'message': '$patientName has cancelled the appointment scheduled for $date.',
-                          'isRead': false,
-                          'timestamp': FieldValue.serverTimestamp(),
-                        });
-                      }
-
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Appointment cancelled successfully.'),
-                          backgroundColor: Colors.redAccent,
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.cancel_outlined, size: 16, color: Colors.redAccent),
-                    label: const Text('Cancel Appointment',
-                        style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+                    onPressed: _cancellingId == doc.id
+                        ? null
+                        : () => _cancelAppointment(doc),
+                    icon: const Icon(
+                      Icons.cancel_outlined,
+                      size: 17,
+                    ),
+                    label: const Text(
+                      'Cancel Appointment',
+                    ),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.redAccent),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      foregroundColor: Colors.red,
                     ),
                   ),
                 ),
@@ -292,43 +528,53 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
     );
   }
 
-  Widget _buildEmptyState(String message) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.calendar_today_outlined, size: 55, color: _textMuted),
-          const SizedBox(height: 12),
-          Text(
-            message,
-            style: const TextStyle(color: _textMuted, fontSize: 14, fontWeight: FontWeight.w600),
+  Widget _detailRow(
+    IconData icon,
+    String text, {
+    Color color = muted,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 17, color: color),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Color _getStatusBg(String status) {
-    switch (status) {
-      case 'Approved':
-      case 'Completed':
-        return const Color(0xFFECFDF5);
-      case 'Cancelled':
-        return const Color(0xFFFEF2F2);
-      default:
-        return const Color(0xFFFEF3C7);
-    }
-  }
-
-  Color _getStatusText(String status) {
-    switch (status) {
-      case 'Approved':
-      case 'Completed':
-        return const Color(0xFF059669);
-      case 'Cancelled':
-        return Colors.redAccent;
-      default:
-        return const Color(0xFFD97706);
-    }
+  Widget _emptyState(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(25),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.calendar_month_outlined,
+              color: muted,
+              size: 56,
+            ),
+            const SizedBox(height: 14),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: muted,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

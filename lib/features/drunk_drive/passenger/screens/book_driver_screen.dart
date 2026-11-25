@@ -101,11 +101,33 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     if (result != null) setState(() => _destination = result);
   }
 
+  void _swapLocations() {
+    if (_pickup == null || _destination == null) return;
+    setState(() {
+      final previousPickup = _pickup;
+      _pickup = _destination;
+      _destination = previousPickup;
+    });
+  }
+
+  bool get _sameLocations {
+    final pickup = _pickup;
+    final destination = _destination;
+    if (pickup == null || destination == null) return false;
+    if (pickup.latitude != null && pickup.longitude != null &&
+        destination.latitude != null && destination.longitude != null) {
+      return pickup.latitude == destination.latitude &&
+          pickup.longitude == destination.longitude;
+    }
+    return false;
+  }
+
   void _onContinue() {
     if (_selectedVehicleId == null ||
         _pickup == null ||
         _destination == null ||
-        _selectedReason == null) {
+        _selectedReason == null ||
+        _sameLocations) {
       return;
     }
     final matchingVehicles = _vehicles.where(
@@ -236,7 +258,18 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
           value: _pickup?.name,
           onTap: _selectPickup,
         ),
-        const SizedBox(height: 10),
+        if (_pickup != null && _destination != null)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _swapLocations,
+              icon: const Icon(Icons.swap_vert_rounded),
+              label: const Text('Swap locations'),
+              style: TextButton.styleFrom(foregroundColor: colors.accent),
+            ),
+          )
+        else
+          const SizedBox(height: 10),
         _LocationTile(
           icon: Icons.location_on_rounded,
           iconColor: colors.danger,
@@ -244,6 +277,13 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
           value: _destination?.name,
           onTap: _selectDestination,
         ),
+        if (_sameLocations) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Pickup and destination must be different locations.',
+            style: TextStyle(color: colors.danger, fontSize: 12),
+          ),
+        ],
         const SizedBox(height: 24),
         _SectionTitle(title: 'Select Vehicle', colors: colors),
         const SizedBox(height: 4),
@@ -299,7 +339,8 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     final enabled = _selectedVehicleId != null &&
         _pickup != null &&
         _destination != null &&
-        _selectedReason != null;
+        _selectedReason != null &&
+        !_sameLocations;
 
     return SafeArea(
       top: false,

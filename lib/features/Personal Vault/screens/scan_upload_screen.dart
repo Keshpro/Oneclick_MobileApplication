@@ -16,7 +16,7 @@ class _ScanUploadScreenState extends State<ScanUploadScreen> {
   static const Color _ink = Color(0xFF303344);
   static const Color _muted = Color(0xFF686C7C);
 
-  String? _selectedFileName;
+  PlatformFile? _selectedFile;
 
 Future<void> _chooseFile() async {
   final result = await FilePicker.pickFiles(
@@ -28,8 +28,10 @@ Future<void> _chooseFile() async {
 
   final file = result.first;
 
+  if (!mounted) return;
+
   setState(() {
-    _selectedFileName = file.name;
+    _selectedFile = file;
   });
 }
   void _openCamera() {
@@ -43,6 +45,9 @@ Future<void> _chooseFile() async {
   }
 
   void _continueToReview() {
+    final file = _selectedFile;
+    if (file == null) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -54,7 +59,7 @@ Future<void> _chooseFile() async {
   expiryNotification: false,
   notes: '',
   tags: const [],
-  selectedFile: null,
+  selectedFile: file,
 ),
       ),
     );
@@ -135,7 +140,7 @@ Future<void> _chooseFile() async {
                     onPressed: _chooseFile,
                   ),
 
-                  if (_selectedFileName != null) ...[
+                  if (_selectedFile != null) ...[
                     const SizedBox(height: 24),
                     Container(
                       padding: const EdgeInsets.all(18),
@@ -175,7 +180,7 @@ Future<void> _chooseFile() async {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  _selectedFileName!,
+                                  _selectedFile!.name,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     color: _muted,
@@ -232,7 +237,7 @@ Future<void> _chooseFile() async {
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton(
-                      onPressed: _selectedFileName == null
+                      onPressed: _selectedFile == null
                           ? null
                           : _continueToReview,
                       style: ElevatedButton.styleFrom(

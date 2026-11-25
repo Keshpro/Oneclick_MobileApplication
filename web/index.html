@@ -49,5 +49,35 @@
   pdfjsLib.GlobalWorkerOptions.workerSrc =
       'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
 </script>
+
+
+<script src="https://www.payhere.lk/lib/payhere-2.0.js"></script>
+
+<script>
+  window.oneclickPayHere = function (payment) {
+    return new Promise((resolve, reject) => {
+      if (typeof payhere === "undefined") {
+        reject("PayHere Web SDK could not load.");
+        return;
+      }
+
+      payhere.onCompleted = function (orderId) {
+        // Gateway completion is not verified payment.
+        resolve(String(orderId));
+      };
+
+      payhere.onDismissed = function () {
+        reject("Payment window was closed.");
+      };
+
+      payhere.onError = function (error) {
+        reject(String(error));
+      };
+
+      payhere.startPayment(payment);
+    });
+  };
+</script>
+
 </body>
 </html>

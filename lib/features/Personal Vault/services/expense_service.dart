@@ -5,8 +5,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/expense_record.dart';
 
 class ExpenseService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore =
+      FirebaseFirestore.instance;
+
+  final FirebaseAuth _auth =
+      FirebaseAuth.instance;
 
   static const List<String> modules = [
     'food',
@@ -16,45 +19,76 @@ class ExpenseService {
     'drunk_drive',
   ];
 
-  String get _userId {
-    final user = _auth.currentUser;
+  // ---------------------------------------------------
+  // REAL-TIME PAYMENT HISTORY
+  // ---------------------------------------------------
 
-    if (user == null) {
-      throw StateError('Please sign in to view your expenses.');
+  Stream<List<ExpenseRecord>> watchExpenses() {
+    final uid = _auth.currentUser?.uid;
+
+    if (uid == null) {
+      return Stream.value(<ExpenseRecord>[]);
     }
 
-    return user.uid;
-  }
-
-  CollectionReference<Map<String, dynamic>> get _expenses {
     return _firestore
-        .collection('users')
-        .doc(_userId)
-        .collection('expenses');
-  }
+        .collection('payments')
+        .where('userId', isEqualTo: uid)
+        .snapshots()
+        .map((snapshot) {
+      if (_auth.currentUser?.uid != uid) {
+        return <ExpenseRecord>[];
+      }
 
-  // Listen for expenses belonging to the signed-in user.
-  Stream<List<ExpenseRecord>> watchExpenses() {
-    return _expenses.snapshots().map((snapshot) {
-      final expenses = snapshot.docs
-          .where((doc) => doc.data()['status'] == 'paid')
-          .map(ExpenseRecord.fromFirestore)
-          .where((expense) =>
-              modules.contains(expense.sourceModule) &&
-              expense.sourceTransactionId.isNotEmpty &&
-              expense.amount.isFinite &&
-              expense.amount > 0 &&
-              expense.currency == 'LKR' &&
-              expense.paidAt.millisecondsSinceEpoch > 0)
-          .toList();
+      final unique = <String, ExpenseRecord>{};
 
-      expenses.sort((a, b) => b.paidAt.compareTo(a.paidAt));
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
 
-      return expenses;
+        // Additional ownership validation.
+        if (data['userId'] != uid) {
+          continue;
+        }
+
+        final expense =
+            ExpenseRecord.fromFirestore(doc);
+
+        // Validate payment records.
+        if (!modules.contains(expense.sourceModule) ||
+            expense.currency != 'LKR' ||
+            !expense.amount.isFinite ||
+            expense.amount <= 0 ||
+            expense.paidAt.millisecondsSinceEpoch <= 0) {
+          continue;
+        }
+
+        final key =
+            expense.sourceTransactionId.isEmpty
+                ? expense.id
+                : expense.sourceTransactionId;
+
+        final existing = unique[key];
+
+        // Prevent duplicate payment IDs.
+        if (existing == null ||
+            expense.paidAt.isAfter(existing.paidAt)) {
+          unique[key] = expense;
+        }
+      }
+
+      final records = unique.values.toList();
+
+      records.sort(
+        (a, b) => b.paidAt.compareTo(a.paidAt),
+      );
+
+      return records;
     });
   }
 
-  // Expenses within a given calendar month.
+  // ---------------------------------------------------
+  // MONTHLY PAYMENT RECORDS
+  // ---------------------------------------------------
+
   List<ExpenseRecord> expensesForMonth(
     List<ExpenseRecord> expenses,
     DateTime month,
@@ -65,16 +99,26 @@ class ExpenseService {
     }).toList();
   }
 
-  // Total paid amount for a given month.
+  // ---------------------------------------------------
+  // MONTHLY DEMO PAYMENT TOTAL
+  // ---------------------------------------------------
+
   double monthlyTotal(
     List<ExpenseRecord> expenses,
     DateTime month,
   ) {
     return expensesForMonth(expenses, month)
-        .fold<double>(0, (total, expense) => total + expense.amount);
+        .where((expense) => expense.isDemoPaid)
+        .fold<double>(
+          0.0,
+          (total, expense) => total + expense.amount,
+        );
   }
 
-  // Spending totals grouped by OneClick module.
+  // ---------------------------------------------------
+  // MODULE-WISE TOTALS
+  // ---------------------------------------------------
+
   Map<String, double> totalsByModule(
     List<ExpenseRecord> expenses,
     DateTime month,
@@ -83,13 +127,61 @@ class ExpenseService {
       for (final module in modules) module: 0.0,
     };
 
-    for (final expense in expensesForMonth(expenses, month)) {
-      if (totals.containsKey(expense.sourceModule)) {
+    for (final expense
+        in expensesForMonth(expenses, month)) {
+      if (expense.isDemoPaid &&
+          totals.containsKey(expense.sourceModule)) {
         totals[expense.sourceModule] =
-            totals[expense.sourceModule]! + expense.amount;
+            totals[expense.sourceModule]! +
+                expense.amount;
       }
     }
 
     return totals;
+  }
+
+  // ---------------------------------------------------
+  // TRANSACTION STATISTICS
+  // ---------------------------------------------------
+
+  int confirmedPaymentCount(
+    List<ExpenseRecord> expenses,
+    DateTime month,
+  ) {
+    return expensesForMonth(expenses, month)
+        .where((expense) => expense.isDemoPaid)
+        .length;
+  }
+
+  int pendingCashCount(
+    List<ExpenseRecord> expenses,
+    DateTime month,
+  ) {
+    return expensesForMonth(expenses, month)
+        .where((expense) => expense.isPendingCash)
+        .length;
+  }
+
+  double pendingCashTotal(
+    List<ExpenseRecord> expenses,
+    DateTime month,
+  ) {
+    return expensesForMonth(expenses, month)
+        .where((expense) => expense.isPendingCash)
+        .fold<double>(
+          0.0,
+          (total, expense) => total + expense.amount,
+        );
+  }
+
+  double totalDemoPayments(
+    List<ExpenseRecord> expenses,
+  ) {
+    return expenses
+        .where((expense) => expense.isDemoPaid)
+        .fold<double>(
+          0.0,
+          (total, expense) => total + expense.amount,
+        );
   }
 }

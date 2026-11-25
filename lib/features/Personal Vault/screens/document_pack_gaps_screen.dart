@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'document_pack_export_screen.dart';
+import 'document_pack_home_screen.dart';
+import '../services/document_pack_service.dart';
 import '../models/document_pack.dart';
 
 class DocumentPackGapsScreen extends StatefulWidget {
@@ -17,15 +19,16 @@ class DocumentPackGapsScreen extends StatefulWidget {
 
 class _DocumentPackGapsScreenState
     extends State<DocumentPackGapsScreen> {
-  static const background = Color(0xFFE9EBF2);
-  static const card = Color(0xFFEEF0F6);
-  static const purple = Color(0xFF6667FF);
-  static const ink = Color(0xFF303344);
-  static const muted = Color(0xFF707383);
-  static const orange = Color(0xFFFF9800);
-  static const red = Color(0xFFFF3B62);
-  static const green = Color(0xFF00A978);
+  static const background = Color(0xFFF5F3F2);
+  static const card = Color(0xFFFFFDFC);
+  static const purple = Color(0xFF725763);
+  static const ink = Color(0xFF302B31);
+  static const muted = Color(0xFF776F77);
+  static const orange = Color(0xFFBA8754);
+  static const red = Color(0xFFB96C75);
+  static const green = Color(0xFF47866D);
 
+  bool _savingDraft = false;
   bool accommodationResolved = false;
 bool bankResolved = false;
 
@@ -55,7 +58,7 @@ bool get allResolved =>
                     'Resolve Remaining Gaps',
                     style: TextStyle(
                       color: ink,
-                      fontSize: 21,
+                      fontSize: 17,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -66,7 +69,7 @@ bool get allResolved =>
                     'Review uncertain matches and provide any missing documents before creating the pack.',
                     style: TextStyle(
                       color: muted,
-                      fontSize: 13,
+                      fontSize: 12,
                       height: 1.5,
                     ),
                   ),
@@ -89,6 +92,16 @@ bool get allResolved =>
                   const SizedBox(height: 24),
 
                   _continue(),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: TextButton(
+                      onPressed: _savingDraft ? null : _saveDraftAndExit,
+                      child: const Text(
+                        'Save Pack Draft & Exit',
+                        style: TextStyle(color: muted),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -96,6 +109,26 @@ bool get allResolved =>
         ),
       ),
     );
+  }
+
+  Future<void> _saveDraftAndExit() async {
+    if (_savingDraft) return;
+    setState(() => _savingDraft = true);
+    try {
+      await DocumentPackService().savePack(widget.pack);
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const DocumentPackHomeScreen()),
+        (route) => route.isFirst,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to save pack: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _savingDraft = false);
+    }
   }
 
   Widget _header() {
@@ -111,12 +144,11 @@ bool get allResolved =>
             'Document Pack Builder',
             style: TextStyle(
               color: ink,
-              fontSize: 22,
+              fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),
         ),
-        _circle(Icons.more_vert, () {}),
       ],
     );
   }
@@ -128,7 +160,7 @@ bool get allResolved =>
           const Row(
             children: [
               Text(
-                '● Step 3 of 4',
+                'Step 3 of 4',
                 style: TextStyle(
                   color: purple,
                   fontWeight: FontWeight.w600,
@@ -184,7 +216,7 @@ bool get allResolved =>
           'All Requirements Matched',
           style: TextStyle(
             color: ink,
-            fontSize: 18,
+            fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -194,7 +226,7 @@ bool get allResolved =>
           'You can continue to review your document pack.',
           style: TextStyle(
             color: muted,
-            fontSize: 13,
+            fontSize: 12,
             height: 1.5,
           ),
         ),
@@ -227,7 +259,7 @@ Widget _actualGapCard(String requirementName) {
                 requirementName,
                 style: const TextStyle(
                   color: ink,
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -240,7 +272,7 @@ Widget _actualGapCard(String requirementName) {
           'No Vault document has been confirmed for this requirement.',
           style: TextStyle(
             color: muted,
-            fontSize: 13,
+            fontSize: 12,
             height: 1.5,
           ),
         ),
@@ -262,7 +294,7 @@ Widget _gapStatus() {
       vertical: 7,
     ),
     decoration: BoxDecoration(
-      color: const Color(0xFFF0F1F6),
+      color: const Color(0xFFF7F3F4),
       borderRadius: BorderRadius.circular(18),
     ),
     child: const Text(
@@ -313,7 +345,7 @@ Widget _gapStatus() {
                 ),
               ),
               _status(
-                resolved ? '● Resolved' : '● Needs Review',
+                resolved ? 'Resolved' : 'Needs Review',
                 resolved ? green : orange,
               ),
             ],
@@ -332,7 +364,7 @@ Widget _gapStatus() {
             Container(
               padding: const EdgeInsets.all(17),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0F1F6),
+                color: const Color(0xFFF7F3F4),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: const Row(
@@ -430,7 +462,7 @@ Widget _gapStatus() {
                 ),
               ),
               _status(
-                resolved ? '● Resolved' : '● Missing',
+                resolved ? 'Resolved' : 'Missing',
                 resolved ? green : red,
               ),
             ],
@@ -442,7 +474,7 @@ Widget _gapStatus() {
             Container(
               padding: const EdgeInsets.all(17),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0F1F6),
+                color: const Color(0xFFF7F3F4),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: const Row(
@@ -532,7 +564,7 @@ Widget _gapStatus() {
                 value: total == 0 ? 0 : matched / total,
                 strokeWidth: 6,
                 color: allResolved ? green : purple,
-                backgroundColor: const Color(0xFFD5D7E0),
+                backgroundColor: const Color(0xFFE5DADF),
               ),
               Text(
                 '$matched/$total',
@@ -555,7 +587,7 @@ Widget _gapStatus() {
                     : '$matched of $total Requirements Matched',
                 style: const TextStyle(
                   color: ink,
-                  fontSize: 17,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -566,7 +598,7 @@ Widget _gapStatus() {
                     : '$remaining requirement(s) still need a confirmed document.',
                 style: const TextStyle(
                   color: muted,
-                  fontSize: 13,
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -598,7 +630,7 @@ Widget _gapStatus() {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 18),
           decoration: BoxDecoration(
-            color: const Color(0xFFF0F1F6),
+            color: const Color(0xFFF7F3F4),
             borderRadius: BorderRadius.circular(30),
             boxShadow: _shadow(),
           ),
@@ -610,7 +642,7 @@ Widget _gapStatus() {
                 style: TextStyle(
                   color: purple,
                   fontWeight: FontWeight.w600,
-                  fontSize: 15,
+                  fontSize: 14,
                 ),
               ),
               SizedBox(width: 9),
@@ -633,7 +665,7 @@ Widget _gapStatus() {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F1F6),
+        color: const Color(0xFFF7F3F4),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
@@ -685,7 +717,7 @@ Widget _gapStatus() {
           horizontal: 12,
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFFF0F1F6),
+          color: const Color(0xFFF7F3F4),
           borderRadius: BorderRadius.circular(25),
           boxShadow: _shadow(),
         ),
@@ -722,7 +754,7 @@ Widget _gapStatus() {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 15),
         decoration: BoxDecoration(
-          color: const Color(0xFFF0F1F6),
+          color: const Color(0xFFF7F3F4),
           borderRadius: BorderRadius.circular(27),
           boxShadow: _shadow(),
         ),
@@ -751,7 +783,7 @@ Widget _gapStatus() {
         vertical: 7,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F2F7),
+        color: const Color(0xFFECE3E8),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Text(
@@ -788,7 +820,7 @@ Widget _gapStatus() {
         width: 56,
         height: 56,
         decoration: BoxDecoration(
-          color: const Color(0xFFF0F1F6),
+          color: const Color(0xFFF7F3F4),
           shape: BoxShape.circle,
           boxShadow: _shadow(),
         ),
@@ -840,7 +872,7 @@ Widget _gapStatus() {
             shape: BoxShape.circle,
             color: active
                 ? purple
-                : const Color(0xFFF1F2F7),
+                : const Color(0xFFECE3E8),
             boxShadow: _shadow(),
           ),
           child: Text(
@@ -871,21 +903,16 @@ Widget _gapStatus() {
     return Container(
       width: 18,
       height: 3,
-      color: active ? purple : const Color(0xFFD7D9E4),
+      color: active ? purple : const Color(0xFFE5DADF),
     );
   }
 
   List<BoxShadow> _shadow() {
     return const [
       BoxShadow(
-        color: Colors.white70,
-        offset: Offset(-3, -3),
-        blurRadius: 8,
-      ),
-      BoxShadow(
-        color: Color(0xFFD5D7E0),
-        offset: Offset(4, 4),
-        blurRadius: 9,
+        color: Color(0x16000000),
+        offset: Offset(0, 4),
+        blurRadius: 14,
       ),
     ];
   }

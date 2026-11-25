@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../models/booking_model.dart';
 import '../../models/incident_model.dart';
 import '../../services/incident_service.dart';
-import '../../services/vehicle_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 
 class ReportIncidentScreen extends StatefulWidget {
@@ -46,14 +45,25 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
 
     setState(() => _isSubmitting = true);
 
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    _incidentService.reportIncident(
-      bookingId: widget.booking.id,
-      reportedBy: VehicleService.currentUserId,
-      type: _selectedType!,
-      description: description,
-    );
+    try {
+      await _incidentService.reportIncident(
+        bookingId: widget.booking.id,
+        type: _selectedType!,
+        description: description,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not submit the incident report. Check your connection '
+            'and try again. If this continues, contact support.',
+          ),
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
     setState(() => _isSubmitting = false);

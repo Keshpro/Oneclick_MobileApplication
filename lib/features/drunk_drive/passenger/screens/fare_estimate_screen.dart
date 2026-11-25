@@ -7,7 +7,10 @@ import '../../models/vehicle_model.dart';
 import '../../services/fare_service.dart';
 import '../../services/location_service.dart';
 import '../../theme/drunk_drive_colors.dart';
-import 'booking_confirmation_screen.dart';
+import '../../models/booking_model.dart';
+import '../../models/booking_status.dart';
+import '../../services/booking_firestore_service.dart';
+import 'active_trip_screen.dart';
 
 class FareEstimateScreen extends StatefulWidget {
   final VehicleModel vehicle;
@@ -30,11 +33,14 @@ class FareEstimateScreen extends StatefulWidget {
 class _FareEstimateScreenState extends State<FareEstimateScreen> {
   final LocationService _locationService = LocationService();
   final FareService _fareService = FareService();
+  final BookingFirestoreService _bookingService = BookingFirestoreService();
+  bool _isConfirming = false;
 
   bool _isLoading = true;
   double _distanceKm = 0;
   int _durationMinutes = 0;
   FareEstimate? _estimate;
+  String? _fareError;
 
   @override
   void initState() {
@@ -43,46 +49,114 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
   }
 
   Future<void> _calculateFare() async {
-    await Future.delayed(const Duration(milliseconds: 400));
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _fareError = null;
+        _estimate = null;
+      });
+    }
 
-    final distanceKm = _locationService.distanceKmBetween(
-      widget.pickup,
-      widget.destination,
-    );
-    final durationMinutes = _locationService.estimatedDurationMinutes(
-      distanceKm,
-    );
-    final estimate = _fareService.estimateFare(
-      distanceKm: distanceKm,
-      durationMinutes: durationMinutes,
-    );
+    final pickup = widget.pickup;
+    final destination = widget.destination;
+    final coordinates = [
+      pickup.latitude,
+      pickup.longitude,
+      destination.latitude,
+      destination.longitude,
+    ];
 
-    if (!mounted) return;
-    setState(() {
-      _distanceKm = distanceKm;
-      _durationMinutes = durationMinutes;
-      _estimate = estimate;
-      _isLoading = false;
-    });
+    // Do not allow LocationService's legacy 10 km fallback to quote a fare.
+    if (coordinates.any((value) => value == null) ||
+        pickup.latitude! < -90 || pickup.latitude! > 90 ||
+        destination.latitude! < -90 || destination.latitude! > 90 ||
+        pickup.longitude! < -180 || pickup.longitude! > 180 ||
+        destination.longitude! < -180 || destination.longitude! > 180 ||
+        coordinates.any((value) => value != null && !value.isFinite)) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _fareError = 'Pickup or destination coordinates are unavailable. '
+            'Go back and select both locations on the map again.';
+      });
+      return;
+    }
+
+    try {
+      final distanceKm = _locationService.distanceKmBetween(
+        pickup,
+        destination,
+      );
+      if (!distanceKm.isFinite || distanceKm <= 0) {
+        throw StateError('Pickup and destination must be different locations.');
+      }
+      final durationMinutes = _locationService.estimatedDurationMinutes(
+        distanceKm,
+      );
+      final estimate = _fareService.estimateFare(
+        distanceKm: distanceKm,
+        durationMinutes: durationMinutes,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _distanceKm = distanceKm;
+        _durationMinutes = durationMinutes;
+        _estimate = estimate;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _fareError = 'Unable to estimate this trip. Check that pickup and '
+            'destination are different, then select the locations again.';
+        _isLoading = false;
+      });
+    }
   }
 
-  void _onContinue() {
-    if (_estimate == null) return;
+  Future<void> _onContinue() async {
+    final estimate = _estimate;
+    if (estimate == null || _fareError != null || _isConfirming) return;
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BookingConfirmationScreen(
-          vehicle: widget.vehicle,
-          pickup: widget.pickup,
-          destination: widget.destination,
-          reason: widget.reason,
-          fareEstimate: _estimate!,
-          distanceKm: _distanceKm,
-          durationMinutes: _durationMinutes,
+    setState(() => _isConfirming = true);
+    try {
+      final booking = BookingModel(
+        id: '',
+        passengerId: _bookingService.currentUserId,
+        vehicle: widget.vehicle,
+        pickup: widget.pickup,
+        destination: widget.destination,
+        reason: widget.reason,
+        fareEstimate: estimate,
+        distanceKm: _distanceKm,
+        durationMinutes: _durationMinutes,
+        status: BookingStatus.searchingDriver,
+        createdAt: DateTime.now(),
+      );
+
+      final bookingId = await _bookingService.createBookingModel(booking);
+      // Read the saved booking so navigation uses its actual Firestore ID.
+      final savedBooking = await _bookingService.watchBooking(bookingId).first;
+      if (savedBooking == null) {
+        throw StateError('Booking was created but could not be loaded.');
+      }
+      if (!mounted) return;
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(
+          builder: (_) => ActiveTripScreen(booking: savedBooking),
         ),
-      ),
-    );
+        (route) => route.isFirst,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to confirm booking: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _isConfirming = false);
+    }
   }
 
   String _rs(double amount) => 'Rs. ${amount.toStringAsFixed(0)}';
@@ -99,16 +173,52 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'Estimated Fare',
+          'Review & Book',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
       body: SafeArea(child: _buildBody(colors)),
-      bottomNavigationBar: _isLoading ? null : _buildContinueBar(colors),
+      bottomNavigationBar: (_isLoading || _estimate == null)
+          ? null
+          : _buildContinueBar(colors),
     );
   }
 
   Widget _buildBody(DrunkDrivePalette colors) {
+    if (_fareError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.location_off_rounded, size: 46, color: colors.danger),
+              const SizedBox(height: 16),
+              Text(
+                'Location unavailable',
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _fareError!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: colors.textMuted),
+              ),
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.arrow_back_rounded),
+                label: const Text('Choose locations again'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     if (_isLoading || _estimate == null) {
       return Center(
         child: Column(
@@ -303,7 +413,7 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
         child: SizedBox(
           width: double.infinity,
           child: FilledButton(
-            onPressed: _onContinue,
+            onPressed: _isConfirming ? null : _onContinue,
             style: FilledButton.styleFrom(
               backgroundColor: colors.accent,
               foregroundColor: Colors.white,
@@ -312,10 +422,18 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-            child: const Text(
-              'Continue',
-              style: TextStyle(fontWeight: FontWeight.w800),
-            ),
+            child: _isConfirming
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
+                    'Confirm & Find Driver',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
           ),
         ),
       ),

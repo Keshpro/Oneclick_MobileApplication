@@ -37,9 +37,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           _loadError = booking == null ? 'Booking could not be found.' : null;
         });
       },
-      onError: (Object error) {
+      onError: (Object _) {
         if (!mounted) return;
-        setState(() => _loadError = 'Unable to load payment details: $error');
+        setState(() => _loadError = 'Unable to load payment details. Check your connection and reopen this screen.');
       },
     );
   }
@@ -139,9 +139,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
       );
       if (!mounted) return;
       Navigator.pop(context, true);
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
-      _showMessage('Unable to update payment: $error');
+      _showMessage('Payment could not be updated. Please check your connection and try again.');
     } finally {
       if (mounted) setState(() => _isProcessing = false);
     }

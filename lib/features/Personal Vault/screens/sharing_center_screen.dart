@@ -215,18 +215,11 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
     void showSharingSearch() {
       final controller = TextEditingController();
       final searchItems = [
-        ...sharedRecords.map(
-          (record) => (
-            title: record.recordTitle,
-            received: false,
-          ),
-        ),
-        ...receivedRecords.map(
-          (record) => (
-            title: record.recordTitle,
-            received: true,
-          ),
-        ),
+        'Apartment Lease Agreement',
+        'Home Purchase Tax Bundle',
+        'Wi-Fi & Router Admin',
+        'Family Health Insurance Group',
+        'Rental Car Protection Receipt',
       ];
       showModalBottomSheet(
         context: context,
@@ -237,7 +230,7 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
             builder: (context, setModalState) {
               final query = controller.text.toLowerCase();
               final results = searchItems.where((item) {
-                return item.title.toLowerCase().contains(query);
+                return item.toLowerCase().contains(query);
               }).toList();
               return Padding(
                 padding: EdgeInsets.only(
@@ -323,7 +316,7 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
                                       color: purple,
                                     ),
                                     title: Text(
-                                      item.title,
+                                      item,
                                       style: const TextStyle(
                                         color: ink,
                                         fontWeight: FontWeight.w600,
@@ -336,10 +329,11 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
                                     ),
                                     onTap: () {
                                       Navigator.pop(context);
-
-                                      setState(() {
-                                        sharedByMe = !item.received;
-                                      });
+                                      ScaffoldMessenger.of(
+                                        this.context,
+                                      ).showSnackBar(
+                                        SnackBar(content: Text('Found: $item')),
+                                      );
                                     },
                                   );
                                 },
@@ -796,7 +790,7 @@ class _SharingCenterScreenState extends State<SharingCenterScreen> {
                 child: _receivedItem(
                   icon: Icons.description_outlined,
                   title: record.recordTitle,
-                  from: 'Shared by ${record.ownerEmail}',
+                  from: 'Shared by ${record.ownerId}',
                   permission: record.permission,
                   footerIcon: record.expiryDate == null
                       ? Icons.all_inclusive
@@ -1418,13 +1412,10 @@ class _VaultGlassScope extends InheritedWidget {
 }
 
 class _VaultGlassCard extends StatefulWidget {
-  // ignore: unused_element_parameter
   const _VaultGlassCard({
     required this.child,
     required this.padding,
-     // ignore: unused_element_parameter
-    this.interactive = false,
-  });
+  }) : interactive = false;
   final Widget child;
   final EdgeInsetsGeometry padding;
   final bool interactive;
@@ -1583,11 +1574,7 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
 }
 
 class _VaultNavGlyph extends StatefulWidget {
-  const _VaultNavGlyph(
-    this.icon, {
-    // ignore: unused_element_parameter
-    this.color,
-  });
+  const _VaultNavGlyph(this.icon) : color = null;
   final IconData icon;
   final Color? color;
 

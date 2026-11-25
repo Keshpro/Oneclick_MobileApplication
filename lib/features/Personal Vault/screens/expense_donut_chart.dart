@@ -9,24 +9,37 @@ class ExpenseDonutChart extends StatelessWidget {
     required this.totals,
   });
 
-  /// Category totals for the selected month, in LKR.
   final Map<String, double> totals;
 
   static const _categories = [
     _DonutCategory(
-      'food', 'Food', Color(0xFFFFA45C),
+      'food',
+      'Food',
+      Color(0xFFFFA45C),
     ),
+
     _DonutCategory(
-      'doctor', 'Doctor', Color(0xFFEF7894),
+      'doctor',
+      'Doctor',
+      Color(0xFFEF7894),
     ),
+
     _DonutCategory(
-      'groceries', 'Groceries', Color(0xFF4CBF9C),
+      'groceries',
+      'Groceries',
+      Color(0xFF4CBF9C),
     ),
+
     _DonutCategory(
-      'quickfix', 'QuickFix', Color(0xFF6997E8),
+      'quickfix',
+      'QuickFix',
+      Color(0xFF6997E8),
     ),
+
     _DonutCategory(
-      'drunk_drive', 'Drunk Drive', Color(0xFF9B80DD),
+      'drunk_drive',
+      'Drink & Drive',
+      Color(0xFF9B80DD),
     ),
   ];
 
@@ -39,7 +52,8 @@ class ExpenseDonutChart extends StatelessWidget {
 
     final total = values.fold<double>(
       0.0,
-      (runningTotal, value) => runningTotal + value,
+      (runningTotal, value) =>
+          runningTotal + value,
     );
 
     return Container(
@@ -60,7 +74,8 @@ class ExpenseDonutChart extends StatelessWidget {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           const Text(
             'Spending Distribution',
@@ -70,53 +85,93 @@ class ExpenseDonutChart extends StatelessWidget {
               color: Color(0xFF25263A),
             ),
           ),
+
           const SizedBox(height: 5),
+
           const Text(
-            'Monthly spending by category',
+            'Monthly demo payments by category',
             style: TextStyle(
               fontSize: 12,
               color: Color(0xFF8B90A4),
             ),
           ),
+
           const SizedBox(height: 24),
 
           LayoutBuilder(
             builder: (context, constraints) {
-              final compact = constraints.maxWidth < 380;
+              final compact =
+                  constraints.maxWidth < 380;
+
+              final chartSize = math.min(
+                constraints.maxWidth,
+                compact ? 200.0 : 220.0,
+              );
 
               final donut = SizedBox(
-                width: compact ? 200 : 220,
-                height: compact ? 200 : 220,
+                width: chartSize,
+                height: chartSize,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
                     CustomPaint(
                       size: Size(
-                        compact ? 200 : 220,
-                        compact ? 200 : 220,
+                        chartSize,
+                        chartSize,
                       ),
                       painter: _ExpenseDonutPainter(
                         values: values,
                         total: total,
                         colors: [
-                          for (final category in _categories)
+                          for (final category
+                              in _categories)
                             category.color,
                         ],
                       ),
                     ),
+
+                    if (total <= 0)
+                      const Column(
+                        mainAxisSize:
+                            MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.pie_chart_outline_rounded,
+                            size: 25,
+                            color: Color(0xFF8B90A4),
+                          ),
+
+                          SizedBox(height: 5),
+
+                          Text(
+                            'No payments',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF8B90A4),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               );
 
               final legend = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
-                  for (var i = 0; i < _categories.length; i++)
+                  for (
+                    var i = 0;
+                    i < _categories.length;
+                    i++
+                  )
                     Padding(
                       padding: EdgeInsets.only(
-                        bottom: i == _categories.length - 1
-                            ? 0
-                            : 18,
+                        bottom:
+                            i == _categories.length - 1
+                                ? 0
+                                : 18,
                       ),
                       child: _legendRow(
                         _categories[i],
@@ -132,7 +187,9 @@ class ExpenseDonutChart extends StatelessWidget {
                 return Column(
                   children: [
                     Center(child: donut),
+
                     const SizedBox(height: 22),
+
                     legend,
                   ],
                 );
@@ -141,8 +198,12 @@ class ExpenseDonutChart extends StatelessWidget {
               return Row(
                 children: [
                   donut,
+
                   const SizedBox(width: 24),
-                  Expanded(child: legend),
+
+                  Expanded(
+                    child: legend,
+                  ),
                 ],
               );
             },
@@ -153,9 +214,12 @@ class ExpenseDonutChart extends StatelessWidget {
   }
 
   double _validAmount(double? amount) {
-    if (amount == null || !amount.isFinite || amount <= 0) {
+    if (amount == null ||
+        !amount.isFinite ||
+        amount <= 0) {
       return 0.0;
     }
+
     return amount;
   }
 
@@ -173,7 +237,9 @@ class ExpenseDonutChart extends StatelessWidget {
             shape: BoxShape.circle,
           ),
         ),
+
         const SizedBox(width: 9),
+
         Expanded(
           child: Text(
             category.label,
@@ -184,7 +250,9 @@ class ExpenseDonutChart extends StatelessWidget {
             ),
           ),
         ),
+
         const SizedBox(width: 6),
+
         Text(
           '${percentage.toStringAsFixed(1)}%',
           style: const TextStyle(
@@ -227,8 +295,11 @@ class _ExpenseDonutPainter extends CustomPainter {
       size.width / 2,
       size.height / 2,
     );
+
     final radius =
         math.min(size.width, size.height) / 2 - 18;
+
+    if (radius <= 0) return;
 
     final rect = Rect.fromCircle(
       center: center,
@@ -252,7 +323,11 @@ class _ExpenseDonutPainter extends CustomPainter {
 
     var startAngle = -math.pi / 2;
 
-    for (var i = 0; i < values.length; i++) {
+    for (
+      var i = 0;
+      i < values.length;
+      i++
+    ) {
       if (values[i] <= 0) continue;
 
       final sweepAngle =
@@ -286,7 +361,11 @@ class _ExpenseDonutPainter extends CustomPainter {
       return true;
     }
 
-    for (var i = 0; i < values.length; i++) {
+    for (
+      var i = 0;
+      i < values.length;
+      i++
+    ) {
       if (values[i] != oldDelegate.values[i] ||
           colors[i] != oldDelegate.colors[i]) {
         return true;
