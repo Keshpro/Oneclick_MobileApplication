@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../auth/screens/provider_rules_screen.dart';
-
 import 'food_saver_screen.dart';
-import 'mystery_bites_screen.dart';
-import 'sweet_craft_screen.dart';
 
 class FoodHomeScreen extends StatelessWidget {
   const FoodHomeScreen({super.key});
@@ -33,7 +30,6 @@ class FoodHomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome text
             const Text(
               'What are you craving today?',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -48,7 +44,6 @@ class FoodHomeScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Search bar
             Container(
               height: 52,
               decoration: BoxDecoration(
@@ -74,7 +69,6 @@ class FoodHomeScreen extends StatelessWidget {
 
             const SizedBox(height: 28),
 
-            // Services title
             const Text(
               'Explore Food',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -82,56 +76,99 @@ class FoodHomeScreen extends StatelessWidget {
 
             const SizedBox(height: 14),
 
-            // Food services
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 14,
-              mainAxisSpacing: 14,
-              childAspectRatio: 1.15,
-              children: [
-                // Save Bites
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const FoodSaverScreen(),
-                      ),
-                    );
-                  },
-                  child: _FoodServiceCard(
-                    icon: Icons.recycling_rounded,
-                    title: 'Save Bites',
-                    subtitle: 'Save food & money',
-                    color: const Color(0xFF43A047),
-                  ),
+            // Save Bites - Only visible Food service
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FoodSaverScreen()),
+                );
+              },
+              child: Container(
+                width: double.infinity,
+                height: 170,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
+                child: Row(
+                  children: [
+                    Container(
+                      height: 80,
+                      width: 80,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF43A047).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                      child: const Icon(
+                        Icons.recycling_rounded,
+                        color: Color(0xFF43A047),
+                        size: 42,
+                      ),
+                    ),
 
-                // Mystery Bites
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const MysteryBitesScreen(),
+                    const SizedBox(width: 18),
+
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Save Bites',
+                            style: TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
+                          const SizedBox(height: 6),
+
+                          Text(
+                            'Save food, save money and help reduce food waste.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          const Row(
+                            children: [
+                              Text(
+                                'Explore offers',
+                                style: TextStyle(
+                                  color: Color(0xFF2E7D32),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(width: 5),
+                              Icon(
+                                Icons.arrow_forward_rounded,
+                                color: Color(0xFF2E7D32),
+                                size: 18,
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                  child: _FoodServiceCard(
-                    icon: Icons.card_giftcard_rounded,
-                    title: 'Mystery Bites',
-                    subtitle: 'Discover mystery food',
-                    color: const Color(0xFFFF8A65),
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
 
             const SizedBox(height: 30),
 
-            // Ending Soon
             const Text(
               '🔥 Ending Soon',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -227,7 +264,7 @@ class FoodHomeScreen extends StatelessWidget {
 
             const SizedBox(height: 28),
 
-            // Impact
+            // Food Waste Impact
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -266,66 +303,6 @@ class FoodHomeScreen extends StatelessWidget {
             const SizedBox(height: 20),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _FoodServiceCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
-
-  const _FoodServiceCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 48,
-            width: 48,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: color, size: 26),
-          ),
-
-          const Spacer(),
-
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-
-          const SizedBox(height: 4),
-
-          Text(
-            subtitle,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-          ),
-        ],
       ),
     );
   }
