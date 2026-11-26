@@ -44,6 +44,9 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   final FirebaseAuth _auth =
       FirebaseAuth.instance;
 
+  late final Stream<User?> _authStream =
+      _auth.authStateChanges();
+
   int _tab = 0;
 
   String _filter = 'All';
@@ -490,7 +493,12 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   // ======================================================
 
   Future<void> _switchToUserMode() async {
-    if (_accountBusy || _busyIds.isNotEmpty) return;
+    if (_accountBusy ||
+        _availabilityBusy ||
+        _busyIds.isNotEmpty ||
+        uid.isEmpty) {
+      return;
+    }
 
     final confirmed = await _confirm(
       title: 'Switch to User Mode?',
@@ -523,7 +531,11 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   }
 
   Future<void> _logout() async {
-    if (_accountBusy || _busyIds.isNotEmpty) return;
+    if (_accountBusy ||
+        _availabilityBusy ||
+        _busyIds.isNotEmpty) {
+      return;
+    }
 
     final confirmed = await _confirm(
       title: 'Log out?',
@@ -592,6 +604,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
       context: context,
       backgroundColor: Colors.white,
       showDragHandle: true,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(24),
@@ -606,7 +619,8 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
               20,
               20,
             ),
-            child: Column(
+            child: SingleChildScrollView(
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
@@ -658,7 +672,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
                 _accountTile(
                   icon: Icons.swap_horiz_rounded,
-                  title: 'Switch Account',
+                  title: 'Switch to User Mode',
                   subtitle: 'Continue in User Mode',
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -676,6 +690,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                   },
                 ),
               ],
+            ),
             ),
           ),
         );
@@ -1012,6 +1027,76 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                       : _updateAvailability,
                 ),
               ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+
+                side: const BorderSide(
+                  color: Colors.white54,
+                ),
+
+                minimumSize: const Size(0, 46),
+
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+
+              onPressed: _accountBusy ||
+                      _availabilityBusy ||
+                      _busyIds.isNotEmpty
+                  ? null
+                  : _switchToUserMode,
+
+              icon: const Icon(
+                Icons.swap_horiz_rounded,
+              ),
+
+              label: const Text(
+                'Switch to User Mode',
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: red,
+                foregroundColor: Colors.white,
+
+                minimumSize: const Size(0, 46),
+
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+
+              onPressed: _accountBusy ||
+                      _availabilityBusy ||
+                      _busyIds.isNotEmpty
+                  ? null
+                  : _logout,
+
+              icon: const Icon(
+                Icons.logout_rounded,
+              ),
+
+              label: const Text(
+                'Log Out',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],
@@ -2040,7 +2125,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
             _quickAction(
               Icons.person_outline,
               'Profile',
-              () => _editProfile(),
+              () => _showAccountSheet(worker),
             ),
           ],
         ),
@@ -2581,6 +2666,22 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
             ),
           ),
 
+          IconButton(
+            tooltip: 'Log Out',
+
+            onPressed: _accountBusy ||
+                    _availabilityBusy ||
+                    _busyIds.isNotEmpty
+                ? null
+                : _logout,
+
+            icon: const Icon(
+              Icons.logout_rounded,
+              color: red,
+              size: 24,
+            ),
+          ),
+
           const SizedBox(width: 5),
         ],
       ),
@@ -2647,7 +2748,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: _auth.authStateChanges(),
+      stream: _authStream,
       builder: (context, authSnapshot) {
         if (authSnapshot.connectionState ==
             ConnectionState.waiting) {

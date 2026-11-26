@@ -391,7 +391,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
 
-    if (confirm != true) return;
+    if (confirm != true || !mounted) return;
 
     setState(() => _busy = true);
 
@@ -400,13 +400,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (!mounted) return;
 
-      // The app's auth-state listener should switch
-      // to the guest/login experience.
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      } else {
-        setState(() {});
-      }
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/login',
+        (route) => false,
+      );
     } catch (_) {
       _message('Unable to log out. Please try again.');
     } finally {
@@ -523,6 +520,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // ======================================================
+  // SWITCH TO QUICKFIX WORKER MODE
+  // ======================================================
+
+  Future<void> _switchToWorkerMode() async {
+    final user = _auth.currentUser;
+
+    if (user == null || _busy) return;
+
+    setState(() => _busy = true);
+
+    try {
+      final worker = await _firestore
+          .collection('workers')
+          .doc(user.uid)
+          .get(const GetOptions(source: Source.server));
+
+      if (!mounted ||
+          _auth.currentUser?.uid != user.uid) {
+        return;
+      }
+
+      if (!worker.exists) {
+        _message('Worker account is unavailable.');
+        return;
+      }
+
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/worker-dashboard',
+        (route) => false,
+      );
+
+    } catch (_) {
+      _message(
+        'Unable to verify worker account. Please try again.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Widget _workerModeSection(User user) {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      key: ValueKey('profile-worker-${user.uid}'),
+
+      stream: _firestore
+          .collection('workers')
+          .doc(user.uid)
+          .snapshots(),
+
+      builder: (context, snapshot) {
+        if (snapshot.hasError ||
+            !snapshot.hasData ||
+            !snapshot.data!.exists ||
+            _auth.currentUser?.uid != user.uid) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 25),
+
+            _sectionTitle('Professional Account'),
+
+            const SizedBox(height: 12),
+
+            _sectionCard([
+              _actionTile(
+                Icons.handyman_outlined,
+                'Switch to Worker Mode',
+                'Open QuickFix Worker Dashboard',
+                onTap: _busy ? null : _switchToWorkerMode,
+              ),
+            ]),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildAuthenticated(User user) {
     final ref = _userRef;
 
@@ -579,6 +659,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
 
             const SizedBox(height: 25),
+
+            _workerModeSection(user),
+
+            const SizedBox(height: 12),
 
             _sectionTitle('Personal Information'),
             const SizedBox(height: 12),
