@@ -1,8 +1,13 @@
+import 'dart:io';
+
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../models/food_offer_model.dart';
 import '../services/food_seller_data_service.dart';
 import 'food_my_offers_screen.dart';
+
+import '../services/food_saver_image_service.dart';
 
 class FoodAddSurplusScreen extends StatefulWidget {
   const FoodAddSurplusScreen({super.key});
@@ -23,6 +28,9 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
 
   String selectedCategory = 'Bakery';
   bool _isSaving = false;
+  File? _selectedFoodImage;
+  final ImagePicker _imagePicker = ImagePicker();
+  bool _isUploadingImage = false;
 
   DateTime? selectedStartDateTime;
   DateTime? selectedEndDateTime;
@@ -36,6 +44,32 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
     'Beverages',
     'Other',
   ];
+  Future<void> _pickFoodImage() async {
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 1200,
+      );
+
+      if (pickedFile == null || !mounted) return;
+
+      setState(() {
+        _selectedFoodImage = File(pickedFile.path);
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          duration: const Duration(seconds: 8),
+        ),
+      );
+
+      debugPrint('Create food offer error: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -153,21 +187,57 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
       _isSaving = true;
     });
 
-    final offer = FoodOfferModel(
-      foodName: foodNameController.text.trim(),
-      category: selectedCategory,
-      originalPrice: originalPriceController.text.trim(),
-      saverPrice: saverPriceController.text.trim(),
-      quantity: quantityController.text.trim(),
-      availableFrom: _formatDateTime(startAt),
-      availableUntil: _formatDateTime(endAt),
-      description: descriptionController.text.trim(),
-      allergens: allergenController.text.trim(),
-      startsAt: startAt,
-      expiresAt: endAt,
-    );
-
     try {
+      String? uploadedImageUrl;
+
+      // Upload the selected photo if the seller chose one.
+      if (_selectedFoodImage != null) {
+        setState(() {
+          _isUploadingImage = true;
+        });
+
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('savebite_offers')
+            .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+        debugPrint('STORAGE BUCKET: ${FirebaseStorage.instance.bucket}');
+        debugPrint('UPLOAD PATH: ${storageRef.fullPath}');
+
+        final uploadTask = storageRef.putFile(_selectedFoodImage!);
+
+        final snapshot = await uploadTask;
+
+        debugPrint('FINAL UPLOAD STATE: ${snapshot.state}');
+        debugPrint('FINAL UPLOAD PATH: ${snapshot.ref.fullPath}');
+
+        uploadedImageUrl = await snapshot.ref.getDownloadURL();
+
+        debugPrint('DOWNLOAD URL: $uploadedImageUrl');
+
+        if (mounted) {
+          setState(() {
+            _isUploadingImage = false;
+          });
+        }
+      }
+
+      final offer = FoodOfferModel(
+        foodName: foodNameController.text.trim(),
+        category: selectedCategory,
+        originalPrice: originalPriceController.text.trim(),
+        saverPrice: saverPriceController.text.trim(),
+        quantity: quantityController.text.trim(),
+        availableFrom: _formatDateTime(startAt),
+        availableUntil: _formatDateTime(endAt),
+        description: descriptionController.text.trim(),
+        allergens: allergenController.text.trim(),
+        startsAt: startAt,
+        expiresAt: endAt,
+        imageUrl: uploadedImageUrl,
+      );
+
+      await FoodSellerDataService.instance.addOffer(offer);
       await FoodSellerDataService.instance.addOffer(offer);
 
       if (!mounted) return;
@@ -183,21 +253,23 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
         context,
         MaterialPageRoute(builder: (_) => const FoodMyOffersScreen()),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('CREATE OFFER FAILED: $e');
+      debugPrint('$stackTrace');
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not save offer. Please try again.'),
-          duration: const Duration(seconds: 3),
+          content: Text(e.toString(), maxLines: 5),
+          duration: const Duration(seconds: 10),
         ),
       );
-
-      debugPrint('Create food offer error: $e');
     } finally {
       if (mounted) {
         setState(() {
           _isSaving = false;
+          _isUploadingImage = false;
         });
       }
     }
@@ -235,6 +307,95 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
               ),
 
               const SizedBox(height: 28),
+
+              // ------------------------------------------------------------
+              // FOOD PHOTO
+              // ------------------------------------------------------------
+              const Text(
+                'Food Photo',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                'Upload a real photo of the surplus food you are selling.',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+
+              const SizedBox(height: 12),
+
+              GestureDetector(
+                onTap: _isSaving ? null : _pickFoodImage,
+                child: Container(
+                  width: double.infinity,
+                  height: 220,
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.green.shade300,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: _selectedFoodImage != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Image.file(
+                            _selectedFoodImage!,
+                            width: double.infinity,
+                            height: 220,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.add_a_photo_outlined,
+                              size: 45,
+                              color: Colors.green.shade700,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Tap to upload food photo',
+                              style: TextStyle(
+                                color: Colors.green.shade800,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Choose an image from your gallery',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+
+              if (_selectedFoodImage != null) ...[
+                const SizedBox(height: 8),
+
+                TextButton.icon(
+                  onPressed: _isSaving
+                      ? null
+                      : () {
+                          setState(() {
+                            _selectedFoodImage = null;
+                          });
+                        },
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Remove photo'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                ),
+              ],
+
+              const SizedBox(height: 24),
+
+              // ------------------------------------------------------------
+              // FOOD NAME
+              // ------------------------------------------------------------
 
               // ------------------------------------------------------------
               // FOOD NAME
@@ -535,7 +696,11 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
                         )
                       : const Icon(Icons.add_circle_outline),
                   label: Text(
-                    _isSaving ? 'Saving Offer...' : 'Create Food Saver Offer',
+                    _isUploadingImage
+                        ? 'Uploading Photo...'
+                        : _isSaving
+                        ? 'Saving Offer...'
+                        : 'Create Food Saver Offer',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

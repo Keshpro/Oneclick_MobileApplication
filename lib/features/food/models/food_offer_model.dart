@@ -11,6 +11,7 @@ class FoodOfferModel {
   final String availableUntil;
   final String description;
   final String allergens;
+  final String? imageUrl;
 
   // Exact date and time when the offer becomes available.
   final DateTime? startsAt;
@@ -31,6 +32,7 @@ class FoodOfferModel {
     required this.availableUntil,
     required this.description,
     required this.allergens,
+    this.imageUrl,
     this.startsAt,
     this.expiresAt,
     this.status = 'ACTIVE',
@@ -55,6 +57,7 @@ class FoodOfferModel {
       availableUntil: data['availableUntil']?.toString() ?? '',
       description: data['description']?.toString() ?? '',
       allergens: data['allergens']?.toString() ?? '',
+      imageUrl: data['imageUrl']?.toString(),
       startsAt: start is Timestamp
           ? start.toDate()
           : start is DateTime
@@ -80,6 +83,7 @@ class FoodOfferModel {
       'availableUntil': availableUntil,
       'description': description,
       'allergens': allergens,
+      'imageUrl': imageUrl,
       'startsAt': startsAt == null ? null : Timestamp.fromDate(startsAt!),
       'expiresAt': expiresAt == null ? null : Timestamp.fromDate(expiresAt!),
       'status': status,

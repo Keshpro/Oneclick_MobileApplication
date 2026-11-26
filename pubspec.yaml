@@ -56,6 +56,7 @@ dependencies:
   latlong2: ^0.10.1
   payhere_mobilesdk_flutter: ^3.2.3
   cloud_functions: ^6.5.1
+  image_picker: ^1.2.0
 
 # Packages used during development
 dev_dependencies:

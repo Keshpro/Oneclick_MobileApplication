@@ -1957,8 +1957,8 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                             );
                           },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E7D32),
-                      foregroundColor: Colors.white,
+                      backgroundColor: const Color(0xFFE8F5E9),
+                      foregroundColor: const Color(0xFF2E7D32),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(17),
@@ -2003,7 +2003,7 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                             );
                           },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: const Color(0xFF2E7D32),
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
