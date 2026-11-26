@@ -6,6 +6,7 @@ import '../features/auth/screens/splash_screen.dart';
 import '../features/auth/screens/home_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
+import '../features/quickfix/worker/screens/worker_dashboard.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -49,6 +50,10 @@ class MyApp extends StatelessWidget {
 
         // Login Screen
         '/login': (context) => const LoginScreen(),
+
+        // QuickFix Worker Dashboard
+        '/worker-dashboard': (context) =>
+            const WorkerDashboard(),
 
         // Register Screen
         '/register': (context) => RegisterScreen(role: UserRole.customer),
