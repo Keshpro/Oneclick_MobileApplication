@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../models/booking_model.dart';
 import '../../models/booking_status.dart';
@@ -227,6 +228,29 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
               ),
             ),
+            if (booking.status == BookingStatus.completed && (booking.paymentStatus == 'paid' || booking.paymentStatus == 'simulated')) ...[
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.receipt_long_outlined),
+                label: Text(booking.paymentStatus == 'paid' ? 'Copy payment receipt' : 'Copy simulation summary'),
+                onPressed: () async {
+                  final receipt = [
+                    booking.paymentStatus == 'paid' ? 'ONECLICK CASH RECEIPT' : 'ONECLICK DEMO — NO PAYMENT CHARGED',
+                    'Booking: ${booking.id}',
+                    'Date: ${(booking.completedAt ?? booking.createdAt).toLocal()}',
+                    'Route: ${booking.pickup.name} to ${booking.destination.name}',
+                    'Base fare: Rs. ${booking.fareEstimate.baseFare.toStringAsFixed(2)}',
+                    'Distance: Rs. ${booking.fareEstimate.distanceCharge.toStringAsFixed(2)}',
+                    'Time: Rs. ${booking.fareEstimate.timeCharge.toStringAsFixed(2)}',
+                    'Service fee: Rs. ${booking.fareEstimate.serviceFee.toStringAsFixed(2)}',
+                    'Total: Rs. ${booking.customerAmountDue.toStringAsFixed(2)}',
+                    'Status: ${_statusText(booking)}',
+                  ].join('\n');
+                  await Clipboard.setData(ClipboardData(text: receipt));
+                  if (mounted) _showMessage('Receipt details copied.');
+                },
+              ),
+            ],
             if (canRequest) ...[
               const SizedBox(height: 24),
               Text('Payment Method',

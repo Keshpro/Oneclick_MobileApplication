@@ -56,6 +56,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
     super.dispose();
   }
 
+  BookingModel? _completedBooking;
   bool _isEnding = false;
   bool _isConfirmingCash = false;
 
@@ -78,7 +79,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
         unawaited(_locationService.stop().catchError((Object _) {}));
         if (mounted) setState(() => _locationSharing = false);
       }
-    });
+    }, onError: (Object _) { if (mounted) _showMessage('Unable to monitor trip status.'); });
   }
 
   void _showMessage(String message) {
@@ -100,6 +101,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
         _showMessage('Unable to complete this trip. Please refresh and try again.');
         return;
       }
+      setState(() => _completedBooking = updated);
       try {
         await _locationService.stop();
       } catch (_) {
@@ -203,7 +205,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: _bookingStream,
       builder: (context, snapshot) {
-        BookingModel booking = widget.booking;
+        BookingModel booking = _completedBooking ?? widget.booking;
         String? loadError;
 
         if (snapshot.hasError) {
@@ -216,7 +218,11 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
           } else if (data['driverId'] != _bookingService.currentUserId) {
             loadError = 'You do not have access to this trip.';
           } else {
-            booking = BookingModel.fromMap(document.id, data);
+            final latest = BookingModel.fromMap(document.id, data);
+            // A cached pre-completion snapshot must not undo a successful endTrip.
+            if (_completedBooking == null || latest.status == BookingStatus.completed) {
+              booking = latest;
+            }
           }
         }
 
@@ -282,6 +288,37 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
                           ],
                         ),
                       ),
+                      if (completed) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: colors.surface,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: colors.accent),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(booking.paymentStatus == 'paid'
+                                  ? 'Amount received'
+                                  : booking.paymentStatus == 'simulated'
+                                      ? 'Simulated payment amount'
+                                      : 'Amount due from passenger',
+                                  style: TextStyle(color: colors.textPrimary,
+                                      fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 8),
+                              Text('Rs. ${booking.customerAmountDue.toStringAsFixed(0)}',
+                                  style: TextStyle(color: colors.accent,
+                                      fontSize: 34, fontWeight: FontWeight.w900)),
+                              const SizedBox(height: 8),
+                              Text(_paymentDescription(booking),
+                                  style: TextStyle(color: colors.textMuted)),
+                            ],
+                          ),
+                        ),
+                      ],
                       if (!completed &&
                           (booking.status == BookingStatus.tripStarted ||
                               booking.status == BookingStatus.tripInProgress)) ...[
@@ -353,7 +390,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
                             _row(
                               Icons.payments_rounded,
                               colors.accent,
-                              completed ? 'Customer to Pay' : 'Estimated Fare',
+                              completed ? 'Trip Fare' : 'Estimated Fare',
                               'Rs. ${booking.customerAmountDue.toStringAsFixed(0)}',
                             ),
                           ],

@@ -80,7 +80,8 @@ class LocationService {
     final h =
         sin(dLat / 2) * sin(dLat / 2) +
         sin(dLon / 2) * sin(dLon / 2) * cos(lat1) * cos(lat2);
-    final c = 2 * atan2(sqrt(h), sqrt(1 - h));
+    final bounded = h.clamp(0.0, 1.0).toDouble();
+    final c = 2 * atan2(sqrt(bounded), sqrt(1 - bounded));
     return earthRadiusKm * c;
   }
 
@@ -88,7 +89,7 @@ class LocationService {
   int estimatedDurationMinutes(double distanceKm) {
     const averageSpeedKmh = 35;
     final minutes = (distanceKm / averageSpeedKmh) * 60;
-    return minutes.round().clamp(5, 300);
+    return max(5, minutes.round());
   }
 
   double _degToRad(double deg) => deg * (pi / 180);

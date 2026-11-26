@@ -8,6 +8,7 @@ import 'pending_approval_screen.dart';
 import 'package:oneclick/admin/screens/admin_dashboard.dart';
 import 'package:oneclick/features/doctor/doctor/screens/doctor_dashboard.dart';
 import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
+import '../../drunk_drive/services/driver_entry_router.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -68,6 +69,7 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     final currentUser = FirebaseAuth.instance.currentUser;
+    debugPrint('[DD_ROUTE_V3] splash signedIn=${currentUser != null}');
 
     // 1. User ලොග් වී නැත්නම් කෙලින්ම Home / Guest Screen එකට යැවීම
     if (currentUser == null) {
@@ -78,6 +80,27 @@ class _SplashScreenState extends State<SplashScreen>
     final uid = currentUser.uid;
 
     try {
+      // Preserve admin routing and read the shared account role first.
+      final userDoc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final role = (userDoc.data()?['role'] ?? 'user')
+          .toString().trim().toLowerCase();
+      if (role == 'admin') {
+        _navigateTo(const AdminDashboard());
+        return;
+      }
+
+      // The same driver routing used for fresh sign-in must also run when
+      // reopening the app with an existing Firebase Auth session.
+      final driverDashboard = await DriverEntryRouter.dashboardFor(
+        uid: uid,
+        role: role,
+      );
+      if (driverDashboard != null) {
+        _navigateTo(driverDashboard);
+        return;
+      }
+
       // 2. Doctor කෙනෙක්දැයි 'doctors' collection එකෙන් පරීක්ෂා කිරීම
       final doctorDoc =
           await FirebaseFirestore.instance.collection('doctors').doc(uid).get();
@@ -95,13 +118,12 @@ class _SplashScreenState extends State<SplashScreen>
         return;
       }
 
-      // 3. Driver කෙනෙක්දැයි 'drivers' collection එකෙන් පරීක්ෂා කිරීම
+      // Preserve the existing fallback for other provider combinations.
       final driverDoc =
           await FirebaseFirestore.instance.collection('drivers').doc(uid).get();
 
       if (driverDoc.exists) {
         final status = driverDoc.data()?['status'] ?? 'pending';
-
         if (status == 'active' || status == 'approved') {
           _navigateTo(const HomeScreen());
         } else {
@@ -110,21 +132,10 @@ class _SplashScreenState extends State<SplashScreen>
         return;
       }
 
-      // 4. Admin ද Regular User ද කියා 'users' collection එකෙන් පරීක්ෂා කිරීම
-      final userDoc =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
-
-      if (userDoc.exists) {
-        final role = userDoc.data()?['role'];
-        if (role == 'admin') {
-          _navigateTo(const AdminDashboard());
-          return;
-        }
-      }
-
       // 5. Normal User / Patient
       _navigateTo(const HomeScreen());
     } catch (e) {
+      debugPrint('[DD_ROUTE_V3] splash fallback error=$e');
       _navigateTo(const HomeScreen());
     }
   }
@@ -146,7 +157,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   // ==============================================================
-  // UI ONLY (Fresh Teal). Everything above this line is unchanged.
+  // UI ONLY (Fresh Teal).
   // ==============================================================
   @override
   Widget build(BuildContext context) {

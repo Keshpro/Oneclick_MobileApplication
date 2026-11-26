@@ -6,6 +6,7 @@ import '../../models/trip_reason.dart';
 import '../../models/vehicle_model.dart';
 import '../../services/fare_service.dart';
 import '../../services/location_service.dart';
+import '../../services/road_routing_service.dart';
 import '../../theme/drunk_drive_colors.dart';
 import '../../models/booking_model.dart';
 import '../../models/booking_status.dart';
@@ -35,8 +36,10 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
   final FareService _fareService = FareService();
   final BookingFirestoreService _bookingService = BookingFirestoreService();
   bool _isConfirming = false;
+  String? _createdBookingId;
 
   bool _isLoading = true;
+  bool _roadRouteUsed = false;
   double _distanceKm = 0;
   int _durationMinutes = 0;
   FareEstimate? _estimate;
@@ -83,16 +86,17 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
     }
 
     try {
-      final distanceKm = _locationService.distanceKmBetween(
+      final directDistanceKm = _locationService.distanceKmBetween(
         pickup,
         destination,
       );
-      if (!distanceKm.isFinite || distanceKm <= 0) {
+      if (!directDistanceKm.isFinite || directDistanceKm <= 0) {
         throw StateError('Pickup and destination must be different locations.');
       }
-      final durationMinutes = _locationService.estimatedDurationMinutes(
-        distanceKm,
-      );
+      final route = await RoadRoutingService().route(pickup, destination);
+      if (!mounted) return;
+      final distanceKm = route?.distanceKm ?? directDistanceKm;
+      final durationMinutes = route?.durationMinutes ?? _locationService.estimatedDurationMinutes(distanceKm);
       final estimate = _fareService.estimateFare(
         distanceKm: distanceKm,
         durationMinutes: durationMinutes,
@@ -100,6 +104,7 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
 
       if (!mounted) return;
       setState(() {
+        _roadRouteUsed = route != null;
         _distanceKm = distanceKm;
         _durationMinutes = durationMinutes;
         _estimate = estimate;
@@ -135,7 +140,7 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
         createdAt: DateTime.now(),
       );
 
-      final bookingId = await _bookingService.createBookingModel(booking);
+      final bookingId = _createdBookingId ??= await _bookingService.createBookingModel(booking);
       // Read the saved booking so navigation uses its actual Firestore ID.
       final savedBooking = await _bookingService.watchBooking(bookingId).first;
       if (savedBooking == null) {
@@ -152,7 +157,7 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to confirm booking: $error')),
+        SnackBar(content: Text('Unable to confirm booking. Check your connection and trip history before trying again.')),
       );
     } finally {
       if (mounted) setState(() => _isConfirming = false);
@@ -297,7 +302,7 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'This is an estimate. Your final fare may vary slightly based on actual distance and time.',
+                _roadRouteUsed ? 'Estimated using road routing; live traffic is not included.' : 'Estimated using straight-line distance and approximate travel time. Road routing is unavailable.',
                 style: TextStyle(color: colors.textMuted, fontSize: 12, height: 1.4),
               ),
             ),

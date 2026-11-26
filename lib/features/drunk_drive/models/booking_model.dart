@@ -18,6 +18,8 @@ class BookingModel {
   final int durationMinutes;
   final BookingStatus status;
   final DateTime createdAt;
+  final DateTime? searchStartedAt;
+  final String? cancellationReason;
   final String? driverId;
   final String? tripPin;
   final DateTime? startedAt;
@@ -42,6 +44,8 @@ class BookingModel {
     required this.durationMinutes,
     required this.status,
     required this.createdAt,
+    this.searchStartedAt,
+    this.cancellationReason,
     this.driverId,
     this.tripPin,
     this.startedAt,
@@ -77,6 +81,8 @@ class BookingModel {
       durationMinutes: durationMinutes,
       status: status ?? this.status,
       createdAt: createdAt,
+      searchStartedAt: searchStartedAt,
+      cancellationReason: cancellationReason,
       driverId: driverId ?? this.driverId,
       tripPin: tripPin ?? this.tripPin,
       startedAt: startedAt ?? this.startedAt,
@@ -126,6 +132,8 @@ class BookingModel {
       'durationMinutes': durationMinutes,
       'status': status.name,
       'createdAt': Timestamp.fromDate(createdAt),
+      if (searchStartedAt != null) 'searchStartedAt': Timestamp.fromDate(searchStartedAt!),
+      if (cancellationReason != null) 'cancellationReason': cancellationReason,
       'driverId': driverId,
       'tripPin': tripPin,
       'startedAt': startedAt == null ? null : Timestamp.fromDate(startedAt!),
@@ -202,6 +210,8 @@ class BookingModel {
       durationMinutes: (data['durationMinutes'] as num).toInt(),
       status: BookingStatus.values.byName(data['status'] as String),
       createdAt: optionalDate(data['createdAt']) ?? DateTime.now(),
+      searchStartedAt: optionalDate(data['searchStartedAt']),
+      cancellationReason: data['cancellationReason'] as String?,
       driverId: data['driverId'] as String?,
       tripPin: data['tripPin'] as String?,
       startedAt: optionalDate(data['startedAt']),

@@ -19,6 +19,17 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
   List<BookingModel> _trips = [];
   bool _isLoading = true;
   String? _loadError;
+  String _filter = 'All';
+  List<BookingModel> get _visibleTrips => _trips.where((b) {
+    switch (_filter) {
+      case 'Completed': return b.status == BookingStatus.completed;
+      case 'Cancelled': return b.status == BookingStatus.cancelledByUser || b.status == BookingStatus.cancelledByDriver;
+      case 'Payment due': return b.status == BookingStatus.completed && (b.paymentStatus == 'unpaid' || b.paymentStatus == 'pending');
+      case 'Paid': return b.paymentStatus == 'paid';
+      case 'Last 7 days': return !b.createdAt.isBefore(DateTime.now().subtract(const Duration(days: 7)));
+      default: return true;
+    }
+  }).toList();
 
   @override
   void initState() {
@@ -97,12 +108,18 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
   Widget build(BuildContext context) {
     final colors = DrunkDrivePalette.of(context);
 
+    final visible = _visibleTrips;
     return Scaffold(
       backgroundColor: colors.background,
       appBar: AppBar(
         backgroundColor: colors.background,
         foregroundColor: colors.textPrimary,
         elevation: 0,
+        actions: [PopupMenuButton<String>(
+          tooltip: 'Filter trips', initialValue: _filter,
+          onSelected: (value) => setState(() => _filter = value),
+          itemBuilder: (_) => ['All', 'Completed', 'Cancelled', 'Payment due', 'Paid', 'Last 7 days'].map((s) => PopupMenuItem(value: s, child: Text(s))).toList(),
+        )],
         title: Text(
           'Trip History',
           style: TextStyle(
@@ -141,7 +158,7 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
                   onRefresh: _loadTrips,
                   color: colors.accent,
                   backgroundColor: colors.surface,
-                  child: _trips.isEmpty
+                  child: visible.isEmpty
                       ? ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
                           children: [
@@ -150,7 +167,7 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
                             const SizedBox(height: 16),
                             Center(
                               child: Text(
-                                'No driver trips yet.',
+                                'No trips match this filter.',
                                 style: TextStyle(
                                   color: colors.textMuted,
                                   fontSize: 15,
@@ -163,10 +180,10 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
                       : ListView.separated(
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.all(20),
-                          itemCount: _trips.length,
+                          itemCount: visible.length,
                           separatorBuilder: (_, _) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
-                            final booking = _trips[index];
+                            final booking = visible[index];
                             return _TripHistoryCard(
                               booking: booking,
                               statusLabel: _statusLabel(booking.status),
@@ -222,7 +239,7 @@ class _TripHistoryCard extends StatelessWidget {
               ),
               if (isCompleted)
                 Text(
-                  'Rs. ${booking.fareEstimate.total.toStringAsFixed(0)}',
+                  'Rs. ${booking.customerAmountDue.toStringAsFixed(0)}',
                   style: TextStyle(
                     color: colors.success,
                     fontWeight: FontWeight.w800,
@@ -250,6 +267,14 @@ class _TripHistoryCard extends StatelessWidget {
             text:
                 '${booking.distanceKm.toStringAsFixed(1)} km • ${booking.durationMinutes} min',
           ),
+          if (isCompleted) ...[
+            const SizedBox(height: 8),
+            _InfoRow(icon: Icons.payments_outlined, text: booking.paymentStatus == 'paid' ? 'Cash confirmed' : booking.paymentStatus == 'pending' ? 'Cash pending' : booking.paymentStatus == 'simulated' ? 'Simulated (not paid)' : 'Unpaid'),
+          ],
+          if (booking.cancellationReason != null) ...[
+            const SizedBox(height: 8),
+            _InfoRow(icon: Icons.info_outline, text: 'Cancellation: ${booking.cancellationReason}'),
+          ],
           const SizedBox(height: 14),
           Divider(color: colors.surfaceBorder, height: 1),
           const SizedBox(height: 12),

@@ -2,17 +2,26 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../models/location_model.dart';
+import '../../services/gps_policy.dart';
 
 /// Choose an actual map coordinate for a pickup or destination.
 /// Selecting a point does not share live GPS location with Firestore.
 class LocationPickerScreen extends StatefulWidget {
   final String title;
+  final LocationModel? initialSelection;
+  final LocationModel? centerNear;
+  final bool useGpsOnOpen;
 
-  const LocationPickerScreen({super.key, required this.title});
+  const LocationPickerScreen({
+    super.key,
+    required this.title,
+    this.initialSelection,
+    this.centerNear,
+    this.useGpsOnOpen = false,
+  });
 
   @override
   State<LocationPickerScreen> createState() => _LocationPickerScreenState();
@@ -25,6 +34,40 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   final MapController _mapController = MapController();
   LatLng? _selected;
   bool _locating = false;
+  bool _mapReady = false;
+  int _selectionVersion = 0;
+  String? _gpsMessage;
+  double? _gpsAccuracy;
+
+  LatLng? _pointFor(LocationModel? location) {
+    if (location == null || !GpsPolicy.validCoordinates(location.latitude, location.longitude)) {
+      return null;
+    }
+    return LatLng(location.latitude!, location.longitude!);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = _pointFor(widget.initialSelection);
+  }
+
+  void _onMapReady() {
+    if (!mounted) return;
+    setState(() => _mapReady = true);
+    if (widget.useGpsOnOpen && _selected == null) {
+      unawaited(_useCurrentLocation());
+    }
+  }
+
+  void _selectOnMap(LatLng point) {
+    _selectionVersion++;
+    setState(() {
+      _selected = point;
+      _gpsAccuracy = null;
+      _gpsMessage = 'Map pin selected manually. Check that it is at the correct place.';
+    });
+  }
 
   @override
   void dispose() {
@@ -33,47 +76,40 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   Future<void> _useCurrentLocation() async {
-    if (_locating) return;
-    setState(() => _locating = true);
-
+    if (_locating || !_mapReady) return;
+    final version = ++_selectionVersion;
+    setState(() {
+      _locating = true;
+      _gpsMessage = 'Getting a fresh GPS location...';
+    });
     try {
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        throw StateError('Turn on Location Services in your device settings, or tap the map to select a place.');
-      }
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        throw StateError('Location permission is unavailable. Allow location access in Settings, or tap the map to select a place.');
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 15),
-        ),
-      );
-      if (!mounted) return;
-
+      final position = await GpsPolicy.currentPosition();
+      if (!mounted || version != _selectionVersion) return;
       final point = LatLng(position.latitude, position.longitude);
-      setState(() => _selected = point);
-      _mapController.move(point, 16);
-    } catch (error) {
-      if (!mounted) return;
-      final String message;
-      if (error is StateError) {
-        message = error.message;
-      } else if (error is TimeoutException) {
-        message = 'Finding your location took too long. Try again or tap the map to choose a place.';
-      } else {
-        message = 'Could not get your location. Check your connection and location settings, then try again or select a place on the map.';
+      if (!GpsPolicy.usable(position, maxAccuracy: GpsPolicy.maxPickupAccuracyMeters)) {
+        setState(() {
+          _gpsAccuracy = null;
+          _gpsMessage = 'GPS is too imprecise (${position.accuracy.toStringAsFixed(0)} m). Enable precise location, retry, or tap the correct point on the map.';
+        });
+        _mapController.move(point, 16);
+        return;
       }
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(message)));
+      setState(() {
+        _selected = point;
+        _gpsAccuracy = position.accuracy;
+        _gpsMessage = position.isMocked
+            ? 'Device is supplying a simulated location. Verify the pin before confirming.'
+            : 'GPS location selected. Check the pin before confirming.';
+      });
+      _mapController.move(point, 17);
+    } catch (error) {
+      if (!mounted || version != _selectionVersion) return;
+      final message = error is StateError
+          ? error.message
+          : error is TimeoutException
+              ? 'GPS timed out. Try again outdoors or tap the map.'
+              : 'GPS unavailable. Check location permissions, then retry or tap the map.';
+      setState(() => _gpsMessage = message);
     } finally {
       if (mounted) setState(() => _locating = false);
     }
@@ -81,7 +117,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   void _confirmSelection() {
     final point = _selected;
-    if (point == null) return;
+    if (point == null || _locating) return;
 
     // Coordinates are accurate, but a reverse-geocoding service is needed
     // to show a human-readable street address.
@@ -113,13 +149,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Tap the map to choose a place, or use your current location.',
+                      'Tap the exact pickup or destination on the map, or use the GPS button.',
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton.filledTonal(
                     tooltip: 'Use my current location',
-                    onPressed: _locating ? null : _useCurrentLocation,
+                    onPressed: _locating || !_mapReady ? null : _useCurrentLocation,
                     icon: _locating
                         ? const SizedBox(
                             width: 20,
@@ -137,9 +173,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   FlutterMap(
                     mapController: _mapController,
                     options: MapOptions(
-                      initialCenter: _initialCenter,
-                      initialZoom: 12,
-                      onTap: (_, point) => setState(() => _selected = point),
+                      initialCenter: _selected ?? _pointFor(widget.centerNear) ?? _initialCenter,
+                      initialZoom: _selected != null || _pointFor(widget.centerNear) != null ? 16 : 12,
+                      onMapReady: _onMapReady,
+                      onTap: (_, point) => _selectOnMap(point),
                     ),
                     children: [
                       TileLayer(
@@ -151,12 +188,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                           markers: [
                             Marker(
                               point: _selected!,
-                              width: 48,
-                              height: 48,
-                              alignment: Alignment.topCenter,
+                              width: 34,
+                              height: 34,
+                              alignment: Alignment.center,
                               child: const Icon(
-                                Icons.location_pin,
-                                size: 46,
+                                Icons.gps_fixed_rounded,
+                                size: 32,
                                 color: Colors.red,
                               ),
                             ),
@@ -196,9 +233,16 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                             '${_selected!.longitude.toStringAsFixed(5)}',
                     style: TextStyle(color: colors.onSurfaceVariant),
                   ),
+                  if (_gpsAccuracy != null)
+                    Text('GPS accuracy: ±${_gpsAccuracy!.toStringAsFixed(0)} m',
+                        style: TextStyle(color: colors.onSurfaceVariant)),
+                  if (_gpsMessage != null) ...[
+                    const SizedBox(height: 6),
+                    Text(_gpsMessage!, style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
+                  ],
                   const SizedBox(height: 12),
                   FilledButton.icon(
-                    onPressed: _selected == null ? null : _confirmSelection,
+                    onPressed: _selected == null || _locating ? null : _confirmSelection,
                     icon: const Icon(Icons.check_circle_outline),
                     label: const Text('Confirm Location'),
                   ),

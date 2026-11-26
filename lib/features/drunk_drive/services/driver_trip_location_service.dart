@@ -12,12 +12,15 @@ class DriverTripLocationService {
   String? _bookingId;
   bool _sharing = false;
   bool _publishing = false;
+  int _generation = 0;
+  Timer? _heartbeat;
   Future<void> Function(Object error)? onError;
 
   bool get isSharing => _sharing;
 
   Future<void> start(String bookingId) async {
     if (_sharing) return;
+    final generation = ++_generation;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw StateError('Sign in before sharing location.');
     if (!await Geolocator.isLocationServiceEnabled()) {
@@ -47,16 +50,28 @@ class DriverTripLocationService {
       );
     }
 
+    if (generation != _generation) return;
     _sharing = true;
     _bookingId = bookingId;
     try {
       final first = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
+          accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 15),
         ),
       );
+      if (generation != _generation || !_sharing) return;
       await _publish(first);
-      if (!_sharing) return;
+      if (!_sharing || generation != _generation) return;
+      _heartbeat = Timer.periodic(const Duration(seconds: 45), (_) async {
+        if (!_sharing || generation != _generation || _publishing) return;
+        try {
+          final fresh = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 10)));
+          if (!_sharing || generation != _generation) return;
+          await _publish(fresh);
+        } catch (_) {
+          // A failed GPS read must not re-publish an old coordinate as fresh.
+        }
+      });
       _positionSubscription =
           Geolocator.getPositionStream(
             locationSettings: const LocationSettings(
@@ -65,6 +80,7 @@ class DriverTripLocationService {
             ),
           ).listen(
             (position) {
+              if (generation != _generation) return;
               unawaited(_publish(position));
             },
             onError: (Object error) {
@@ -72,18 +88,19 @@ class DriverTripLocationService {
             },
           );
     } catch (_) {
-      await stop();
+      try { await stop(); } catch (_) {}
       rethrow;
     }
   }
 
   bool _isRunning(Object? status) =>
-      status == 'tripStarted' || status == 'tripInProgress';
+      status == 'driverArriving' || status == 'tripStarted' || status == 'tripInProgress';
 
   Future<void> _publish(Position position) async {
     if (!_sharing || _publishing || _bookingId == null) return;
     _publishing = true;
     final bookingId = _bookingId!;
+    final generation = _generation;
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) throw StateError('Driver signed out.');
@@ -98,7 +115,7 @@ class DriverTripLocationService {
         if (data == null ||
             data['driverId'] != uid ||
             !_isRunning(data['status']) ||
-            !_sharing) {
+            !_sharing || generation != _generation || _bookingId != bookingId) {
           return false;
         }
         transaction.update(reference, {
@@ -110,21 +127,24 @@ class DriverTripLocationService {
         });
         return true;
       });
-      if (!accepted) await stop();
+      if (!accepted && generation == _generation) await stop();
     } catch (error) {
-      await _handleError(error);
+      if (generation == _generation) await _handleError(error);
     } finally {
       _publishing = false;
     }
   }
 
   Future<void> _handleError(Object error) async {
-    await stop();
+    try { await stop(); } catch (_) {}
     await onError?.call(error);
   }
 
   Future<void> stop() async {
     final bookingId = _bookingId;
+    _generation++;
+    _heartbeat?.cancel();
+    _heartbeat = null;
     _sharing = false;
     _bookingId = null;
     final subscription = _positionSubscription;
