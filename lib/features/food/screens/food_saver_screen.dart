@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'dart:ui' show FontFeature;
+
 import '../models/food_product.dart';
 import '../services/food_cart_service.dart';
 import 'food_cart_screen.dart';
@@ -8,7 +10,6 @@ import 'food_checkout_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/food_offer_model.dart' as seller_model;
-import 'food_checkout_screen.dart';
 
 import 'dart:async';
 
@@ -68,6 +69,7 @@ class SaveBiteOffer extends FoodProduct {
        );
 
   int get discountPercentage {
+    if (originalPrice <= 0) return 0;
     return ((originalPrice - saverPrice) / originalPrice * 100).round();
   }
 
@@ -301,7 +303,9 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
             restaurantName: restaurantName,
             restaurantLogo:
                 'assets/images/food/restaurants/cocos_bakery_logo.webp',
-            foodImage: 'assets/images/food/dishes/bakery_pack.webp',
+            foodImage: offer.imageUrl?.isNotEmpty == true
+                ? offer.imageUrl!
+                : 'assets/images/food/dishes/bakery_pack.webp',
             originalPrice: originalPrice,
             saverPrice: saverPrice,
             quantity: quantity,
@@ -1067,22 +1071,39 @@ class _SaveBiteCard extends StatelessWidget {
                 SizedBox(
                   height: 210,
                   width: double.infinity,
-                  child: Image.asset(
-                    offer.foodImage,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: const Color(0xFFFFF0DF),
-                        child: const Center(
-                          child: Icon(
-                            Icons.fastfood_rounded,
-                            size: 65,
-                            color: Color(0xFFFF8A35),
-                          ),
+                  child: offer.foodImage.startsWith('http')
+                      ? Image.network(
+                          offer.foodImage,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: const Color(0xFFFFF0DF),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.fastfood_rounded,
+                                  size: 65,
+                                  color: Color(0xFFFF8A35),
+                                ),
+                              ),
+                            );
+                          },
+                        )
+                      : Image.asset(
+                          offer.foodImage,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: const Color(0xFFFFF0DF),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.fastfood_rounded,
+                                  size: 65,
+                                  color: Color(0xFFFF8A35),
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
 
                 // Discount badge

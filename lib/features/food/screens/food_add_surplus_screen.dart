@@ -190,30 +190,22 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
     try {
       String? uploadedImageUrl;
 
-      // Upload the selected photo if the seller chose one.
+      // Upload the selected photo to Supabase.
       if (_selectedFoodImage != null) {
         setState(() {
           _isUploadingImage = true;
         });
 
-        final storageRef = FirebaseStorage.instance
-            .ref()
-            .child('savebite_offers')
-            .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
+        final imageBytes = await _selectedFoodImage!.readAsBytes();
 
-        debugPrint('STORAGE BUCKET: ${FirebaseStorage.instance.bucket}');
-        debugPrint('UPLOAD PATH: ${storageRef.fullPath}');
+        final fileName = _selectedFoodImage!.path
+            .split(Platform.pathSeparator)
+            .last;
 
-        final uploadTask = storageRef.putFile(_selectedFoodImage!);
-
-        final snapshot = await uploadTask;
-
-        debugPrint('FINAL UPLOAD STATE: ${snapshot.state}');
-        debugPrint('FINAL UPLOAD PATH: ${snapshot.ref.fullPath}');
-
-        uploadedImageUrl = await snapshot.ref.getDownloadURL();
-
-        debugPrint('DOWNLOAD URL: $uploadedImageUrl');
+        uploadedImageUrl = await FoodSaverImageService.instance.uploadFoodImage(
+          fileName: fileName,
+          bytes: imageBytes,
+        );
 
         if (mounted) {
           setState(() {
@@ -237,7 +229,6 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
         imageUrl: uploadedImageUrl,
       );
 
-      await FoodSellerDataService.instance.addOffer(offer);
       await FoodSellerDataService.instance.addOffer(offer);
 
       if (!mounted) return;
