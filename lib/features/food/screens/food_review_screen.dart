@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/food_order_service.dart';
+import 'food_saver_screen.dart';
 
 class FoodReviewScreen extends StatefulWidget {
   final FoodOrder order;
@@ -160,9 +161,17 @@ class _FoodReviewScreenState extends State<FoodReviewScreen> {
                       actions: [
                         TextButton(
                           onPressed: () {
-                            Navigator.pop(context);
+                            Navigator.pop(
+                              context,
+                            ); // Close the Thank You dialog
 
-                            Navigator.pop(context);
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const FoodSaverScreen(),
+                              ),
+                              (route) => false,
+                            );
                           },
                           child: const Text('Done'),
                         ),

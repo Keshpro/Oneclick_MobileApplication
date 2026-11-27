@@ -6,13 +6,25 @@ import 'food_order_confirmation_screen.dart';
 import '../services/save_bite_stock_service.dart';
 
 class FoodCheckoutScreen extends StatefulWidget {
-  const FoodCheckoutScreen({super.key});
+  final List<FoodCartItem>? directItems;
+
+  const FoodCheckoutScreen({super.key, this.directItems});
 
   @override
   State<FoodCheckoutScreen> createState() => _FoodCheckoutScreenState();
 }
 
 class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
+  List<FoodCartItem> get checkoutItems =>
+      widget.directItems ?? FoodCartService.instance.items;
+
+  bool get isDirectCheckout => widget.directItems != null;
+
+  double get checkoutSubtotal =>
+      checkoutItems.fold(0, (sum, item) => sum + item.total);
+
+  bool get checkoutIsEmpty => checkoutItems.isEmpty;
+
   final _formKey = GlobalKey<FormState>();
 
   final nameController = TextEditingController();
@@ -54,9 +66,7 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cart = FoodCartService.instance;
-
-    final subtotal = cart.subtotal;
+    final subtotal = checkoutSubtotal;
 
     final deliveryFee = fulfillmentType == FoodFulfillmentType.delivery
         ? 150.0
@@ -256,7 +266,7 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
               ),
               child: Column(
                 children: [
-                  ...cart.items.map(
+                  ...checkoutItems.map(
                     (item) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Row(
@@ -328,14 +338,16 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
 
     final cart = FoodCartService.instance;
 
-    if (cart.isEmpty) {
+    if (checkoutIsEmpty) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Your cart is empty.')));
       return;
     }
 
     try {
-      await SaveBiteStockService.instance.validateAndReserveStock(cart.items);
+      await SaveBiteStockService.instance.validateAndReserveStock(
+        checkoutItems,
+      );
 
       if (!mounted) return;
 
@@ -347,9 +359,12 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
         deliveryNote: noteController.text.trim(),
         pickupTime: pickupTime,
         paymentMethod: paymentMethod,
+        checkoutItems: checkoutItems,
       );
 
-      cart.clearCart();
+      if (!isDirectCheckout) {
+        cart.clearCart();
+      }
 
       Navigator.pushReplacement(
         context,
@@ -382,6 +397,11 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
               'There are not enough portions available for your order. '
               'Please review your cart and try a smaller quantity.';
         }
+      } else if (errorText.contains('has expired')) {
+        title = 'SaveBite offer expired';
+        message =
+            'Sorry, this food offer has expired. '
+            'Please return to your cart and choose another available offer.';
       } else if (errorText.contains('no longer available')) {
         message =
             'Sorry, this food offer is no longer available. '

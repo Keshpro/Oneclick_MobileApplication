@@ -162,23 +162,72 @@ class _MysteryBitesScreenState extends State<MysteryBitesScreen> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-      color: Colors.black,
-      child: const Column(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF174D38), Color(0xFF286B4D)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(26),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'A surprise worth discovering 🎁',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: const Text(
+              '♻️  FOOD RESCUE',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-          SizedBox(height: 8),
-          Text(
-            'Enjoy suitable surplus food at a special price.',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+          const SizedBox(height: 18),
+          const Text(
+            'Good food.\nGreat surprises. 🎁',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 27,
+              height: 1.2,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Discover surprise food boxes at amazing prices while helping reduce food waste.',
+            style: TextStyle(
+              color: Color(0xFFDDEEE3),
+              fontSize: 13,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              const Icon(
+                Icons.savings_rounded,
+                color: Color(0xFFFFD58A),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Save money • Save food • Enjoy!',
+                style: TextStyle(
+                  color: Color(0xFFFFD58A),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -187,7 +236,7 @@ class _MysteryBitesScreenState extends State<MysteryBitesScreen> {
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: TextField(
         controller: _searchController,
         onChanged: (value) {
@@ -196,14 +245,17 @@ class _MysteryBitesScreenState extends State<MysteryBitesScreen> {
           });
         },
         decoration: InputDecoration(
-          hintText: 'Search MysteryBites...',
-          prefixIcon: const Icon(Icons.search),
+          hintText: 'Find a surprise box...',
+          hintStyle: TextStyle(color: Colors.grey.shade500),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: Color(0xFF286B4D),
+          ),
           suffixIcon: _searchText.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear),
+                  icon: const Icon(Icons.close_rounded),
                   onPressed: () {
                     _searchController.clear();
-
                     setState(() {
                       _searchText = '';
                     });
@@ -212,8 +264,9 @@ class _MysteryBitesScreenState extends State<MysteryBitesScreen> {
               : null,
           filled: true,
           fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(18),
             borderSide: BorderSide.none,
           ),
         ),
@@ -235,14 +288,22 @@ class _MysteryBitesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      color: Colors.white,
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF174D38).withValues(alpha: 0.07),
+            blurRadius: 18,
+            offset: const Offset(0, 7),
+          ),
+        ],
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -250,50 +311,90 @@ class _MysteryBitesCard extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(18),
+                    top: Radius.circular(24),
                   ),
                   child: Image.asset(
                     box.foodImage,
                     width: double.infinity,
-                    height: 190,
+                    height: 210,
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      height: 210,
+                      color: const Color(0xFFF1E8D8),
+                      child: const Center(
+                        child: Icon(
+                          Icons.fastfood_rounded,
+                          size: 60,
+                          color: Color(0xFF286B4D),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-
                 Positioned(
-                  top: 12,
-                  left: 12,
+                  top: 14,
+                  left: 14,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+                      horizontal: 13,
+                      vertical: 9,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(20),
+                      color: const Color(0xFF174D38),
+                      borderRadius: BorderRadius.circular(30),
                     ),
                     child: Text(
                       '$discount% OFF',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 14,
+                  right: 14,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          color: Colors.amber,
+                          size: 17,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          box.rating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ],
             ),
-
             Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       _RestaurantLogo(imagePath: box.sellerLogo),
-                      const SizedBox(width: 10),
-
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,89 +403,95 @@ class _MysteryBitesCard extends StatelessWidget {
                               box.name,
                               style: const TextStyle(
                                 fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
-                            const SizedBox(height: 3),
+                            const SizedBox(height: 4),
                             Text(
                               box.sellerName,
-                              style: const TextStyle(color: Colors.grey),
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 13,
+                              ),
                             ),
                           ],
                         ),
                       ),
-
-                      Row(
-                        children: [
-                          const Icon(Icons.star, size: 18, color: Colors.amber),
-                          const SizedBox(width: 3),
-                          Text(
-                            box.rating.toStringAsFixed(1),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
-
-                  const SizedBox(height: 12),
-
+                  const SizedBox(height: 16),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
                         'Rs. ${box.price.toStringAsFixed(0)}',
                         style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 23,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF174D38),
                         ),
                       ),
                       const SizedBox(width: 8),
                       if (box.originalPrice != null)
-                        Text(
-                          'Rs. ${box.originalPrice!.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            decoration: TextDecoration.lineThrough,
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            'Rs. ${box.originalPrice!.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              decoration: TextDecoration.lineThrough,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                     ],
                   ),
-
-                  const SizedBox(height: 8),
-
+                  const SizedBox(height: 14),
                   Row(
                     children: [
-                      const Icon(
-                        Icons.inventory_2_outlined,
-                        size: 17,
-                        color: Colors.grey,
+                      Expanded(
+                        child: _InfoPill(
+                          icon: Icons.inventory_2_outlined,
+                          text: '${box.availableQuantity} boxes left',
+                        ),
                       ),
-                      const SizedBox(width: 5),
-                      Text(
-                        '${box.availableQuantity} left',
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(width: 16),
-                      const Icon(
-                        Icons.access_time,
-                        size: 17,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        'Until ${box.availableUntil}',
-                        style: const TextStyle(color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _InfoPill(
+                          icon: Icons.access_time_rounded,
+                          text: 'Until ${box.availableUntil}',
+                        ),
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 12),
-
+                  const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
+                    height: 50,
                     child: ElevatedButton(
                       onPressed: onTap,
-                      child: const Text('View MysteryBites'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF174D38),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Discover your box',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Icon(Icons.arrow_forward_rounded, size: 18),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -392,6 +499,42 @@ class _MysteryBitesCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _InfoPill extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _InfoPill({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F7F3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFF286B4D)),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF345845),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

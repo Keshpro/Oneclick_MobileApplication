@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FoodOfferModel {
@@ -12,7 +11,14 @@ class FoodOfferModel {
   final String availableUntil;
   final String description;
   final String allergens;
+  final String? imageUrl;
+
+  // Exact date and time when the offer becomes available.
+  final DateTime? startsAt;
+
+  // Exact date and time when the offer expires.
   final DateTime? expiresAt;
+
   String status;
 
   FoodOfferModel({
@@ -26,6 +32,8 @@ class FoodOfferModel {
     required this.availableUntil,
     required this.description,
     required this.allergens,
+    this.imageUrl,
+    this.startsAt,
     this.expiresAt,
     this.status = 'ACTIVE',
   });
@@ -34,6 +42,8 @@ class FoodOfferModel {
     DocumentSnapshot<Map<String, dynamic>> document,
   ) {
     final data = document.data() ?? {};
+
+    final start = data['startsAt'];
     final expiry = data['expiresAt'];
 
     return FoodOfferModel(
@@ -47,11 +57,17 @@ class FoodOfferModel {
       availableUntil: data['availableUntil']?.toString() ?? '',
       description: data['description']?.toString() ?? '',
       allergens: data['allergens']?.toString() ?? '',
+      imageUrl: data['imageUrl']?.toString(),
+      startsAt: start is Timestamp
+          ? start.toDate()
+          : start is DateTime
+          ? start
+          : null,
       expiresAt: expiry is Timestamp
           ? expiry.toDate()
           : expiry is DateTime
-              ? expiry
-              : null,
+          ? expiry
+          : null,
       status: data['status']?.toString() ?? 'ACTIVE',
     );
   }
@@ -67,9 +83,9 @@ class FoodOfferModel {
       'availableUntil': availableUntil,
       'description': description,
       'allergens': allergens,
-      'expiresAt': expiresAt == null
-          ? null
-          : Timestamp.fromDate(expiresAt!),
+      'imageUrl': imageUrl,
+      'startsAt': startsAt == null ? null : Timestamp.fromDate(startsAt!),
+      'expiresAt': expiresAt == null ? null : Timestamp.fromDate(expiresAt!),
       'status': status,
     };
   }

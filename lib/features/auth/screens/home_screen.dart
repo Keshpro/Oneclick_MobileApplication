@@ -16,8 +16,12 @@ import '../../drunk_drive/passenger/screens/drunk_drive_home_screen.dart';
 import '../../Personal Vault/screens/dashboard.dart' as personal_vault;
 import '../../food/screens/food_home_screen.dart';
 import '../../quickfix/user/screens/home_services_screen.dart';
-import 'package:oneclick/core/theme/app_theme.dart'; 
-import 'package:oneclick/core/widgets/teal_header.dart'; 
+
+import 'package:oneclick/core/theme/app_theme.dart';
+import 'package:oneclick/core/widgets/teal_header.dart';
+import 'package:oneclick/features/food/screens/food_saver_screen.dart';
+
+import '../../food/screens/food_seller_dashboard_screen.dart';
 
 class _Palette {
   static const bg = AppColors.background;
@@ -189,7 +193,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   floating: _HomeSearchField(
                     searchController: _searchController,
                     searchQuery: _searchQuery,
-                    onSearchChanged: (value) => setState(() => _searchQuery = value),
+                    onSearchChanged: (value) =>
+                        setState(() => _searchQuery = value),
                     onSearchClear: () {
                       _searchController.clear();
                       setState(() => _searchQuery = '');
@@ -220,7 +225,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: _Palette.primary.withValues(alpha: 0.10),
                           borderRadius: BorderRadius.circular(16),
@@ -242,25 +250,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: .78,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final service = _filteredServices[index];
-                        return _ServiceCard(
-                          title: service['title'].toString(),
-                          description: service['description'].toString(),
-                          icon: service['icon'] as IconData,
-                          gradient: List<Color>.from(service['gradient'] as List),
-                          onTap: () => _openService(service['title'].toString()),
-                        );
-                      },
-                      childCount: _filteredServices.length,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: .78,
+                        ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final service = _filteredServices[index];
+                      return _ServiceCard(
+                        title: service['title'].toString(),
+                        description: service['description'].toString(),
+                        icon: service['icon'] as IconData,
+                        gradient: List<Color>.from(service['gradient'] as List),
+                        onTap: () => _openService(service['title'].toString()),
+                      );
+                    }, childCount: _filteredServices.length),
                   ),
                 )
               else
@@ -269,7 +275,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: EdgeInsets.symmetric(horizontal: 20, vertical: 40),
                     child: Column(
                       children: [
-                        Icon(Icons.search_off_rounded, size: 48, color: _Palette.inkSoft),
+                        Icon(
+                          Icons.search_off_rounded,
+                          size: 48,
+                          color: _Palette.inkSoft,
+                        ),
                         SizedBox(height: 12),
                         Text(
                           'No services found',
@@ -308,7 +318,11 @@ class _HomeScreenState extends State<HomeScreen> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(AppRadius.button),
             ),
-            child: const Icon(Icons.grid_view_rounded, color: _Palette.primary, size: 24),
+            child: const Icon(
+              Icons.grid_view_rounded,
+              color: _Palette.primary,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 12),
           const Expanded(
@@ -317,11 +331,19 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   'OneClick',
-                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 Text(
                   'Everything in one place',
-                  style: TextStyle(color: Color(0xCCFFFFFF), fontSize: 12, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    color: Color(0xCCFFFFFF),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -331,7 +353,10 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('No new notifications')),
               ),
-              icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
+              icon: const Icon(
+                Icons.notifications_none_rounded,
+                color: Colors.white,
+              ),
             ),
             GestureDetector(
               onTap: _showAccountOptions,
@@ -347,11 +372,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? const SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: _Palette.primary),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: _Palette.primary,
+                        ),
                       )
                     : Text(
                         _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                        style: const TextStyle(color: _Palette.primary, fontWeight: FontWeight.w800, fontSize: 16),
+                        style: const TextStyle(
+                          color: _Palette.primary,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
                       ),
               ),
             ),
@@ -360,7 +392,10 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () => Navigator.pushNamed(context, '/login'),
               child: const Text(
                 'Login',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             _GradientButton(
@@ -396,18 +431,30 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Column(
           children: [
-            const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 40),
+            const Icon(
+              Icons.person_add_alt_1_rounded,
+              color: Colors.white,
+              size: 40,
+            ),
             const SizedBox(height: 16),
             const Text(
               'Ready to get started?',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Create an account to access services and manage everything from one place.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white.withValues(alpha: .80), fontSize: 14, height: 1.5),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: .80),
+                fontSize: 14,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -419,9 +466,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   foregroundColor: _Palette.primary,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.button),
+                  ),
                 ),
-                child: const Text('Create Account', style: TextStyle(fontWeight: FontWeight.w700)),
+                child: const Text(
+                  'Create Account',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
             ),
             TextButton(
@@ -453,7 +505,7 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
 
       case 'Food':
-        screen = const FoodHomeScreen();
+        screen = const FoodSaverScreen();
         break;
 
       case 'Groceries':
@@ -495,10 +547,9 @@ class _HomeScreenState extends State<HomeScreen> {
     };
 
     setState(() => _selectedIndex = index);
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => screen),
-    ).then((_) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen)).then((
+      _,
+    ) {
       if (mounted) setState(() => _selectedIndex = 0);
     });
   }
@@ -530,7 +581,11 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               'Access $serviceName',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _Palette.ink, fontSize: 20, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                color: _Palette.ink,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -551,7 +606,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.pushNamed(context, '/login');
                 },
                 style: _primaryButtonStyle(),
-                child: const Text('Login', style: TextStyle(fontWeight: FontWeight.w700)),
+                child: const Text(
+                  'Login',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -704,12 +762,40 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Account Options with Dynamic Role Switcher
-  void _showAccountOptions() {
+
+  // Account Options with Food Seller Mode Switching
+  Future<void> _showAccountOptions() async {
     if (!_isLoggedIn) {
       Navigator.pushNamed(context, '/login');
       if (mounted) setState(() => _selectedIndex = 0);
       return;
     }
+
+    // Check whether the current user is an approved Food Seller
+    bool isActiveFoodSeller = false;
+
+    try {
+      final user = _auth.currentUser;
+
+      if (user != null) {
+        final sellerDoc = await _firestore
+            .collection('food_sellers')
+            .doc(user.uid)
+            .get();
+
+        final sellerData = sellerDoc.data();
+
+        isActiveFoodSeller =
+            sellerDoc.exists &&
+            sellerData?['uid'] == user.uid &&
+            sellerData?['role'] == 'foodSeller' &&
+            sellerData?['status']?.toString().toLowerCase() == 'active';
+      }
+    } catch (e) {
+      debugPrint('Food seller mode check failed: $e');
+    }
+
+    if (!mounted) return;
 
     showModalBottomSheet<void>(
       context: context,
@@ -722,23 +808,84 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             _bottomSheetHandle(),
             const SizedBox(height: 24),
+
             CircleAvatar(
               radius: 34,
               backgroundColor: _Palette.primary,
               child: Text(
                 _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
+
             const SizedBox(height: 12),
+
             Text(
               _userName.isEmpty ? 'OneClick User' : _userName,
-              style: const TextStyle(color: _Palette.ink, fontSize: 20, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                color: _Palette.ink,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
             ),
+
             const SizedBox(height: 4),
-            Text(_userEmail, style: const TextStyle(color: _Palette.inkSoft, fontSize: 13)),
+
+            Text(
+              _userEmail,
+              style: const TextStyle(color: _Palette.inkSoft, fontSize: 13),
+            ),
+
             const SizedBox(height: 16),
 
+            // FOOD SELLER MODE
+            if (isActiveFoodSeller)
+              Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  border: Border.all(
+                    color: Colors.orange.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: ListTile(
+                  leading: const Icon(
+                    Icons.storefront_rounded,
+                    color: Colors.orange,
+                  ),
+                  title: const Text(
+                    'Switch to Seller Mode',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                    color: Colors.orange,
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FoodSellerDashboardScreen(),
+                      ),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ),
+
+            // DOCTOR MODE
+            if (_userRole == 'doctor')
             // QuickFix worker account switcher
             _workerModeOption(sheetContext),
 
@@ -749,15 +896,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppRadius.card),
-                  border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppColors.success.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: ListTile(
-                  leading: const Icon(Icons.medical_services_rounded, color: AppColors.success),
+                  leading: const Icon(
+                    Icons.medical_services_rounded,
+                    color: AppColors.success,
+                  ),
                   title: const Text(
                     'Switch to Doctor Mode',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.success),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.success,
+                    ),
                   ),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.success),
+                  trailing: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                    color: AppColors.success,
+                  ),
                   onTap: () {
                     Navigator.pop(sheetContext);
                     Navigator.pushAndRemoveUntil(
@@ -770,21 +929,35 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
-            ] else if (_userRole == 'admin') ...[
+
+            // ADMIN MODE
+            if (_userRole == 'admin')
               Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
                   color: _Palette.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppRadius.card),
-                  border: Border.all(color: _Palette.primary.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: _Palette.primary.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: ListTile(
-                  leading: const Icon(Icons.admin_panel_settings_rounded, color: _Palette.primary),
+                  leading: const Icon(
+                    Icons.admin_panel_settings_rounded,
+                    color: _Palette.primary,
+                  ),
                   title: const Text(
                     'Switch to Admin Portal',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: _Palette.primary),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: _Palette.primary,
+                    ),
                   ),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: _Palette.primary),
+                  trailing: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                    color: _Palette.primary,
+                  ),
                   onTap: () {
                     Navigator.pop(sheetContext);
                     Navigator.pushAndRemoveUntil(
@@ -795,8 +968,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
-            ],
 
+            // PROFILE
             ListTile(
               leading: const Icon(
                 Icons.person_outline_rounded,
@@ -809,6 +982,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 _onNavigationSelected(3);
               },
             ),
+
+            // ACTIVITY
             ListTile(
               leading: const Icon(
                 Icons.history_rounded,
@@ -821,14 +996,26 @@ class _HomeScreenState extends State<HomeScreen> {
                 _onNavigationSelected(2);
               },
             ),
+
             const Divider(),
+
+            // LOGOUT
             ListTile(
               leading: const Icon(Icons.logout_rounded, color: Colors.red),
-              title: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700)),
+              title: const Text(
+                'Logout',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               onTap: () async {
                 Navigator.pop(sheetContext);
+
                 await _auth.signOut();
+
                 if (!mounted) return;
+
                 setState(() {
                   _userName = '';
                   _userEmail = '';
@@ -836,6 +1023,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   _isLoadingUser = false;
                   _selectedIndex = 0;
                 });
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Logged out successfully')),
                 Navigator.of(context).pushNamedAndRemoveUntil(
                   '/login',
                   (route) => false,
@@ -852,21 +1042,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _bottomSheetHandle() => Container(
-        width: 48,
-        height: 4,
-        decoration: BoxDecoration(
-          color: _Palette.line,
-          borderRadius: BorderRadius.circular(4),
-        ),
-      );
+    width: 48,
+    height: 4,
+    decoration: BoxDecoration(
+      color: _Palette.line,
+      borderRadius: BorderRadius.circular(4),
+    ),
+  );
 
   ButtonStyle _primaryButtonStyle() => ElevatedButton.styleFrom(
-        backgroundColor: _Palette.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
-      );
+    backgroundColor: _Palette.primary,
+    foregroundColor: Colors.white,
+    elevation: 0,
+    padding: const EdgeInsets.symmetric(vertical: 16),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppRadius.button),
+    ),
+  );
 }
 
 // ================================================================
@@ -950,7 +1142,11 @@ class _HeroCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Discover services, find the right people and get things done with OneClick.',
-            style: TextStyle(color: Colors.white.withValues(alpha: .85), fontSize: 14, height: 1.5),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: .85),
+              fontSize: 14,
+              height: 1.5,
+            ),
           ),
         ],
       ),
@@ -997,7 +1193,10 @@ class _HomeSearchField extends StatelessWidget {
           suffixIcon: searchQuery.isNotEmpty
               ? IconButton(
                   onPressed: onSearchClear,
-                  icon: const Icon(Icons.close_rounded, color: _Palette.inkSoft),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: _Palette.inkSoft,
+                  ),
                 )
               : null,
           border: InputBorder.none,
@@ -1065,7 +1264,11 @@ class _ServiceCard extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: _Palette.ink, fontSize: 16, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  color: _Palette.ink,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 4),
               Expanded(
@@ -1073,7 +1276,11 @@ class _ServiceCard extends StatelessWidget {
                   description,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: _Palette.inkSoft, fontSize: 12, height: 1.4),
+                  style: const TextStyle(
+                    color: _Palette.inkSoft,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -1081,10 +1288,18 @@ class _ServiceCard extends StatelessWidget {
                 children: [
                   Text(
                     'Explore',
-                    style: TextStyle(color: _Palette.primary, fontSize: 12, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      color: _Palette.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_rounded, color: _Palette.primary, size: 16),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    color: _Palette.primary,
+                    size: 16,
+                  ),
                 ],
               ),
             ],
@@ -1184,7 +1399,9 @@ class _FloatingNavBar extends StatelessWidget {
                           child: Icon(
                             _icons[index],
                             size: 26,
-                            color: selected ? _Palette.primary : _Palette.inkSoft,
+                            color: selected
+                                ? _Palette.primary
+                                : _Palette.inkSoft,
                           ),
                         ),
                       ),

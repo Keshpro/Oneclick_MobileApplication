@@ -107,158 +107,303 @@ class _FoodMyOffersScreenState extends State<FoodMyOffersScreen> {
   // EDIT OFFER
   // ------------------------------------------------------------
 
+  Future<DateTime?> _pickOfferDateTime(
+    BuildContext pickerContext,
+    DateTime initialDateTime,
+    String title,
+  ) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final initialDate = initialDateTime.isBefore(today)
+        ? today
+        : initialDateTime;
+
+    final pickedDate = await showDatePicker(
+      context: pickerContext,
+      initialDate: initialDate,
+      firstDate: today,
+      lastDate: DateTime(now.year + 2, now.month, now.day),
+      helpText: title,
+    );
+
+    if (pickedDate == null) return null;
+
+    final pickedTime = await showTimePicker(
+      context: pickerContext,
+      initialTime: TimeOfDay.fromDateTime(initialDateTime),
+      helpText: title,
+    );
+
+    if (pickedTime == null) return null;
+
+    return DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+  }
+
+  String _formatOfferDateTime(DateTime? value) {
+    if (value == null) return 'Select date and time';
+
+    final date =
+        '${value.day.toString().padLeft(2, '0')}/'
+        '${value.month.toString().padLeft(2, '0')}/'
+        '${value.year}';
+
+    final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;
+    final minute = value.minute.toString().padLeft(2, '0');
+    final period = value.hour >= 12 ? 'PM' : 'AM';
+
+    return '$date • $hour:$minute $period';
+  }
+
   void editOffer(int index, FoodOfferModel offer) {
     final nameController = TextEditingController(text: offer.foodName);
-
     final originalController = TextEditingController(text: offer.originalPrice);
-
     final saverController = TextEditingController(text: offer.saverPrice);
-
     final quantityController = TextEditingController(text: offer.quantity);
+
+    final now = DateTime.now();
+
+    DateTime selectedStart =
+        offer.startsAt != null && offer.startsAt!.isAfter(now)
+        ? offer.startsAt!
+        : now.add(const Duration(minutes: 5));
+
+    DateTime selectedEnd =
+        offer.expiresAt != null && offer.expiresAt!.isAfter(selectedStart)
+        ? offer.expiresAt!
+        : selectedStart.add(const Duration(hours: 2));
+
+    bool isSaving = false;
 
     showDialog(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Edit Offer'),
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Edit Offer'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Food Name',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: originalController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Original Price',
+                        prefixText: 'Rs. ',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: saverController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Saver Price',
+                        prefixText: 'Rs. ',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: quantityController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Quantity',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Offer Schedule',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.play_circle_outline),
+                      title: const Text('Offer starts'),
+                      subtitle: Text(_formatOfferDateTime(selectedStart)),
+                      trailing: const Icon(Icons.calendar_month),
+                      onTap: () async {
+                        final picked = await _pickOfferDateTime(
+                          context,
+                          selectedStart,
+                          'Select offer start',
+                        );
 
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // FOOD NAME
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Food Name',
-                    border: OutlineInputBorder(),
-                  ),
+                        if (picked != null) {
+                          setDialogState(() {
+                            selectedStart = picked;
+                          });
+                        }
+                      },
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.event_available_outlined),
+                      title: const Text('Offer ends'),
+                      subtitle: Text(_formatOfferDateTime(selectedEnd)),
+                      trailing: const Icon(Icons.calendar_month),
+                      onTap: () async {
+                        final picked = await _pickOfferDateTime(
+                          context,
+                          selectedEnd,
+                          'Select offer end',
+                        );
+
+                        if (picked != null) {
+                          setDialogState(() {
+                            selectedEnd = picked;
+                          });
+                        }
+                      },
+                    ),
+                  ],
                 ),
-
-                const SizedBox(height: 12),
-
-                // ORIGINAL PRICE
-                TextField(
-                  controller: originalController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Original Price',
-                    prefixText: 'Rs. ',
-                    border: OutlineInputBorder(),
-                  ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
                 ),
+                ElevatedButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          final name = nameController.text.trim();
+                          final originalPrice = originalController.text.trim();
+                          final saverPrice = saverController.text.trim();
+                          final quantity = quantityController.text.trim();
+                          final parsedQuantity = int.tryParse(quantity);
+                          final currentTime = DateTime.now();
 
-                const SizedBox(height: 12),
+                          if (name.isEmpty ||
+                              originalPrice.isEmpty ||
+                              saverPrice.isEmpty ||
+                              parsedQuantity == null ||
+                              parsedQuantity <= 0) {
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Enter all fields and a quantity greater than zero.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
 
-                // SAVER PRICE
-                TextField(
-                  controller: saverController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Saver Price',
-                    prefixText: 'Rs. ',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
+                          if (!selectedStart.isAfter(currentTime)) {
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'The offer start must be in the future.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
 
-                const SizedBox(height: 12),
+                          if (!selectedEnd.isAfter(selectedStart)) {
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'The offer end must be later than its start.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
 
-                // QUANTITY
-                TextField(
-                  controller: quantityController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Quantity',
-                    border: OutlineInputBorder(),
-                  ),
+                          setDialogState(() {
+                            isSaving = true;
+                          });
+
+                          final updatedOffer = FoodOfferModel(
+                            id: offer.id,
+                            foodName: name,
+                            category: offer.category,
+                            originalPrice: originalPrice,
+                            saverPrice: saverPrice,
+                            quantity: quantity,
+                            availableFrom: _formatOfferDateTime(selectedStart),
+                            availableUntil: _formatOfferDateTime(selectedEnd),
+                            description: offer.description,
+                            allergens: offer.allergens,
+                            startsAt: selectedStart,
+                            expiresAt: selectedEnd,
+                            status: offer.status,
+                          );
+
+                          try {
+                            await sellerData.updateOffer(updatedOffer);
+
+                            if (!this.mounted) return;
+
+                            setState(() {});
+
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext);
+                            }
+
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Offer updated successfully.'),
+                              ),
+                            );
+                          } catch (e) {
+                            debugPrint('Edit offer error: $e');
+
+                            if (!this.mounted) return;
+
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Could not update offer. Please try again.',
+                                ),
+                              ),
+                            );
+
+                            if (dialogContext.mounted) {
+                              setDialogState(() {
+                                isSaving = false;
+                              });
+                            }
+                          }
+                        },
+                  child: Text(isSaving ? 'Saving...' : 'Save'),
                 ),
               ],
-            ),
-          ),
-
-          actions: [
-            // CANCEL
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Cancel'),
-            ),
-
-            // SAVE
-            ElevatedButton(
-              onPressed: () async {
-                final name = nameController.text.trim();
-                final originalPrice = originalController.text.trim();
-                final saverPrice = saverController.text.trim();
-                final quantity = quantityController.text.trim();
-
-                final parsedQuantity = int.tryParse(quantity);
-
-                if (name.isEmpty ||
-                    originalPrice.isEmpty ||
-                    saverPrice.isEmpty ||
-                    parsedQuantity == null ||
-                    parsedQuantity <= 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Enter all fields and a quantity greater than zero.',
-                      ),
-                    ),
-                  );
-                  return;
-                }
-                final oldOffer = sellerData.offers[index];
-
-                final updatedOffer = FoodOfferModel(
-                  id: oldOffer.id,
-                  foodName: name,
-                  category: oldOffer.category,
-                  originalPrice: originalPrice,
-                  saverPrice: saverPrice,
-                  quantity: quantity,
-                  availableFrom: oldOffer.availableFrom,
-                  availableUntil: oldOffer.availableUntil,
-                  description: oldOffer.description,
-                  allergens: oldOffer.allergens,
-                  status: oldOffer.status,
-                );
-
-                try {
-                  await sellerData.updateOffer(updatedOffer);
-
-                  if (!mounted) return;
-
-                  setState(() {});
-
-                  Navigator.pop(dialogContext);
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Offer updated successfully.'),
-                    ),
-                  );
-                } catch (e) {
-                  debugPrint('Edit offer error: $e');
-
-                  if (!mounted) return;
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Could not update offer. Please try again.',
-                      ),
-                    ),
-                  );
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
+            );
+          },
         );
       },
-    );
+    ).then((_) {
+      nameController.dispose();
+      originalController.dispose();
+      saverController.dispose();
+      quantityController.dispose();
+    });
   }
 
   // ------------------------------------------------------------

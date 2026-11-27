@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/food_order_service.dart';
 import 'food_order_tracking_screen.dart';
+import 'food_saver_screen.dart';
 
 class FoodOrderConfirmationScreen extends StatelessWidget {
   final FoodOrder order;
@@ -154,7 +155,11 @@ class FoodOrderConfirmationScreen extends StatelessWidget {
 
               TextButton(
                 onPressed: () {
-                  Navigator.popUntil(context, (route) => route.isFirst);
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FoodSaverScreen()),
+                    (route) => false,
+                  );
                 },
                 child: const Text(
                   'Continue Shopping',

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import 'dart:ui' show FontFeature;
+
 import '../models/food_product.dart';
 import '../services/food_cart_service.dart';
 import 'food_cart_screen.dart';
+import 'food_checkout_screen.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -66,6 +69,7 @@ class SaveBiteOffer extends FoodProduct {
        );
 
   int get discountPercentage {
+    if (originalPrice <= 0) return 0;
     return ((originalPrice - saverPrice) / originalPrice * 100).round();
   }
 
@@ -140,80 +144,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     );
   }
 
-  final List<SaveBiteOffer> offers = const [
-    SaveBiteOffer(
-      id: 'SB001',
-      foodName: 'Chicken Rice & Curry',
-      restaurantName: 'Spice Garden Restaurant',
-      restaurantLogo: 'assets/images/food/restaurants/spice_garden_logo.webp',
-      foodImage: 'assets/images/food/dishes/chicken_rice.webp',
-      originalPrice: 650,
-      saverPrice: 390,
-      quantity: 5,
-      endingTime: '7:00 PM',
-      expiresAt: null,
-      rating: 4.7,
-      description: 'A delicious Sri Lankan rice and curry meal available at a special SaveBite price before closing time.',
-      category: 'Meals',
-      collectionTime: '6:00 PM - 7:00 PM',
-      allergens: 'May contain coconut and spices.',
-    ),
-
-    SaveBiteOffer(
-      id: 'SB002',
-      foodName: 'Bakery Surprise Pack',
-      restaurantName: 'Cocos Bakery',
-      restaurantLogo: 'assets/images/food/restaurants/cocos_bakery_logo.webp',
-      foodImage: 'assets/images/food/dishes/bakery_pack.webp',
-      originalPrice: 800,
-      saverPrice: 450,
-      quantity: 3,
-      endingTime: '6:30 PM',
-      expiresAt: null,
-      rating: 4.9,
-      description: 'A selection of freshly baked bakery items that are available at a discounted SaveBite price.',
-      category: 'Bakery',
-      collectionTime: '5:30 PM - 6:30 PM',
-      allergens: 'Contains wheat, eggs and dairy.',
-    ),
-
-    SaveBiteOffer(
-      id: 'SB003',
-      foodName: 'Pizza Slices',
-      restaurantName: 'Urban Pizza',
-      restaurantLogo: 'assets/images/food/restaurants/urban_pizza_logo.webp',
-      foodImage: 'assets/images/food/dishes/pizza_slices.webp',
-      originalPrice: 900,
-      saverPrice: 500,
-      quantity: 4,
-      endingTime: '8:00 PM',
-      expiresAt: null,
-      rating: 4.6,
-      description: 'Fresh pizza slices available near the end of the restaurant service at a reduced price.',
-      category: 'Pizza',
-      collectionTime: '7:00 PM - 8:00 PM',
-      allergens: 'Contains wheat, dairy and possible soy.',
-    ),
-
-    SaveBiteOffer(
-      id: 'SB004',
-      foodName: 'Chocolate Brownies',
-      restaurantName: 'Cocos Bakery',
-      restaurantLogo: 'assets/images/food/restaurants/cocos_bakery_logo.webp',
-      foodImage: 'assets/images/food/dishes/chocolate_brownies.webp',
-      originalPrice: 600,
-      saverPrice: 350,
-      quantity: 6,
-      endingTime: '7:30 PM',
-      expiresAt: null,
-      rating: 4.9,
-      description:
-          'Rich chocolate brownies rescued from the end-of-day bakery stock.',
-      category: 'Desserts',
-      collectionTime: '6:30 PM - 7:30 PM',
-      allergens: 'Contains wheat, eggs and dairy.',
-    ),
-  ];
+  final List<SaveBiteOffer> offers = const [];
 
   Future<void> _loadFirestoreOffers() async {
     try {
@@ -299,7 +230,9 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
             restaurantName: restaurantName,
             restaurantLogo:
                 'assets/images/food/restaurants/cocos_bakery_logo.webp',
-            foodImage: 'assets/images/food/dishes/bakery_pack.webp',
+            foodImage: offer.imageUrl?.isNotEmpty == true
+                ? offer.imageUrl!
+                : 'assets/images/food/dishes/bakery_pack.webp',
             originalPrice: originalPrice,
             saverPrice: saverPrice,
             quantity: quantity,
@@ -411,20 +344,22 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
       backgroundColor: const Color(0xFFF7F7F5),
 
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFFFF8F2),
         elevation: 0,
+        scrolledUnderElevation: 0,
 
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF292421)),
           onPressed: () => Navigator.pop(context),
         ),
 
         title: const Text(
-          'SaveBite',
+          'Save Bites',
           style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 21,
+            color: Color(0xFF292421),
+            fontWeight: FontWeight.w900,
+            fontSize: 22,
+            letterSpacing: -0.5,
           ),
         ),
 
@@ -438,7 +373,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
                   IconButton(
                     icon: const Icon(
                       Icons.shopping_bag_outlined,
-                      color: Colors.black,
+                      color: Color(0xFF292421),
                     ),
                     onPressed: () {
                       Navigator.push(
@@ -503,21 +438,37 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
             const SizedBox(height: 22),
 
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Available Near You',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  const Expanded(
+                    child: Text(
+                      'Fresh Deals 🍊',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF292421),
+                      ),
+                    ),
                   ),
-
-                  Text(
-                    '${filtered.length} offers',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF0E3),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      '${filtered.length} offers',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFFF5722),
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ],
@@ -530,7 +481,7 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
               const Padding(
                 padding: EdgeInsets.all(30),
                 child: Center(
-                  child: CircularProgressIndicator(color: Color(0xFF2E7D32)),
+                  child: CircularProgressIndicator(color: Color(0xFFFF5722)),
                 ),
               )
             else if (firestoreOffersError != null)
@@ -593,52 +544,100 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.all(22),
+      height: 210,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF66BB6A), Color(0xFF2E7D32)],
+          colors: [Color(0xFFFF8A35), Color(0xFFFF5722)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(26),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 62,
-            height: 62,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Icon(Icons.eco_rounded, color: Colors.white, size: 34),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF5722).withValues(alpha: 0.22),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
-
-          const SizedBox(width: 16),
-
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -25,
+            top: -30,
+            child: Container(
+              height: 160,
+              width: 160,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 15,
+            bottom: -30,
+            child: Container(
+              height: 120,
+              width: 120,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.10),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(22),
+            child: Row(
               children: [
-                Text(
-                  'Good food. Better prices.',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 21,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.20),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: const Text(
+                          '♻️  FOOD RESCUE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      const Text(
+                        'Good food.\nAmazing deals!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 27,
+                          fontWeight: FontWeight.w900,
+                          height: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 9),
+                      const Text(
+                        'Grab delicious meals for less\nbefore they disappear!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-
-                SizedBox(height: 5),
-
-                Text(
-                  'Rescue delicious food before it goes to waste.',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                    height: 1.3,
-                  ),
-                ),
+                const SizedBox(width: 8),
+                const Text('🍕', style: TextStyle(fontSize: 85)),
               ],
             ),
           ),
@@ -651,13 +650,14 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
-        height: 52,
+        height: 56,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(17),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFFFE4D2)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: const Color(0xFFFF8A35).withValues(alpha: 0.07),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -665,18 +665,17 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
         ),
         child: TextField(
           controller: _searchController,
-
           onChanged: (_) {
             setState(() {});
           },
-
           decoration: InputDecoration(
-            hintText: 'Search food or restaurant...',
-
+            hintText: 'Find delicious deals...',
             hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-
-            prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
-
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              color: Color(0xFFFF8A35),
+              size: 24,
+            ),
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
                     icon: const Icon(Icons.close_rounded),
@@ -686,10 +685,8 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
                     },
                   )
                 : null,
-
             border: InputBorder.none,
-
-            contentPadding: const EdgeInsets.symmetric(vertical: 15),
+            contentPadding: const EdgeInsets.symmetric(vertical: 17),
           ),
         ),
       ),
@@ -698,17 +695,14 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
 
   Widget _buildCategories() {
     return SizedBox(
-      height: 42,
+      height: 50,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,
-
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
           final category = categories[index];
-
           final selected = category == selectedCategory;
 
           return GestureDetector(
@@ -717,30 +711,42 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
                 selectedCategory = category;
               });
             },
-
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
               decoration: BoxDecoration(
-                color: selected ? const Color(0xFF2E7D32) : Colors.white,
-
-                borderRadius: BorderRadius.circular(22),
-
+                gradient: selected
+                    ? const LinearGradient(
+                        colors: [Color(0xFFFF8A35), Color(0xFFFF5722)],
+                      )
+                    : null,
+                color: selected ? null : const Color(0xFFFFF5ED),
+                borderRadius: BorderRadius.circular(30),
                 border: Border.all(
                   color: selected
-                      ? const Color(0xFF2E7D32)
-                      : Colors.grey.shade200,
+                      ? Colors.transparent
+                      : const Color(0xFFFFE0CC),
                 ),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFFFF5722)
+                              .withValues(alpha: 0.20),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : [],
               ),
-
-              child: Text(
-                category,
-                style: TextStyle(
-                  color: selected ? Colors.white : Colors.grey.shade700,
-                  fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-                  fontSize: 13,
+              child: Center(
+                child: Text(
+                  category,
+                  style: TextStyle(
+                    color: selected ? Colors.white : const Color(0xFF6B5548),
+                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ),
@@ -753,31 +759,46 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
   Widget _buildEmptyState() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-
       padding: const EdgeInsets.all(30),
-
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: const Color(0xFFFFE4D2)),
       ),
-
-      child: const Center(
+      child: Center(
         child: Column(
           children: [
-            Icon(Icons.search_off_rounded, size: 50, color: Colors.grey),
-
-            SizedBox(height: 12),
-
-            Text(
-              'No SaveBites found',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            Container(
+              height: 85,
+              width: 85,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF0E3),
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: const Icon(
+                Icons.no_food_rounded,
+                size: 42,
+                color: Color(0xFFFF8A35),
+              ),
             ),
-
-            SizedBox(height: 5),
-
+            const SizedBox(height: 18),
+            const Text(
+              'No tasty deals found!',
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF292421),
+              ),
+            ),
+            const SizedBox(height: 8),
             Text(
-              'Try another food or restaurant.',
-              style: TextStyle(color: Colors.grey),
+              'Try another category or search for something else.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 13,
+                height: 1.5,
+              ),
             ),
           ],
         ),
@@ -787,39 +808,53 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
 
   Widget _buildImpactCard() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-
-      padding: const EdgeInsets.all(18),
-
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
-        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFE8D5), Color(0xFFFFF3E7)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFFFD5B5)),
       ),
-
       child: Row(
         children: [
           Container(
-            height: 46,
-            width: 46,
-
+            height: 55,
+            width: 55,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(18),
             ),
-
-            child: const Icon(Icons.eco_rounded, color: Color(0xFF2E7D32)),
+            child: const Icon(
+              Icons.eco_rounded,
+              color: Color(0xFFFF8A35),
+              size: 30,
+            ),
           ),
-
-          const SizedBox(width: 12),
-
+          const SizedBox(width: 15),
           const Expanded(
-            child: Text(
-              'Every rescued meal helps reduce food waste. 🌱',
-              style: TextStyle(
-                color: Color(0xFF2E7D32),
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Good for you. Good for Earth! 🌱',
+                  style: TextStyle(
+                    color: Color(0xFF713B20),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Every rescued meal helps reduce food waste.',
+                  style: TextStyle(
+                    color: Color(0xFF875D45),
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -949,123 +984,103 @@ class _SaveBiteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(26),
       clipBehavior: Clip.antiAlias,
-
+      elevation: 3,
+      shadowColor: Colors.orange.withValues(alpha: 0.12),
       child: InkWell(
         onTap: onTap,
-
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-
           children: [
             Stack(
               children: [
                 SizedBox(
-                  height: 190,
+                  height: 210,
                   width: double.infinity,
-
-                  child: Image.asset(
-                    offer.foodImage,
-                    fit: BoxFit.cover,
-
-                    errorBuilder: (context, error, stackTrace) {
-                      debugPrint('IMAGE ERROR: ${offer.foodImage}');
-
-                      debugPrint('ERROR DETAILS: $error');
-
-                      return Container(
-                        color: const Color(0xFFE8F5E9),
-
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-
-                            children: [
-                              const Icon(
-                                Icons.restaurant_rounded,
-                                size: 55,
-                                color: Color(0xFF66BB6A),
-                              ),
-
-                              const SizedBox(height: 8),
-
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                ),
-                                child: Text(
-                                  'Image not found\n${offer.foodImage}',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Color(0xFF2E7D32),
-                                    fontSize: 10,
-                                  ),
+                  child: offer.foodImage.startsWith('http')
+                      ? Image.network(
+                          offer.foodImage,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: const Color(0xFFFFF0DF),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.fastfood_rounded,
+                                  size: 65,
+                                  color: Color(0xFFFF8A35),
                                 ),
                               ),
-                            ],
-                          ),
+                            );
+                          },
+                        )
+                      : Image.asset(
+                          offer.foodImage,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: const Color(0xFFFFF0DF),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.fastfood_rounded,
+                                  size: 65,
+                                  color: Color(0xFFFF8A35),
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
 
+                // Discount badge
                 Positioned(
-                  top: 12,
-                  left: 12,
-
+                  top: 14,
+                  left: 14,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 11,
-                      vertical: 7,
+                      horizontal: 13,
+                      vertical: 9,
                     ),
-
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2E7D32),
-                      borderRadius: BorderRadius.circular(20),
+                      color: const Color(0xFFFF5722),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-
                     child: Text(
                       '${offer.discountPercentage}% OFF',
-
                       style: const TextStyle(
                         color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13,
                       ),
                     ),
                   ),
                 ),
 
+                // Ending time
                 Positioned(
-                  top: 12,
-                  right: 12,
-
+                  top: 14,
+                  right: 14,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 7,
+                      horizontal: 11,
+                      vertical: 9,
                     ),
-
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.94),
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
                           Icons.access_time_rounded,
                           size: 14,
-                          color: Colors.orange,
+                          color: Color(0xFFFF5722),
                         ),
-
-                        const SizedBox(width: 4),
-
+                        const SizedBox(width: 5),
                         Text(
                           'Until ${offer.endingTime}',
-
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
@@ -1075,41 +1090,58 @@ class _SaveBiteCard extends StatelessWidget {
                     ),
                   ),
                 ),
+
+                // Food rescue label
+                Positioned(
+                  bottom: 14,
+                  left: 14,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Text(
+                      '♻️  SAVE BITES',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
 
             Padding(
-              padding: const EdgeInsets.all(16),
-
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-
                 children: [
+                  // Restaurant
                   Row(
                     children: [
                       _RestaurantLogo(
                         imagePath: offer.restaurantLogo,
-                        size: 40,
+                        size: 44,
                       ),
-
-                      const SizedBox(width: 10),
-
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-
                           children: [
                             Text(
                               offer.restaurantName,
-
                               style: const TextStyle(
-                                fontSize: 13,
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-
-                            const SizedBox(height: 3),
-
+                            const SizedBox(height: 4),
                             Row(
                               children: [
                                 const Icon(
@@ -1117,14 +1149,11 @@ class _SaveBiteCard extends StatelessWidget {
                                   size: 15,
                                   color: Colors.amber,
                                 ),
-
-                                const SizedBox(width: 3),
-
+                                const SizedBox(width: 4),
                                 Text(
                                   '${offer.rating}',
-
                                   style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 12,
                                     color: Colors.grey.shade700,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -1134,22 +1163,30 @@ class _SaveBiteCard extends StatelessWidget {
                           ],
                         ),
                       ),
-
-                      const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 15,
-                        color: Colors.grey,
+                      Container(
+                        padding: const EdgeInsets.all(9),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF2E8),
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_forward_rounded,
+                          color: Color(0xFFFF5722),
+                          size: 19,
+                        ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
 
+                  // Food name
                   Text(
                     offer.foodName,
                     style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF242424),
                     ),
                   ),
 
@@ -1158,27 +1195,25 @@ class _SaveBiteCard extends StatelessWidget {
                     _ExpiryCountdown(expiresAt: offer.expiresAt!),
                   ],
 
-                  const SizedBox(height: 9),
+                  const SizedBox(height: 14),
 
+                  // Price section
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
                         'Rs. ${offer.saverPrice.toStringAsFixed(0)}',
-
                         style: const TextStyle(
-                          fontSize: 19,
-                          color: Color(0xFF2E7D32),
-                          fontWeight: FontWeight.bold,
+                          fontSize: 23,
+                          color: Color(0xFFFF5722),
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
-
-                      const SizedBox(width: 8),
-
+                      const SizedBox(width: 10),
                       Text(
                         'Rs. ${offer.originalPrice.toStringAsFixed(0)}',
-
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 13,
                           color: Colors.grey,
                           decoration: TextDecoration.lineThrough,
                         ),
@@ -1186,18 +1221,19 @@ class _SaveBiteCard extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: 9),
+                  const SizedBox(height: 12),
 
+                  // Remaining quantity and savings
                   Row(
                     children: [
                       Icon(
-                        Icons.inventory_2_outlined,
-                        size: 15,
-                        color: offer.quantity <= 3 ? Colors.red : Colors.orange,
+                        Icons.inventory_2_rounded,
+                        size: 16,
+                        color: offer.quantity <= 3
+                            ? Colors.red
+                            : const Color(0xFFFF8A35),
                       ),
-
-                      const SizedBox(width: 5),
-
+                      const SizedBox(width: 6),
                       Flexible(
                         child: Text(
                           offer.quantity == 0
@@ -1209,25 +1245,30 @@ class _SaveBiteCard extends StatelessWidget {
                             fontSize: 12,
                             color: offer.quantity == 0
                                 ? Colors.grey
-                                : offer.quantity == 1
-                                ? Colors.red
                                 : offer.quantity <= 3
                                 ? Colors.red
                                 : Colors.orange.shade800,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
-
                       const Spacer(),
-
-                      Text(
-                        'Save Rs. ${offer.savings.toStringAsFixed(0)}',
-
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF2E7D32),
-                          fontWeight: FontWeight.bold,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF2E8),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Save Rs. ${offer.savings.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFFFF5722),
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ),
                     ],
@@ -1313,72 +1354,55 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
   int quantity = 1;
   bool delivery = true;
 
+  static const Color orange = Color(0xFFFF5722);
+  static const Color lightOrange = Color(0xFFFFF0E3);
+  static const Color darkText = Color(0xFF292421);
+  static const Color cream = Color(0xFFFFF8F2);
+
   @override
   Widget build(BuildContext context) {
     final offer = widget.offer;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F5),
+      backgroundColor: cream,
 
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: cream,
         elevation: 0,
-
+        scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_rounded, color: darkText),
           onPressed: () => Navigator.pop(context),
         ),
-
         title: const Text(
           'SaveBite Details',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(color: darkText, fontWeight: FontWeight.w900),
         ),
       ),
 
       body: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-
           children: [
+            // FOOD IMAGE
             Stack(
               children: [
                 SizedBox(
-                  height: 260,
+                  height: 280,
                   width: double.infinity,
-
                   child: Image.asset(
                     offer.foodImage,
                     fit: BoxFit.cover,
-
                     errorBuilder: (context, error, stackTrace) {
-                      debugPrint('DETAIL IMAGE ERROR: ${offer.foodImage}');
-
-                      debugPrint('ERROR DETAILS: $error');
-
                       return Container(
-                        color: const Color(0xFFE8F5E9),
-
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-
-                          children: [
-                            const Icon(
-                              Icons.restaurant_rounded,
-                              size: 80,
-                              color: Color(0xFF66BB6A),
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            Text(
-                              'Image not found\n${offer.foodImage}',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Color(0xFF2E7D32),
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
+                        color: const Color(0xFFFFE8D9),
+                        child: const Center(
+                          child: Icon(
+                            Icons.restaurant_rounded,
+                            size: 90,
+                            color: orange,
+                          ),
                         ),
                       );
                     },
@@ -1386,26 +1410,46 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                 ),
 
                 Positioned(
-                  left: 16,
-                  bottom: 16,
+                  top: 18,
+                  left: 18,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 15,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: orange,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      '${offer.discountPercentage}% OFF',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
 
+                Positioned(
+                  bottom: 18,
+                  left: 18,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 8,
+                      vertical: 9,
                     ),
-
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2E7D32),
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.black.withValues(alpha: 0.65),
+                      borderRadius: BorderRadius.circular(15),
                     ),
-
-                    child: Text(
-                      '${offer.discountPercentage}% OFF',
-
-                      style: const TextStyle(
+                    child: const Text(
+                      '♻️ FOOD RESCUE',
+                      style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
                   ),
@@ -1413,40 +1457,46 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
               ],
             ),
 
+            // MAIN INFORMATION CARD
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              color: Colors.white,
-
+              margin: const EdgeInsets.fromLTRB(14, 16, 14, 0),
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: orange.withValues(alpha: 0.06),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-
                 children: [
+                  // RESTAURANT
                   Row(
                     children: [
                       _RestaurantLogo(
                         imagePath: offer.restaurantLogo,
-                        size: 54,
+                        size: 56,
                       ),
-
-                      const SizedBox(width: 12),
-
+                      const SizedBox(width: 13),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-
                           children: [
                             Text(
                               offer.restaurantName,
-
                               style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: darkText,
                               ),
                             ),
-
-                            const SizedBox(height: 4),
-
+                            const SizedBox(height: 5),
                             Row(
                               children: [
                                 const Icon(
@@ -1454,20 +1504,17 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                                   color: Colors.amber,
                                   size: 17,
                                 ),
-
                                 const SizedBox(width: 4),
-
                                 Text(
                                   '${offer.rating}',
-
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
                                   ),
                                 ),
-
+                                const SizedBox(width: 5),
                                 Text(
-                                  '  Restaurant',
-
+                                  'Restaurant',
                                   style: TextStyle(
                                     color: Colors.grey.shade600,
                                     fontSize: 12,
@@ -1481,44 +1528,41 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 24),
 
+                  // FOOD NAME
                   Text(
                     offer.foodName,
-
                     style: const TextStyle(
-                      fontSize: 25,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: darkText,
+                      height: 1.2,
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 18),
 
+                  // PRICE
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
-
                     children: [
                       Text(
                         'Rs. ${offer.saverPrice.toStringAsFixed(0)}',
-
                         style: const TextStyle(
-                          color: Color(0xFF2E7D32),
-                          fontSize: 27,
-                          fontWeight: FontWeight.bold,
+                          color: orange,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
-
-                      const SizedBox(width: 9),
-
+                      const SizedBox(width: 10),
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-
+                        padding: const EdgeInsets.only(bottom: 6),
                         child: Text(
                           'Rs. ${offer.originalPrice.toStringAsFixed(0)}',
-
                           style: const TextStyle(
                             color: Colors.grey,
-                            fontSize: 14,
+                            fontSize: 15,
                             decoration: TextDecoration.lineThrough,
                           ),
                         ),
@@ -1526,50 +1570,72 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
 
-                  Text(
-                    'You save Rs. ${offer.savings.toStringAsFixed(0)}',
-
-                    style: const TextStyle(
-                      color: Color(0xFF2E7D32),
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      color: lightOrange,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.savings_rounded,
+                          color: orange,
+                          size: 19,
+                        ),
+                        const SizedBox(width: 7),
+                        Text(
+                          'You save Rs. ${offer.savings.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            color: Color(0xFFB84620),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 26),
 
-                  const Text(
-                    'About this food',
+                  // DESCRIPTION
+                  _SectionTitle(title: 'About this food'),
 
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                  ),
-
-                  const SizedBox(height: 7),
+                  const SizedBox(height: 9),
 
                   Text(
                     offer.description,
-
                     style: TextStyle(
                       color: Colors.grey.shade700,
-                      height: 1.5,
+                      height: 1.6,
                       fontSize: 14,
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 25),
+
+                  // INFORMATION
+                  _SectionTitle(title: 'Food information'),
+
+                  const SizedBox(height: 16),
 
                   _InfoRow(
-                    icon: Icons.inventory_2_outlined,
+                    icon: Icons.inventory_2_rounded,
                     title: 'Availability',
                     value: offer.quantity == 0
                         ? 'Out of Stock'
                         : offer.quantity == 1
-                        ? 'Last Portion available'
+                        ? 'Last portion available'
                         : '${offer.quantity} portions left',
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 15),
 
                   _InfoRow(
                     icon: Icons.access_time_rounded,
@@ -1577,15 +1643,15 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                     value: offer.endingTime,
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 15),
 
                   _InfoRow(
-                    icon: Icons.shopping_bag_outlined,
+                    icon: Icons.shopping_bag_rounded,
                     title: 'Collection time',
                     value: offer.collectionTime,
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 15),
 
                   _InfoRow(
                     icon: Icons.warning_amber_rounded,
@@ -1593,15 +1659,12 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                     value: offer.allergens,
                   ),
 
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 26),
 
-                  const Text(
-                    'Fulfilment',
+                  // FULFILMENT
+                  _SectionTitle(title: 'Choose fulfilment'),
 
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                  ),
-
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 13),
 
                   Row(
                     children: [
@@ -1610,7 +1673,6 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                           icon: Icons.delivery_dining_rounded,
                           title: 'Delivery',
                           selected: delivery,
-
                           onTap: () {
                             setState(() {
                               delivery = true;
@@ -1619,14 +1681,13 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                         ),
                       ),
 
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
 
                       Expanded(
                         child: _FulfilmentButton(
                           icon: Icons.storefront_rounded,
                           title: 'Pickup',
                           selected: !delivery,
-
                           onTap: () {
                             setState(() {
                               delivery = false;
@@ -1637,153 +1698,272 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 26),
 
-                  const Text(
-                    'Quantity',
+                  // QUANTITY
+                  _SectionTitle(title: 'Select quantity'),
 
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                  ),
+                  const SizedBox(height: 14),
 
-                  const SizedBox(height: 10),
-
-                  Row(
-                    children: [
-                      _QuantityButton(
-                        icon: Icons.remove,
-                        onTap: () {
-                          if (offer.quantity > 0 && quantity > 1) {
-                            setState(() {
-                              quantity--;
-                            });
-                          }
-                        },
-                      ),
-
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-
-                        child: Text(
-                          '$quantity',
-
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cream,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFFFE2CE)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Portions',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
-                      ),
 
-                      _QuantityButton(
-                        icon: Icons.add,
+                        _QuantityButton(
+                          icon: Icons.remove_rounded,
+                          onTap: () {
+                            if (offer.quantity > 0 && quantity > 1) {
+                              setState(() {
+                                quantity--;
+                              });
+                            }
+                          },
+                        ),
 
-                        onTap: () {
-                          if (offer.quantity > 0 && quantity < offer.quantity) {
-                            setState(() {
-                              quantity++;
-                            });
-                          }
-                        },
-                      ),
-                    ],
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            '$quantity',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: darkText,
+                            ),
+                          ),
+                        ),
+
+                        _QuantityButton(
+                          icon: Icons.add_rounded,
+                          onTap: () {
+                            if (offer.quantity > 0 &&
+                                quantity < offer.quantity) {
+                              setState(() {
+                                quantity++;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  Text(
+                    offer.quantity <= 0
+                        ? 'Currently unavailable'
+                        : '${offer.quantity} portions available',
+                    style: TextStyle(
+                      color: offer.quantity <= 3
+                          ? Colors.red.shade700
+                          : Colors.grey.shade600,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 100),
+            const SizedBox(height: 18),
+
+            // FOOD RESCUE MESSAGE
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFE8D5), Color(0xFFFFF3E7)],
+                ),
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(color: const Color(0xFFFFD5B5)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.eco_rounded, color: orange, size: 32),
+                  SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Your rescue matters! 🌱',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                            color: Color(0xFF713B20),
+                          ),
+                        ),
+                        SizedBox(height: 5),
+                        Text(
+                          'Enjoy great food while helping reduce food waste.',
+                          style: TextStyle(
+                            color: Color(0xFF875D45),
+                            fontSize: 12,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 120),
           ],
         ),
       ),
 
+      // BOTTOM ADD TO CART
       bottomSheet: Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
-
         decoration: BoxDecoration(
           color: Colors.white,
-
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12,
+              color: Colors.black.withValues(alpha: 0.07),
+              blurRadius: 15,
               offset: const Offset(0, -4),
             ),
           ],
         ),
-
         child: SafeArea(
           child: SizedBox(
             height: 54,
-            width: double.infinity,
-
-            child: ElevatedButton(
-              onPressed: offer.quantity <= 0
-                  ? null
-                  : () {
-                      if (quantity > offer.quantity) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Not enough portions are available.'),
-                          ),
-                        );
-                        return;
-                      }
-
-                      final added = FoodCartService.instance.addProduct(
-                        offer,
-                        quantity,
-                      );
-
-                      if (!added) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'This offer has expired or is no longer available.',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            '$quantity × ${offer.foodName} added to cart',
-                          ),
-                          behavior: SnackBarBehavior.floating,
-
-                          action: SnackBarAction(
-                            label: 'VIEW CART',
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const FoodCartScreen(),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: offer.quantity <= 0
+                        ? null
+                        : () {
+                            if (quantity > offer.quantity) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Not enough portions are available.',
+                                  ),
                                 ),
                               );
-                            },
-                          ),
-                        ),
-                      );
-                    },
+                              return;
+                            }
 
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E7D32),
-                foregroundColor: Colors.white,
-                elevation: 0,
+                            final added = FoodCartService.instance.addProduct(
+                              offer,
+                              quantity,
+                            );
 
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(17),
+                            if (!added) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'This offer has expired or is no longer available.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '$quantity × ${offer.foodName} added to cart',
+                                ),
+                                behavior: SnackBarBehavior.floating,
+                                action: SnackBarAction(
+                                  label: 'VIEW CART',
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const FoodCartScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE8F5E9),
+                      foregroundColor: const Color(0xFF2E7D32),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(17),
+                      ),
+                    ),
+                    child: Text(
+                      'Add to Cart • Rs. ${(offer.saverPrice * quantity).toStringAsFixed(0)}',
+                    ),
+                  ),
                 ),
-              ),
 
-              child: Text(
-                'Add to Cart • Rs. ${(offer.saverPrice * quantity).toStringAsFixed(0)}',
+                const SizedBox(width: 10),
 
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: offer.quantity <= 0
+                        ? null
+                        : () {
+                            if (quantity > offer.quantity) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Not enough portions are available.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => FoodCheckoutScreen(
+                                  directItems: [
+                                    FoodCartItem(
+                                      product: offer,
+                                      quantity: quantity,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2E7D32),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(17),
+                      ),
+                    ),
+                    child: Text(
+                      'Buy Now • Rs. ${(offer.saverPrice * quantity).toStringAsFixed(0)}',
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -1792,6 +1972,26 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
   }
 }
 
+// SECTION TITLE
+class _SectionTitle extends StatelessWidget {
+  final String title;
+
+  const _SectionTitle({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w900,
+        color: Color(0xFF292421),
+      ),
+    );
+  }
+}
+
+// INFORMATION ROW
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -1807,41 +2007,41 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-
       children: [
         Container(
-          height: 38,
-          width: 38,
-
+          height: 44,
+          width: 44,
           decoration: BoxDecoration(
-            color: const Color(0xFFE8F5E9),
-            borderRadius: BorderRadius.circular(12),
+            color: const Color(0xFFFFF0E3),
+            borderRadius: BorderRadius.circular(15),
           ),
-
-          child: Icon(icon, size: 20, color: const Color(0xFF2E7D32)),
+          child: Icon(icon, size: 21, color: const Color(0xFFFF5722)),
         ),
 
-        const SizedBox(width: 11),
+        const SizedBox(width: 13),
 
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-
             children: [
               Text(
                 title,
-
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
 
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
 
               Text(
                 value,
-
                 style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF292421),
+                  height: 1.4,
                 ),
               ),
             ],
@@ -1852,6 +2052,7 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
+// DELIVERY / PICKUP BUTTON
 class _FulfilmentButton extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -1869,46 +2070,48 @@ class _FulfilmentButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-
-        padding: const EdgeInsets.symmetric(vertical: 14),
-
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(vertical: 17),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFE8F5E9) : Colors.white,
-
-          borderRadius: BorderRadius.circular(15),
-
+          gradient: selected
+              ? const LinearGradient(
+                  colors: [Color(0xFFFF8A35), Color(0xFFFF5722)],
+                )
+              : null,
+          color: selected ? null : Colors.white,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? const Color(0xFF2E7D32) : Colors.grey.shade300,
-            width: selected ? 1.5 : 1,
+            color: selected ? Colors.transparent : const Color(0xFFFFE0CC),
+            width: 1.2,
           ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFFFF5722).withValues(alpha: 0.15),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : [],
         ),
-
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-
           children: [
             Icon(
               icon,
-
-              color: selected ? const Color(0xFF2E7D32) : Colors.grey,
-
-              size: 21,
+              color: selected ? Colors.white : const Color(0xFFFF5722),
+              size: 22,
             ),
 
-            const SizedBox(width: 7),
+            const SizedBox(width: 8),
 
             Text(
               title,
-
               style: TextStyle(
-                fontWeight: FontWeight.bold,
-
-                color: selected
-                    ? const Color(0xFF2E7D32)
-                    : Colors.grey.shade700,
+                fontWeight: FontWeight.w800,
+                color: selected ? Colors.white : const Color(0xFF6B5548),
+                fontSize: 14,
               ),
             ),
           ],
@@ -1918,6 +2121,7 @@ class _FulfilmentButton extends StatelessWidget {
   }
 }
 
+// QUANTITY BUTTON
 class _QuantityButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -1926,21 +2130,21 @@ class _QuantityButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-
-      borderRadius: BorderRadius.circular(12),
-
-      child: Container(
-        height: 40,
-        width: 40,
-
-        decoration: BoxDecoration(
-          color: const Color(0xFFE8F5E9),
-          borderRadius: BorderRadius.circular(12),
+    return Material(
+      color: const Color(0xFFFFF0E3),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          height: 44,
+          width: 44,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFFFE0CC)),
+          ),
+          child: Icon(icon, color: const Color(0xFFFF5722), size: 22),
         ),
-
-        child: Icon(icon, color: const Color(0xFF2E7D32)),
       ),
     );
   }

@@ -1,8 +1,13 @@
+import 'dart:io';
+
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../models/food_offer_model.dart';
 import '../services/food_seller_data_service.dart';
 import 'food_my_offers_screen.dart';
+
+import '../services/food_saver_image_service.dart';
 
 class FoodAddSurplusScreen extends StatefulWidget {
   const FoodAddSurplusScreen({super.key});
@@ -23,10 +28,12 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
 
   String selectedCategory = 'Bakery';
   bool _isSaving = false;
+  File? _selectedFoodImage;
+  final ImagePicker _imagePicker = ImagePicker();
+  bool _isUploadingImage = false;
 
-  String selectedFromTime = '5:00 PM';
-  String selectedUntilTime = '8:00 PM';
-  DateTime selectedCollectionDate = DateTime.now();
+  DateTime? selectedStartDateTime;
+  DateTime? selectedEndDateTime;
 
   final List<String> categories = [
     'Bakery',
@@ -37,6 +44,32 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
     'Beverages',
     'Other',
   ];
+  Future<void> _pickFoodImage() async {
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 1200,
+      );
+
+      if (pickedFile == null || !mounted) return;
+
+      setState(() {
+        _selectedFoodImage = File(pickedFile.path);
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          duration: const Duration(seconds: 8),
+        ),
+      );
+
+      debugPrint('Create food offer error: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -50,43 +83,54 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
     super.dispose();
   }
 
-  DateTime _dateTimeForTime(DateTime date, String time) {
-    final parts = time.split(' ');
-    final timeParts = parts[0].split(':');
-
-    int hour = int.parse(timeParts[0]);
-    final int minute = int.parse(timeParts[1]);
-    final String period = parts[1];
-
-    if (period == 'PM' && hour != 12) {
-      hour += 12;
-    } else if (period == 'AM' && hour == 12) {
-      hour = 0;
-    }
-
-    return DateTime(date.year, date.month, date.day, hour, minute);
-  }
-
-  Future<void> _selectCollectionDate() async {
+  Future<DateTime?> _pickDateTime({
+    required String title,
+    required DateTime initialDateTime,
+  }) async {
     final now = DateTime.now();
 
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate:
-          selectedCollectionDate.isBefore(
-            DateTime(now.year, now.month, now.day),
-          )
+      initialDate: initialDateTime.isBefore(now)
           ? DateTime(now.year, now.month, now.day)
-          : selectedCollectionDate,
+          : initialDateTime,
       firstDate: DateTime(now.year, now.month, now.day),
       lastDate: DateTime(now.year + 2, now.month, now.day),
+      helpText: title,
     );
 
-    if (pickedDate != null && mounted) {
-      setState(() {
-        selectedCollectionDate = pickedDate;
-      });
-    }
+    if (pickedDate == null || !mounted) return null;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initialDateTime),
+      helpText: title,
+    );
+
+    if (pickedTime == null) return null;
+
+    return DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+  }
+
+  String _formatDateTime(DateTime? dateTime) {
+    if (dateTime == null) return 'Choose date and time';
+
+    final date =
+        '${dateTime.day.toString().padLeft(2, '0')}/'
+        '${dateTime.month.toString().padLeft(2, '0')}/'
+        '${dateTime.year}';
+
+    final hour = dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12;
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    final period = dateTime.hour >= 12 ? 'PM' : 'AM';
+
+    return '$date • $hour:$minute $period';
   }
 
   // ------------------------------------------------------------
@@ -100,29 +144,29 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
       return;
     }
     final now = DateTime.now();
+    final startAt = selectedStartDateTime;
+    final endAt = selectedEndDateTime;
 
-    final collectionStart = _dateTimeForTime(
-      selectedCollectionDate,
-      selectedFromTime,
-    );
-
-    final expiry = _dateTimeForTime(selectedCollectionDate, selectedUntilTime);
-
-    if (!expiry.isAfter(collectionStart)) {
+    if (startAt == null || endAt == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'The collection end time must be after the start time.',
-          ),
+          content: Text('Please select both the offer start and end times.'),
         ),
       );
       return;
     }
 
-    if (!expiry.isAfter(now)) {
+    if (!startAt.isAfter(now)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The offer start must be in the future.')),
+      );
+      return;
+    }
+
+    if (!endAt.isAfter(startAt)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please choose a future collection end date and time.'),
+          content: Text('The offer end must be later than its start.'),
         ),
       );
       return;
@@ -143,20 +187,48 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
       _isSaving = true;
     });
 
-    final offer = FoodOfferModel(
-      foodName: foodNameController.text.trim(),
-      category: selectedCategory,
-      originalPrice: originalPriceController.text.trim(),
-      saverPrice: saverPriceController.text.trim(),
-      quantity: quantityController.text.trim(),
-      availableFrom: selectedFromTime,
-      availableUntil: selectedUntilTime,
-      description: descriptionController.text.trim(),
-      allergens: allergenController.text.trim(),
-      expiresAt: expiry,
-    );
-
     try {
+      String? uploadedImageUrl;
+
+      // Upload the selected photo to Supabase.
+      if (_selectedFoodImage != null) {
+        setState(() {
+          _isUploadingImage = true;
+        });
+
+        final imageBytes = await _selectedFoodImage!.readAsBytes();
+
+        final fileName = _selectedFoodImage!.path
+            .split(Platform.pathSeparator)
+            .last;
+
+        uploadedImageUrl = await FoodSaverImageService.instance.uploadFoodImage(
+          fileName: fileName,
+          bytes: imageBytes,
+        );
+
+        if (mounted) {
+          setState(() {
+            _isUploadingImage = false;
+          });
+        }
+      }
+
+      final offer = FoodOfferModel(
+        foodName: foodNameController.text.trim(),
+        category: selectedCategory,
+        originalPrice: originalPriceController.text.trim(),
+        saverPrice: saverPriceController.text.trim(),
+        quantity: quantityController.text.trim(),
+        availableFrom: _formatDateTime(startAt),
+        availableUntil: _formatDateTime(endAt),
+        description: descriptionController.text.trim(),
+        allergens: allergenController.text.trim(),
+        startsAt: startAt,
+        expiresAt: endAt,
+        imageUrl: uploadedImageUrl,
+      );
+
       await FoodSellerDataService.instance.addOffer(offer);
 
       if (!mounted) return;
@@ -172,21 +244,23 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
         context,
         MaterialPageRoute(builder: (_) => const FoodMyOffersScreen()),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('CREATE OFFER FAILED: $e');
+      debugPrint('$stackTrace');
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not save offer. Please try again.'),
-          duration: const Duration(seconds: 3),
+          content: Text(e.toString(), maxLines: 5),
+          duration: const Duration(seconds: 10),
         ),
       );
-
-      debugPrint('Create food offer error: $e');
     } finally {
       if (mounted) {
         setState(() {
           _isSaving = false;
+          _isUploadingImage = false;
         });
       }
     }
@@ -224,6 +298,95 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
               ),
 
               const SizedBox(height: 28),
+
+              // ------------------------------------------------------------
+              // FOOD PHOTO
+              // ------------------------------------------------------------
+              const Text(
+                'Food Photo',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                'Upload a real photo of the surplus food you are selling.',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+
+              const SizedBox(height: 12),
+
+              GestureDetector(
+                onTap: _isSaving ? null : _pickFoodImage,
+                child: Container(
+                  width: double.infinity,
+                  height: 220,
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.green.shade300,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: _selectedFoodImage != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Image.file(
+                            _selectedFoodImage!,
+                            width: double.infinity,
+                            height: 220,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.add_a_photo_outlined,
+                              size: 45,
+                              color: Colors.green.shade700,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Tap to upload food photo',
+                              style: TextStyle(
+                                color: Colors.green.shade800,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Choose an image from your gallery',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+
+              if (_selectedFoodImage != null) ...[
+                const SizedBox(height: 8),
+
+                TextButton.icon(
+                  onPressed: _isSaving
+                      ? null
+                      : () {
+                          setState(() {
+                            _selectedFoodImage = null;
+                          });
+                        },
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Remove photo'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                ),
+              ],
+
+              const SizedBox(height: 24),
+
+              // ------------------------------------------------------------
+              // FOOD NAME
+              // ------------------------------------------------------------
 
               // ------------------------------------------------------------
               // FOOD NAME
@@ -387,136 +550,73 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
                 },
               ),
 
-              const SizedBox(height: 20),
+              // OFFER SCHEDULE
               const Text(
-                'Collection Date',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                'Offer Schedule',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
 
-              InkWell(
-                onTap: _selectCollectionDate,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade400),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_month_outlined),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          '${selectedCollectionDate.day.toString().padLeft(2, '0')}/'
-                          '${selectedCollectionDate.month.toString().padLeft(2, '0')}/'
-                          '${selectedCollectionDate.year}',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                      const Icon(Icons.edit_calendar_outlined),
-                    ],
-                  ),
-                ),
+              Text(
+                'Choose exactly when customers can start buying and when the offer expires.',
+                style: TextStyle(color: Colors.grey.shade600),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // ------------------------------------------------------------
-              // COLLECTION TIME
-              // ------------------------------------------------------------
-              const Text(
-                'Collection Time',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              // START DATE AND TIME
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.play_circle_outline),
+                title: const Text('Offer starts'),
+                subtitle: Text(_formatDateTime(selectedStartDateTime)),
+                trailing: const Icon(Icons.calendar_month),
+                onTap: () async {
+                  final now = DateTime.now();
+
+                  final picked = await _pickDateTime(
+                    title: 'Select offer start',
+                    initialDateTime:
+                        selectedStartDateTime ??
+                        now.add(const Duration(minutes: 5)),
+                  );
+
+                  if (picked != null && mounted) {
+                    setState(() {
+                      selectedStartDateTime = picked;
+                    });
+                  }
+                },
               ),
 
-              const SizedBox(height: 8),
+              const Divider(),
 
-              Row(
-                children: [
-                  // FROM
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: selectedFromTime,
+              // END DATE AND TIME
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.event_available_outlined),
+                title: const Text('Offer ends'),
+                subtitle: Text(_formatDateTime(selectedEndDateTime)),
+                trailing: const Icon(Icons.calendar_month),
+                onTap: () async {
+                  final now = DateTime.now();
 
-                      decoration: const InputDecoration(
-                        labelText: 'From',
-                        border: OutlineInputBorder(),
-                      ),
-
-                      items: const [
-                        DropdownMenuItem(
-                          value: '4:00 PM',
-                          child: Text('4:00 PM'),
+                  final picked = await _pickDateTime(
+                    title: 'Select offer end',
+                    initialDateTime:
+                        selectedEndDateTime ??
+                        (selectedStartDateTime ?? now).add(
+                          const Duration(hours: 2),
                         ),
-                        DropdownMenuItem(
-                          value: '5:00 PM',
-                          child: Text('5:00 PM'),
-                        ),
-                        DropdownMenuItem(
-                          value: '6:00 PM',
-                          child: Text('6:00 PM'),
-                        ),
-                        DropdownMenuItem(
-                          value: '7:00 PM',
-                          child: Text('7:00 PM'),
-                        ),
-                      ],
+                  );
 
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() {
-                            selectedFromTime = value;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  // UNTIL
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: selectedUntilTime,
-
-                      decoration: const InputDecoration(
-                        labelText: 'Until',
-                        border: OutlineInputBorder(),
-                      ),
-
-                      items: const [
-                        DropdownMenuItem(
-                          value: '6:00 PM',
-                          child: Text('6:00 PM'),
-                        ),
-                        DropdownMenuItem(
-                          value: '7:00 PM',
-                          child: Text('7:00 PM'),
-                        ),
-                        DropdownMenuItem(
-                          value: '8:00 PM',
-                          child: Text('8:00 PM'),
-                        ),
-                        DropdownMenuItem(
-                          value: '9:00 PM',
-                          child: Text('9:00 PM'),
-                        ),
-                      ],
-
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() {
-                            selectedUntilTime = value;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                ],
+                  if (picked != null && mounted) {
+                    setState(() {
+                      selectedEndDateTime = picked;
+                    });
+                  }
+                },
               ),
 
               const SizedBox(height: 20),
@@ -587,7 +687,11 @@ class _FoodAddSurplusScreenState extends State<FoodAddSurplusScreen> {
                         )
                       : const Icon(Icons.add_circle_outline),
                   label: Text(
-                    _isSaving ? 'Saving Offer...' : 'Create Food Saver Offer',
+                    _isUploadingImage
+                        ? 'Uploading Photo...'
+                        : _isSaving
+                        ? 'Saving Offer...'
+                        : 'Create Food Saver Offer',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
