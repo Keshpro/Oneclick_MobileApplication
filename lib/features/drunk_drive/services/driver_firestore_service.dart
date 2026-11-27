@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/driver_application_model.dart';
+import 'booking_policy.dart';
 
 class DriverFirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -26,6 +27,13 @@ class DriverFirestoreService {
     }
 
     return _fromMap(doc.id, doc.data()!);
+  }
+
+  Stream<DriverApplicationModel?> watchMyApplication() {
+    return _applications.doc(currentUserId).snapshots().map((doc) {
+      final data = doc.data();
+      return data == null ? null : _fromMap(doc.id, data);
+    });
   }
 
   Future<bool> isCurrentDriverApproved() async {
@@ -54,6 +62,9 @@ class DriverFirestoreService {
       if (!snapshot.exists ||
           snapshot.data()?['status'] != DriverApplicationStatus.approved.name) {
         throw StateError('Only approved drivers can change availability.');
+      }
+      if (isOnline && !BookingPolicy.licenceValid(snapshot.data()?['licenceExpiry']?.toString() ?? '')) {
+        throw StateError('An unexpired driving licence is required.');
       }
       transaction.update(reference, {
         'isOnline': isOnline,
@@ -92,6 +103,9 @@ class DriverFirestoreService {
       throw StateError('You can only submit your own application.');
     }
 
+    if (!BookingPolicy.licenceValid(application.licenceExpiry) || (!application.canDriveManual && !application.canDriveAutomatic)) {
+      throw StateError('A valid licence and at least one transmission type are required.');
+    }
     await _applications.doc(currentUserId).set({
       'userId': currentUserId,
       'fullName': application.fullName,

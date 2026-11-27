@@ -1,5 +1,14 @@
 import 'dart:async';
 
+import 'package:geolocator/geolocator.dart';
+
+import '../../services/booking_policy.dart';
+import '../../services/gps_policy.dart';
+import '../../services/driver_trip_location_service.dart';
+import '../../models/driver_application_model.dart';
+import '../../models/driver_rating_model.dart';
+import '../../passenger/widgets/cancellation_reason_dialog.dart';
+
 import '../../services/booking_firestore_service.dart';
 
 import '../../services/driver_firestore_service.dart';
@@ -24,9 +33,17 @@ import 'driver_application_screen.dart';
 import 'driver_active_trip_screen.dart';
 
 import 'driver_trip_history_screen.dart';
+import '../../passenger/screens/drunk_drive_home_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
-  const DriverHomeScreen({super.key});
+  final bool fromPassengerMode;
+  final VoidCallback? onSwitchToPassenger;
+
+  const DriverHomeScreen({
+    super.key,
+    this.fromPassengerMode = false,
+    this.onSwitchToPassenger,
+  });
 
   @override
   State<DriverHomeScreen> createState() => _DriverHomeScreenState();
@@ -50,12 +67,133 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   _paymentsSubscription;
 
   final DriverRatingService _driverRatingService = DriverRatingService();
+  Stream<List<DriverRatingModel>>? _ratingsStream;
 
   bool _isOnline = false;
 
   bool _isApproved = false;
+  bool _isCheckingAuthorization = true;
+  bool _authorizationCheckFailed = false;
 
   List<BookingModel> _incomingRequests = [];
+  final DriverTripLocationService _pickupTracking = DriverTripLocationService();
+  bool _pickupTrackingBusy = false;
+  bool _pickupSharing = false;
+  Future<void> _togglePickupTracking() async {
+    if (_pickupTrackingBusy ||
+        _activeTrip?.status != BookingStatus.driverArriving) {
+      return;
+    }
+    final id = _activeTrip!.id;
+    setState(() => _pickupTrackingBusy = true);
+    try {
+      if (_pickupSharing) {
+        await _pickupTracking.stop();
+      } else {
+        await _pickupTracking.start(id);
+      }
+      if (mounted &&
+          _activeTrip?.status == BookingStatus.driverArriving &&
+          _activeTrip?.id == id) {
+        setState(() => _pickupSharing = _pickupTracking.isSharing);
+      } else {
+        await _pickupTracking.stop();
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Unable to share pickup location. Check GPS and permissions.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _pickupTrackingBusy = false);
+    }
+  }
+
+  Position? _requestPosition;
+  StreamSubscription<Position>? _requestLocationSubscription;
+  StreamSubscription<DriverApplicationModel?>? _approvalSubscription;
+  Timer? _requestRefreshTimer;
+  DriverApplicationModel? _driverApplication;
+  bool _locationLoading = false;
+  String? _requestLocationError;
+  String? _requestFeedError;
+  bool _refreshingGps = false;
+  int _gpsGeneration = 0;
+
+  bool get _canReceiveRequests =>
+      mounted && _isApproved && _isOnline && _activeTrip == null;
+
+  double? _pickupDistance(BookingModel booking) =>
+      GpsPolicy.pickupDistanceMeters(_requestPosition, booking.pickup);
+
+  bool _isCompatible(BookingModel booking) {
+    final application = _driverApplication;
+    return application != null &&
+        BookingPolicy.compatible(
+          booking,
+          manual: application.canDriveManual,
+          automatic: application.canDriveAutomatic,
+        );
+  }
+
+  String get _emptyRequestMessage {
+    final current = _incomingRequests
+        .where((b) => !BookingPolicy.searchExpired(b))
+        .toList();
+    if (current.isEmpty) {
+      return 'No new requests available. Book a fresh ride from a different passenger account.';
+    }
+    final compatible = current.where(_isCompatible).toList();
+    if (compatible.isEmpty) {
+      return 'Requests are available, but none match your registered vehicle transmission skills.';
+    }
+    final withCoordinates = compatible
+        .where((b) => _pickupDistance(b) != null)
+        .toList();
+    if (withCoordinates.isEmpty) {
+      return 'Requests have no valid pickup coordinates. Ask the passenger to select a new map pin.';
+    }
+    return '${withCoordinates.length} compatible request(s) outside the 15 km pickup radius.';
+  }
+
+  void _stopRequestGps() {
+    _gpsGeneration++;
+    _requestLocationSubscription?.cancel();
+    _requestLocationSubscription = null;
+    _requestRefreshTimer?.cancel();
+    _requestRefreshTimer = null;
+    _requestPosition = null;
+    _requestLocationError = null;
+    _locationLoading = false;
+    _refreshingGps = false;
+  }
+
+  final Set<String> _notifiedRequestIds = <String>{};
+  List<BookingModel> get _nearbyRequests {
+    final application = _driverApplication;
+    if (!_canReceiveRequests ||
+        !GpsPolicy.usable(_requestPosition) ||
+        application == null ||
+        !BookingPolicy.licenceValid(application.licenceExpiry)) {
+      return [];
+    }
+    final result = _incomingRequests
+        .where(
+          (booking) =>
+              !BookingPolicy.searchExpired(booking) &&
+              _isCompatible(booking) &&
+              GpsPolicy.withinPickupRadius(_requestPosition, booking.pickup),
+        )
+        .toList();
+    result.sort((a, b) => _pickupDistance(a)!.compareTo(_pickupDistance(b)!));
+    return result;
+  }
+
   Set<String> _declinedBookingIds = {};
 
   BookingModel? _activeTrip;
@@ -73,22 +211,32 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   double _todayEarnings = 0;
 
   double _weeklyEarnings = 0;
+  double _monthlyEarnings = 0;
 
   double _pendingCash = 0;
   double _unpaidPayments = 0;
   double _simulatedPayments = 0;
   double _confirmedPayments = 0;
+  List<BookingModel> _awaitingPayment = [];
 
   @override
   void initState() {
     super.initState();
 
+    _pickupTracking.onError = (_) async {
+      if (mounted) setState(() => _pickupSharing = false);
+    };
     _checkAuthorization();
   }
 
   @override
   void dispose() {
     _requestsSubscription?.cancel();
+    _stopRequestGps();
+    _pickupTracking.onError = null;
+    unawaited(_pickupTracking.stop().catchError((Object _) {}));
+    _approvalSubscription?.cancel();
+    _requestRefreshTimer?.cancel();
 
     _activeTripSubscription?.cancel();
 
@@ -100,9 +248,17 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   Future<void> _checkAuthorization() async {
+    if (!mounted) return;
+    setState(() {
+      _isCheckingAuthorization = true;
+      _authorizationCheckFailed = false;
+    });
     try {
-      final isApproved = await DriverFirestoreService()
-          .isCurrentDriverApproved();
+      final application = await DriverFirestoreService().getMyApplication();
+      final isApproved =
+          application?.status == DriverApplicationStatus.approved;
+      _driverApplication = application;
+      debugPrint('[DD_ROUTE_V3] driver dashboard approved=$isApproved');
 
       if (!mounted) return;
 
@@ -130,35 +286,201 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         _loadActiveTrip();
         _loadDriverStats();
       }
-    } catch (_) {
+      _approvalSubscription?.cancel();
+      _approvalSubscription = DriverFirestoreService()
+          .watchMyApplication()
+          .listen(
+            (application) {
+              if (!mounted) return;
+              final approved =
+                  application?.status == DriverApplicationStatus.approved;
+              final changed = approved != _isApproved;
+              setState(() {
+                _driverApplication = application;
+                _isApproved = approved;
+              });
+              if (changed && approved) {
+                unawaited(_checkAuthorization());
+              }
+              if (!approved) {
+                _requestsSubscription?.cancel();
+                _requestsSubscription = null;
+                _stopRequestGps();
+                unawaited(_pickupTracking.stop().catchError((Object _) {}));
+                _pickupSharing = false;
+                _activeTripSubscription?.cancel();
+                _paymentsSubscription?.cancel();
+                setState(() {
+                  _isOnline = false;
+                  _incomingRequests = [];
+                  _requestPosition = null;
+                });
+              }
+            },
+            onError: (Object _) {
+              if (mounted) setState(() => _authorizationCheckFailed = true);
+            },
+          );
+    } catch (error) {
+      debugPrint('[DD_ROUTE_V3] driver authorization error=$error');
       if (!mounted) return;
+      setState(() => _authorizationCheckFailed = true);
+    } finally {
+      if (mounted) {
+        setState(() => _isCheckingAuthorization = false);
+      }
+    }
+  }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to check your driver status. Check your connection and try again.')),
+  void _applyRequestPosition(Position position) {
+    if (!_canReceiveRequests) return;
+    if (!GpsPolicy.usable(position)) {
+      if (!GpsPolicy.usable(_requestPosition)) {
+        setState(() {
+          _requestPosition = null;
+          _requestLocationError = 'GPS accuracy is too low or the position is outdated. Enable precise location and retry.';
+        });
+      }
+      return;
+    }
+    setState(() {
+      _requestPosition = position;
+      _requestLocationError = null;
+    });
+    _notifyNearbyRequests();
+  }
+
+  void _notifyNearbyRequests() {
+    if (!_canReceiveRequests) return;
+    final newNearby = _nearbyRequests
+        .where((booking) => _notifiedRequestIds.add(booking.id))
+        .length;
+    if (newNearby > 0 && ModalRoute.of(context)?.isCurrent == true) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: Text(
+            newNearby == 1
+                ? 'New nearby trip request'
+                : '$newNearby nearby trip requests',
+          ),
+        ),
       );
+    }
+  }
+
+  Future<void> _refreshRequestGps() async {
+    if (!_canReceiveRequests || _refreshingGps || _locationLoading) return;
+    final generation = _gpsGeneration;
+    _refreshingGps = true;
+    try {
+      final position = await GpsPolicy.currentPosition();
+      if (!_canReceiveRequests || generation != _gpsGeneration) return;
+      _applyRequestPosition(position);
+    } catch (error) {
+      if (!_canReceiveRequests || generation != _gpsGeneration) return;
+      if (!GpsPolicy.usable(_requestPosition) || error is StateError) {
+        setState(() {
+          _requestPosition = null;
+          _requestLocationError = error is StateError
+              ? error.message
+              : 'GPS unavailable. Refresh your location.';
+        });
+      }
+    } finally {
+      if (generation == _gpsGeneration) _refreshingGps = false;
+    }
+  }
+
+  Future<void> _startRequestLocation() async {
+    if (_locationLoading || !_canReceiveRequests) return;
+    final generation = ++_gpsGeneration;
+    _refreshingGps = false;
+    setState(() {
+      _locationLoading = true;
+      _requestLocationError = null;
+      _requestPosition = null;
+    });
+    try {
+      await _requestLocationSubscription?.cancel();
+      _requestLocationSubscription = null;
+      _requestRefreshTimer?.cancel();
+      final position = await GpsPolicy.currentPosition();
+      if (!_canReceiveRequests || generation != _gpsGeneration) return;
+      _applyRequestPosition(position);
+      _requestLocationSubscription =
+          Geolocator.getPositionStream(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.high,
+              distanceFilter: 20,
+            ),
+          ).listen(
+            (position) {
+              if (_canReceiveRequests && generation == _gpsGeneration) {
+                _applyRequestPosition(position);
+              }
+            },
+            onError: (Object _) {
+              if (_canReceiveRequests && generation == _gpsGeneration) {
+                setState(() {
+                  _requestPosition = null;
+                  _requestLocationError =
+                      'GPS stream unavailable. Enable location and retry.';
+                });
+              }
+            },
+          );
+      _requestRefreshTimer = Timer.periodic(const Duration(seconds: 10), (
+        timer,
+      ) {
+        if (!_canReceiveRequests || generation != _gpsGeneration) return;
+        setState(() {}); // Refresh request expiry and GPS freshness.
+        if (timer.tick % 3 == 0) unawaited(_refreshRequestGps());
+      });
+    } catch (error) {
+      if (_canReceiveRequests && generation == _gpsGeneration) {
+        setState(() {
+          _requestPosition = null;
+          _requestLocationError = error is StateError
+              ? error.message
+              : 'Unable to get GPS. Enable precise location and retry.';
+        });
+      }
+    } finally {
+      if (mounted && generation == _gpsGeneration) {
+        setState(() => _locationLoading = false);
+      }
     }
   }
 
   void _loadRequests() {
     _requestsSubscription?.cancel();
-
+    _requestsSubscription = null;
+    if (!_canReceiveRequests) return;
+    if (!GpsPolicy.usable(_requestPosition) && !_locationLoading) {
+      unawaited(_startRequestLocation());
+    }
+    setState(() => _requestFeedError = null);
     _requestsSubscription = _firestoreService.watchAvailableRequests().listen(
       (requests) {
-        if (!mounted) return;
-
+        if (!_canReceiveRequests) return;
         setState(() {
-          _incomingRequests = requests.where((booking) {
-            return !_declinedBookingIds.contains(booking.id);
-          }).toList();
+          _requestFeedError = null;
+          _incomingRequests = requests
+              .where((booking) => !_declinedBookingIds.contains(booking.id))
+              .toList();
         });
+        _notifyNearbyRequests();
       },
-
-      onError: (_) {
-        if (!mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unable to load booking requests. Check your connection and try again.')),
-        );
+      onError: (Object error) {
+        if (!_canReceiveRequests) return;
+        final message =
+            error is FirebaseException && error.code == 'permission-denied'
+            ? 'Firestore denied access to available requests. Check the driver booking read rules.'
+            : 'Unable to load booking requests. Check the connection and retry.';
+        setState(() {
+          _incomingRequests = [];
+          _requestFeedError = message;
+        });
       },
     );
   }
@@ -172,16 +494,33 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           (booking) {
             if (!mounted) return;
 
+            final hadTrip = _activeTrip != null;
+            if (booking?.status != BookingStatus.driverArriving &&
+                _pickupTracking.isSharing) {
+              unawaited(_pickupTracking.stop().catchError((Object _) {}));
+              _pickupSharing = false;
+            }
             setState(() {
               _activeTrip = booking;
             });
+            if (booking != null) {
+              _requestsSubscription?.cancel();
+              _requestsSubscription = null;
+              _stopRequestGps();
+            } else if (hadTrip && _isOnline) {
+              _loadRequests();
+            }
           },
 
           onError: (_) {
             if (!mounted) return;
 
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Unable to load your active trip. Please try again.')),
+              SnackBar(
+                content: Text(
+                  'Unable to load your active trip. Please try again.',
+                ),
+              ),
             );
           },
         );
@@ -198,8 +537,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       );
     }
 
-    return StreamBuilder(
-      stream: _driverRatingService.watchRatingsForDriver(driverId),
+    return StreamBuilder<List<DriverRatingModel>>(
+      stream: _ratingsStream ??= _driverRatingService.watchRatingsForDriver(
+        driverId,
+      ),
       builder: (context, snapshot) {
         String text;
         if (snapshot.hasError) {
@@ -252,10 +593,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             int todayTrips = 0;
             double todayEarnings = 0;
             double weeklyEarnings = 0;
+            double monthlyEarnings = 0;
+            final startOfMonth = DateTime(now.year, now.month);
             double confirmed = 0;
             double pending = 0;
             double unpaid = 0;
             double simulated = 0;
+            final awaitingPayment = <BookingModel>[];
 
             for (final document in snapshot.docs) {
               final booking = BookingModel.fromMap(
@@ -264,6 +608,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               );
               if (booking.status != BookingStatus.completed) continue;
 
+              if (booking.paymentStatus == 'unpaid' ||
+                  booking.paymentStatus == 'pending') {
+                awaitingPayment.add(booking);
+              }
               final amount = booking.customerAmountDue;
               final completedAt = booking.completedAt;
               final completedToday =
@@ -278,6 +626,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   confirmed += amount;
                   if (completedToday) todayEarnings += amount;
                   if (completedThisWeek) weeklyEarnings += amount;
+                  if (completedAt != null &&
+                      !completedAt.isBefore(startOfMonth)) {
+                    monthlyEarnings += amount;
+                  }
                   break;
                 case 'pending':
                   pending += amount;
@@ -290,10 +642,17 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               }
             }
 
+            awaitingPayment.sort(
+              (a, b) => (b.completedAt ?? b.createdAt).compareTo(
+                a.completedAt ?? a.createdAt,
+              ),
+            );
             setState(() {
+              _awaitingPayment = awaitingPayment;
               _todayTrips = todayTrips;
               _todayEarnings = todayEarnings;
               _weeklyEarnings = weeklyEarnings;
+              _monthlyEarnings = monthlyEarnings;
               _confirmedPayments = confirmed;
               _pendingCash = pending;
               _unpaidPayments = unpaid;
@@ -303,7 +662,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           onError: (Object _) {
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Unable to load your payment summary right now.')),
+              SnackBar(
+                content: Text('Unable to load your payment summary right now.'),
+              ),
             );
           },
         );
@@ -336,9 +697,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     } catch (_) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Unable to update your trip. Please try again.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to update your trip. Please try again.'),
+        ),
+      );
     }
   }
 
@@ -405,7 +768,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to start verification. Please try again.')),
+        SnackBar(
+          content: Text('Unable to start verification. Please try again.'),
+        ),
       );
     }
   }
@@ -460,9 +825,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     } catch (_) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Unable to start the trip. Please try again.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to start the trip. Please try again.')),
+      );
     } finally {
       if (mounted) {
         setState(() => _isStartingTrip = false);
@@ -513,19 +878,25 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       },
     );
 
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !mounted || _activeTrip == null) return;
+    final bookingId = _activeTrip!.id;
+    final reason = await chooseCancellationReason(context, driver: true);
+    if (reason == null || !mounted || _activeTrip?.id != bookingId) return;
 
     BookingModel? cancelled;
 
     try {
       cancelled = await _firestoreService.cancelBookingByDriver(
-        _activeTrip!.id,
+        bookingId,
+        reason: reason,
       );
     } catch (_) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to cancel this booking. Please try again.')),
+        SnackBar(
+          content: Text('Unable to cancel this booking. Please try again.'),
+        ),
       );
 
       return;
@@ -554,7 +925,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   Future<void> _onAccept(BookingModel booking) async {
-    if (_isAcceptingRequest ||
+    if (!_nearbyRequests.any((b) => b.id == booking.id) ||
+        _isAcceptingRequest ||
         _pendingRequestIds.contains(booking.id) ||
         _activeTrip != null) {
       return;
@@ -565,7 +937,23 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       _pendingRequestIds.add(booking.id);
     });
     try {
-      final updated = await _firestoreService.acceptBookingByDriver(booking.id);
+      final position = await GpsPolicy.currentPosition();
+      if (!mounted || !_canReceiveRequests) return;
+      _applyRequestPosition(position);
+      if (!GpsPolicy.withinPickupRadius(position, booking.pickup)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Cannot accept: pickup is outside 15 km or GPS is inaccurate. Refresh location.',
+            ),
+          ),
+        );
+        return;
+      }
+      final updated = await _firestoreService.acceptBookingByDriver(
+        booking.id,
+        driverPosition: position,
+      );
       if (!mounted) return;
 
       if (updated == null) {
@@ -579,15 +967,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         _incomingRequests.removeWhere((b) => b.id == booking.id);
         _activeTrip = updated;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Booking accepted!')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Booking accepted!')));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(
-          'Unable to accept this booking. It may already have been assigned. Please try again.',
-        )),
+        const SnackBar(
+          content: Text(
+            'Unable to accept this booking. It may already have been assigned. Please try again.',
+          ),
+        ),
       );
     } finally {
       if (mounted) {
@@ -621,7 +1010,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to decline this request. Please try again.')),
+        const SnackBar(
+          content: Text('Unable to decline this request. Please try again.'),
+        ),
       );
     } finally {
       if (mounted) {
@@ -635,9 +1026,17 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   Future<void> _toggleOnline(bool value) async {
     if (_isUpdatingOnlineStatus) return;
 
-    if (!_isApproved) {
+    if (!_isApproved ||
+        (value &&
+            !BookingPolicy.licenceValid(
+              _driverApplication?.licenceExpiry ?? '',
+            ))) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Only approved drivers can go online.')),
+        const SnackBar(
+          content: Text(
+            'Only approved drivers with a valid licence can go online.',
+          ),
+        ),
       );
       return;
     }
@@ -658,8 +1057,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         _loadActiveTrip();
       } else {
         _requestsSubscription?.cancel();
+        _requestsSubscription = null;
+        _stopRequestGps();
 
         setState(() {
+          _requestPosition = null;
           _incomingRequests = [];
         });
       }
@@ -673,7 +1075,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to change your availability. Check your connection and try again.')),
+        SnackBar(
+          content: Text(
+            'Unable to change your availability. Check your connection and try again.',
+          ),
+        ),
       );
     } finally {
       if (mounted) {
@@ -698,6 +1104,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
         iconTheme: IconThemeData(color: colors.textPrimary),
 
+        leading: !Navigator.canPop(context)
+            ? IconButton(
+                tooltip: 'OneClick Home',
+                icon: const Icon(Icons.home_outlined),
+                onPressed: () =>
+                    Navigator.of(context).pushReplacementNamed('/home'),
+              )
+            : null,
         title: Text(
           'Driver Mode',
 
@@ -706,10 +1120,68 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             fontWeight: FontWeight.w800,
           ),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: TextButton.icon(
+              onPressed: () {
+                final switchToPassenger = widget.onSwitchToPassenger;
+                if (switchToPassenger != null) {
+                  switchToPassenger();
+                  return;
+                }
+                final navigator = Navigator.of(context);
+                if (widget.fromPassengerMode && navigator.canPop()) {
+                  navigator.pop();
+                } else {
+                  navigator.pushReplacement(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const DrunkDriveHomeScreen(
+                        startInPassengerMode: true,
+                        preferDriverMode: true,
+                      ),
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.swap_horiz_rounded, size: 19),
+              label: const Text('Passenger'),
+              style: TextButton.styleFrom(
+                foregroundColor: colors.accent,
+                textStyle: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+        ],
       ),
 
       body: SafeArea(
-        child: !_isApproved ? _buildNotApprovedView() : _buildDriverDashboard(),
+        child: _isCheckingAuthorization
+            ? Center(child: CircularProgressIndicator(color: colors.accent))
+            : _authorizationCheckFailed
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Unable to load your driver dashboard. Please try again.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: colors.textPrimary),
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: _checkAuthorization,
+                        child: const Text('Try Again'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : !_isApproved
+            ? _buildNotApprovedView()
+            : _buildDriverDashboard(),
       ),
     );
   }
@@ -792,6 +1264,68 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAwaitingPaymentCard(BookingModel booking) {
+    final cashSelected =
+        booking.paymentStatus == 'pending' && booking.paymentMethod == 'cash';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.accent),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Trip completed • Amount due',
+            style: TextStyle(
+              color: colors.textMuted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _rs(booking.customerAmountDue),
+            style: TextStyle(
+              color: colors.accent,
+              fontSize: 30,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${booking.pickup.name} → ${booking.destination.name}',
+            style: TextStyle(color: colors.textPrimary),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            cashSelected
+                ? 'Cash selected. Confirm only after receiving payment.'
+                : 'Waiting for passenger to select payment method.',
+            style: TextStyle(color: colors.textMuted, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                await Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => DriverActiveTripScreen(booking: booking),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.payments_outlined),
+              label: const Text('View Payment'),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -879,7 +1413,32 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
         const SizedBox(height: 20),
 
+        if (_awaitingPayment.isNotEmpty) ...[
+          Text(
+            'Payments to Collect',
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ..._awaitingPayment.map(_buildAwaitingPaymentCard),
+          const SizedBox(height: 12),
+        ],
         if (_activeTrip != null) ...[
+          if (_activeTrip!.status == BookingStatus.driverArriving) ...[
+            OutlinedButton.icon(
+              onPressed: _pickupTrackingBusy ? null : _togglePickupTracking,
+              icon: const Icon(Icons.my_location),
+              label: Text(
+                _pickupSharing
+                    ? 'Stop sharing pickup location'
+                    : 'Share pickup location with passenger',
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Text(
             'Your Current Trip',
 
@@ -921,6 +1480,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 ),
               );
 
+              if (!mounted) return;
               _loadActiveTrip();
 
               _loadRequests();
@@ -958,6 +1518,32 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             style: TextStyle(color: colors.textMuted, fontSize: 12),
           ),
 
+          if (_isOnline) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  GpsPolicy.usable(_requestPosition)
+                      ? 'GPS ±${_requestPosition!.accuracy.toStringAsFixed(0)} m${_requestPosition!.isMocked ? ' (simulated)' : ''}'
+                      : 'Waiting for accurate GPS',
+                  style: TextStyle(color: colors.textMuted, fontSize: 12),
+                ),
+                TextButton.icon(
+                  onPressed: _locationLoading ? null : _startRequestLocation,
+                  icon: const Icon(Icons.my_location, size: 18),
+                  label: const Text('Refresh GPS'),
+                ),
+                TextButton.icon(
+                  onPressed: _loadRequests,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Refresh requests'),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 14),
         ],
 
@@ -981,7 +1567,40 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               ),
             ),
           )
-        else if (_incomingRequests.isEmpty)
+        else if (_locationLoading)
+          const Center(child: CircularProgressIndicator())
+        else if (_requestFeedError != null)
+          Column(
+            children: [
+              Text(_requestFeedError!, style: TextStyle(color: colors.danger)),
+              TextButton(
+                onPressed: _loadRequests,
+                child: const Text('Retry requests'),
+              ),
+            ],
+          )
+        else if (_requestLocationError != null ||
+            !GpsPolicy.usable(_requestPosition))
+          Column(
+            children: [
+              Text(
+                _requestLocationError ??
+                    'GPS is outdated. Refresh your location.',
+                style: TextStyle(color: colors.textMuted),
+              ),
+              TextButton(
+                onPressed: _startRequestLocation,
+                child: const Text('Retry location'),
+              ),
+            ],
+          )
+        else if (!BookingPolicy.licenceValid(
+          _driverApplication?.licenceExpiry ?? '',
+        ))
+          const Text(
+            'Your licence has expired or needs correction. Contact admin.',
+          )
+        else if (_nearbyRequests.isEmpty)
           Container(
             padding: const EdgeInsets.all(20),
 
@@ -993,21 +1612,24 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
             child: Center(
               child: Text(
-                'No pending requests near you.',
+                _emptyRequestMessage,
 
                 style: TextStyle(color: colors.textMuted),
               ),
             ),
           )
         else
-          ..._incomingRequests.map(
+          ..._nearbyRequests.map(
             (booking) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
 
               child: _BookingRequestCard(
                 booking: booking,
+                pickupDistanceKm: _pickupDistance(booking)! / 1000,
                 isProcessing: _pendingRequestIds.contains(booking.id),
-                actionsDisabled: _isAcceptingRequest || _pendingRequestIds.contains(booking.id),
+                actionsDisabled:
+                    _isAcceptingRequest ||
+                    _pendingRequestIds.contains(booking.id),
 
                 onAccept: () => _onAccept(booking),
 
@@ -1083,6 +1705,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
         const SizedBox(height: 20),
 
+        _statCard(
+          'Monthly Confirmed',
+          _rs(_monthlyEarnings),
+          Icons.calendar_month_rounded,
+          colors.success,
+        ),
+        const SizedBox(height: 12),
         _buildPaymentSummary(),
 
         const SizedBox(height: 16),
@@ -1126,7 +1755,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         ),
 
         const SizedBox(height: 24),
-
       ],
     );
   }
@@ -1264,6 +1892,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
 class _BookingRequestCard extends StatelessWidget {
   final BookingModel booking;
+  final double pickupDistanceKm;
   final VoidCallback onAccept;
   final VoidCallback onDecline;
   final bool isProcessing;
@@ -1271,6 +1900,7 @@ class _BookingRequestCard extends StatelessWidget {
 
   const _BookingRequestCard({
     required this.booking,
+    required this.pickupDistanceKm,
     required this.onAccept,
     required this.onDecline,
     required this.isProcessing,
@@ -1282,8 +1912,8 @@ class _BookingRequestCard extends StatelessWidget {
     final colors = DrunkDrivePalette.of(context);
     final onSuccess =
         ThemeData.estimateBrightnessForColor(colors.success) == Brightness.dark
-            ? Colors.white
-            : Colors.black;
+        ? Colors.white
+        : Colors.black;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -1297,8 +1927,11 @@ class _BookingRequestCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.notifications_active_outlined,
-                  size: 20, color: colors.accent),
+              Icon(
+                Icons.notifications_active_outlined,
+                size: 20,
+                color: colors.accent,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1320,6 +1953,15 @@ class _BookingRequestCard extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          Text(
+            '${pickupDistanceKm.toStringAsFixed(1)} km to pickup (straight-line)',
+            style: TextStyle(
+              color: colors.accent,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
           const SizedBox(height: 16),
           _locationLine(
             colors,
@@ -1329,11 +1971,7 @@ class _BookingRequestCard extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(left: 9),
-            child: Container(
-              width: 2,
-              height: 18,
-              color: colors.surfaceBorder,
-            ),
+            child: Container(width: 2, height: 18, color: colors.surfaceBorder),
           ),
           _locationLine(
             colors,
@@ -1351,12 +1989,15 @@ class _BookingRequestCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.directions_car_outlined,
-                    size: 18, color: colors.textMuted),
+                Icon(
+                  Icons.directions_car_outlined,
+                  size: 18,
+                  color: colors.textMuted,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '${booking.vehicle.displayName} · ${booking.vehicle.transmission.label}',
+                    '${booking.vehicle.displayName} · ${booking.vehicle.transmission.label}\n${booking.distanceKm.toStringAsFixed(1)} km · approx. ${booking.durationMinutes} min',
                     style: TextStyle(
                       color: colors.textPrimary,
                       fontSize: 12,
@@ -1398,7 +2039,8 @@ class _BookingRequestCard extends StatelessWidget {
                   ),
                   child: isProcessing
                       ? const SizedBox(
-                          height: 18, width: 18,
+                          height: 18,
+                          width: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text(

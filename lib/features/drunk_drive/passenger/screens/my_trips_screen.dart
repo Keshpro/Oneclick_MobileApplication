@@ -6,6 +6,7 @@ import '../../models/booking_status.dart';
 import '../../services/booking_firestore_service.dart';
 import '../../services/driver_rating_service.dart';
 import 'payment_screen.dart';
+import 'active_trip_screen.dart';
 import '../../theme/drunk_drive_colors.dart';
 
 class MyTripsScreen extends StatefulWidget {
@@ -21,6 +22,18 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
 
   List<BookingModel> _bookings = [];
   bool _isLoading = true;
+  String _filter = 'All';
+  List<BookingModel> get _visibleBookings => _bookings.where((b) {
+    switch (_filter) {
+      case 'Completed': return b.status == BookingStatus.completed;
+      case 'Cancelled': return b.status == BookingStatus.cancelledByUser || b.status == BookingStatus.cancelledByDriver;
+      case 'Payment due': return b.status == BookingStatus.completed && (b.paymentStatus == 'pending' || b.paymentStatus == 'unpaid');
+      case 'Paid': return b.paymentStatus == 'paid';
+      case 'No driver found': return b.status == BookingStatus.driverNotFound;
+      case 'Last 7 days': return !b.createdAt.isBefore(DateTime.now().subtract(const Duration(days: 7)));
+      default: return true;
+    }
+  }).toList();
 
   @override
   void initState() {
@@ -40,7 +53,8 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
         _bookings = bookings.where((booking) {
           return booking.status == BookingStatus.completed ||
               booking.status == BookingStatus.cancelledByUser ||
-              booking.status == BookingStatus.cancelledByDriver;
+              booking.status == BookingStatus.cancelledByDriver ||
+              booking.status == BookingStatus.driverNotFound;
         }).toList();
         _isLoading = false;
       });
@@ -238,7 +252,14 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
-      body: SafeArea(child: _buildBody(colors)),
+      body: SafeArea(child: Column(children: [
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8), child: DropdownButton<String>(
+          isExpanded: true, value: _filter,
+          items: ['All', 'Completed', 'Cancelled', 'No driver found', 'Payment due', 'Paid', 'Last 7 days'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+          onChanged: (value) { if (value != null) setState(() => _filter = value); },
+        )),
+        Expanded(child: _buildBody(colors)),
+      ])),
     );
   }
 
@@ -249,11 +270,12 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
       );
     }
 
+    final visible = _visibleBookings;
     return RefreshIndicator(
       onRefresh: _loadBookings,
       color: colors.accent,
       backgroundColor: colors.surface,
-      child: _bookings.isEmpty
+      child: visible.isEmpty
           ? ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(24),
@@ -266,7 +288,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No past trips yet.',
+                  'No trips match this filter.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: colors.textMuted,
@@ -279,10 +301,10 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
           : ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(20),
-              itemCount: _bookings.length,
+              itemCount: visible.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                final booking = _bookings[index];
+                final booking = visible[index];
                 final statusColor =
                     _historyStatusColor(booking.status, colors);
 
@@ -375,15 +397,28 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
                           ),
                         ],
                       ),
+                      if (booking.cancellationReason != null) ...[
+                        const SizedBox(height: 8),
+                        Text('Cancellation: ${booking.cancellationReason}', style: TextStyle(color: colors.textMuted)),
+                      ],
+                      if (booking.status == BookingStatus.driverNotFound) ...[
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(icon: const Icon(Icons.refresh), label: const Text('Retry / Cancel'), onPressed: () async {
+                          await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ActiveTripScreen(booking: booking)));
+                          if (mounted) await _loadBookings();
+                        }),
+                      ],
                       if (booking.status == BookingStatus.completed) ...[
+                        const SizedBox(height: 8),
+                        Text('Payment: ${booking.paymentStatus == 'paid' ? 'Confirmed' : booking.paymentStatus == 'simulated' ? 'Demo only' : booking.paymentStatus == 'pending' ? 'Cash pending' : 'Unpaid'}', style: TextStyle(color: colors.textMuted)),
                         const SizedBox(height: 14),
-                        if (booking.paymentStatus == 'unpaid') ...[
+                        if (booking.paymentStatus == 'unpaid' || booking.paymentStatus == 'pending' || booking.paymentStatus == 'paid' || booking.paymentStatus == 'simulated') ...[
                           SizedBox(
                             width: double.infinity,
                             child: FilledButton.icon(
                               onPressed: () => _openPayment(booking),
                               icon: const Icon(Icons.payment_rounded),
-                              label: const Text('Proceed to Payment'),
+                              label: Text(booking.paymentStatus == 'unpaid' ? 'Proceed to Payment' : 'Payment details / receipt'),
                             ),
                           ),
                           const SizedBox(height: 8),

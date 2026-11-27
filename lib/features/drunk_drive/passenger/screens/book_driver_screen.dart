@@ -63,7 +63,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Unable to load vehicles: $error';
+        _errorMessage = 'Unable to load vehicles. Check your connection and try again.';
         _isLoading = false;
       });
     }
@@ -83,7 +83,11 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
       context,
       MaterialPageRoute(
         builder: (context) =>
-            const LocationPickerScreen(title: 'Pickup Location'),
+            LocationPickerScreen(
+              title: 'Pickup Location',
+              initialSelection: _pickup,
+              useGpsOnOpen: true,
+            ),
       ),
     );
     if (!mounted) return;
@@ -94,7 +98,11 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     final result = await Navigator.push<LocationModel>(
       context,
       MaterialPageRoute(
-        builder: (context) => const LocationPickerScreen(title: 'Destination'),
+        builder: (context) => LocationPickerScreen(
+          title: 'Destination',
+          initialSelection: _destination,
+          centerNear: _pickup,
+        ),
       ),
     );
     if (!mounted) return;
@@ -314,7 +322,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
         _SectionTitle(title: 'Reason', colors: colors),
         const SizedBox(height: 4),
         Text(
-          'This helps us brief your driver. It is not used to make any medical or legal decision.',
+          'Choose why you need a driver.',
           style: TextStyle(color: colors.textMuted, fontSize: 12),
         ),
         const SizedBox(height: 12),

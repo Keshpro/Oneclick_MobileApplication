@@ -10,6 +10,7 @@ import 'package:oneclick/features/doctor/doctor/screens/doctor_dashboard.dart';
 import 'package:oneclick/features/quickfix/worker/screens/worker_dashboard.dart'; // Worker Dashboard Import
 import '../../../shared/models/user_model.dart';
 import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
+import '../../drunk_drive/services/driver_entry_router.dart';
 
 class AuthService {
   Future<String> login({
@@ -231,8 +232,27 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // 3. Provider roles handling
+      // 3. Resolve the Drunk & Drive application before ordinary user routing.
+      // Existing passengers keep users.role == 'user' after applying as drivers.
       final currentUser = FirebaseAuth.instance.currentUser;
+      debugPrint('[DD_ROUTE_V3] login role=$role');
+      if (currentUser != null) {
+        final driverDashboard = await DriverEntryRouter.dashboardFor(
+          uid: currentUser.uid,
+          role: role,
+        );
+        if (!mounted) return;
+        if (driverDashboard != null) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => driverDashboard),
+            (Route<dynamic> route) => false,
+          );
+          return;
+        }
+      }
+
+      debugPrint('[DD_ROUTE_V3] login using existing non-driver routing');
+      // 4. Preserve the existing provider routing for other modules.
       if (currentUser != null &&
           (role == 'worker' || role == 'doctor' || role == 'driver' || role == 'foodSeller')) {
         await _checkProviderStatusAndNavigate(currentUser.uid, role);
@@ -243,6 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
+      debugPrint('[DD_ROUTE_V3] login exception=${e.runtimeType}');
       if (!mounted) return;
 
       String message = e.toString();
@@ -267,7 +288,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // ==============================================================
-  // UI ONLY (Fresh Teal). Everything above this line is unchanged.
+  // UI ONLY (Fresh Teal).
   // ==============================================================
   InputDecoration _fieldDecoration({
     required String hint,

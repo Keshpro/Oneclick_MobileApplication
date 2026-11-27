@@ -10,8 +10,11 @@ import 'package:flutter/services.dart';
 import '../../models/booking_model.dart';
 
 import '../../models/booking_status.dart';
+import '../../models/driver_rating_model.dart';
 
 import '../../services/booking_firestore_service.dart';
+import '../../services/booking_policy.dart';
+import '../widgets/cancellation_reason_dialog.dart';
 
 import '../../services/driver_rating_service.dart';
 
@@ -43,27 +46,52 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
   late BookingModel _booking;
 
   Timer? _locationFreshnessTimer;
+  bool _expiringSearch = false;
+  bool _cancelling = false;
+  bool _retrying = false;
 
   StreamSubscription<BookingModel?>? _bookingSubscription;
+  late final Stream<DocumentSnapshot<Map<String, dynamic>>> _locationStream;
+  String? _assignedStreamId;
+  Stream<DocumentSnapshot<Map<String, dynamic>>>? _assignedDriverStream;
+  Stream<List<DriverRatingModel>>? _assignedRatingStream;
 
   @override
   void initState() {
     super.initState();
 
     _booking = widget.booking;
-    _locationFreshnessTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) setState(() {});
+    _locationStream = FirebaseFirestore.instance
+        .collection('drunkDriveBookings')
+        .doc(_booking.id)
+        .snapshots();
+    _locationFreshnessTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) {
+        setState(() {});
+        unawaited(_expireSearchIfNeeded());
+      }
     });
 
+    unawaited(_expireSearchIfNeeded());
     _bookingSubscription = _bookingService
         .watchBooking(_booking.id)
         .listen(
           (updated) {
             if (!mounted || updated == null) return;
 
+            final changed =
+                updated.status != _booking.status ||
+                updated.paymentStatus != _booking.paymentStatus;
             setState(() {
               _booking = updated;
             });
+            if (changed && ModalRoute.of(context)?.isCurrent == true) {
+              final message = updated.paymentStatus == 'paid'
+                  ? 'Payment confirmed'
+                  : _passengerStatusLabel;
+              ScaffoldMessenger.maybeOf(context)
+                  ?.showSnackBar(SnackBar(content: Text(message)));
+            }
           },
 
           onError: (Object error) {
@@ -85,6 +113,27 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
     super.dispose();
   }
 
+  Future<void> _expireSearchIfNeeded() async {
+    if (_expiringSearch || !BookingPolicy.searchExpired(_booking)) return;
+    _expiringSearch = true;
+    try {
+      final updated = await _bookingService.markDriverNotFound(_booking.id);
+      if (mounted && updated != null) setState(() => _booking = updated);
+    } catch (_) {
+      // Keep the existing listener active and retry on the next tick.
+    } finally {
+      _expiringSearch = false;
+    }
+  }
+
+  int get _searchSecondsLeft =>
+      (BookingPolicy.searchTimeout.inSeconds -
+              DateTime.now()
+                  .difference(_booking.searchStartedAt ?? _booking.createdAt)
+                  .inSeconds)
+          .clamp(0, BookingPolicy.searchTimeout.inSeconds)
+          .toInt();
+
   Future<void> _refreshBooking() async {
     try {
       final updated = await _bookingService.watchBooking(_booking.id).first;
@@ -105,10 +154,7 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
 
   bool get _showTripPin {
     return _booking.tripPin != null &&
-        _booking.status != BookingStatus.tripStarted &&
-        _booking.status != BookingStatus.tripInProgress &&
-        _booking.status != BookingStatus.tripCompleted &&
-        _booking.status != BookingStatus.completed;
+        _booking.status == BookingStatus.verification;
   }
 
   bool get _tripIsRunning {
@@ -127,7 +173,7 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
         return 'Looking for an available driver...';
 
       case BookingStatus.searchingDriver:
-        return 'Looking for a verified driver. Your request remains active until a driver accepts or you cancel.';
+        return 'Looking for a verified driver near your pickup.';
 
       case BookingStatus.driverAssigned:
         return 'A driver has accepted your booking.';
@@ -191,6 +237,7 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
   }
 
   Future<void> _cancelBooking() async {
+    if (_cancelling) return;
     final confirmed = await showDialog<bool>(
       context: context,
 
@@ -219,9 +266,25 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    final cancelled = await _bookingService.cancelBookingByPassenger(
-      _booking.id,
-    );
+    final reason = await chooseCancellationReason(context, driver: false);
+    if (reason == null || !mounted || _cancelling) return;
+    setState(() => _cancelling = true);
+    BookingModel? cancelled;
+    try {
+      cancelled = await _bookingService.cancelBookingByPassenger(
+        _booking.id,
+        reason: reason,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not cancel. Try again.')),
+        );
+      }
+      return;
+    } finally {
+      if (mounted) setState(() => _cancelling = false);
+    }
 
     if (!mounted) return;
 
@@ -234,7 +297,9 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
     }
 
     setState(() {
-      _booking = cancelled;
+      if (cancelled != null) {
+        _booking = cancelled;
+      }
     });
 
     if (!mounted) return;
@@ -243,6 +308,8 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
   }
 
   Future<void> _retryDriverSearch() async {
+    if (_retrying) return;
+    setState(() => _retrying = true);
     try {
       final updated = await _bookingService.retryDriverSearch(_booking.id);
 
@@ -269,6 +336,8 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Unable to retry driver search: $error')),
       );
+    } finally {
+      if (mounted) setState(() => _retrying = false);
     }
   }
 
@@ -1026,10 +1095,18 @@ Status: ${_booking.status.label}
 
             children: [
               _buildStatusCard(),
+              if (_booking.cancellationReason != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Cancellation reason: ${_booking.cancellationReason}',
+                    style: TextStyle(color: _palette.textMuted),
+                  ),
+                ),
               if (_booking.status == BookingStatus.searchingDriver) ...[
                 const SizedBox(height: 10),
                 Text(
-                  'Still waiting? You can keep this booking active or cancel it below. We will update this screen when a driver accepts.',
+                  'Searching for nearby drivers: ${_searchSecondsLeft ~/ 60}:${(_searchSecondsLeft % 60).toString().padLeft(2, '0')} remaining.',
                   style: TextStyle(
                     color: _palette.textMuted,
                     fontSize: 12,
@@ -1070,12 +1147,13 @@ Status: ${_booking.status.label}
                   _booking.status == BookingStatus.driverAccepted ||
                   _booking.status == BookingStatus.driverArriving ||
                   _booking.status == BookingStatus.driverArrived ||
-                  _booking.status == BookingStatus.verification) ...[
+                  _booking.status == BookingStatus.verification ||
+                  _booking.status == BookingStatus.driverNotFound) ...[
                 SizedBox(
                   width: double.infinity,
 
                   child: OutlinedButton.icon(
-                    onPressed: _cancelBooking,
+                    onPressed: _cancelling ? null : _cancelBooking,
 
                     icon: Icon(Icons.cancel_outlined),
 
@@ -1107,7 +1185,7 @@ Status: ${_booking.status.label}
                   width: double.infinity,
 
                   child: ElevatedButton.icon(
-                    onPressed: _retryDriverSearch,
+                    onPressed: _retrying ? null : _retryDriverSearch,
 
                     icon: Icon(Icons.refresh_rounded),
 
@@ -1277,13 +1355,20 @@ Status: ${_booking.status.label}
 
   Widget _buildAssignedDriverCard() {
     final driverId = _booking.driverId!;
+    if (_assignedStreamId != driverId) {
+      _assignedStreamId = driverId;
+      _assignedDriverStream = FirebaseFirestore.instance
+          .collection('drunkDriveDriverApplications')
+          .doc(driverId)
+          .snapshots();
+      _assignedRatingStream = _driverRatingService.watchRatingsForDriver(
+        driverId,
+      );
+    }
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       key: ValueKey('assigned-driver-$driverId'),
-      stream: FirebaseFirestore.instance
-          .collection('drunkDriveDriverApplications')
-          .doc(driverId)
-          .snapshots(),
+      stream: _assignedDriverStream,
       builder: (context, snapshot) {
         final data = snapshot.data?.data();
         final approved =
@@ -1358,6 +1443,27 @@ Status: ${_booking.status.label}
                 ],
               ),
               if (approved) ...[
+                const SizedBox(height: 8),
+                StreamBuilder<List<DriverRatingModel>>(
+                  stream: _assignedRatingStream,
+                  builder: (context, ratingSnapshot) {
+                    final ratings = ratingSnapshot.data;
+                    final text = ratingSnapshot.hasError
+                        ? 'Rating unavailable'
+                        : ratings == null
+                        ? 'Loading rating...'
+                        : ratings.isEmpty
+                        ? 'No ratings yet'
+                        : '${(ratings.fold<int>(0, (total, r) => total + r.rating) / ratings.length).toStringAsFixed(1)} / 5 (${ratings.length})';
+                    return Text(
+                      '★ $text',
+                      style: TextStyle(
+                        color: _palette.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    );
+                  },
+                ),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -1464,10 +1570,7 @@ Status: ${_booking.status.label}
     final pickup = LatLng(pickupLat, pickupLng);
     final destination = LatLng(destinationLat, destinationLng);
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('drunkDriveBookings')
-          .doc(_booking.id)
-          .snapshots(),
+      stream: _locationStream,
       builder: (context, snapshot) {
         LatLng? driverPosition;
         String label = 'Waiting for the driver to share their location.';
@@ -1488,11 +1591,22 @@ Status: ${_booking.status.label}
                 DateTime.now().difference(updatedAt.toDate()).inSeconds < 90;
             final tracking = location['trackingActive'] == true;
             final running =
+                data['status'] == 'driverArriving' ||
                 data['status'] == 'tripStarted' ||
                 data['status'] == 'tripInProgress';
             if (tracking && fresh && running && lat is num && lng is num) {
               driverPosition = LatLng(lat.toDouble(), lng.toDouble());
               label = 'Driver position shared recently (not turn-by-turn navigation).';
+              if (data['status'] == 'driverArriving') {
+                final km = const Distance().as(
+                  LengthUnit.Kilometer,
+                  driverPosition,
+                  pickup,
+                );
+                final eta = (km / 30 * 60).ceil().clamp(1, 999);
+                label =
+                    'Approx. $eta min to pickup (straight-line estimate; no live traffic).';
+              }
             } else if (tracking && running) {
               label = 'Driver location is unavailable or outdated.';
             } else {
