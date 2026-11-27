@@ -1412,10 +1412,8 @@ class _VaultGlassScope extends InheritedWidget {
 }
 
 class _VaultGlassCard extends StatefulWidget {
-  const _VaultGlassCard({
-    required this.child,
-    required this.padding,
-  }) : interactive = false;
+  const _VaultGlassCard({required this.child, required this.padding})
+    : interactive = false;
   final Widget child;
   final EdgeInsetsGeometry padding;
   final bool interactive;
@@ -1537,29 +1535,19 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) => SizedBox(
-          width: widget.size,
-          height: widget.size,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              if (widget.ping)
-                Transform.scale(
-                  scale: 1 + _controller.value,
-                  child: Opacity(
-                    opacity: (1 - _controller.value) * 0.75,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: widget.color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                ),
-              Opacity(
-                opacity: widget.ping ? 1 : 1 - _controller.value * 0.5,
+    animation: _controller,
+    builder: (context, child) => SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          if (widget.ping)
+            Transform.scale(
+              scale: 1 + _controller.value,
+              child: Opacity(
+                opacity: (1 - _controller.value) * 0.75,
                 child: Container(
                   decoration: BoxDecoration(
                     color: widget.color,
@@ -1567,10 +1555,20 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
                   ),
                 ),
               ),
-            ],
+            ),
+          Opacity(
+            opacity: widget.ping ? 1 : 1 - _controller.value * 0.5,
+            child: Container(
+              decoration: BoxDecoration(
+                color: widget.color,
+                shape: BoxShape.circle,
+              ),
+            ),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 class _VaultNavGlyph extends StatefulWidget {
@@ -1588,30 +1586,31 @@ class _VaultNavGlyphState extends State<_VaultNavGlyph> {
 
   @override
   Widget build(BuildContext context) => MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() {
-          _hovered = false;
-          _pressed = false;
-        }),
-        child: Listener(
-          onPointerDown: (_) => setState(() => _pressed = true),
-          onPointerUp: (_) => setState(() => _pressed = false),
-          onPointerCancel: (_) => setState(() => _pressed = false),
-          child: AnimatedScale(
-            scale: _pressed ? 0.95 : 1,
-            duration: const Duration(milliseconds: 200),
-            child: _VaultReferenceIcon(
-              widget.icon,
-              size: 20,
-              color: widget.color ??
-                  (_hovered
-                      ? const Color(0xFF1E293B)
-                      : IconTheme.of(context).color ?? const Color(0xFF94A3B8)),
-            ),
-          ),
+    cursor: SystemMouseCursors.click,
+    onEnter: (_) => setState(() => _hovered = true),
+    onExit: (_) => setState(() {
+      _hovered = false;
+      _pressed = false;
+    }),
+    child: Listener(
+      onPointerDown: (_) => setState(() => _pressed = true),
+      onPointerUp: (_) => setState(() => _pressed = false),
+      onPointerCancel: (_) => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.95 : 1,
+        duration: const Duration(milliseconds: 200),
+        child: _VaultReferenceIcon(
+          widget.icon,
+          size: 20,
+          color:
+              widget.color ??
+              (_hovered
+                  ? const Color(0xFF1E293B)
+                  : IconTheme.of(context).color ?? const Color(0xFF94A3B8)),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _VaultReferenceIcon extends StatelessWidget {
@@ -1725,7 +1724,8 @@ class _VaultReferenceIcon extends StatelessWidget {
     final theme = IconTheme.of(context);
     final resolvedColor = color ?? theme.color ?? const Color(0xFF64748B);
     final resolvedSize = size ?? theme.size ?? 24;
-    if (svg == null) return Icon(icon, size: resolvedSize, color: resolvedColor);
+    if (svg == null)
+      return Icon(icon, size: resolvedSize, color: resolvedColor);
     return SvgPicture.string(
       svg,
       width: resolvedSize,
@@ -1746,16 +1746,16 @@ class _VaultPressFeedbackState extends State<_VaultPressFeedback> {
   bool _pressed = false;
   @override
   Widget build(BuildContext context) => MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Listener(
-          onPointerDown: (_) => setState(() => _pressed = true),
-          onPointerUp: (_) => setState(() => _pressed = false),
-          onPointerCancel: (_) => setState(() => _pressed = false),
-          child: AnimatedScale(
-            scale: _pressed ? .95 : 1,
-            duration: const Duration(milliseconds: 150),
-            child: widget.child,
-          ),
-        ),
-      );
+    cursor: SystemMouseCursors.click,
+    child: Listener(
+      onPointerDown: (_) => setState(() => _pressed = true),
+      onPointerUp: (_) => setState(() => _pressed = false),
+      onPointerCancel: (_) => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? .95 : 1,
+        duration: const Duration(milliseconds: 150),
+        child: widget.child,
+      ),
+    ),
+  );
 }

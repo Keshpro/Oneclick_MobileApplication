@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -36,8 +35,7 @@ const List<MockOffer> mockOffers = [
   MockOffer(
     id: '1',
     title: 'Your Next Meal, For Less',
-    description:
-        'Enjoy delicious meals with an exclusive demo discount.',
+    description: 'Enjoy delicious meals with an exclusive demo discount.',
     category: 'Food',
     discount: '30% OFF',
     code: 'FOOD30',
@@ -60,8 +58,7 @@ const List<MockOffer> mockOffers = [
   MockOffer(
     id: '3',
     title: 'Healthcare Made Easier',
-    description:
-        'Special savings on eligible doctor consultations.',
+    description: 'Special savings on eligible doctor consultations.',
     category: 'Doctor',
     discount: '15% OFF',
     code: 'CARE15',
@@ -72,8 +69,7 @@ const List<MockOffer> mockOffers = [
   MockOffer(
     id: '4',
     title: 'Fix It & Save',
-    description:
-        'Save on home maintenance and repair services.',
+    description: 'Save on home maintenance and repair services.',
     category: 'QuickFix',
     discount: '20% OFF',
     code: 'FIX20',
@@ -84,8 +80,7 @@ const List<MockOffer> mockOffers = [
   MockOffer(
     id: '5',
     title: 'Ride Home Safely',
-    description:
-        'A special promotion for your next driver booking.',
+    description: 'A special promotion for your next driver booking.',
     category: 'Driver',
     discount: 'Rs. 500 OFF',
     code: 'RIDE500',
@@ -107,8 +102,7 @@ const List<MockOffer> mockOffers = [
   MockOffer(
     id: '7',
     title: 'Family Grocery Deal',
-    description:
-        'More value for your weekly grocery shopping.',
+    description: 'More value for your weekly grocery shopping.',
     category: 'Groceries',
     discount: 'Rs. 750 OFF',
     code: 'FAMILY750',
@@ -119,8 +113,7 @@ const List<MockOffer> mockOffers = [
   MockOffer(
     id: '8',
     title: 'Home Care Special',
-    description:
-        'A little extra savings on household services.',
+    description: 'A little extra savings on household services.',
     category: 'QuickFix',
     discount: '15% OFF',
     code: 'HOME15',
@@ -133,10 +126,7 @@ const List<MockOffer> mockOffers = [
 class OffersScreen extends StatefulWidget {
   final VoidCallback? onBack;
 
-  const OffersScreen({
-    super.key,
-    this.onBack,
-  });
+  const OffersScreen({super.key, this.onBack});
 
   @override
   State<OffersScreen> createState() => _OffersScreenState();
@@ -147,8 +137,7 @@ class _OffersScreenState extends State<OffersScreen> {
   String _search = '';
 
   final Set<String> _favorites = {};
-  final TextEditingController _searchController =
-      TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   static const List<String> categories = [
     'All',
@@ -163,9 +152,7 @@ class _OffersScreenState extends State<OffersScreen> {
     final query = _search.trim().toLowerCase();
 
     return mockOffers.where((offer) {
-      final matchesCategory =
-          _category == 'All' ||
-          offer.category == _category;
+      final matchesCategory = _category == 'All' || offer.category == _category;
 
       final matchesSearch =
           query.isEmpty ||
@@ -214,28 +201,18 @@ class _OffersScreenState extends State<OffersScreen> {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding:
-                    const EdgeInsets.only(top: 20),
+                padding: const EdgeInsets.only(top: 20),
                 child: _buildFeaturedBanner(),
               ),
             ),
 
-            SliverToBoxAdapter(
-              child: _buildSearch(),
-            ),
+            SliverToBoxAdapter(child: _buildSearch()),
 
-            SliverToBoxAdapter(
-              child: _buildCategories(),
-            ),
+            SliverToBoxAdapter(child: _buildCategories()),
 
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  24,
-                  20,
-                  14,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 14),
                 child: Row(
                   children: [
                     const Expanded(
@@ -273,45 +250,32 @@ class _OffersScreenState extends State<OffersScreen> {
                         color: Colors.grey,
                       ),
                       SizedBox(height: 12),
-                      Text(
-                        'No matching offers found',
-                      ),
+                      Text('No matching offers found'),
                     ],
                   ),
                 ),
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverLayoutBuilder(
                   builder: (context, constraints) {
-                    final columns =
-                        constraints.crossAxisExtent >= 850
-                            ? 3
-                            : constraints.crossAxisExtent >=
-                                    550
-                                ? 2
-                                : 1;
+                    final columns = constraints.crossAxisExtent >= 850
+                        ? 3
+                        : constraints.crossAxisExtent >= 550
+                        ? 2
+                        : 1;
 
                     return SliverGrid(
-                      gridDelegate:
-                          SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: columns,
                         crossAxisSpacing: 14,
                         mainAxisSpacing: 14,
                         mainAxisExtent: 225,
                       ),
-                      delegate:
-                          SliverChildBuilderDelegate(
-                        (context, index) {
-                          return _buildOfferCard(
-                            offers[index],
-                          );
-                        },
-                        childCount: offers.length,
-                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        return _buildOfferCard(offers[index]);
+                      }, childCount: offers.length),
                     );
                   },
                 ),
@@ -319,12 +283,7 @@ class _OffersScreenState extends State<OffersScreen> {
 
             const SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  22,
-                  20,
-                  120,
-                ),
+                padding: EdgeInsets.fromLTRB(20, 22, 20, 120),
                 child: Text(
                   'DEMO OFFERS ONLY • Discounts, codes and expiry labels are sample data and cannot be redeemed.',
                   textAlign: TextAlign.center,
@@ -359,11 +318,7 @@ class _OffersScreenState extends State<OffersScreen> {
       leadingWidth: 58,
 
       leading: Padding(
-        padding: const EdgeInsets.only(
-          left: 12,
-          top: 12,
-          bottom: 12,
-        ),
+        padding: const EdgeInsets.only(left: 12, top: 12, bottom: 12),
         child: Material(
           color: Colors.white.withValues(alpha: .16),
           borderRadius: BorderRadius.circular(14),
@@ -420,8 +375,7 @@ class _OffersScreenState extends State<OffersScreen> {
         const SizedBox(width: 12),
       ],
 
-      systemOverlayStyle:
-          SystemUiOverlayStyle.light,
+      systemOverlayStyle: SystemUiOverlayStyle.light,
     );
   }
 
@@ -433,18 +387,12 @@ class _OffersScreenState extends State<OffersScreen> {
     final offer = mockOffers.first;
 
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 20,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF0D9488),
-            Color(0xFF075B60),
-            Color(0xFF102D38),
-          ],
+          colors: [Color(0xFF0D9488), Color(0xFF075B60), Color(0xFF102D38)],
         ),
         borderRadius: BorderRadius.circular(25),
         boxShadow: [
@@ -462,8 +410,7 @@ class _OffersScreenState extends State<OffersScreen> {
             top: -35,
             child: CircleAvatar(
               radius: 105,
-              backgroundColor:
-                  Colors.white.withValues(alpha: .06),
+              backgroundColor: Colors.white.withValues(alpha: .06),
             ),
           ),
 
@@ -480,20 +427,16 @@ class _OffersScreenState extends State<OffersScreen> {
           Padding(
             padding: const EdgeInsets.all(23),
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 11,
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white
-                        .withValues(alpha: .17),
-                    borderRadius:
-                        BorderRadius.circular(20),
+                    color: Colors.white.withValues(alpha: .17),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
                     '✦ FEATURED DEMO DEAL',
@@ -534,15 +477,13 @@ class _OffersScreenState extends State<OffersScreen> {
                 Row(
                   children: [
                     Container(
-                      padding:
-                          const EdgeInsets.symmetric(
+                      padding: const EdgeInsets.symmetric(
                         horizontal: 13,
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius:
-                            BorderRadius.circular(13),
+                        borderRadius: BorderRadius.circular(13),
                       ),
                       child: const Text(
                         'UP TO 30% OFF',
@@ -560,10 +501,7 @@ class _OffersScreenState extends State<OffersScreen> {
                       onPressed: () {
                         _showOfferDetails(offer);
                       },
-                      icon: const Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 17,
-                      ),
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 17),
                       label: const Text('Explore'),
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.white,
@@ -585,12 +523,7 @@ class _OffersScreenState extends State<OffersScreen> {
 
   Widget _buildSearch() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        22,
-        20,
-        0,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
       child: TextField(
         controller: _searchController,
 
@@ -601,15 +534,10 @@ class _OffersScreenState extends State<OffersScreen> {
         },
 
         decoration: InputDecoration(
-          hintText:
-              'Search offers and categories...',
-          hintStyle:
-              const TextStyle(fontSize: 13),
+          hintText: 'Search offers and categories...',
+          hintStyle: const TextStyle(fontSize: 13),
 
-          prefixIcon: const Icon(
-            Icons.search_rounded,
-            color: _teal,
-          ),
+          prefixIcon: const Icon(Icons.search_rounded, color: _teal),
 
           suffixIcon: _search.isEmpty
               ? null
@@ -621,24 +549,18 @@ class _OffersScreenState extends State<OffersScreen> {
                       _search = '';
                     });
                   },
-                  icon: const Icon(
-                    Icons.close_rounded,
-                  ),
+                  icon: const Icon(Icons.close_rounded),
                 ),
 
           filled: true,
           fillColor: Colors.white,
 
           border: OutlineInputBorder(
-            borderRadius:
-                BorderRadius.circular(17),
+            borderRadius: BorderRadius.circular(17),
             borderSide: BorderSide.none,
           ),
 
-          contentPadding:
-              const EdgeInsets.symmetric(
-            vertical: 17,
-          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 17),
         ),
       ),
     );
@@ -653,21 +575,17 @@ class _OffersScreenState extends State<OffersScreen> {
       height: 72,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding:
-            const EdgeInsets.symmetric(
-          horizontal: 20,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
 
         itemCount: categories.length,
 
-        separatorBuilder: (_, __) {
+        separatorBuilder: (_, _) {
           return const SizedBox(width: 9);
         },
 
         itemBuilder: (context, index) {
           final category = categories[index];
-          final selected =
-              _category == category;
+          final selected = _category == category;
 
           return Center(
             child: ChoiceChip(
@@ -678,15 +596,11 @@ class _OffersScreenState extends State<OffersScreen> {
               backgroundColor: Colors.white,
 
               side: BorderSide(
-                color: selected
-                    ? _teal
-                    : const Color(0xFFE3EAED),
+                color: selected ? _teal : const Color(0xFFE3EAED),
               ),
 
               labelStyle: TextStyle(
-                color: selected
-                    ? Colors.white
-                    : _dark,
+                color: selected ? Colors.white : _dark,
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
               ),
@@ -708,39 +622,30 @@ class _OffersScreenState extends State<OffersScreen> {
   // ==================================================
 
   Widget _buildOfferCard(MockOffer offer) {
-    final isSaved =
-        _favorites.contains(offer.id);
+    final isSaved = _favorites.contains(offer.id);
 
     return Material(
       color: Colors.white,
-      borderRadius:
-          BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(22),
 
       child: InkWell(
         onTap: () {
           _showOfferDetails(offer);
         },
 
-        borderRadius:
-            BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(22),
 
         child: Container(
-          padding:
-              const EdgeInsets.all(17),
+          padding: const EdgeInsets.all(17),
 
           decoration: BoxDecoration(
-            borderRadius:
-                BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(22),
 
-            border: Border.all(
-              color:
-                  const Color(0xFFE9EFF1),
-            ),
+            border: Border.all(color: const Color(0xFFE9EFF1)),
           ),
 
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
 
             children: [
               Row(
@@ -750,35 +655,26 @@ class _OffersScreenState extends State<OffersScreen> {
                     height: 53,
 
                     decoration: BoxDecoration(
-                      color: offer.color
-                          .withValues(alpha: .12),
+                      color: offer.color.withValues(alpha: .12),
 
-                      borderRadius:
-                          BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(16),
                     ),
 
-                    child: Icon(
-                      offer.icon,
-                      color: offer.color,
-                      size: 27,
-                    ),
+                    child: Icon(offer.icon, color: offer.color, size: 27),
                   ),
 
                   const Spacer(),
 
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: 11,
                       vertical: 7,
                     ),
 
                     decoration: BoxDecoration(
-                      color: offer.color
-                          .withValues(alpha: .10),
+                      color: offer.color.withValues(alpha: .10),
 
-                      borderRadius:
-                          BorderRadius.circular(11),
+                      borderRadius: BorderRadius.circular(11),
                     ),
 
                     child: Text(
@@ -786,28 +682,21 @@ class _OffersScreenState extends State<OffersScreen> {
 
                       style: TextStyle(
                         color: offer.color,
-                        fontWeight:
-                            FontWeight.w900,
+                        fontWeight: FontWeight.w900,
                         fontSize: 12,
                       ),
                     ),
                   ),
 
                   IconButton(
-                    tooltip: isSaved
-                        ? 'Remove from saved'
-                        : 'Save offer',
+                    tooltip: isSaved ? 'Remove from saved' : 'Save offer',
 
                     onPressed: () {
                       setState(() {
                         if (isSaved) {
-                          _favorites.remove(
-                            offer.id,
-                          );
+                          _favorites.remove(offer.id);
                         } else {
-                          _favorites.add(
-                            offer.id,
-                          );
+                          _favorites.add(offer.id);
                         }
                       });
                     },
@@ -815,12 +704,9 @@ class _OffersScreenState extends State<OffersScreen> {
                     icon: Icon(
                       isSaved
                           ? Icons.favorite_rounded
-                          : Icons
-                              .favorite_border_rounded,
+                          : Icons.favorite_border_rounded,
 
-                      color: isSaved
-                          ? Colors.redAccent
-                          : Colors.grey,
+                      color: isSaved ? Colors.redAccent : Colors.grey,
 
                       size: 21,
                     ),
@@ -836,8 +722,7 @@ class _OffersScreenState extends State<OffersScreen> {
                 style: TextStyle(
                   fontSize: 10,
                   color: offer.color,
-                  fontWeight:
-                      FontWeight.w800,
+                  fontWeight: FontWeight.w800,
                   letterSpacing: 1,
                 ),
               ),
@@ -847,14 +732,12 @@ class _OffersScreenState extends State<OffersScreen> {
               Text(
                 offer.title,
                 maxLines: 1,
-                overflow:
-                    TextOverflow.ellipsis,
+                overflow: TextOverflow.ellipsis,
 
                 style: const TextStyle(
                   color: _dark,
                   fontSize: 16,
-                  fontWeight:
-                      FontWeight.w800,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
 
@@ -863,8 +746,7 @@ class _OffersScreenState extends State<OffersScreen> {
               Text(
                 offer.description,
                 maxLines: 2,
-                overflow:
-                    TextOverflow.ellipsis,
+                overflow: TextOverflow.ellipsis,
 
                 style: const TextStyle(
                   color: Colors.grey,
@@ -890,10 +772,7 @@ class _OffersScreenState extends State<OffersScreen> {
                   Text(
                     offer.expiry,
 
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
                   ),
 
                   const Spacer(),
@@ -903,8 +782,7 @@ class _OffersScreenState extends State<OffersScreen> {
 
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight:
-                          FontWeight.w800,
+                      fontWeight: FontWeight.w800,
                       color: _teal,
                     ),
                   ),
@@ -933,8 +811,7 @@ class _OffersScreenState extends State<OffersScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor:
-          Colors.transparent,
+      backgroundColor: Colors.transparent,
 
       builder: (sheetContext) {
         return Container(
@@ -942,24 +819,16 @@ class _OffersScreenState extends State<OffersScreen> {
             24,
             15,
             24,
-            MediaQuery.viewPaddingOf(
-                  sheetContext,
-                ).bottom +
-                25,
+            MediaQuery.viewPaddingOf(sheetContext).bottom + 25,
           ),
 
-          decoration:
-              const BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius:
-                BorderRadius.vertical(
-              top: Radius.circular(28),
-            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
 
           child: Column(
-            mainAxisSize:
-                MainAxisSize.min,
+            mainAxisSize: MainAxisSize.min,
 
             children: [
               Container(
@@ -968,8 +837,7 @@ class _OffersScreenState extends State<OffersScreen> {
 
                 decoration: BoxDecoration(
                   color: Colors.black12,
-                  borderRadius:
-                      BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
 
@@ -978,15 +846,9 @@ class _OffersScreenState extends State<OffersScreen> {
               CircleAvatar(
                 radius: 37,
 
-                backgroundColor:
-                    offer.color
-                        .withValues(alpha: .12),
+                backgroundColor: offer.color.withValues(alpha: .12),
 
-                child: Icon(
-                  offer.icon,
-                  color: offer.color,
-                  size: 37,
-                ),
+                child: Icon(offer.icon, color: offer.color, size: 37),
               ),
 
               const SizedBox(height: 15),
@@ -997,8 +859,7 @@ class _OffersScreenState extends State<OffersScreen> {
                 style: TextStyle(
                   color: offer.color,
                   fontSize: 29,
-                  fontWeight:
-                      FontWeight.w900,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
 
@@ -1006,13 +867,11 @@ class _OffersScreenState extends State<OffersScreen> {
 
               Text(
                 offer.title,
-                textAlign:
-                    TextAlign.center,
+                textAlign: TextAlign.center,
 
                 style: const TextStyle(
                   fontSize: 21,
-                  fontWeight:
-                      FontWeight.w800,
+                  fontWeight: FontWeight.w800,
                   color: _dark,
                 ),
               ),
@@ -1021,8 +880,7 @@ class _OffersScreenState extends State<OffersScreen> {
 
               Text(
                 offer.description,
-                textAlign:
-                    TextAlign.center,
+                textAlign: TextAlign.center,
 
                 style: const TextStyle(
                   fontSize: 13,
@@ -1034,28 +892,21 @@ class _OffersScreenState extends State<OffersScreen> {
               const SizedBox(height: 24),
 
               Container(
-                padding:
-                    const EdgeInsets.all(17),
+                padding: const EdgeInsets.all(17),
 
                 decoration: BoxDecoration(
                   color: _background,
 
-                  borderRadius:
-                      BorderRadius.circular(17),
+                  borderRadius: BorderRadius.circular(17),
 
-                  border: Border.all(
-                    color: const Color(
-                      0xFFDCE7EA,
-                    ),
-                  ),
+                  border: Border.all(color: const Color(0xFFDCE7EA)),
                 ),
 
                 child: Row(
                   children: [
                     Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
 
                         children: [
                           const Text(
@@ -1065,8 +916,7 @@ class _OffersScreenState extends State<OffersScreen> {
                               fontSize: 10,
                               color: Colors.grey,
                               letterSpacing: 1,
-                              fontWeight:
-                                  FontWeight.bold,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
 
@@ -1075,11 +925,9 @@ class _OffersScreenState extends State<OffersScreen> {
                           Text(
                             offer.code,
 
-                            style:
-                                const TextStyle(
+                            style: const TextStyle(
                               fontSize: 21,
-                              fontWeight:
-                                  FontWeight.w900,
+                              fontWeight: FontWeight.w900,
                               color: _dark,
                               letterSpacing: 1.2,
                             ),
@@ -1089,35 +937,25 @@ class _OffersScreenState extends State<OffersScreen> {
                     ),
 
                     IconButton.filledTonal(
-                      tooltip:
-                          'Copy demo code',
+                      tooltip: 'Copy demo code',
 
                       onPressed: () async {
                         await Clipboard.setData(
-                          ClipboardData(
-                            text: offer.code,
-                          ),
+                          ClipboardData(text: offer.code),
                         );
 
-                        if (!sheetContext
-                            .mounted) {
+                        if (!sheetContext.mounted) {
                           return;
                         }
 
-                        ScaffoldMessenger.of(
-                          sheetContext,
-                        ).showSnackBar(
+                        ScaffoldMessenger.of(sheetContext).showSnackBar(
                           const SnackBar(
-                            content: Text(
-                              'Demo code copied. Not redeemable.',
-                            ),
+                            content: Text('Demo code copied. Not redeemable.'),
                           ),
                         );
                       },
 
-                      icon: const Icon(
-                        Icons.copy_rounded,
-                      ),
+                      icon: const Icon(Icons.copy_rounded),
                     ),
                   ],
                 ),
@@ -1126,8 +964,7 @@ class _OffersScreenState extends State<OffersScreen> {
               const SizedBox(height: 14),
 
               Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
 
                 children: [
                   const Icon(
@@ -1141,11 +978,7 @@ class _OffersScreenState extends State<OffersScreen> {
                   Text(
                     'Sample expiry: ${offer.expiry}',
 
-                    style:
-                        const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
               ),
@@ -1154,13 +987,9 @@ class _OffersScreenState extends State<OffersScreen> {
 
               const Text(
                 'Preview only. This offer is not active and cannot be redeemed.',
-                textAlign:
-                    TextAlign.center,
+                textAlign: TextAlign.center,
 
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 11, color: Colors.grey),
               ),
 
               const SizedBox(height: 22),
@@ -1170,34 +999,23 @@ class _OffersScreenState extends State<OffersScreen> {
 
                 child: FilledButton(
                   onPressed: () {
-                    Navigator.pop(
-                      sheetContext,
-                    );
+                    Navigator.pop(sheetContext);
                   },
 
-                  style:
-                      FilledButton.styleFrom(
+                  style: FilledButton.styleFrom(
                     backgroundColor: _teal,
 
-                    padding:
-                        const EdgeInsets.symmetric(
-                      vertical: 17,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 17),
 
-                    shape:
-                        RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
                     ),
                   ),
 
                   child: const Text(
                     'Continue Exploring',
 
-                    style: TextStyle(
-                      fontWeight:
-                          FontWeight.w800,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
               ),
@@ -1214,12 +1032,7 @@ class _OffersScreenState extends State<OffersScreen> {
 
   void _showFavorites() {
     final saved = mockOffers
-        .where(
-          (offer) =>
-              _favorites.contains(
-                offer.id,
-              ),
-        )
+        .where((offer) => _favorites.contains(offer.id))
         .toList();
 
     showModalBottomSheet<void>(
@@ -1229,83 +1042,53 @@ class _OffersScreenState extends State<OffersScreen> {
       builder: (sheetContext) {
         return SafeArea(
           child: Padding(
-            padding:
-                const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(20),
 
             child: Column(
-              mainAxisSize:
-                  MainAxisSize.min,
+              mainAxisSize: MainAxisSize.min,
 
               children: [
                 const Text(
                   'Saved Offers',
 
-                  style: TextStyle(
-                    fontSize: 21,
-                    fontWeight:
-                        FontWeight.w800,
-                  ),
+                  style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
                 ),
 
                 const SizedBox(height: 15),
 
                 if (saved.isEmpty)
                   const Padding(
-                    padding:
-                        EdgeInsets.all(25),
+                    padding: EdgeInsets.all(25),
 
                     child: Text(
                       'No saved offers yet.\nTap the heart on an offer to save it.',
-                      textAlign:
-                          TextAlign.center,
+                      textAlign: TextAlign.center,
                     ),
                   )
                 else
                   ConstrainedBox(
-                    constraints:
-                        const BoxConstraints(
-                      maxHeight: 400,
-                    ),
+                    constraints: const BoxConstraints(maxHeight: 400),
 
                     child: ListView.builder(
                       shrinkWrap: true,
-                      itemCount:
-                          saved.length,
+                      itemCount: saved.length,
 
-                      itemBuilder:
-                          (context, index) {
-                        final offer =
-                            saved[index];
+                      itemBuilder: (context, index) {
+                        final offer = saved[index];
 
                         return ListTile(
-                          leading: Icon(
-                            offer.icon,
-                            color:
-                                offer.color,
-                          ),
+                          leading: Icon(offer.icon, color: offer.color),
 
-                          title: Text(
-                            offer.title,
-                          ),
+                          title: Text(offer.title),
 
-                          subtitle: Text(
-                            offer.discount,
-                          ),
+                          subtitle: Text(offer.discount),
 
-                          trailing:
-                              const Icon(
-                            Icons
-                                .chevron_right_rounded,
-                          ),
+                          trailing: const Icon(Icons.chevron_right_rounded),
 
                           onTap: () {
-                            Navigator.pop(
-                              sheetContext,
-                            );
+                            Navigator.pop(sheetContext);
 
-                            _showOfferDetails(
-                              offer,
-                            );
+                            _showOfferDetails(offer);
                           },
                         );
                       },

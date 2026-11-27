@@ -130,8 +130,7 @@ class ActivityLogs extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
                                   'By: $performedBy',

@@ -25,13 +25,24 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
   String _filter = 'All';
   List<BookingModel> get _visibleBookings => _bookings.where((b) {
     switch (_filter) {
-      case 'Completed': return b.status == BookingStatus.completed;
-      case 'Cancelled': return b.status == BookingStatus.cancelledByUser || b.status == BookingStatus.cancelledByDriver;
-      case 'Payment due': return b.status == BookingStatus.completed && (b.paymentStatus == 'pending' || b.paymentStatus == 'unpaid');
-      case 'Paid': return b.paymentStatus == 'paid';
-      case 'No driver found': return b.status == BookingStatus.driverNotFound;
-      case 'Last 7 days': return !b.createdAt.isBefore(DateTime.now().subtract(const Duration(days: 7)));
-      default: return true;
+      case 'Completed':
+        return b.status == BookingStatus.completed;
+      case 'Cancelled':
+        return b.status == BookingStatus.cancelledByUser ||
+            b.status == BookingStatus.cancelledByDriver;
+      case 'Payment due':
+        return b.status == BookingStatus.completed &&
+            (b.paymentStatus == 'pending' || b.paymentStatus == 'unpaid');
+      case 'Paid':
+        return b.paymentStatus == 'paid';
+      case 'No driver found':
+        return b.status == BookingStatus.driverNotFound;
+      case 'Last 7 days':
+        return !b.createdAt.isBefore(
+          DateTime.now().subtract(const Duration(days: 7)),
+        );
+      default:
+        return true;
     }
   }).toList();
 
@@ -91,9 +102,9 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
       }
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to check rating: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to check rating: $error')));
       return;
     }
 
@@ -109,14 +120,18 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
         builder: (dialogContext) => StatefulBuilder(
           builder: (dialogContext, setDialogState) => AlertDialog(
             backgroundColor: colors.surface,
-            title: Text('Rate Your Driver',
-                style: TextStyle(color: colors.textPrimary)),
+            title: Text(
+              'Rate Your Driver',
+              style: TextStyle(color: colors.textPrimary),
+            ),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('How was your trip?',
-                      style: TextStyle(color: colors.textMuted)),
+                  Text(
+                    'How was your trip?',
+                    style: TextStyle(color: colors.textMuted),
+                  ),
                   const SizedBox(height: 12),
                   Wrap(
                     alignment: WrapAlignment.center,
@@ -151,7 +166,9 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
             ),
             actions: [
               TextButton(
-                onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext),
+                onPressed: isSubmitting
+                    ? null
+                    : () => Navigator.pop(dialogContext),
                 child: const Text('Cancel'),
               ),
               FilledButton(
@@ -170,15 +187,21 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
                           Navigator.pop(dialogContext);
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(result == null
-                                ? 'This trip has already been rated.'
-                                : 'Rating saved to Firebase.')),
+                            SnackBar(
+                              content: Text(
+                                result == null
+                                    ? 'This trip has already been rated.'
+                                    : 'Rating saved to Firebase.',
+                              ),
+                            ),
                           );
                         } catch (error) {
                           if (!dialogContext.mounted) return;
                           setDialogState(() => isSubmitting = false);
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            SnackBar(content: Text('Unable to save rating: $error')),
+                            SnackBar(
+                              content: Text('Unable to save rating: $error'),
+                            ),
                           );
                         }
                       },
@@ -252,22 +275,41 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
-      body: SafeArea(child: Column(children: [
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8), child: DropdownButton<String>(
-          isExpanded: true, value: _filter,
-          items: ['All', 'Completed', 'Cancelled', 'No driver found', 'Payment due', 'Paid', 'Last 7 days'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-          onChanged: (value) { if (value != null) setState(() => _filter = value); },
-        )),
-        Expanded(child: _buildBody(colors)),
-      ])),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: DropdownButton<String>(
+                isExpanded: true,
+                value: _filter,
+                items:
+                    [
+                          'All',
+                          'Completed',
+                          'Cancelled',
+                          'No driver found',
+                          'Payment due',
+                          'Paid',
+                          'Last 7 days',
+                        ]
+                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                        .toList(),
+                onChanged: (value) {
+                  if (value != null) setState(() => _filter = value);
+                },
+              ),
+            ),
+            Expanded(child: _buildBody(colors)),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildBody(DrunkDrivePalette colors) {
     if (_isLoading) {
-      return Center(
-        child: CircularProgressIndicator(color: colors.accent),
-      );
+      return Center(child: CircularProgressIndicator(color: colors.accent));
     }
 
     final visible = _visibleBookings;
@@ -281,11 +323,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
               padding: const EdgeInsets.all(24),
               children: [
                 const SizedBox(height: 130),
-                Icon(
-                  Icons.history_rounded,
-                  color: colors.textMuted,
-                  size: 54,
-                ),
+                Icon(Icons.history_rounded, color: colors.textMuted, size: 54),
                 const SizedBox(height: 16),
                 Text(
                   'No trips match this filter.',
@@ -305,8 +343,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final booking = visible[index];
-                final statusColor =
-                    _historyStatusColor(booking.status, colors);
+                final statusColor = _historyStatusColor(booking.status, colors);
 
                 return Container(
                   padding: const EdgeInsets.all(16),
@@ -372,10 +409,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
                       Text(
                         '${booking.vehicle.displayName} • '
                         '${booking.distanceKm.toStringAsFixed(1)} km',
-                        style: TextStyle(
-                          color: colors.textMuted,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: colors.textMuted, fontSize: 12),
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -399,26 +433,54 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
                       ),
                       if (booking.cancellationReason != null) ...[
                         const SizedBox(height: 8),
-                        Text('Cancellation: ${booking.cancellationReason}', style: TextStyle(color: colors.textMuted)),
+                        Text(
+                          'Cancellation: ${booking.cancellationReason}',
+                          style: TextStyle(color: colors.textMuted),
+                        ),
                       ],
                       if (booking.status == BookingStatus.driverNotFound) ...[
                         const SizedBox(height: 8),
-                        OutlinedButton.icon(icon: const Icon(Icons.refresh), label: const Text('Retry / Cancel'), onPressed: () async {
-                          await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ActiveTripScreen(booking: booking)));
-                          if (mounted) await _loadBookings();
-                        }),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry / Cancel'),
+                          onPressed: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ActiveTripScreen(booking: booking),
+                              ),
+                            );
+                            if (mounted) await _loadBookings();
+                          },
+                        ),
                       ],
                       if (booking.status == BookingStatus.completed) ...[
                         const SizedBox(height: 8),
-                        Text('Payment: ${booking.paymentStatus == 'paid' ? 'Confirmed' : booking.paymentStatus == 'simulated' ? 'Demo only' : booking.paymentStatus == 'pending' ? 'Cash pending' : 'Unpaid'}', style: TextStyle(color: colors.textMuted)),
+                        Text(
+                          'Payment: ${booking.paymentStatus == 'paid'
+                              ? 'Confirmed'
+                              : booking.paymentStatus == 'simulated'
+                              ? 'Demo only'
+                              : booking.paymentStatus == 'pending'
+                              ? 'Cash pending'
+                              : 'Unpaid'}',
+                          style: TextStyle(color: colors.textMuted),
+                        ),
                         const SizedBox(height: 14),
-                        if (booking.paymentStatus == 'unpaid' || booking.paymentStatus == 'pending' || booking.paymentStatus == 'paid' || booking.paymentStatus == 'simulated') ...[
+                        if (booking.paymentStatus == 'unpaid' ||
+                            booking.paymentStatus == 'pending' ||
+                            booking.paymentStatus == 'paid' ||
+                            booking.paymentStatus == 'simulated') ...[
                           SizedBox(
                             width: double.infinity,
                             child: FilledButton.icon(
                               onPressed: () => _openPayment(booking),
                               icon: const Icon(Icons.payment_rounded),
-                              label: Text(booking.paymentStatus == 'unpaid' ? 'Proceed to Payment' : 'Payment details / receipt'),
+                              label: Text(
+                                booking.paymentStatus == 'unpaid'
+                                    ? 'Proceed to Payment'
+                                    : 'Payment details / receipt',
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -477,10 +539,7 @@ class _RatingAction extends StatelessWidget {
   final String bookingId;
   final VoidCallback onRate;
 
-  const _RatingAction({
-    required this.bookingId,
-    required this.onRate,
-  });
+  const _RatingAction({required this.bookingId, required this.onRate});
 
   @override
   Widget build(BuildContext context) {
@@ -492,8 +551,10 @@ class _RatingAction extends StatelessWidget {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Text('Unable to check rating: ${snapshot.error}',
-              style: TextStyle(color: colors.danger));
+          return Text(
+            'Unable to check rating: ${snapshot.error}',
+            style: TextStyle(color: colors.danger),
+          );
         }
         if (!snapshot.hasData) {
           return const Center(child: LinearProgressIndicator());

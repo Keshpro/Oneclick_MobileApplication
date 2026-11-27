@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class RescheduleAppointmentScreen extends StatefulWidget {
   final Map<String, dynamic> appointment;
 
-  const RescheduleAppointmentScreen({
-    super.key,
-    required this.appointment,
-  });
+  const RescheduleAppointmentScreen({super.key, required this.appointment});
 
   @override
   State<RescheduleAppointmentScreen> createState() =>
@@ -44,24 +41,12 @@ class _RescheduleAppointmentScreenState
 
     return List.generate(
       7,
-      (index) => DateTime(
-        now.year,
-        now.month,
-        now.day + index,
-      ),
+      (index) => DateTime(now.year, now.month, now.day + index),
     );
   }
 
   String _dayShort(DateTime date) {
-    const days = [
-      'Mon',
-      'Tue',
-      'Wed',
-      'Thu',
-      'Fri',
-      'Sat',
-      'Sun',
-    ];
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     return days[date.weekday - 1];
   }
@@ -105,9 +90,7 @@ class _RescheduleAppointmentScreenState
   }
 
   bool _sameDate(DateTime a, DateTime b) {
-    return a.year == b.year &&
-        a.month == b.month &&
-        a.day == b.day;
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   void _continueReschedule() {
@@ -126,10 +109,7 @@ class _RescheduleAppointmentScreenState
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 
@@ -140,17 +120,10 @@ class _RescheduleAppointmentScreenState
       isScrollControlled: true,
       builder: (sheetContext) {
         return Container(
-          padding: const EdgeInsets.fromLTRB(
-            22,
-            12,
-            22,
-            28,
-          ),
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(30),
-            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
           ),
           child: SafeArea(
             top: false,
@@ -186,10 +159,7 @@ class _RescheduleAppointmentScreenState
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Your current appointment will be updated.',
-                    style: TextStyle(
-                      color: _muted,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: _muted, fontSize: 11),
                   ),
                 ),
 
@@ -200,17 +170,14 @@ class _RescheduleAppointmentScreenState
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: const Color(0xFFE2E8F0),
-                    ),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
                   child: Column(
                     children: [
                       _reviewRow(
                         Icons.person_outline_rounded,
                         'Doctor',
-                        widget.appointment['doctor']?.toString() ??
-                            'Doctor',
+                        widget.appointment['doctor']?.toString() ?? 'Doctor',
                       ),
                       _divider(),
                       _reviewRow(
@@ -228,8 +195,7 @@ class _RescheduleAppointmentScreenState
                       _reviewRow(
                         Icons.health_and_safety_outlined,
                         'Consultation',
-                        widget.appointment['type']?.toString() ??
-                            'In-person',
+                        widget.appointment['type']?.toString() ?? 'In-person',
                       ),
                     ],
                   ),
@@ -244,22 +210,16 @@ class _RescheduleAppointmentScreenState
                       Navigator.pop(sheetContext);
                       _confirmReschedule();
                     },
-                    icon: const Icon(
-                      Icons.check_circle_outline_rounded,
-                    ),
+                    icon: const Icon(Icons.check_circle_outline_rounded),
                     label: const Text(
                       'Confirm Reschedule',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w800),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 16,
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
@@ -301,8 +261,7 @@ class _RescheduleAppointmentScreenState
         '${_monthShort(_selectedDate!)} '
         '${_selectedDate!.year}';
 
-    widget.appointment['day'] =
-        _dayFull(_selectedDate!);
+    widget.appointment['day'] = _dayFull(_selectedDate!);
 
     widget.appointment['time'] = _selectedTime;
 
@@ -352,11 +311,7 @@ class _RescheduleAppointmentScreenState
                 const Text(
                   'Your appointment has been moved to the new date and time.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: _muted,
-                    fontSize: 12,
-                    height: 1.5,
-                  ),
+                  style: TextStyle(color: _muted, fontSize: 12, height: 1.5),
                 ),
 
                 const SizedBox(height: 18),
@@ -410,18 +365,14 @@ class _RescheduleAppointmentScreenState
                       backgroundColor: _primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 15,
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: const Text(
                       'Done',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
                 ),
@@ -433,11 +384,7 @@ class _RescheduleAppointmentScreenState
     );
   }
 
-  Widget _reviewRow(
-    IconData icon,
-    String title,
-    String value,
-  ) {
+  Widget _reviewRow(IconData icon, String title, String value) {
     return Row(
       children: [
         Container(
@@ -447,24 +394,14 @@ class _RescheduleAppointmentScreenState
             color: const Color(0xFFECFDF5),
             borderRadius: BorderRadius.circular(11),
           ),
-          child: Icon(
-            icon,
-            color: _primary,
-            size: 19,
-          ),
+          child: Icon(icon, color: _primary, size: 19),
         ),
         const SizedBox(width: 11),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: _muted,
-                  fontSize: 10,
-                ),
-              ),
+              Text(title, style: const TextStyle(color: _muted, fontSize: 10)),
               const SizedBox(height: 3),
               Text(
                 value,
@@ -484,10 +421,7 @@ class _RescheduleAppointmentScreenState
   Widget _divider() {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 11),
-      child: Divider(
-        height: 1,
-        color: Color(0xFFE2E8F0),
-      ),
+      child: Divider(height: 1, color: Color(0xFFE2E8F0)),
     );
   }
 
@@ -511,14 +445,9 @@ class _RescheduleAppointmentScreenState
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(13),
-                border: Border.all(
-                  color: const Color(0xFFE2E8F0),
-                ),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              child: const Icon(
-                Icons.arrow_back_rounded,
-                color: _text,
-              ),
+              child: const Icon(Icons.arrow_back_rounded, color: _text),
             ),
           ),
         ),
@@ -536,12 +465,7 @@ class _RescheduleAppointmentScreenState
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
-                20,
-                10,
-                20,
-                30,
-              ),
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -579,8 +503,7 @@ class _RescheduleAppointmentScreenState
                         const SizedBox(height: 14),
 
                         Text(
-                          appointment['doctor']?.toString() ??
-                              'Doctor',
+                          appointment['doctor']?.toString() ?? 'Doctor',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 17,
@@ -591,8 +514,7 @@ class _RescheduleAppointmentScreenState
                         const SizedBox(height: 3),
 
                         Text(
-                          appointment['specialty']?.toString() ??
-                              'General',
+                          appointment['specialty']?.toString() ?? 'General',
                           style: const TextStyle(
                             color: Color(0xFF6EE7B7),
                             fontSize: 11,
@@ -607,15 +529,13 @@ class _RescheduleAppointmentScreenState
                             Expanded(
                               child: _currentInfo(
                                 Icons.calendar_month_outlined,
-                                appointment['date']?.toString() ??
-                                    '-',
+                                appointment['date']?.toString() ?? '-',
                               ),
                             ),
                             Expanded(
                               child: _currentInfo(
                                 Icons.schedule_rounded,
-                                appointment['time']?.toString() ??
-                                    '-',
+                                appointment['time']?.toString() ?? '-',
                               ),
                             ),
                           ],
@@ -639,10 +559,7 @@ class _RescheduleAppointmentScreenState
 
                   const Text(
                     'Select a new date for your appointment.',
-                    style: TextStyle(
-                      color: _muted,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: _muted, fontSize: 11),
                   ),
 
                   const SizedBox(height: 14),
@@ -652,17 +569,13 @@ class _RescheduleAppointmentScreenState
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: _availableDates.length,
-                      separatorBuilder: (_, _) =>
-                          const SizedBox(width: 9),
+                      separatorBuilder: (_, _) => const SizedBox(width: 9),
                       itemBuilder: (context, index) {
                         final date = _availableDates[index];
 
                         final selected =
                             _selectedDate != null &&
-                            _sameDate(
-                              _selectedDate!,
-                              date,
-                            );
+                            _sameDate(_selectedDate!, date);
 
                         return InkWell(
                           onTap: () {
@@ -673,63 +586,43 @@ class _RescheduleAppointmentScreenState
                           },
                           borderRadius: BorderRadius.circular(17),
                           child: AnimatedContainer(
-                            duration: const Duration(
-                              milliseconds: 180,
-                            ),
+                            duration: const Duration(milliseconds: 180),
                             width: 67,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 11,
-                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 11),
                             decoration: BoxDecoration(
-                              color: selected
-                                  ? _primary
-                                  : Colors.white,
-                              borderRadius:
-                                  BorderRadius.circular(17),
+                              color: selected ? _primary : Colors.white,
+                              borderRadius: BorderRadius.circular(17),
                               border: Border.all(
                                 color: selected
                                     ? _primary
-                                    : const Color(
-                                        0xFFE2E8F0,
-                                      ),
+                                    : const Color(0xFFE2E8F0),
                               ),
                             ),
                             child: Column(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  index == 0
-                                      ? 'Today'
-                                      : _dayShort(date),
+                                  index == 0 ? 'Today' : _dayShort(date),
                                   style: TextStyle(
-                                    color: selected
-                                        ? Colors.white
-                                        : _muted,
+                                    color: selected ? Colors.white : _muted,
                                     fontSize: 10,
-                                    fontWeight:
-                                        FontWeight.w600,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 const SizedBox(height: 5),
                                 Text(
                                   '${date.day}',
                                   style: TextStyle(
-                                    color: selected
-                                        ? Colors.white
-                                        : _text,
+                                    color: selected ? Colors.white : _text,
                                     fontSize: 20,
-                                    fontWeight:
-                                        FontWeight.w800,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                                 Text(
                                   _monthShort(date),
                                   style: TextStyle(
                                     color: selected
-                                        ? const Color(
-                                            0xFFD1FAE5,
-                                          )
+                                        ? const Color(0xFFD1FAE5)
                                         : _muted,
                                     fontSize: 9,
                                   ),
@@ -757,30 +650,25 @@ class _RescheduleAppointmentScreenState
 
                   const Text(
                     'Available times for the selected date.',
-                    style: TextStyle(
-                      color: _muted,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: _muted, fontSize: 11),
                   ),
 
                   const SizedBox(height: 14),
 
                   GridView.builder(
                     shrinkWrap: true,
-                    physics:
-                        const NeverScrollableScrollPhysics(),
+                    physics: const NeverScrollableScrollPhysics(),
                     itemCount: _timeSlots.length,
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 9,
-                      crossAxisSpacing: 9,
-                      childAspectRatio: 2.45,
-                    ),
+                          crossAxisCount: 3,
+                          mainAxisSpacing: 9,
+                          crossAxisSpacing: 9,
+                          childAspectRatio: 2.45,
+                        ),
                     itemBuilder: (context, index) {
                       final time = _timeSlots[index];
-                      final selected =
-                          _selectedTime == time;
+                      final selected = _selectedTime == time;
 
                       return InkWell(
                         onTap: _selectedDate == null
@@ -790,29 +678,21 @@ class _RescheduleAppointmentScreenState
                                   _selectedTime = time;
                                 });
                               },
-                        borderRadius:
-                            BorderRadius.circular(13),
+                        borderRadius: BorderRadius.circular(13),
                         child: AnimatedContainer(
-                          duration: const Duration(
-                            milliseconds: 180,
-                          ),
+                          duration: const Duration(milliseconds: 180),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: selected
                                 ? _primary
                                 : _selectedDate == null
-                                    ? const Color(
-                                        0xFFF1F5F9,
-                                      )
-                                    : Colors.white,
-                            borderRadius:
-                                BorderRadius.circular(13),
+                                ? const Color(0xFFF1F5F9)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(13),
                             border: Border.all(
                               color: selected
                                   ? _primary
-                                  : const Color(
-                                      0xFFE2E8F0,
-                                    ),
+                                  : const Color(0xFFE2E8F0),
                             ),
                           ),
                           child: Text(
@@ -821,13 +701,10 @@ class _RescheduleAppointmentScreenState
                               color: selected
                                   ? Colors.white
                                   : _selectedDate == null
-                                      ? const Color(
-                                          0xFFCBD5E1,
-                                        )
-                                      : _text,
+                                  ? const Color(0xFFCBD5E1)
+                                  : _text,
                               fontSize: 11,
-                              fontWeight:
-                                  FontWeight.w700,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
@@ -842,13 +719,10 @@ class _RescheduleAppointmentScreenState
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFFBEB),
                       borderRadius: BorderRadius.circular(17),
-                      border: Border.all(
-                        color: const Color(0xFFFEF3C7),
-                      ),
+                      border: Border.all(color: const Color(0xFFFEF3C7)),
                     ),
                     child: const Row(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(
                           Icons.info_outline_rounded,
@@ -877,41 +751,25 @@ class _RescheduleAppointmentScreenState
           SafeArea(
             top: false,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(
-                20,
-                12,
-                20,
-                12,
-              ),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                border: Border(
-                  top: BorderSide(
-                    color: Color(0xFFE2E8F0),
-                  ),
-                ),
+                border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
               ),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: _continueReschedule,
-                  icon: const Icon(
-                    Icons.event_repeat_rounded,
-                    size: 19,
-                  ),
+                  icon: const Icon(Icons.event_repeat_rounded, size: 19),
                   label: const Text(
                     'Review New Schedule',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w800),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _primary,
                     foregroundColor: Colors.white,
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
@@ -925,17 +783,10 @@ class _RescheduleAppointmentScreenState
     );
   }
 
-  Widget _currentInfo(
-    IconData icon,
-    String value,
-  ) {
+  Widget _currentInfo(IconData icon, String value) {
     return Row(
       children: [
-        Icon(
-          icon,
-          color: const Color(0xFFA7F3D0),
-          size: 15,
-        ),
+        Icon(icon, color: const Color(0xFFA7F3D0), size: 15),
         const SizedBox(width: 5),
         Flexible(
           child: Text(

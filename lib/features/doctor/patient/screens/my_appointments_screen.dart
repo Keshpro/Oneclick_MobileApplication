@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -7,12 +6,10 @@ class MyAppointmentsScreen extends StatefulWidget {
   const MyAppointmentsScreen({super.key});
 
   @override
-  State<MyAppointmentsScreen> createState() =>
-      _MyAppointmentsScreenState();
+  State<MyAppointmentsScreen> createState() => _MyAppointmentsScreenState();
 }
 
-class _MyAppointmentsScreenState
-    extends State<MyAppointmentsScreen>
+class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
@@ -28,10 +25,7 @@ class _MyAppointmentsScreenState
   void initState() {
     super.initState();
 
-    _tabController = TabController(
-      length: 4,
-      vsync: this,
-    );
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -45,28 +39,22 @@ class _MyAppointmentsScreenState
   }
 
   bool _isUnpaidDraft(Map<String, dynamic> data) {
-    return _status(data).toLowerCase() ==
-        'awaiting_payment';
+    return _status(data).toLowerCase() == 'awaiting_payment';
   }
 
   // Legacy Approved bookings are preserved for compatibility.
   // New confirmed bookings must originate from verified payments.
-  bool _matchesTab(
-    Map<String, dynamic> data,
-    int tab,
-  ) {
+  bool _matchesTab(Map<String, dynamic> data, int tab) {
     if (_isUnpaidDraft(data)) return false;
 
     final status = _status(data).toLowerCase();
 
     switch (tab) {
       case 0:
-        return status == 'approved' ||
-            status == 'confirmed';
+        return status == 'approved' || status == 'confirmed';
 
       case 1:
-        return status == 'upcoming' ||
-            status == 'rescheduled';
+        return status == 'upcoming' || status == 'rescheduled';
 
       case 2:
         return status == 'completed';
@@ -133,13 +121,11 @@ class _MyAppointmentsScreenState
         ),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Keep Appointment'),
           ),
           TextButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text(
               'Cancel Appointment',
               style: TextStyle(color: Colors.red),
@@ -157,18 +143,15 @@ class _MyAppointmentsScreenState
       final data = doc.data();
 
       if (data['userId'] != user.uid) {
-        throw StateError(
-          'Appointment does not belong to this user.',
-        );
+        throw StateError('Appointment does not belong to this user.');
       }
 
       // For paid bookings, cancellation/refund
       // should be handled by a trusted backend.
-      final paid = data['paymentStatus'] == 'paid' ||
+      final paid =
+          data['paymentStatus'] == 'paid' ||
           (data['paymentId'] != null &&
-              data['paymentId']
-                  .toString()
-                  .isNotEmpty);
+              data['paymentId'].toString().isNotEmpty);
 
       if (paid) {
         if (!mounted) return;
@@ -190,14 +173,11 @@ class _MyAppointmentsScreenState
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      final doctorId =
-          data['doctorId']?.toString() ?? '';
+      final doctorId = data['doctorId']?.toString() ?? '';
 
       if (doctorId.isNotEmpty) {
         try {
-          await FirebaseFirestore.instance
-              .collection('notifications')
-              .add({
+          await FirebaseFirestore.instance.collection('notifications').add({
             'userId': doctorId,
             'type': 'APPOINTMENT_CANCELLED',
             'title': 'Appointment Cancelled',
@@ -214,20 +194,14 @@ class _MyAppointmentsScreenState
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Appointment cancelled.'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Appointment cancelled.')));
     } catch (_) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Unable to cancel appointment.',
-          ),
-        ),
+        const SnackBar(content: Text('Unable to cancel appointment.')),
       );
     } finally {
       if (mounted) {
@@ -248,17 +222,12 @@ class _MyAppointmentsScreenState
         elevation: 0,
         title: const Text(
           'My Appointments',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-          ),
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(52),
           child: Container(
-            margin: const EdgeInsets.fromLTRB(
-              16, 0, 16, 8,
-            ),
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             decoration: BoxDecoration(
               color: const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(14),
@@ -290,8 +259,7 @@ class _MyAppointmentsScreenState
       ),
       body: uid == null
           ? _emptyState('Please log in to view appointments.')
-          : StreamBuilder<
-              QuerySnapshot<Map<String, dynamic>>>(
+          : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: FirebaseFirestore.instance
                   .collection('appointments')
                   .where('userId', isEqualTo: uid)
@@ -306,9 +274,7 @@ class _MyAppointmentsScreenState
 
                 if (!snapshot.hasData) {
                   return const Center(
-                    child: CircularProgressIndicator(
-                      color: primary,
-                    ),
+                    child: CircularProgressIndicator(color: primary),
                   );
                 }
 
@@ -316,19 +282,13 @@ class _MyAppointmentsScreenState
 
                 return TabBarView(
                   controller: _tabController,
-                  children: List.generate(
-                    4,
-                    (tab) {
-                      final filtered = docs.where((doc) {
-                        return _matchesTab(
-                          doc.data(),
-                          tab,
-                        );
-                      }).toList();
+                  children: List.generate(4, (tab) {
+                    final filtered = docs.where((doc) {
+                      return _matchesTab(doc.data(), tab);
+                    }).toList();
 
-                      return _appointmentsList(filtered);
-                    },
-                  ),
+                    return _appointmentsList(filtered);
+                  }),
                 );
               },
             ),
@@ -339,22 +299,16 @@ class _MyAppointmentsScreenState
     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) {
     if (docs.isEmpty) {
-      return _emptyState(
-        'No appointments in this category.',
-      );
+      return _emptyState('No appointments in this category.');
     }
 
     docs.sort((a, b) {
       final aTime = a.data()['createdAt'];
       final bTime = b.data()['createdAt'];
 
-      final aDate = aTime is Timestamp
-          ? aTime.toDate()
-          : DateTime(1970);
+      final aDate = aTime is Timestamp ? aTime.toDate() : DateTime(1970);
 
-      final bDate = bTime is Timestamp
-          ? bTime.toDate()
-          : DateTime(1970);
+      final bDate = bTime is Timestamp ? bTime.toDate() : DateTime(1970);
 
       return bDate.compareTo(aDate);
     });
@@ -366,37 +320,26 @@ class _MyAppointmentsScreenState
         final doc = docs[index];
         final data = doc.data();
 
-        final doctorName =
-            data['doctorName']?.toString() ?? 'Doctor';
+        final doctorName = data['doctorName']?.toString() ?? 'Doctor';
 
-        final specialty =
-            data['specialty']?.toString() ??
-                'Specialist';
+        final specialty = data['specialty']?.toString() ?? 'Specialist';
 
-        final date =
-            data['date']?.toString() ?? '-';
+        final date = data['date']?.toString() ?? '-';
 
-        final time =
-            data['time']?.toString() ?? '-';
+        final time = data['time']?.toString() ?? '-';
 
-        final type =
-            data['type']?.toString() ?? 'In-person';
+        final type = data['type']?.toString() ?? 'In-person';
 
-        final hospital =
-            data['hospital']?.toString() ?? '-';
+        final hospital = data['hospital']?.toString() ?? '-';
 
-        final status =
-            _displayStatus(_status(data));
+        final status = _displayStatus(_status(data));
 
-        final active =
-            status != 'Cancelled' &&
-            status != 'Completed';
+        final active = status != 'Cancelled' && status != 'Completed';
 
-        final paid = data['paymentStatus'] == 'paid' ||
+        final paid =
+            data['paymentStatus'] == 'paid' ||
             (data['paymentId'] != null &&
-                data['paymentId']
-                    .toString()
-                    .isNotEmpty);
+                data['paymentId'].toString().isNotEmpty);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 15),
@@ -407,23 +350,18 @@ class _MyAppointmentsScreenState
             border: Border.all(color: border),
           ),
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   const CircleAvatar(
                     backgroundColor: Color(0xFFECFDF5),
-                    child: Icon(
-                      Icons.medical_services_rounded,
-                      color: primary,
-                    ),
+                    child: Icon(Icons.medical_services_rounded, color: primary),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           doctorName,
@@ -451,10 +389,8 @@ class _MyAppointmentsScreenState
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: _statusColor(status)
-                          .withValues(alpha: .10),
-                      borderRadius:
-                          BorderRadius.circular(10),
+                      color: _statusColor(status).withValues(alpha: .10),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       status,
@@ -472,24 +408,15 @@ class _MyAppointmentsScreenState
               const Divider(color: border),
               const SizedBox(height: 12),
 
-              _detailRow(
-                Icons.calendar_month_outlined,
-                '$date at $time',
-              ),
+              _detailRow(Icons.calendar_month_outlined, '$date at $time'),
 
               const SizedBox(height: 11),
 
-              _detailRow(
-                Icons.location_on_outlined,
-                hospital,
-              ),
+              _detailRow(Icons.location_on_outlined, hospital),
 
               const SizedBox(height: 11),
 
-              _detailRow(
-                Icons.health_and_safety_outlined,
-                type,
-              ),
+              _detailRow(Icons.health_and_safety_outlined, type),
 
               if (paid) ...[
                 const SizedBox(height: 11),
@@ -508,13 +435,8 @@ class _MyAppointmentsScreenState
                     onPressed: _cancellingId == doc.id
                         ? null
                         : () => _cancelAppointment(doc),
-                    icon: const Icon(
-                      Icons.cancel_outlined,
-                      size: 17,
-                    ),
-                    label: const Text(
-                      'Cancel Appointment',
-                    ),
+                    icon: const Icon(Icons.cancel_outlined, size: 17),
+                    label: const Text('Cancel Appointment'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                     ),
@@ -528,11 +450,7 @@ class _MyAppointmentsScreenState
     );
   }
 
-  Widget _detailRow(
-    IconData icon,
-    String text, {
-    Color color = muted,
-  }) {
+  Widget _detailRow(IconData icon, String text, {Color color = muted}) {
     return Row(
       children: [
         Icon(icon, size: 17, color: color),
@@ -558,19 +476,12 @@ class _MyAppointmentsScreenState
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.calendar_month_outlined,
-              color: muted,
-              size: 56,
-            ),
+            const Icon(Icons.calendar_month_outlined, color: muted, size: 56),
             const SizedBox(height: 14),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: muted,
-                fontSize: 14,
-              ),
+              style: const TextStyle(color: muted, fontSize: 14),
             ),
           ],
         ),

@@ -40,9 +40,7 @@ Future<void> showSharedWithMeDetails(
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.25),
     builder: (context) {
-      return SharedWithMeDetailsScreen(
-        item: item,
-      );
+      return SharedWithMeDetailsScreen(item: item);
     },
   );
 }
@@ -54,10 +52,7 @@ Future<void> showSharedWithMeDetails(
 class SharedWithMeDetailsScreen extends StatelessWidget {
   final SharedWithMeItem item;
 
-  const SharedWithMeDetailsScreen({
-    super.key,
-    required this.item,
-  });
+  const SharedWithMeDetailsScreen({super.key, required this.item});
 
   static const Color bg = Color(0xFFF4F5FB);
   static const Color surface = Color(0xFFF0F1F7);
@@ -77,9 +72,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
         ),
         decoration: const BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(32),
-          ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -88,12 +81,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
 
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                  22,
-                  4,
-                  22,
-                  28,
-                ),
+                padding: const EdgeInsets.fromLTRB(22, 4, 22, 28),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -153,11 +141,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _circleIcon(
-          item.icon,
-          purple,
-          size: 52,
-        ),
+        _circleIcon(item.icon, purple, size: 52),
 
         const SizedBox(width: 15),
 
@@ -179,11 +163,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
 
               const Row(
                 children: [
-                  Icon(
-                    Icons.folder_shared_outlined,
-                    color: purple,
-                    size: 16,
-                  ),
+                  Icon(Icons.folder_shared_outlined, color: purple, size: 16),
                   SizedBox(width: 5),
                   Text(
                     'Shared with Me',
@@ -194,19 +174,11 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
                     ),
                   ),
                   SizedBox(width: 8),
-                  Text(
-                    '•',
-                    style: TextStyle(
-                      color: muted,
-                    ),
-                  ),
+                  Text('•', style: TextStyle(color: muted)),
                   SizedBox(width: 8),
                   Text(
                     'Encrypted',
-                    style: TextStyle(
-                      color: muted,
-                      fontSize: 11.5,
-                    ),
+                    style: TextStyle(color: muted, fontSize: 11.5),
                   ),
                 ],
               ),
@@ -229,11 +201,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: _shadow(),
             ),
-            child: const Icon(
-              Icons.close_rounded,
-              color: muted,
-              size: 21,
-            ),
+            child: const Icon(Icons.close_rounded, color: muted, size: 21),
           ),
         ),
       ],
@@ -275,10 +243,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
               children: [
                 const Text(
                   'Shared by',
-                  style: TextStyle(
-                    color: muted,
-                    fontSize: 10.5,
-                  ),
+                  style: TextStyle(color: muted, fontSize: 10.5),
                 ),
 
                 const SizedBox(height: 4),
@@ -300,11 +265,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
 
                     const SizedBox(width: 5),
 
-                    const Icon(
-                      Icons.verified_rounded,
-                      color: purple,
-                      size: 16,
-                    ),
+                    const Icon(Icons.verified_rounded, color: purple, size: 16),
                   ],
                 ),
               ],
@@ -312,10 +273,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
           ),
 
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 7,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
               color: const Color(0xFFF8F8FC),
               borderRadius: BorderRadius.circular(20),
@@ -324,11 +282,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.shield_outlined,
-                  color: purple,
-                  size: 14,
-                ),
+                Icon(Icons.shield_outlined, color: purple, size: 14),
                 SizedBox(width: 5),
                 Text(
                   'Verified',
@@ -371,8 +325,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
                 : Icons.event_available_outlined,
             title: 'Access expiry',
             value: item.expiry,
-            valueColor:
-                item.expiringSoon ? danger : ink,
+            valueColor: item.expiringSoon ? danger : ink,
           ),
 
           _divider(),
@@ -413,11 +366,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: _shadow(),
           ),
-          child: Icon(
-            icon,
-            color: muted,
-            size: 18,
-          ),
+          child: Icon(icon, color: muted, size: 18),
         ),
 
         const SizedBox(width: 12),
@@ -425,10 +374,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
-              color: muted,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: muted, fontSize: 12),
           ),
         ),
 
@@ -451,13 +397,8 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
 
   Widget _divider() {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 10,
-      ),
-      child: Divider(
-        height: 1,
-        color: muted.withValues(alpha: .10),
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Divider(height: 1, color: muted.withValues(alpha: .10)),
     );
   }
 
@@ -469,11 +410,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
     return _card(
       child: Row(
         children: [
-          _circleIcon(
-            item.icon,
-            purple,
-            size: 48,
-          ),
+          _circleIcon(item.icon, purple, size: 48),
 
           const SizedBox(width: 14),
 
@@ -496,10 +433,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
 
                 Text(
                   '${item.fileType} • ${item.fileSize}',
-                  style: const TextStyle(
-                    color: muted,
-                    fontSize: 11,
-                  ),
+                  style: const TextStyle(color: muted, fontSize: 11),
                 ),
               ],
             ),
@@ -508,10 +442,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
           const SizedBox(width: 8),
 
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 7,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
               color: const Color(0xFFF8F8FC),
               borderRadius: BorderRadius.circular(18),
@@ -539,11 +470,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.info_outline_rounded,
-            color: purple,
-            size: 21,
-          ),
+          Icon(Icons.info_outline_rounded, color: purple, size: 21),
 
           SizedBox(width: 12),
 
@@ -552,11 +479,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
               'This record was securely shared with your OneClick '
               'account. Access is controlled by the record owner '
               'and may be revoked.',
-              style: TextStyle(
-                color: muted,
-                fontSize: 11.5,
-                height: 1.5,
-              ),
+              style: TextStyle(color: muted, fontSize: 11.5, height: 1.5),
             ),
           ),
         ],
@@ -571,17 +494,12 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
   Widget _buildOpenButton(BuildContext context) {
     return InkWell(
       onTap: () {
-        _showMessage(
-          context,
-          'Opening ${item.fileName}',
-        );
+        _showMessage(context, 'Opening ${item.fileName}');
       },
       borderRadius: BorderRadius.circular(28),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          vertical: 17,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 17),
         decoration: BoxDecoration(
           color: purple,
           borderRadius: BorderRadius.circular(28),
@@ -590,11 +508,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.visibility_outlined,
-              color: Colors.white,
-              size: 20,
-            ),
+            Icon(Icons.visibility_outlined, color: Colors.white, size: 20),
             SizedBox(width: 9),
             Text(
               'Open Document',
@@ -617,17 +531,12 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
   Widget _buildDownloadButton(BuildContext context) {
     return InkWell(
       onTap: () {
-        _showMessage(
-          context,
-          'Downloading ${item.fileName}',
-        );
+        _showMessage(context, 'Downloading ${item.fileName}');
       },
       borderRadius: BorderRadius.circular(28),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          vertical: 16,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: const Color(0xFFF8F8FC),
           borderRadius: BorderRadius.circular(28),
@@ -636,11 +545,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.download_rounded,
-              color: purple,
-              size: 20,
-            ),
+            Icon(Icons.download_rounded, color: purple, size: 20),
             SizedBox(width: 9),
             Text(
               'Download Copy',
@@ -694,9 +599,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _card({
-    required Widget child,
-  }) {
+  Widget _card({required Widget child}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(17),
@@ -709,11 +612,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _circleIcon(
-    IconData icon,
-    Color color, {
-    double size = 48,
-  }) {
+  Widget _circleIcon(IconData icon, Color color, {double size = 48}) {
     return Container(
       width: size,
       height: size,
@@ -722,20 +621,13 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: _shadow(),
       ),
-      child: Icon(
-        icon,
-        color: color,
-        size: size * .46,
-      ),
+      child: Icon(icon, color: color, size: size * .46),
     );
   }
 
   Widget _dragHandle() {
     return Container(
-      margin: const EdgeInsets.only(
-        top: 12,
-        bottom: 15,
-      ),
+      margin: const EdgeInsets.only(top: 12, bottom: 15),
       width: 55,
       height: 5,
       decoration: BoxDecoration(
@@ -764,8 +656,7 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
     final parts = name.trim().split(' ');
 
     if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'
-          .toUpperCase();
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
 
     if (name.isNotEmpty) {
@@ -775,14 +666,8 @@ class SharedWithMeDetailsScreen extends StatelessWidget {
     return '?';
   }
 
-  void _showMessage(
-    BuildContext context,
-    String message,
-  ) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-      ),
-    );
+  void _showMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }

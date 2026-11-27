@@ -4,10 +4,7 @@ import 'package:flutter/material.dart';
 class UserManagementScreen extends StatefulWidget {
   final String title;
 
-  const UserManagementScreen({
-    super.key,
-    required this.title,
-  });
+  const UserManagementScreen({super.key, required this.title});
 
   @override
   State<UserManagementScreen> createState() => _UserManagementScreenState();
@@ -32,7 +29,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     String userName,
     String currentStatus,
   ) async {
-    final newStatus = currentStatus.toLowerCase() == 'blocked' ? 'active' : 'blocked';
+    final newStatus = currentStatus.toLowerCase() == 'blocked'
+        ? 'active'
+        : 'blocked';
 
     try {
       // 1. Update status in Firestore
@@ -71,7 +70,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete User'),
-        content: Text('Are you sure you want to delete $userName from Firestore?'),
+        content: Text(
+          'Are you sure you want to delete $userName from Firestore?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -226,8 +227,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
                     final name = data['name'] ?? 'Unknown User';
                     final email = data['email'] ?? 'No Email';
-                    final role = (data['role'] ?? 'user').toString().toUpperCase();
-                    final status = (data['status'] ?? 'active').toString().toLowerCase();
+                    final role = (data['role'] ?? 'user')
+                        .toString()
+                        .toUpperCase();
+                    final status = (data['status'] ?? 'active')
+                        .toString()
+                        .toLowerCase();
 
                     final isBlocked = status == 'blocked';
 
@@ -244,8 +249,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           vertical: 6,
                         ),
                         leading: CircleAvatar(
-                          backgroundColor:
-                              const Color(0xff032744).withValues(alpha: 0.1),
+                          backgroundColor: const Color(0xff032744)
+                              .withValues(alpha: 0.1),
                           child: Text(
                             name.isNotEmpty ? name[0].toUpperCase() : 'U',
                             style: const TextStyle(
@@ -267,7 +272,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             '$email\n$role • ${isBlocked ? "Blocked" : "Active"}',
                             style: TextStyle(
                               fontSize: 12,
-                              color: isBlocked ? Colors.red : Colors.grey.shade700,
+                              color: isBlocked
+                                  ? Colors.red
+                                  : Colors.grey.shade700,
                             ),
                           ),
                         ),
@@ -286,7 +293,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                               child: Text(
                                 isBlocked ? 'Activate User' : 'Block User',
                                 style: TextStyle(
-                                  color: isBlocked ? Colors.green : Colors.orange,
+                                  color: isBlocked
+                                      ? Colors.green
+                                      : Colors.orange,
                                 ),
                               ),
                             ),

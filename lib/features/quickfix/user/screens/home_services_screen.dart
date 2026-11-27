@@ -3,8 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:oneclick/features/auth/screens/provider_rules_screen.dart';
+
 import 'my_bookings_screen.dart'; // Import MyBookingsScreen
 import 'workers_list_screen.dart';
+
 import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
 
 class _Service {
@@ -14,7 +16,13 @@ class _Service {
   final Color primaryColor;
   final Color softBgColor;
 
-  const _Service(this.name, this.tagline, this.icon, this.primaryColor, this.softBgColor);
+  const _Service(
+    this.name,
+    this.tagline,
+    this.icon,
+    this.primaryColor,
+    this.softBgColor,
+  );
 }
 
 class HomeServicesScreen extends StatefulWidget {
@@ -30,16 +38,76 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
   static const Color _textMuted = AppColors.textSecondary;
 
   static const List<_Service> _services = [
-    _Service('Electrician', 'Wiring & repairs', Icons.electrical_services_rounded, Color(0xFFD97706), Color(0xFFFEF3C7)),
-    _Service('Plumber', 'Leaks & fittings', Icons.plumbing_rounded, Color(0xFF0284C7), Color(0xFFE0F2FE)),
-    _Service('Carpenter', 'Furniture & woodwork', Icons.handyman_rounded, Color(0xFF78350F), Color(0xFFFFEDD5)),
-    _Service('Painter', 'Interior & exterior', Icons.format_paint_rounded, Color(0xFFDB2777), Color(0xFFFCE7F3)),
-    _Service('Cleaning', 'Home & office', Icons.cleaning_services_rounded, Color(0xFF0D9488), Color(0xFFCCFBF1)),
-    _Service('AC Repair', 'Service & install', Icons.ac_unit_rounded, Color(0xFF2563EB), Color(0xFFDBEAFE)),
-    _Service('Appliances', 'Gadgets & devices', Icons.local_laundry_service_rounded, Color(0xFFDC2626), Color(0xFFFEE2E2)),
-    _Service('Gardening', 'Landscaping & lawns', Icons.grass_rounded, Color(0xFF16A34A), Color(0xFFDCFCE7)),
-    _Service('Locksmith', 'Key & lock issues', Icons.lock_open_rounded, Color(0xFF7C3AED), Color(0xFFEDE9FE)),
-    _Service('Masonry', 'Construction & brick', Icons.foundation_rounded, Color(0xFF475569), Color(0xFFF1F5F9)),
+    _Service(
+      'Electrician',
+      'Wiring & repairs',
+      Icons.electrical_services_rounded,
+      Color(0xFFD97706),
+      Color(0xFFFEF3C7),
+    ),
+    _Service(
+      'Plumber',
+      'Leaks & fittings',
+      Icons.plumbing_rounded,
+      Color(0xFF0284C7),
+      Color(0xFFE0F2FE),
+    ),
+    _Service(
+      'Carpenter',
+      'Furniture & woodwork',
+      Icons.handyman_rounded,
+      Color(0xFF78350F),
+      Color(0xFFFFEDD5),
+    ),
+    _Service(
+      'Painter',
+      'Interior & exterior',
+      Icons.format_paint_rounded,
+      Color(0xFFDB2777),
+      Color(0xFFFCE7F3),
+    ),
+    _Service(
+      'Cleaning',
+      'Home & office',
+      Icons.cleaning_services_rounded,
+      Color(0xFF0D9488),
+      Color(0xFFCCFBF1),
+    ),
+    _Service(
+      'AC Repair',
+      'Service & install',
+      Icons.ac_unit_rounded,
+      Color(0xFF2563EB),
+      Color(0xFFDBEAFE),
+    ),
+    _Service(
+      'Appliances',
+      'Gadgets & devices',
+      Icons.local_laundry_service_rounded,
+      Color(0xFFDC2626),
+      Color(0xFFFEE2E2),
+    ),
+    _Service(
+      'Gardening',
+      'Landscaping & lawns',
+      Icons.grass_rounded,
+      Color(0xFF16A34A),
+      Color(0xFFDCFCE7),
+    ),
+    _Service(
+      'Locksmith',
+      'Key & lock issues',
+      Icons.lock_open_rounded,
+      Color(0xFF7C3AED),
+      Color(0xFFEDE9FE),
+    ),
+    _Service(
+      'Masonry',
+      'Construction & brick',
+      Icons.foundation_rounded,
+      Color(0xFF475569),
+      Color(0xFFF1F5F9),
+    ),
   ];
 
   String _query = '';
@@ -53,14 +121,22 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
       final matchesSearch = s.name.toLowerCase().contains(_query.toLowerCase());
       if (_selectedCategory == 'All') return matchesSearch;
       if (_selectedCategory == 'Interior' &&
-          (s.name == 'Painter' || s.name == 'Cleaning' || s.name == 'Carpenter' || s.name == 'Locksmith')) {
+          (s.name == 'Painter' ||
+              s.name == 'Cleaning' ||
+              s.name == 'Carpenter' ||
+              s.name == 'Locksmith')) {
         return matchesSearch;
       }
       if (_selectedCategory == 'Mechanical' &&
-          (s.name == 'Electrician' || s.name == 'Plumber' || s.name == 'AC Repair' || s.name == 'Appliances' || s.name == 'Masonry')) {
+          (s.name == 'Electrician' ||
+              s.name == 'Plumber' ||
+              s.name == 'AC Repair' ||
+              s.name == 'Appliances' ||
+              s.name == 'Masonry')) {
         return matchesSearch;
       }
-      if (_selectedCategory == 'Outdoor' && (s.name == 'Gardening' || s.name == 'Masonry')) {
+      if (_selectedCategory == 'Outdoor' &&
+          (s.name == 'Gardening' || s.name == 'Masonry')) {
         return matchesSearch;
       }
       return false;
@@ -94,7 +170,10 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(16),
@@ -124,13 +203,10 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
                     mainAxisSpacing: 16,
                     childAspectRatio: 0.9,
                   ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final s = filtered[index];
-                      return _buildServiceCard(context, s);
-                    },
-                    childCount: filtered.length,
-                  ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final s = filtered[index];
+                    return _buildServiceCard(context, s);
+                  }, childCount: filtered.length),
                 ),
               ),
           ],
@@ -172,8 +248,11 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
                       color: Colors.white.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(AppRadius.button),
                     ),
-                    child: const Icon(Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white, size: 18),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                   ),
                 ),
               const Spacer(),
@@ -183,21 +262,26 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const MyBookingsScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const MyBookingsScreen()),
                   );
                 },
                 borderRadius: BorderRadius.circular(AppRadius.button),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.16),
                     borderRadius: BorderRadius.circular(AppRadius.button),
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.calendar_month_rounded, color: Colors.white, size: 20),
+                      Icon(
+                        Icons.calendar_month_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                       SizedBox(width: 8),
                       Text(
                         'My Bookings',
@@ -220,8 +304,11 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
                   color: Colors.white.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(AppRadius.button),
                 ),
-                child: const Icon(Icons.notifications_none_rounded,
-                    color: Colors.white, size: 24),
+                child: const Icon(
+                  Icons.notifications_none_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
             ],
           ),
@@ -229,13 +316,19 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
 
           StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
             stream: uid != null
-                ? FirebaseFirestore.instance.collection('users').doc(uid).snapshots()
+                ? FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(uid)
+                      .snapshots()
                 : null,
             builder: (context, snapshot) {
               String displayName = 'User';
               if (snapshot.hasData && snapshot.data!.exists) {
                 final data = snapshot.data!.data();
-                displayName = data?['name'] ?? _currentUser?.email?.split('@').first ?? 'User';
+                displayName =
+                    data?['name'] ??
+                    _currentUser?.email?.split('@').first ??
+                    'User';
               }
 
               return Text(
@@ -276,7 +369,11 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
               decoration: const InputDecoration(
                 hintText: 'Search electrician, plumber...',
                 hintStyle: TextStyle(color: _textMuted, fontSize: 14),
-                prefixIcon: Icon(Icons.search_rounded, color: AppColors.primary, size: 24),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: AppColors.primary,
+                  size: 24,
+                ),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -433,7 +530,11 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
           SizedBox(height: 8),
           Text(
             'No matching services found',
-            style: TextStyle(fontSize: 14, color: _textMuted, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 14,
+              color: _textMuted,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -507,7 +608,11 @@ class _HomeServicesScreenState extends State<HomeServicesScreen> {
                     ),
                   ),
                   SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.primary),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
                 ],
               ),
             ],

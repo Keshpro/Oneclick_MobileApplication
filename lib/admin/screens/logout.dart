@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -41,10 +40,8 @@ class _LogoutScreenState extends State<LogoutScreen> {
 
       // Step 4: Remove navigation history and
       // redirect to the Login Screen.
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/login',
-        (Route<dynamic> route) => false,
-      );
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil('/login', (Route<dynamic> route) => false);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
 
@@ -54,9 +51,7 @@ class _LogoutScreenState extends State<LogoutScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Logout failed: ${e.message ?? e.code}',
-          ),
+          content: Text('Logout failed: ${e.message ?? e.code}'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -91,35 +86,21 @@ class _LogoutScreenState extends State<LogoutScreen> {
         foregroundColor: _navy,
         title: const Text(
           'Logout',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 16,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: Container(
               width: double.infinity,
-              constraints: const BoxConstraints(
-                maxWidth: 420,
-              ),
-              padding: const EdgeInsets.fromLTRB(
-                24,
-                36,
-                24,
-                24,
-              ),
+              constraints: const BoxConstraints(maxWidth: 420),
+              padding: const EdgeInsets.fromLTRB(24, 36, 24, 24),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: const Color(0xFFE5E7EB),
-                ),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
                 boxShadow: [
                   BoxShadow(
                     color: _navy.withValues(alpha: 0.08),
@@ -138,9 +119,7 @@ class _LogoutScreenState extends State<LogoutScreen> {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.red.withValues(
-                        alpha: 0.06,
-                      ),
+                      color: Colors.red.withValues(alpha: 0.06),
                     ),
                     child: Container(
                       width: 96,
@@ -148,9 +127,7 @@ class _LogoutScreenState extends State<LogoutScreen> {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.red.withValues(
-                          alpha: 0.12,
-                        ),
+                        color: Colors.red.withValues(alpha: 0.12),
                       ),
                       child: Container(
                         width: 66,
@@ -160,16 +137,11 @@ class _LogoutScreenState extends State<LogoutScreen> {
                           gradient: const LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
-                            colors: [
-                              Color(0xFFFF6B6B),
-                              Color(0xFFE53935),
-                            ],
+                            colors: [Color(0xFFFF6B6B), Color(0xFFE53935)],
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.red.withValues(
-                                alpha: 0.35,
-                              ),
+                              color: Colors.red.withValues(alpha: 0.35),
                               blurRadius: 16,
                               offset: const Offset(0, 6),
                             ),
@@ -220,17 +192,14 @@ class _LogoutScreenState extends State<LogoutScreen> {
                       ),
                       decoration: BoxDecoration(
                         color: _bg,
-                        borderRadius: BorderRadius.circular(
-                          14,
-                        ),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           CircleAvatar(
                             radius: 14,
-                            backgroundColor:
-                                _navy.withValues(alpha: 0.1),
+                            backgroundColor: _navy.withValues(alpha: 0.1),
                             child: const Icon(
                               Icons.person_rounded,
                               size: 16,
@@ -263,8 +232,7 @@ class _LogoutScreenState extends State<LogoutScreen> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton.icon(
-                      onPressed:
-                          _isLoading ? null : _handleLogout,
+                      onPressed: _isLoading ? null : _handleLogout,
                       icon: _isLoading
                           ? const SizedBox(
                               width: 20,
@@ -274,14 +242,9 @@ class _LogoutScreenState extends State<LogoutScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Icon(
-                              Icons.logout_rounded,
-                              size: 20,
-                            ),
+                          : const Icon(Icons.logout_rounded, size: 20),
                       label: Text(
-                        _isLoading
-                            ? 'Logging out...'
-                            : 'Yes, Logout',
+                        _isLoading ? 'Logging out...' : 'Yes, Logout',
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -290,13 +253,12 @@ class _LogoutScreenState extends State<LogoutScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor:
-                            Colors.red.withValues(alpha: 0.6),
+                        disabledBackgroundColor: Colors.red.withValues(
+                          alpha: 0.6,
+                        ),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            16,
-                          ),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
                     ),
@@ -314,13 +276,9 @@ class _LogoutScreenState extends State<LogoutScreen> {
                           : () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: _navy,
-                        side: const BorderSide(
-                          color: Color(0xFFD1D5DB),
-                        ),
+                        side: const BorderSide(color: Color(0xFFD1D5DB)),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            16,
-                          ),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
                       child: const Text(

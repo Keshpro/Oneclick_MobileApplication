@@ -56,7 +56,8 @@ class DriverTripLocationService {
     try {
       final first = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 15),
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 15),
         ),
       );
       if (generation != _generation || !_sharing) return;
@@ -65,7 +66,12 @@ class DriverTripLocationService {
       _heartbeat = Timer.periodic(const Duration(seconds: 45), (_) async {
         if (!_sharing || generation != _generation || _publishing) return;
         try {
-          final fresh = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 10)));
+          final fresh = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.high,
+              timeLimit: Duration(seconds: 10),
+            ),
+          );
           if (!_sharing || generation != _generation) return;
           await _publish(fresh);
         } catch (_) {
@@ -88,13 +94,17 @@ class DriverTripLocationService {
             },
           );
     } catch (_) {
-      try { await stop(); } catch (_) {}
+      try {
+        await stop();
+      } catch (_) {}
       rethrow;
     }
   }
 
   bool _isRunning(Object? status) =>
-      status == 'driverArriving' || status == 'tripStarted' || status == 'tripInProgress';
+      status == 'driverArriving' ||
+      status == 'tripStarted' ||
+      status == 'tripInProgress';
 
   Future<void> _publish(Position position) async {
     if (!_sharing || _publishing || _bookingId == null) return;
@@ -115,7 +125,9 @@ class DriverTripLocationService {
         if (data == null ||
             data['driverId'] != uid ||
             !_isRunning(data['status']) ||
-            !_sharing || generation != _generation || _bookingId != bookingId) {
+            !_sharing ||
+            generation != _generation ||
+            _bookingId != bookingId) {
           return false;
         }
         transaction.update(reference, {
@@ -136,7 +148,9 @@ class DriverTripLocationService {
   }
 
   Future<void> _handleError(Object error) async {
-    try { await stop(); } catch (_) {}
+    try {
+      await stop();
+    } catch (_) {}
     await onError?.call(error);
   }
 

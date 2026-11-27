@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../services/sharing_service.dart';
 import '../services/vault_service.dart';
 
@@ -41,9 +42,7 @@ Future<void> showShareRecordFlow(BuildContext context) async {
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.25),
     builder: (context) {
-      return ShareRecordSheet(
-        selectedRecord: selectedRecord,
-      );
+      return ShareRecordSheet(selectedRecord: selectedRecord);
     },
   );
 }
@@ -65,34 +64,34 @@ class _ChooseRecordSheetState extends State<ChooseRecordSheet> {
   static const Color muted = Color(0xFF6C6F80);
   static const Color purple = Color(0xFF625CFF);
 
- int? selectedIndex;
+  int? selectedIndex;
 
-final VaultService _vaultService = VaultService();
+  final VaultService _vaultService = VaultService();
 
-List<ShareRecordItem> records = [];
+  List<ShareRecordItem> records = [];
 
-@override
-void initState() {
-  super.initState();
-  _loadVaultRecords();
-}
+  @override
+  void initState() {
+    super.initState();
+    _loadVaultRecords();
+  }
 
-void _loadVaultRecords() {
-  _vaultService.getRecords().listen((vaultRecords) {
-    if (!mounted) return;
+  void _loadVaultRecords() {
+    _vaultService.getRecords().listen((vaultRecords) {
+      if (!mounted) return;
 
-    setState(() {
-      records = vaultRecords.map((record) {
-        return ShareRecordItem(
-          recordId: record.id,
-          title: record.title,
-          subtitle: '${record.category} • ${record.recordType}',
-          icon: Icons.description_outlined,
-        );
-      }).toList();
+      setState(() {
+        records = vaultRecords.map((record) {
+          return ShareRecordItem(
+            recordId: record.id,
+            title: record.title,
+            subtitle: '${record.category} • ${record.recordType}',
+            icon: Icons.description_outlined,
+          );
+        }).toList();
+      });
     });
-  });
-}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,9 +103,7 @@ void _loadVaultRecords() {
         ),
         decoration: const BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(32),
-          ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -117,10 +114,7 @@ void _loadVaultRecords() {
               padding: const EdgeInsets.fromLTRB(22, 4, 22, 16),
               child: Row(
                 children: [
-                  _circleIcon(
-                    Icons.folder_open_outlined,
-                    purple,
-                  ),
+                  _circleIcon(Icons.folder_open_outlined, purple),
                   const SizedBox(width: 13),
                   const Expanded(
                     child: Column(
@@ -137,10 +131,7 @@ void _loadVaultRecords() {
                         SizedBox(height: 4),
                         Text(
                           'Select a record or document pack.',
-                          style: TextStyle(
-                            color: muted,
-                            fontSize: 12.5,
-                          ),
+                          style: TextStyle(color: muted, fontSize: 12.5),
                         ),
                       ],
                     ),
@@ -156,12 +147,8 @@ void _loadVaultRecords() {
                 child: Column(
                   children: [
                     for (int i = 0; i < records.length; i++) ...[
-                      _recordOption(
-                        index: i,
-                        record: records[i],
-                      ),
-                      if (i != records.length - 1)
-                        const SizedBox(height: 13),
+                      _recordOption(index: i, record: records[i]),
+                      if (i != records.length - 1) const SizedBox(height: 13),
                     ],
                   ],
                 ),
@@ -178,10 +165,7 @@ void _loadVaultRecords() {
     );
   }
 
-  Widget _recordOption({
-    required int index,
-    required ShareRecordItem record,
-  }) {
+  Widget _recordOption({required int index, required ShareRecordItem record}) {
     final selected = selectedIndex == index;
 
     return InkWell(
@@ -207,10 +191,7 @@ void _loadVaultRecords() {
         ),
         child: Row(
           children: [
-            _circleIcon(
-              record.icon,
-              selected ? purple : muted,
-            ),
+            _circleIcon(record.icon, selected ? purple : muted),
             const SizedBox(width: 15),
 
             Expanded(
@@ -230,10 +211,7 @@ void _loadVaultRecords() {
                   const SizedBox(height: 4),
                   Text(
                     record.subtitle,
-                    style: const TextStyle(
-                      color: muted,
-                      fontSize: 11.5,
-                    ),
+                    style: const TextStyle(color: muted, fontSize: 11.5),
                   ),
                 ],
               ),
@@ -248,18 +226,12 @@ void _loadVaultRecords() {
                 color: selected ? purple : Colors.transparent,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: selected
-                      ? purple
-                      : muted.withValues(alpha: .35),
+                  color: selected ? purple : muted.withValues(alpha: .35),
                   width: 1.5,
                 ),
               ),
               child: selected
-                  ? const Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 15,
-                    )
+                  ? const Icon(Icons.check, color: Colors.white, size: 15)
                   : null,
             ),
           ],
@@ -274,10 +246,7 @@ void _loadVaultRecords() {
     return InkWell(
       onTap: enabled
           ? () {
-              Navigator.pop(
-                context,
-                records[selectedIndex!],
-              );
+              Navigator.pop(context, records[selectedIndex!]);
             }
           : null,
       borderRadius: BorderRadius.circular(28),
@@ -286,9 +255,7 @@ void _loadVaultRecords() {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 17),
         decoration: BoxDecoration(
-          color: enabled
-              ? purple
-              : const Color(0xFFE3E4EC),
+          color: enabled ? purple : const Color(0xFFE3E4EC),
           borderRadius: BorderRadius.circular(28),
           boxShadow: enabled ? _shadow() : null,
         ),
@@ -298,9 +265,7 @@ void _loadVaultRecords() {
             Text(
               'Continue',
               style: TextStyle(
-                color: enabled
-                    ? Colors.white
-                    : muted.withValues(alpha: .6),
+                color: enabled ? Colors.white : muted.withValues(alpha: .6),
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
@@ -308,9 +273,7 @@ void _loadVaultRecords() {
             const SizedBox(width: 7),
             Icon(
               Icons.arrow_forward_rounded,
-              color: enabled
-                  ? Colors.white
-                  : muted.withValues(alpha: .6),
+              color: enabled ? Colors.white : muted.withValues(alpha: .6),
               size: 19,
             ),
           ],
@@ -321,10 +284,7 @@ void _loadVaultRecords() {
 
   Widget _dragHandle() {
     return Container(
-      margin: const EdgeInsets.only(
-        top: 12,
-        bottom: 14,
-      ),
+      margin: const EdgeInsets.only(top: 12, bottom: 14),
       width: 55,
       height: 5,
       decoration: BoxDecoration(
@@ -346,19 +306,12 @@ void _loadVaultRecords() {
           shape: BoxShape.circle,
           boxShadow: _shadow(),
         ),
-        child: const Icon(
-          Icons.close,
-          color: muted,
-          size: 21,
-        ),
+        child: const Icon(Icons.close, color: muted, size: 21),
       ),
     );
   }
 
-  Widget _circleIcon(
-    IconData icon,
-    Color color,
-  ) {
+  Widget _circleIcon(IconData icon, Color color) {
     return Container(
       width: 48,
       height: 48,
@@ -367,11 +320,7 @@ void _loadVaultRecords() {
         shape: BoxShape.circle,
         boxShadow: _shadow(),
       ),
-      child: Icon(
-        icon,
-        color: color,
-        size: 23,
-      ),
+      child: Icon(icon, color: color, size: 23),
     );
   }
 
@@ -398,10 +347,7 @@ void _loadVaultRecords() {
 class ShareRecordSheet extends StatefulWidget {
   final ShareRecordItem selectedRecord;
 
-  const ShareRecordSheet({
-    super.key,
-    required this.selectedRecord,
-  });
+  const ShareRecordSheet({super.key, required this.selectedRecord});
 
   @override
   State<ShareRecordSheet> createState() => _ShareRecordSheetState();
@@ -421,8 +367,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
 
   bool recipientSelected = false;
 
-  final TextEditingController recipientController =
-      TextEditingController();
+  final TextEditingController recipientController = TextEditingController();
 
   @override
   void dispose() {
@@ -440,14 +385,11 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
         padding: EdgeInsets.only(bottom: keyboard),
         child: Container(
           constraints: BoxConstraints(
-            maxHeight:
-                MediaQuery.of(context).size.height * 0.90,
+            maxHeight: MediaQuery.of(context).size.height * 0.90,
           ),
           decoration: const BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(32),
-            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -456,11 +398,9 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
 
               Expanded(
                 child: SingleChildScrollView(
-                  padding:
-                      const EdgeInsets.fromLTRB(22, 3, 22, 30),
+                  padding: const EdgeInsets.fromLTRB(22, 3, 22, 30),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildTitle(),
 
@@ -510,8 +450,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
                       _permissionOption(
                         value: 'View and download',
                         icon: Icons.cloud_download_outlined,
-                        description:
-                            'Recipient can view and download a copy.',
+                        description: 'Recipient can view and download a copy.',
                       ),
 
                       const SizedBox(height: 28),
@@ -565,11 +504,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
   Widget _buildTitle() {
     return Row(
       children: [
-        const Icon(
-          Icons.lock_outline_rounded,
-          color: purple,
-          size: 25,
-        ),
+        const Icon(Icons.lock_outline_rounded, color: purple, size: 25),
         const SizedBox(width: 9),
 
         const Expanded(
@@ -596,11 +531,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
               shape: BoxShape.circle,
               boxShadow: _shadow(),
             ),
-            child: const Icon(
-              Icons.close,
-              color: muted,
-              size: 21,
-            ),
+            child: const Icon(Icons.close, color: muted, size: 21),
           ),
         ),
       ],
@@ -615,17 +546,13 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
     return _card(
       child: Row(
         children: [
-          _circleIcon(
-            widget.selectedRecord.icon,
-            purple,
-          ),
+          _circleIcon(widget.selectedRecord.icon, purple),
 
           const SizedBox(width: 14),
 
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   widget.selectedRecord.title,
@@ -642,10 +569,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
 
                 Text(
                   widget.selectedRecord.subtitle,
-                  style: const TextStyle(
-                    color: muted,
-                    fontSize: 11.5,
-                  ),
+                  style: const TextStyle(color: muted, fontSize: 11.5),
                 ),
               ],
             ),
@@ -657,10 +581,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
             onPressed: _changeRecord,
             child: const Text(
               'Change',
-              style: TextStyle(
-                color: purple,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(color: purple, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -686,33 +607,18 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
         },
         onSubmitted: _findRecipient,
         textInputAction: TextInputAction.search,
-        style: const TextStyle(
-          color: ink,
-          fontSize: 14,
-        ),
+        style: const TextStyle(color: ink, fontSize: 14),
         decoration: InputDecoration(
           hintText: 'Search username or email',
-          hintStyle: const TextStyle(
-            color: muted,
-            fontSize: 13,
-          ),
+          hintStyle: const TextStyle(color: muted, fontSize: 13),
           border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(vertical: 16),
-          prefixIcon: const Icon(
-            Icons.search,
-            color: muted,
-          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
+          prefixIcon: const Icon(Icons.search, color: muted),
           suffixIcon: IconButton(
             onPressed: () {
-              _findRecipient(
-                recipientController.text,
-              );
+              _findRecipient(recipientController.text);
             },
-            icon: const Icon(
-              Icons.arrow_forward_rounded,
-              color: purple,
-            ),
+            icon: const Icon(Icons.arrow_forward_rounded, color: purple),
           ),
         ),
       ),
@@ -750,10 +656,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
                 ),
                 child: const Text(
                   'MV',
-                  style: TextStyle(
-                    color: purple,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(color: purple, fontWeight: FontWeight.w700),
                 ),
               ),
 
@@ -767,11 +670,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
                     color: purple,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.check,
-                    size: 12,
-                    color: Colors.white,
-                  ),
+                  child: const Icon(Icons.check, size: 12, color: Colors.white),
                 ),
               ),
             ],
@@ -781,8 +680,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
 
           const Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
@@ -797,20 +695,13 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
                       ),
                     ),
                     SizedBox(width: 5),
-                    Icon(
-                      Icons.verified_rounded,
-                      color: purple,
-                      size: 16,
-                    ),
+                    Icon(Icons.verified_rounded, color: purple, size: 16),
                   ],
                 ),
                 SizedBox(height: 4),
                 Text(
                   '@marcus.vance',
-                  style: TextStyle(
-                    color: muted,
-                    fontSize: 11.5,
-                  ),
+                  style: TextStyle(color: muted, fontSize: 11.5),
                 ),
               ],
             ),
@@ -825,10 +716,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
             },
             child: const Text(
               'Change',
-              style: TextStyle(
-                color: muted,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: muted, fontSize: 12),
             ),
           ),
         ],
@@ -858,18 +746,13 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon,
-              color: selected ? purple : muted,
-              size: 22,
-            ),
+            Icon(icon, color: selected ? purple : muted, size: 22),
 
             const SizedBox(width: 13),
 
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     value,
@@ -899,21 +782,14 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
               height: 21,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color:
-                    selected ? purple : Colors.transparent,
+                color: selected ? purple : Colors.transparent,
                 border: Border.all(
-                  color: selected
-                      ? purple
-                      : muted.withValues(alpha: .35),
+                  color: selected ? purple : muted.withValues(alpha: .35),
                   width: 1.5,
                 ),
               ),
               child: selected
-                  ? const Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 13,
-                    )
+                  ? const Icon(Icons.check, color: Colors.white, size: 13)
                   : null,
             ),
           ],
@@ -940,25 +816,13 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
             ),
           ),
         ),
-        Text(
-          'Optional',
-          style: TextStyle(
-            color: muted,
-            fontSize: 11,
-          ),
-        ),
+        Text('Optional', style: TextStyle(color: muted, fontSize: 11)),
       ],
     );
   }
 
   Widget _buildExpiryOptions() {
-    const options = [
-      'No expiry',
-      '24 Hours',
-      '7 Days',
-      '30 Days',
-      'Custom',
-    ];
+    const options = ['No expiry', '24 Hours', '7 Days', '30 Days', 'Custom'];
 
     return Wrap(
       spacing: 8,
@@ -979,10 +843,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
           },
           borderRadius: BorderRadius.circular(22),
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 15,
-              vertical: 11,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
             decoration: BoxDecoration(
               color: selected
                   ? purple.withValues(alpha: .10)
@@ -1000,9 +861,7 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
               style: TextStyle(
                 color: selected ? purple : muted,
                 fontSize: 11.5,
-                fontWeight: selected
-                    ? FontWeight.w600
-                    : FontWeight.w500,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
           ),
@@ -1011,138 +870,120 @@ class _ShareRecordSheetState extends State<ShareRecordSheet> {
     );
   }
 
-Future<void> _chooseCustomDate() async {
-  final now = DateTime.now();
+  Future<void> _chooseCustomDate() async {
+    final now = DateTime.now();
 
-  final date = await showDatePicker(
-    context: context,
-    initialDate: now.add(const Duration(days: 1)),
-    firstDate: now,
-    lastDate: DateTime(now.year + 10),
-  );
+    final date = await showDatePicker(
+      context: context,
+      initialDate: now.add(const Duration(days: 1)),
+      firstDate: now,
+      lastDate: DateTime(now.year + 10),
+    );
 
-  if (date == null) return;
+    if (date == null) return;
 
-  setState(() {
-    expiry = '${date.day}/${date.month}/${date.year}';
-  });
-}
-
-Future<void> _confirmSharing() async {
-  final recipient = recipientController.text.trim();
-
-  if (recipient.isEmpty) {
-    _message('Please select or enter a recipient.');
-    return;
+    setState(() {
+      expiry = '${date.day}/${date.month}/${date.year}';
+    });
   }
 
-  DateTime? expiryDate;
+  Future<void> _confirmSharing() async {
+    final recipient = recipientController.text.trim();
 
-  if (expiry == '24 Hours') {
-    expiryDate = DateTime.now().add(const Duration(hours: 24));
-  } else if (expiry == '7 Days') {
-    expiryDate = DateTime.now().add(const Duration(days: 7));
-  } else if (expiry == '30 Days') {
-    expiryDate = DateTime.now().add(const Duration(days: 30));
-  } else if (expiry.contains('/')) {
-    final parts = expiry.split('/');
-
-    if (parts.length == 3) {
-      expiryDate = DateTime(
-        int.parse(parts[2]),
-        int.parse(parts[1]),
-        int.parse(parts[0]),
-      );
+    if (recipient.isEmpty) {
+      _message('Please select or enter a recipient.');
+      return;
     }
-  }
 
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) {
-      return AlertDialog(
-        backgroundColor: bg,
-        title: const Text(
-          'Confirm Sharing',
-          style: TextStyle(
-            color: ink,
-            fontWeight: FontWeight.w700,
+    DateTime? expiryDate;
+
+    if (expiry == '24 Hours') {
+      expiryDate = DateTime.now().add(const Duration(hours: 24));
+    } else if (expiry == '7 Days') {
+      expiryDate = DateTime.now().add(const Duration(days: 7));
+    } else if (expiry == '30 Days') {
+      expiryDate = DateTime.now().add(const Duration(days: 30));
+    } else if (expiry.contains('/')) {
+      final parts = expiry.split('/');
+
+      if (parts.length == 3) {
+        expiryDate = DateTime(
+          int.parse(parts[2]),
+          int.parse(parts[1]),
+          int.parse(parts[0]),
+        );
+      }
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: bg,
+          title: const Text(
+            'Confirm Sharing',
+            style: TextStyle(color: ink, fontWeight: FontWeight.w700),
           ),
-        ),
-        content: Text(
-          'Share "${widget.selectedRecord.title}" with '
-          '$recipient?\n\n'
-          'Permission: $permission\n'
-          'Expiry: $expiry',
-          style: const TextStyle(
-            color: muted,
-            height: 1.5,
+          content: Text(
+            'Share "${widget.selectedRecord.title}" with '
+            '$recipient?\n\n'
+            'Permission: $permission\n'
+            'Expiry: $expiry',
+            style: const TextStyle(color: muted, height: 1.5),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext, false);
-            },
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: muted),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Cancel', style: TextStyle(color: muted)),
             ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext, true);
-            },
-            child: const Text(
-              'Share',
-              style: TextStyle(
-                color: purple,
-                fontWeight: FontWeight.w700,
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text(
+                'Share',
+                style: TextStyle(color: purple, fontWeight: FontWeight.w700),
               ),
             ),
-          ),
-        ],
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _sharingService.shareRecord(
+        recordTitle: widget.selectedRecord.title,
+        recordId: widget.selectedRecord.recordId,
+        recipientName: recipient,
+        recipientEmail: recipient,
+        permission: permission,
+        expiryDate: expiryDate,
       );
-    },
-  );
 
-  if (confirmed != true) return;
+      if (!mounted) return;
 
-  try {
-    await _sharingService.shareRecord(
-      recordTitle: widget.selectedRecord.title,
-      recordId: widget.selectedRecord.recordId,
-      recipientName: recipient,
-      recipientEmail: recipient,
-      permission: permission,
-      expiryDate: expiryDate,
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Record shared successfully')),
+      );
 
-    if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Record shared successfully'),
-      ),
-    );
-
-    Navigator.pop(context, true);
-  } catch (e) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Failed to share record: $e'),
-      ),
-    );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Failed to share record: $e')));
+    }
   }
-}
 
   // ============================================================
   // CONFIRM
   // ============================================================
 
   Widget _buildConfirmButton() {
-    
     final enabled = recipientSelected;
 
     return InkWell(
@@ -1150,14 +991,9 @@ Future<void> _confirmSharing() async {
       borderRadius: BorderRadius.circular(28),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          vertical: 17,
-          horizontal: 16,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 16),
         decoration: BoxDecoration(
-          color: enabled
-              ? purple
-              : const Color(0xFFE2E3EB),
+          color: enabled ? purple : const Color(0xFFE2E3EB),
           borderRadius: BorderRadius.circular(28),
           boxShadow: enabled ? _shadow() : null,
         ),
@@ -1166,9 +1002,7 @@ Future<void> _confirmSharing() async {
           children: [
             Icon(
               Icons.lock_outline_rounded,
-              color: enabled
-                  ? Colors.white
-                  : muted.withValues(alpha: .55),
+              color: enabled ? Colors.white : muted.withValues(alpha: .55),
               size: 20,
             ),
 
@@ -1177,9 +1011,7 @@ Future<void> _confirmSharing() async {
             Text(
               'Confirm Sharing',
               style: TextStyle(
-                color: enabled
-                    ? Colors.white
-                    : muted.withValues(alpha: .55),
+                color: enabled ? Colors.white : muted.withValues(alpha: .55),
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
@@ -1189,41 +1021,35 @@ Future<void> _confirmSharing() async {
       ),
     );
   }
+
   Widget _buildWarning() {
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: const Color(0xFFFFF7ED),
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(
-        color: const Color(0xFFFED7AA),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFFED7AA)),
       ),
-    ),
-    child: const Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          Icons.info_outline,
-          color: Color(0xFFEA580C),
-          size: 20,
-        ),
-        SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            'Only share records with people you trust. Access can be revoked later from the Sharing Center.',
-            style: TextStyle(
-              color: Color(0xFF9A3412),
-              fontSize: 12.5,
-              height: 1.4,
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, color: Color(0xFFEA580C), size: 20),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Only share records with people you trust. Access can be revoked later from the Sharing Center.',
+              style: TextStyle(
+                color: Color(0xFF9A3412),
+                fontSize: 12.5,
+                height: 1.4,
+              ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
-
+        ],
+      ),
+    );
+  }
 
   // ============================================================
   // CHANGE RECORD
@@ -1232,9 +1058,7 @@ Future<void> _confirmSharing() async {
   Future<void> _changeRecord() async {
     Navigator.pop(context);
 
-    await Future.delayed(
-      const Duration(milliseconds: 200),
-    );
+    await Future.delayed(const Duration(milliseconds: 200));
 
     if (!mounted) return;
 
@@ -1257,9 +1081,7 @@ Future<void> _confirmSharing() async {
     );
   }
 
-  Widget _card({
-    required Widget child,
-  }) {
+  Widget _card({required Widget child}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(17),
@@ -1272,10 +1094,7 @@ Future<void> _confirmSharing() async {
     );
   }
 
-  Widget _circleIcon(
-    IconData icon,
-    Color color,
-  ) {
+  Widget _circleIcon(IconData icon, Color color) {
     return Container(
       width: 48,
       height: 48,
@@ -1284,20 +1103,13 @@ Future<void> _confirmSharing() async {
         shape: BoxShape.circle,
         boxShadow: _shadow(),
       ),
-      child: Icon(
-        icon,
-        color: color,
-        size: 22,
-      ),
+      child: Icon(icon, color: color, size: 22),
     );
   }
 
   Widget _dragHandle() {
     return Container(
-      margin: const EdgeInsets.only(
-        top: 12,
-        bottom: 14,
-      ),
+      margin: const EdgeInsets.only(top: 12, bottom: 14),
       width: 55,
       height: 5,
       decoration: BoxDecoration(
@@ -1331,10 +1143,7 @@ Future<void> _confirmSharing() async {
   }
 
   void _message(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-      ),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }

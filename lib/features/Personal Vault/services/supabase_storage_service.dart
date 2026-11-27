@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'dart:typed_data';
 
 class SupabaseStorageService {
@@ -18,35 +19,28 @@ class SupabaseStorageService {
       throw Exception('User is not signed in.');
     }
 
-    final safeFileName =
-        '${DateTime.now().millisecondsSinceEpoch}_$fileName';
+    final safeFileName = '${DateTime.now().millisecondsSinceEpoch}_$fileName';
 
     final path = '${user.uid}/$safeFileName';
 
-    await _supabase.storage.from(bucketName).uploadBinary(
+    await _supabase.storage
+        .from(bucketName)
+        .uploadBinary(
           path,
           bytes,
-          fileOptions: const FileOptions(
-            upsert: false,
-          ),
+          fileOptions: const FileOptions(upsert: false),
         );
 
     return path;
   }
 
-  Future<List<int>> downloadFile({
-    required String path,
-  }) async {
-    final data = await _supabase.storage
-        .from(bucketName)
-        .download(path);
+  Future<List<int>> downloadFile({required String path}) async {
+    final data = await _supabase.storage.from(bucketName).download(path);
 
     return data;
   }
 
-  Future<void> deleteFile({
-    required String path,
-  }) async {
+  Future<void> deleteFile({required String path}) async {
     await _supabase.storage.from(bucketName).remove([path]);
   }
 
@@ -56,9 +50,6 @@ class SupabaseStorageService {
   }) async {
     return _supabase.storage
         .from(bucketName)
-        .createSignedUrl(
-          path,
-          expiresInSeconds,
-        );
+        .createSignedUrl(path, expiresInSeconds);
   }
 }

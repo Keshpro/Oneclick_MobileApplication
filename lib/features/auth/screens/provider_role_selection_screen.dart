@@ -1,23 +1,15 @@
 import 'package:flutter/material.dart';
+
 import '../../groceries/seller/screens/become_seller_screen.dart';
 import 'provider_register_screen.dart';
 
 class ProviderRoleSelectionScreen extends StatelessWidget {
-  const ProviderRoleSelectionScreen({
-    super.key,
-  });
+  const ProviderRoleSelectionScreen({super.key});
 
-  void _selectRole(
-    BuildContext context,
-    ProviderRole role,
-  ) {
+  void _selectRole(BuildContext context, ProviderRole role) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => ProviderRegisterScreen(
-          role: role,
-        ),
-      ),
+      MaterialPageRoute(builder: (_) => ProviderRegisterScreen(role: role)),
     );
   }
 
@@ -31,9 +23,7 @@ class ProviderRoleSelectionScreen extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
         title: const Text(
           'Choose Provider Role',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
       body: SafeArea(
@@ -65,17 +55,10 @@ class ProviderRoleSelectionScreen extends StatelessWidget {
               // 1. Doctor Role Card
               _ProviderRoleCard(
                 title: 'Doctor',
-                description:
-                    'Provide healthcare services and receive appointment requests.',
+                description: 'Provide healthcare services and receive appointment requests.',
                 icon: Icons.medical_services_rounded,
-                colors: const [
-                  Color(0xFF11D999),
-                  Color(0xFF059669),
-                ],
-                onTap: () => _selectRole(
-                  context,
-                  ProviderRole.doctor,
-                ),
+                colors: const [Color(0xFF11D999), Color(0xFF059669)],
+                onTap: () => _selectRole(context, ProviderRole.doctor),
               ),
 
               const SizedBox(height: 16),
@@ -83,17 +66,10 @@ class ProviderRoleSelectionScreen extends StatelessWidget {
               // 2. Driver Role Card
               _ProviderRoleCard(
                 title: 'Driver',
-                description:
-                    'Join the driver network and receive customer ride requests.',
+                description: 'Join the driver network and receive customer ride requests.',
                 icon: Icons.directions_car_rounded,
-                colors: const [
-                  Color(0xFFA78BFA),
-                  Color(0xFF7C3AED),
-                ],
-                onTap: () => _selectRole(
-                  context,
-                  ProviderRole.driver,
-                ),
+                colors: const [Color(0xFFA78BFA), Color(0xFF7C3AED)],
+                onTap: () => _selectRole(context, ProviderRole.driver),
               ),
 
               const SizedBox(height: 16),
@@ -101,17 +77,10 @@ class ProviderRoleSelectionScreen extends StatelessWidget {
               // 3. Quick Fix Worker Role Card
               _ProviderRoleCard(
                 title: 'Quick Fix Worker',
-                description:
-                    'Offer home repair, plumbing, electrical, and technical services.',
+                description: 'Offer home repair, plumbing, electrical, and technical services.',
                 icon: Icons.handyman_rounded,
-                colors: const [
-                  Color(0xFF38BDF8),
-                  Color(0xFF0284C7),
-                ],
-                onTap: () => _selectRole(
-                  context,
-                  ProviderRole.worker, 
-                ),
+                colors: const [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                onTap: () => _selectRole(context, ProviderRole.worker),
               ),
 
               const SizedBox(height: 16),
@@ -119,17 +88,10 @@ class ProviderRoleSelectionScreen extends StatelessWidget {
               // 4. Food Seller Role Card
               _ProviderRoleCard(
                 title: 'Food Partner / Restaurant',
-                description:
-                    'List your restaurant or food items and manage food delivery orders.',
+                description: 'List your restaurant or food items and manage food delivery orders.',
                 icon: Icons.restaurant_rounded,
-                colors: const [
-                  Color(0xFFFF8A65),
-                  Color(0xFFE85D04),
-                ],
-                onTap: () => _selectRole(
-                  context,
-                  ProviderRole.foodSeller,
-                ),
+                colors: const [Color(0xFFFF8A65), Color(0xFFE85D04)],
+                onTap: () => _selectRole(context, ProviderRole.foodSeller),
               ),
 
               const SizedBox(height: 16),
@@ -140,10 +102,7 @@ class ProviderRoleSelectionScreen extends StatelessWidget {
                 description:
                     'Sell groceries and receive orders from customers.',
                 icon: Icons.local_grocery_store_rounded,
-                colors: const [
-                  Color(0xFFFFD54F),
-                  Color(0xFFFFA000),
-                ],
+                colors: const [Color(0xFFFFD54F), Color(0xFFFFA000)],
                 onTap: () {
                   Navigator.push(
                     context,
@@ -188,9 +147,7 @@ class _ProviderRoleCard extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: const Color(0xFFE4E2EC),
-            ),
+            border: Border.all(color: const Color(0xFFE4E2EC)),
           ),
           child: Row(
             children: [
@@ -201,11 +158,7 @@ class _ProviderRoleCard extends StatelessWidget {
                   gradient: LinearGradient(colors: colors),
                   borderRadius: BorderRadius.circular(19),
                 ),
-                child: Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 30,
-                ),
+                child: Icon(icon, color: Colors.white, size: 30),
               ),
               const SizedBox(width: 16),
               Expanded(

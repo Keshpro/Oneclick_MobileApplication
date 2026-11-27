@@ -7,9 +7,7 @@ import '../../../payment/models/payment_request.dart';
 import '../../../payment/screens/checkout_screen.dart';
 import 'my_appointments_screen.dart';
 
-typedef DoctorPaymentHandler = Future<String?> Function(
-  String appointmentId,
-);
+typedef DoctorPaymentHandler = Future<String?> Function(String appointmentId);
 
 class AppointmentSuccessScreen extends StatefulWidget {
   final Map<String, dynamic> doctor;
@@ -207,8 +205,9 @@ class _AppointmentSuccessScreenState extends State<AppointmentSuccessScreen> {
     final displayName =
         user.displayName?.trim() ?? data['userName']?.toString().trim() ?? '';
 
-    final parts =
-        displayName.isEmpty ? <String>[] : displayName.split(RegExp(r'\s+'));
+    final parts = displayName.isEmpty
+        ? <String>[]
+        : displayName.split(RegExp(r'\s+'));
 
     return PaymentRequest(
       bookingId: widget.appointmentId,
@@ -252,9 +251,7 @@ class _AppointmentSuccessScreenState extends State<AppointmentSuccessScreen> {
       if (!mounted) return;
 
       final completed = await Navigator.of(context).push<bool>(
-        MaterialPageRoute(
-          builder: (_) => CheckoutScreen(request: request),
-        ),
+        MaterialPageRoute(builder: (_) => CheckoutScreen(request: request)),
       );
 
       if (!mounted) return;
@@ -275,7 +272,8 @@ class _AppointmentSuccessScreenState extends State<AppointmentSuccessScreen> {
 
         if (!_completed && mounted) {
           setState(() {
-            _error = "We couldn't confirm your payment. Try again, or check "
+            _error =
+                "We couldn't confirm your payment. Try again, or check "
                 'My appointments.';
           });
         }
@@ -297,9 +295,7 @@ class _AppointmentSuccessScreenState extends State<AppointmentSuccessScreen> {
 
   void _openAppointments() {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => const MyAppointmentsScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const MyAppointmentsScreen()),
     );
   }
 
@@ -447,11 +443,7 @@ class _AppointmentSuccessScreenState extends State<AppointmentSuccessScreen> {
           const SizedBox(width: 12),
           _slotCell(Icons.schedule_rounded, 'Time', widget.appointmentTime),
           const SizedBox(width: 12),
-          _slotCell(
-            Icons.videocam_outlined,
-            'Type',
-            widget.consultationType,
-          ),
+          _slotCell(Icons.videocam_outlined, 'Type', widget.consultationType),
         ],
       ),
     );
@@ -593,10 +585,7 @@ class _AppointmentSuccessScreenState extends State<AppointmentSuccessScreen> {
             ),
           ),
           if (_paymentId != null)
-            _row(
-              'Payment ID',
-              _copyable(_paymentId!, 'Payment ID copied'),
-            ),
+            _row('Payment ID', _copyable(_paymentId!, 'Payment ID copied')),
           const SizedBox(height: 6),
           const Row(
             children: [
@@ -641,27 +630,23 @@ class _AppointmentSuccessScreenState extends State<AppointmentSuccessScreen> {
   }
 
   ButtonStyle _primaryStyle() => ElevatedButton.styleFrom(
-        elevation: 0,
-        minimumSize: const Size.fromHeight(54),
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
-        disabledBackgroundColor: const Color(0xFFB3CECA),
-        disabledForegroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-      );
+    elevation: 0,
+    minimumSize: const Size.fromHeight(54),
+    backgroundColor: primary,
+    foregroundColor: Colors.white,
+    disabledBackgroundColor: const Color(0xFFB3CECA),
+    disabledForegroundColor: Colors.white,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+  );
 
   ButtonStyle _secondaryStyle() => OutlinedButton.styleFrom(
-        foregroundColor: primary,
-        minimumSize: const Size.fromHeight(48),
-        side: const BorderSide(color: line),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-      );
+    foregroundColor: primary,
+    minimumSize: const Size.fromHeight(48),
+    side: const BorderSide(color: line),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+  );
 
   // ---------------------------------------------------------------------------
   // Screens
@@ -743,7 +728,7 @@ class _AppointmentSuccessScreenState extends State<AppointmentSuccessScreen> {
         Text(
           _isCash
               ? 'Pay LKR $_amount in cash at the clinic to complete your '
-                  'booking.'
+                    'booking.'
               : 'Your appointment is confirmed.',
           textAlign: TextAlign.center,
           style: const TextStyle(color: muted, fontSize: 14, height: 1.45),

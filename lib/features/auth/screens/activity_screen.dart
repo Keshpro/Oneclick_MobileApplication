@@ -1,14 +1,10 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class ActivityScreen extends StatefulWidget {
   final VoidCallback? onBack;
 
-  const ActivityScreen({
-    super.key,
-    this.onBack,
-  });
+  const ActivityScreen({super.key, this.onBack});
 
   @override
   State<ActivityScreen> createState() => _ActivityScreenState();
@@ -19,13 +15,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
   static const Color dark = Color(0xFF102D38);
   static const Color background = Color(0xFFF5F8FA);
 
-  final TextEditingController _searchController =
-      TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   String _search = '';
 
-  final CollectionReference<Map<String, dynamic>> _logs =
-      FirebaseFirestore.instance.collection('activity_logs');
+  final CollectionReference<Map<String, dynamic>> _logs = FirebaseFirestore
+      .instance
+      .collection('activity_logs');
 
   @override
   void dispose() {
@@ -56,11 +52,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
     return '$day/$month/${date.year}  $hour:$minute';
   }
 
-  String _readText(
-    Map<String, dynamic> data,
-    String key,
-    String fallback,
-  ) {
+  String _readText(Map<String, dynamic> data, String key, String fallback) {
     final value = data[key];
 
     if (value == null) return fallback;
@@ -91,10 +83,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
             child: InkWell(
               onTap: _goBack,
               borderRadius: BorderRadius.circular(14),
-              child: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 19,
-              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
             ),
           ),
         ),
@@ -103,18 +92,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
           children: [
             Text(
               'My Activity',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
             ),
             SizedBox(height: 4),
             Text(
               'Live activity records',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 11,
-              ),
+              style: TextStyle(color: Colors.white70, fontSize: 11),
             ),
           ],
         ),
@@ -135,8 +118,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   ),
                   actions: [
                     TextButton(
-                      onPressed: () =>
-                          Navigator.pop(dialogContext),
+                      onPressed: () => Navigator.pop(dialogContext),
                       child: const Text('OK'),
                     ),
                   ],
@@ -147,11 +129,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: StreamBuilder<
-          QuerySnapshot<Map<String, dynamic>>>(
-        stream: _logs
-            .orderBy('timestamp', descending: true)
-            .snapshots(),
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: _logs.orderBy('timestamp', descending: true).snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return _buildMessage(
@@ -163,9 +142,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
           }
 
           if (!snapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(color: teal),
-            );
+            return const Center(child: CircularProgressIndicator(color: teal));
           }
 
           final allLogs = snapshot.data!.docs;
@@ -183,11 +160,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               'System Event',
             ).toLowerCase();
 
-            final details = _readText(
-              data,
-              'details',
-              '',
-            ).toLowerCase();
+            final details = _readText(data, 'details', '').toLowerCase();
 
             final performedBy = _readText(
               data,
@@ -202,17 +175,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
           return CustomScrollView(
             slivers: [
-              SliverToBoxAdapter(
-                child: _buildOverview(allLogs.length),
-              ),
-              SliverToBoxAdapter(
-                child: _buildSearch(),
-              ),
+              SliverToBoxAdapter(child: _buildOverview(allLogs.length)),
+              SliverToBoxAdapter(child: _buildSearch()),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    20, 24, 20, 14,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 14),
                   child: Row(
                     children: [
                       const Expanded(
@@ -251,24 +218,17 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 )
               else
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   sliver: SliverList.builder(
                     itemCount: filtered.length,
                     itemBuilder: (context, index) {
                       final doc = filtered[index];
 
-                      return _buildActivityCard(
-                        doc.id,
-                        doc.data(),
-                      );
+                      return _buildActivityCard(doc.id, doc.data());
                     },
                   ),
                 ),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 120),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 120)),
             ],
           );
         },
@@ -282,11 +242,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       padding: const EdgeInsets.all(23),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF0D9488),
-            Color(0xFF075B60),
-            Color(0xFF102D38),
-          ],
+          colors: [Color(0xFF0D9488), Color(0xFF075B60), Color(0xFF102D38)],
         ),
         borderRadius: BorderRadius.circular(24),
       ),
@@ -317,10 +273,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 SizedBox(height: 5),
                 Text(
                   'Synced with your database',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 11),
                 ),
               ],
             ),
@@ -337,10 +290,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               ),
               const Text(
                 'Records',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 11,
-                ),
+                style: TextStyle(color: Colors.white70, fontSize: 11),
               ),
             ],
           ),
@@ -360,10 +310,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
         decoration: InputDecoration(
           hintText: 'Search your activity...',
           hintStyle: const TextStyle(fontSize: 13),
-          prefixIcon: const Icon(
-            Icons.search_rounded,
-            color: teal,
-          ),
+          prefixIcon: const Icon(Icons.search_rounded, color: teal),
           suffixIcon: _search.isEmpty
               ? null
               : IconButton(
@@ -375,9 +322,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 ),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 17,
-          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 17),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(17),
             borderSide: BorderSide.none,
@@ -387,27 +332,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
     );
   }
 
-  Widget _buildActivityCard(
-    String id,
-    Map<String, dynamic> data,
-  ) {
-    final action = _readText(
-      data,
-      'action',
-      'System Event',
-    );
+  Widget _buildActivityCard(String id, Map<String, dynamic> data) {
+    final action = _readText(data, 'action', 'System Event');
 
-    final details = _readText(
-      data,
-      'details',
-      'No detailed description.',
-    );
+    final details = _readText(data, 'details', 'No detailed description.');
 
-    final performedBy = _readText(
-      data,
-      'performedBy',
-      'Unknown',
-    );
+    final performedBy = _readText(data, 'performedBy', 'Unknown');
 
     final date = _formatDate(data['timestamp']);
 
@@ -417,19 +347,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(
-          color: Color(0xFFE9EFF1),
-        ),
+        side: const BorderSide(color: Color(0xFFE9EFF1)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => _showDetails(
-          id,
-          action,
-          details,
-          performedBy,
-          date,
-        ),
+        onTap: () => _showDetails(id, action, details, performedBy, date),
         child: Padding(
           padding: const EdgeInsets.all(17),
           child: Column(
@@ -460,10 +382,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                       ),
                     ),
                   ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: Colors.grey,
-                  ),
+                  const Icon(Icons.chevron_right_rounded, color: Colors.grey),
                 ],
               ),
               const SizedBox(height: 12),
@@ -492,18 +411,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     child: Text(
                       performedBy,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 11,
-                      ),
+                      style: const TextStyle(color: Colors.grey, fontSize: 11),
                     ),
                   ),
                   Text(
                     date,
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 11,
-                    ),
+                    style: const TextStyle(color: Colors.grey, fontSize: 11),
                   ),
                 ],
               ),
@@ -535,18 +448,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
           ),
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(28),
-            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.history_rounded,
-                color: teal,
-                size: 45,
-              ),
+              const Icon(Icons.history_rounded, color: teal, size: 45),
               const SizedBox(height: 14),
               Text(
                 action,
@@ -561,10 +468,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               Text(
                 details,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.5,
-                ),
+                style: const TextStyle(fontSize: 13, height: 1.5),
               ),
               const SizedBox(height: 22),
               _detailRow('Record ID', id),
@@ -574,13 +478,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: () =>
-                      Navigator.pop(sheetContext),
+                  onPressed: () => Navigator.pop(sheetContext),
                   style: FilledButton.styleFrom(
                     backgroundColor: teal,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: const Text('Close Details'),
                 ),
@@ -597,13 +498,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       padding: const EdgeInsets.symmetric(vertical: 9),
       child: Row(
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 12,
-            ),
-          ),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -621,20 +516,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
     );
   }
 
-  Widget _buildMessage(
-    IconData icon,
-    String title,
-    String subtitle,
-  ) {
+  Widget _buildMessage(IconData icon, String title, String subtitle) {
     return Padding(
       padding: const EdgeInsets.all(35),
       child: Column(
         children: [
-          Icon(
-            icon,
-            size: 56,
-            color: Colors.grey,
-          ),
+          Icon(icon, size: 56, color: Colors.grey),
           const SizedBox(height: 12),
           Text(
             title,

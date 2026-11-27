@@ -358,7 +358,7 @@ class _FoodMyOffersScreenState extends State<FoodMyOffersScreen> {
                           try {
                             await sellerData.updateOffer(updatedOffer);
 
-                            if (!this.mounted) return;
+                            if (!mounted) return;
 
                             setState(() {});
 
@@ -374,7 +374,7 @@ class _FoodMyOffersScreenState extends State<FoodMyOffersScreen> {
                           } catch (e) {
                             debugPrint('Edit offer error: $e');
 
-                            if (!this.mounted) return;
+                            if (!mounted) return;
 
                             ScaffoldMessenger.of(this.context).showSnackBar(
                               const SnackBar(

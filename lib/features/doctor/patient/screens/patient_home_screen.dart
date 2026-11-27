@@ -123,9 +123,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     if (_isLoggedIn) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const PatientProfileScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const PatientProfileScreen()),
       );
       return;
     }
@@ -459,10 +457,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(color: _muted, fontSize: 10),
-          ),
+          Text(label, style: const TextStyle(color: _muted, fontSize: 10)),
         ],
       ),
     );
@@ -486,11 +481,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               final providerDetails =
                   data['providerDetails'] as Map<String, dynamic>? ?? {};
 
-              final spec = providerDetails['specialization'] ??
+              final spec =
+                  providerDetails['specialization'] ??
                   data['specialization'] ??
                   'General Physician';
 
-              final expYears = int.tryParse(
+              final expYears =
+                  int.tryParse(
                     (providerDetails['experienceYears'] ?? '5').toString(),
                   ) ??
                   5;
@@ -512,12 +509,14 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
             final filteredDoctors = loadedDoctors.where((doctor) {
               final query = _searchQuery.trim().toLowerCase();
-              final bool matchesSearch = query.isEmpty ||
+              final bool matchesSearch =
+                  query.isEmpty ||
                   doctor.name.toLowerCase().contains(query) ||
                   doctor.specialtyLabel.toLowerCase().contains(query) ||
                   doctor.hospital.toLowerCase().contains(query);
 
-              final bool matchesSpecialty = _selectedSpecialty == 'All' ||
+              final bool matchesSpecialty =
+                  _selectedSpecialty == 'All' ||
                   doctor.specialtyLabel.toLowerCase() ==
                       _selectedSpecialty.toLowerCase();
 
@@ -587,8 +586,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                         StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                           stream: FirebaseFirestore.instance
                               .collection('notifications')
-                              .where('userId',
-                                  isEqualTo: _currentUser?.uid ?? '')
+                              .where(
+                                'userId',
+                                isEqualTo: _currentUser?.uid ?? '',
+                              )
                               .where('isRead', isEqualTo: false)
                               .snapshots(),
                           builder: (context, notifSnapshot) {
@@ -782,8 +783,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
                         return InkWell(
                           onTap: () => setState(
-                            () => _selectedSpecialty =
-                                specialty['name'].toString(),
+                            () => _selectedSpecialty = specialty['name']
+                                .toString(),
                           ),
                           borderRadius: BorderRadius.circular(18),
                           child: AnimatedContainer(

@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -81,9 +80,7 @@ class _DoctorScheduleManageScreenState
       final fee = snapshot.data()?['consultationFee'];
 
       setState(() {
-        _feeController.text = fee == null
-            ? '2500'
-            : fee.toString();
+        _feeController.text = fee == null ? '2500' : fee.toString();
       });
     } catch (e) {
       _message('Unable to load consultation fee.', error: true);
@@ -109,10 +106,7 @@ class _DoctorScheduleManageScreenState
     setState(() => _savingFee = true);
 
     try {
-      await FirebaseFirestore.instance
-          .collection('doctors')
-          .doc(uid)
-          .update({
+      await FirebaseFirestore.instance.collection('doctors').doc(uid).update({
         'consultationFee': fee,
       });
 
@@ -155,9 +149,7 @@ class _DoctorScheduleManageScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Lock this date?'),
         content: Text(
           'Mark $formattedDate as unavailable?\n\n'
@@ -171,9 +163,7 @@ class _DoctorScheduleManageScreenState
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: _red,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: _red),
             onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Lock Date'),
           ),
@@ -192,10 +182,10 @@ class _DoctorScheduleManageScreenState
           .collection('vacations')
           .doc(formattedDate)
           .set({
-        'date': formattedDate,
-        'reason': reason,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+            'date': formattedDate,
+            'reason': reason,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
 
       if (!mounted) return;
 
@@ -211,19 +201,13 @@ class _DoctorScheduleManageScreenState
     }
   }
 
-  Future<void> _deleteHoliday(
-    String uid,
-    String holidayId,
-    String date,
-  ) async {
+  Future<void> _deleteHoliday(String uid, String holidayId, String date) async {
     if (_deletingHolidayId != null) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Unlock date?'),
         content: Text(
           'Remove the holiday restriction for $date?\n\n'
@@ -235,9 +219,7 @@ class _DoctorScheduleManageScreenState
             child: const Text('Keep Locked'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: _green,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: _green),
             onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Unlock'),
           ),
@@ -285,17 +267,11 @@ class _DoctorScheduleManageScreenState
           children: [
             Text(
               'Manage Schedule',
-              style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w800,
-              ),
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
             ),
             Text(
               'Doctor workspace',
-              style: TextStyle(
-                color: _muted,
-                fontSize: 11,
-              ),
+              style: TextStyle(color: _muted, fontSize: 11),
             ),
           ],
         ),
@@ -316,9 +292,7 @@ class _DoctorScheduleManageScreenState
         ],
       ),
       body: uid == null
-          ? const Center(
-              child: Text('Please sign in as a doctor.'),
-            )
+          ? const Center(child: Text('Please sign in as a doctor.'))
           : SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(18, 20, 18, 35),
               child: Column(
@@ -360,10 +334,7 @@ class _DoctorScheduleManageScreenState
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            _darkGreen,
-            _green,
-          ],
+          colors: [_darkGreen, _green],
         ),
         borderRadius: BorderRadius.circular(26),
       ),
@@ -432,10 +403,7 @@ class _DoctorScheduleManageScreenState
                     ),
                     Text(
                       'Amount in Sri Lankan Rupees',
-                      style: TextStyle(
-                        color: _muted,
-                        fontSize: 11,
-                      ),
+                      style: TextStyle(color: _muted, fontSize: 11),
                     ),
                   ],
                 ),
@@ -445,13 +413,9 @@ class _DoctorScheduleManageScreenState
           const SizedBox(height: 18),
           TextField(
             controller: _feeController,
-            keyboardType: const TextInputType.numberWithOptions(
-              decimal: true,
-            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
-              FilteringTextInputFormatter.allow(
-                RegExp(r'^\d*\.?\d{0,2}'),
-              ),
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
             ],
             decoration: _inputDecoration(
               hint: 'Enter consultation fee',
@@ -476,15 +440,11 @@ class _DoctorScheduleManageScreenState
                       ),
                     )
                   : const Icon(Icons.save_rounded),
-              label: Text(
-                _savingFee ? 'Saving...' : 'Save Fee Changes',
-              ),
+              label: Text(_savingFee ? 'Saving...' : 'Save Fee Changes'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _green,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: _green.withValues(
-                  alpha: 0.6,
-                ),
+                disabledBackgroundColor: _green.withValues(alpha: 0.6),
                 disabledForegroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -523,10 +483,7 @@ class _DoctorScheduleManageScreenState
                     ),
                     Text(
                       'Lock a date for new appointments',
-                      style: TextStyle(
-                        color: _muted,
-                        fontSize: 11,
-                      ),
+                      style: TextStyle(color: _muted, fontSize: 11),
                     ),
                   ],
                 ),
@@ -538,10 +495,7 @@ class _DoctorScheduleManageScreenState
             onTap: _savingHoliday ? null : _pickDate,
             borderRadius: BorderRadius.circular(14),
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 16,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
                 border: Border.all(color: _border),
@@ -561,18 +515,13 @@ class _DoctorScheduleManageScreenState
                           ? 'Tap to select a date'
                           : _formatDate(_selectedLeaveDate!),
                       style: TextStyle(
-                        color: _selectedLeaveDate == null
-                            ? _muted
-                            : _text,
+                        color: _selectedLeaveDate == null ? _muted : _text,
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
                       ),
                     ),
                   ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: _muted,
-                  ),
+                  const Icon(Icons.chevron_right_rounded, color: _muted),
                 ],
               ),
             ),
@@ -593,8 +542,7 @@ class _DoctorScheduleManageScreenState
             width: double.infinity,
             height: 50,
             child: ElevatedButton.icon(
-              onPressed: _selectedLeaveDate == null ||
-                      _savingHoliday
+              onPressed: _selectedLeaveDate == null || _savingHoliday
                   ? null
                   : _markHoliday,
               icon: _savingHoliday
@@ -608,16 +556,12 @@ class _DoctorScheduleManageScreenState
                     )
                   : const Icon(Icons.lock_clock_rounded),
               label: Text(
-                _savingHoliday
-                    ? 'Locking Date...'
-                    : 'Lock Date for Bookings',
+                _savingHoliday ? 'Locking Date...' : 'Lock Date for Bookings',
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _purple,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: _purple.withValues(
-                  alpha: 0.45,
-                ),
+                disabledBackgroundColor: _purple.withValues(alpha: 0.45),
                 disabledForegroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -632,8 +576,7 @@ class _DoctorScheduleManageScreenState
   }
 
   Widget _holidayList(String uid) {
-    return StreamBuilder<
-        QuerySnapshot<Map<String, dynamic>>>(
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collection('doctors')
           .doc(uid)
@@ -651,9 +594,7 @@ class _DoctorScheduleManageScreenState
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(20),
-              child: CircularProgressIndicator(
-                color: _green,
-              ),
+              child: CircularProgressIndicator(color: _green),
             ),
           );
         }
@@ -661,10 +602,8 @@ class _DoctorScheduleManageScreenState
         final docs = snapshot.data!.docs.toList();
 
         docs.sort((a, b) {
-          final dateA =
-              (a.data()['date'] ?? '').toString();
-          final dateB =
-              (b.data()['date'] ?? '').toString();
+          final dateA = (a.data()['date'] ?? '').toString();
+          final dateB = (b.data()['date'] ?? '').toString();
           return dateA.compareTo(dateB);
         });
 
@@ -678,11 +617,8 @@ class _DoctorScheduleManageScreenState
         return Column(
           children: docs.map((doc) {
             final data = doc.data();
-            final date =
-                (data['date'] ?? doc.id).toString();
-            final reason = (data['reason'] ??
-                    'Doctor Unavailable')
-                .toString();
+            final date = (data['date'] ?? doc.id).toString();
+            final reason = (data['reason'] ?? 'Doctor Unavailable').toString();
 
             return Container(
               margin: const EdgeInsets.only(bottom: 11),
@@ -690,15 +626,11 @@ class _DoctorScheduleManageScreenState
               decoration: _cardDecoration(),
               child: Row(
                 children: [
-                  _iconBox(
-                    Icons.event_busy_rounded,
-                    _purple,
-                  ),
+                  _iconBox(Icons.event_busy_rounded, _purple),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           date,
@@ -711,10 +643,7 @@ class _DoctorScheduleManageScreenState
                         const SizedBox(height: 4),
                         Text(
                           reason,
-                          style: const TextStyle(
-                            color: _muted,
-                            fontSize: 12,
-                          ),
+                          style: const TextStyle(color: _muted, fontSize: 12),
                         ),
                         const SizedBox(height: 5),
                         const Text(
@@ -732,11 +661,7 @@ class _DoctorScheduleManageScreenState
                     tooltip: 'Unlock date',
                     onPressed: _deletingHolidayId != null
                         ? null
-                        : () => _deleteHoliday(
-                              uid,
-                              doc.id,
-                              date,
-                            ),
+                        : () => _deleteHoliday(uid, doc.id, date),
                     icon: _deletingHolidayId == doc.id
                         ? const SizedBox(
                             width: 20,
@@ -746,10 +671,7 @@ class _DoctorScheduleManageScreenState
                               color: _purple,
                             ),
                           )
-                        : const Icon(
-                            Icons.lock_open_rounded,
-                            color: _red,
-                          ),
+                        : const Icon(Icons.lock_open_rounded, color: _red),
                   ),
                 ],
               ),
@@ -772,20 +694,14 @@ class _DoctorScheduleManageScreenState
       prefixIcon: Icon(icon, color: color),
       filled: true,
       fillColor: const Color(0xFFF8FAFC),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 15,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: _border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(
-          color: color,
-          width: 1.5,
-        ),
+        borderSide: BorderSide(color: color, width: 1.5),
       ),
     );
   }
@@ -815,13 +731,7 @@ class _DoctorScheduleManageScreenState
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            color: _muted,
-            fontSize: 12,
-          ),
-        ),
+        Text(subtitle, style: const TextStyle(color: _muted, fontSize: 12)),
       ],
     );
   }
@@ -837,18 +747,11 @@ class _DoctorScheduleManageScreenState
   Widget _emptyState(String title, String subtitle) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 28,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
       decoration: _cardDecoration(),
       child: Column(
         children: [
-          const Icon(
-            Icons.event_available_rounded,
-            color: _green,
-            size: 35,
-          ),
+          const Icon(Icons.event_available_rounded, color: _green, size: 35),
           const SizedBox(height: 12),
           Text(
             title,
@@ -862,10 +765,7 @@ class _DoctorScheduleManageScreenState
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: _muted,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: _muted, fontSize: 12),
           ),
         ],
       ),

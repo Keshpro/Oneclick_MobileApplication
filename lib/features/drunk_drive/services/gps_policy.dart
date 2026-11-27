@@ -12,27 +12,41 @@ class GpsPolicy {
   static const maxPositionAge = Duration(minutes: 2);
 
   static bool validCoordinates(double? latitude, double? longitude) =>
-      latitude != null && longitude != null &&
-      latitude.isFinite && longitude.isFinite &&
-      latitude >= -90 && latitude <= 90 &&
-      longitude >= -180 && longitude <= 180;
+      latitude != null &&
+      longitude != null &&
+      latitude.isFinite &&
+      longitude.isFinite &&
+      latitude >= -90 &&
+      latitude <= 90 &&
+      longitude >= -180 &&
+      longitude <= 180;
 
   static bool isFresh(Position position) {
     final age = DateTime.now().difference(position.timestamp);
     return age >= const Duration(seconds: -30) && age <= maxPositionAge;
   }
 
-  static bool usable(Position? position, {double maxAccuracy = maxDriverAccuracyMeters}) =>
-      position != null && validCoordinates(position.latitude, position.longitude) &&
-      position.accuracy.isFinite && position.accuracy >= 0 &&
-      position.accuracy <= maxAccuracy && isFresh(position);
+  static bool usable(
+    Position? position, {
+    double maxAccuracy = maxDriverAccuracyMeters,
+  }) =>
+      position != null &&
+      validCoordinates(position.latitude, position.longitude) &&
+      position.accuracy.isFinite &&
+      position.accuracy >= 0 &&
+      position.accuracy <= maxAccuracy &&
+      isFresh(position);
 
   static double? pickupDistanceMeters(Position? driver, LocationModel pickup) {
-    if (!usable(driver) || !validCoordinates(pickup.latitude, pickup.longitude)) {
+    if (!usable(driver) ||
+        !validCoordinates(pickup.latitude, pickup.longitude)) {
       return null;
     }
     return Geolocator.distanceBetween(
-      driver!.latitude, driver.longitude, pickup.latitude!, pickup.longitude!,
+      driver!.latitude,
+      driver.longitude,
+      pickup.latitude!,
+      pickup.longitude!,
     );
   }
 
@@ -51,7 +65,9 @@ class GpsPolicy {
     }
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      throw StateError('Allow location access in device settings and try again.');
+      throw StateError(
+        'Allow location access in device settings and try again.',
+      );
     }
     final position = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
@@ -59,8 +75,11 @@ class GpsPolicy {
         timeLimit: Duration(seconds: 20),
       ),
     );
-    if (!validCoordinates(position.latitude, position.longitude) || !isFresh(position)) {
-      throw StateError('The device returned an old or invalid location. Refresh GPS.');
+    if (!validCoordinates(position.latitude, position.longitude) ||
+        !isFresh(position)) {
+      throw StateError(
+        'The device returned an old or invalid location. Refresh GPS.',
+      );
     }
     return position;
   }

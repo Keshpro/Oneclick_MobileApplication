@@ -1,5 +1,7 @@
 import '../models/vehicle_model.dart';
+
 import 'dart:typed_data';
+
 // Mock, in-memory vehicle service.
 //
 // This follows the same pattern as admin_service.dart's dummyUsers list —
@@ -34,10 +36,7 @@ class VehicleService {
   VehicleModel? getDefaultVehicle() {
     final mine = getMyVehicles();
     if (mine.isEmpty) return null;
-    return mine.firstWhere(
-      (v) => v.isDefault,
-      orElse: () => mine.first,
-    );
+    return mine.firstWhere((v) => v.isDefault, orElse: () => mine.first);
   }
 
   VehicleModel addVehicle({
@@ -48,7 +47,7 @@ class VehicleService {
     required VehicleType vehicleType,
     required TransmissionType transmission,
     Uint8List? photoBytes,
-String? photoName,
+    String? photoName,
   }) {
     final isFirstVehicle = getMyVehicles().isEmpty;
 

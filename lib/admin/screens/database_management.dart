@@ -124,11 +124,19 @@ class _DatabaseManagementState extends State<DatabaseManagement>
               final status = data['status'] ?? 'Upcoming';
               return ListTile(
                 dense: true,
-                title: Text(userEmail, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(
+                  userEmail,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 subtitle: Text('Date: $date at $time'),
                 trailing: Chip(
-                  label: Text(status, style: const TextStyle(fontSize: 10, color: Colors.white)),
-                  backgroundColor: status == 'Approved' ? Colors.green : Colors.orange,
+                  label: Text(
+                    status,
+                    style: const TextStyle(fontSize: 10, color: Colors.white),
+                  ),
+                  backgroundColor: status == 'Approved'
+                      ? Colors.green
+                      : Colors.orange,
                 ),
               );
             },
@@ -145,10 +153,19 @@ class _DatabaseManagementState extends State<DatabaseManagement>
               final role = data['role'] ?? 'user';
               return ListTile(
                 dense: true,
-                title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(
+                  name,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 subtitle: Text(email),
-                trailing: Text(role.toString().toUpperCase(),
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue)),
+                trailing: Text(
+                  role.toString().toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
               );
             },
           ),
@@ -164,11 +181,19 @@ class _DatabaseManagementState extends State<DatabaseManagement>
               final status = data['status'] ?? 'pending';
               return ListTile(
                 dense: true,
-                title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(
+                  name,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 subtitle: Text(email),
                 trailing: Chip(
-                  label: Text(status.toString().toUpperCase(), style: const TextStyle(fontSize: 10, color: Colors.white)),
-                  backgroundColor: status == 'active' || status == 'approved' ? Colors.green : Colors.orange,
+                  label: Text(
+                    status.toString().toUpperCase(),
+                    style: const TextStyle(fontSize: 10, color: Colors.white),
+                  ),
+                  backgroundColor: status == 'active' || status == 'approved'
+                      ? Colors.green
+                      : Colors.orange,
                 ),
               );
             },
@@ -184,7 +209,10 @@ class _DatabaseManagementState extends State<DatabaseManagement>
               final email = data['email'] ?? 'N/A';
               return ListTile(
                 dense: true,
-                title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(
+                  name,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 subtitle: Text(email),
               );
             },
@@ -200,8 +228,15 @@ class _DatabaseManagementState extends State<DatabaseManagement>
               final details = data['details'] ?? '';
               return ListTile(
                 dense: true,
-                title: Text(action, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(details, maxLines: 1, overflow: TextOverflow.ellipsis),
+                title: Text(
+                  action,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  details,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               );
             },
           ),
@@ -257,7 +292,9 @@ class _DatabaseManagementState extends State<DatabaseManagement>
       stream: FirebaseFirestore.instance.collection(collectionPath).snapshots(),
       builder: (context, snapshot) {
         final docs = snapshot.data?.docs ?? [];
-        final countText = snapshot.hasData ? '${docs.length} Records' : 'Loading...';
+        final countText = snapshot.hasData
+            ? '${docs.length} Records'
+            : 'Loading...';
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -281,15 +318,21 @@ class _DatabaseManagementState extends State<DatabaseManagement>
             ),
             subtitle: Text(
               countText,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             children: docs.isEmpty
                 ? [
                     const Padding(
                       padding: EdgeInsets.all(14.0),
-                      child: Text('No records found in this collection.',
-                          style: TextStyle(color: Colors.grey, fontSize: 13)),
-                    )
+                      child: Text(
+                        'No records found in this collection.',
+                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                      ),
+                    ),
                   ]
                 : docs.map((doc) => itemBuilder(doc.data())).toList(),
           ),
@@ -317,9 +360,24 @@ class _DatabaseManagementState extends State<DatabaseManagement>
           ),
           const SizedBox(height: 14),
 
-          _buildRoleCategoryTile('Doctor', 'doctors', Icons.medical_services_rounded, Colors.green),
-          _buildRoleCategoryTile('Driver', 'drivers', Icons.directions_car_rounded, Colors.orange),
-          _buildRoleCategoryTile('User / Patient', 'users', Icons.person_rounded, Colors.blue),
+          _buildRoleCategoryTile(
+            'Doctor',
+            'doctors',
+            Icons.medical_services_rounded,
+            Colors.green,
+          ),
+          _buildRoleCategoryTile(
+            'Driver',
+            'drivers',
+            Icons.directions_car_rounded,
+            Colors.orange,
+          ),
+          _buildRoleCategoryTile(
+            'User / Patient',
+            'users',
+            Icons.person_rounded,
+            Colors.blue,
+          ),
         ],
       ),
     );
@@ -364,15 +422,30 @@ class _DatabaseManagementState extends State<DatabaseManagement>
               final status = data['status'] ?? 'active';
 
               return ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
-                title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 2,
+                ),
+                title: Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
                 subtitle: Text(email, style: const TextStyle(fontSize: 12)),
                 trailing: Chip(
                   label: Text(
                     status.toString().toUpperCase(),
-                    style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  backgroundColor: status == 'active' || status == 'approved' ? Colors.green : Colors.orange,
+                  backgroundColor: status == 'active' || status == 'approved'
+                      ? Colors.green
+                      : Colors.orange,
                 ),
               );
             }).toList(),

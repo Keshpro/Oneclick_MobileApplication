@@ -11,38 +11,35 @@ class ManageOrdersScreen extends StatelessWidget {
   static const _muted = Color(0xFF748074);
 
   Future<void> _updateOrderStatus(
-  BuildContext context,
-  String orderId,
-  String newStatus,
-) async {
-  final user = FirebaseAuth.instance.currentUser;
+    BuildContext context,
+    String orderId,
+    String newStatus,
+  ) async {
+    final user = FirebaseAuth.instance.currentUser;
 
-  if (user == null) return;
+    if (user == null) return;
 
-  try {
-    await FirebaseFirestore.instance
-        .collection('grocery_orders')
-        .doc(orderId)
-        .update({
-      'sellerStatuses.${user.uid}': newStatus,
-    });
+    try {
+      await FirebaseFirestore.instance
+          .collection('grocery_orders')
+          .doc(orderId)
+          .update({'sellerStatuses.${user.uid}': newStatus});
 
-    if (!context.mounted) return;
+      if (!context.mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: _green,
-        content: Text('Your order status updated to $newStatus'),
-      ),
-    );
-  } catch (e) {
-    if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: _green,
+          content: Text('Your order status updated to $newStatus'),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to update order: $e')),
-    );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Failed to update order: $e')));
+    }
   }
-}
 
   Widget _statusBadge(String status) {
     final normalized = status.toLowerCase();
@@ -56,8 +53,7 @@ class ManageOrdersScreen extends StatelessWidget {
     } else if (normalized == 'processing') {
       color = const Color(0xFF2868A6);
       background = const Color(0xFFEAF2FA);
-    } else if (normalized == 'cancelled' ||
-        normalized == 'rejected') {
+    } else if (normalized == 'cancelled' || normalized == 'rejected') {
       color = const Color(0xFFB83D3D);
       background = const Color(0xFFFBEDED);
     } else {
@@ -66,10 +62,7 @@ class ManageOrdersScreen extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 7,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(20),
@@ -85,22 +78,14 @@ class ManageOrdersScreen extends StatelessWidget {
     );
   }
 
-  Widget _message(
-    IconData icon,
-    String title,
-    String description,
-  ) {
+  Widget _message(IconData icon, String title, String description) {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: _green,
-              size: 58,
-            ),
+            Icon(icon, color: _green, size: 58),
             const SizedBox(height: 18),
             Text(
               title,
@@ -115,10 +100,7 @@ class ManageOrdersScreen extends StatelessWidget {
             Text(
               description,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: _muted,
-                height: 1.5,
-              ),
+              style: const TextStyle(color: _muted, height: 1.5),
             ),
           ],
         ),
@@ -126,29 +108,18 @@ class ManageOrdersScreen extends StatelessWidget {
     );
   }
 
-  Widget _detailRow(
-    IconData icon,
-    String text,
-  ) {
+  Widget _detailRow(IconData icon, String text) {
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: _green,
-            size: 18,
-          ),
+          Icon(icon, color: _green, size: 18),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                color: _muted,
-                fontSize: 12,
-                height: 1.5,
-              ),
+              style: const TextStyle(color: _muted, fontSize: 12, height: 1.5),
             ),
           ),
         ],
@@ -169,10 +140,7 @@ class ManageOrdersScreen extends StatelessWidget {
         elevation: 0,
         title: const Text(
           'Manage Orders',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
         ),
       ),
       body: SafeArea(
@@ -197,19 +165,15 @@ class ManageOrdersScreen extends StatelessWidget {
 
                   if (!snapshot.hasData) {
                     return const Center(
-                      child: CircularProgressIndicator(
-                        color: _green,
-                      ),
+                      child: CircularProgressIndicator(color: _green),
                     );
                   }
 
                   final orders = snapshot.data!.docs.where((doc) {
-                    final items =
-                        doc.data()['items'] as List? ?? [];
+                    final items = doc.data()['items'] as List? ?? [];
 
                     return items.any((item) {
-                      return item is Map &&
-                          item['sellerId'] == user.uid;
+                      return item is Map && item['sellerId'] == user.uid;
                     });
                   }).toList();
 
@@ -223,23 +187,16 @@ class ManageOrdersScreen extends StatelessWidget {
                   }
 
                   return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(
-                      20,
-                      8,
-                      20,
-                      28,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
                     itemCount: orders.length + 1,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: 14),
+                    separatorBuilder: (_, _) => const SizedBox(height: 14),
                     itemBuilder: (context, index) {
                       if (index == 0) {
                         return Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
                             color: const Color(0xFFE7F2E8),
-                            borderRadius:
-                                BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
                             children: [
@@ -251,16 +208,14 @@ class ManageOrdersScreen extends StatelessWidget {
                               const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
                                       'Your customer orders',
                                       style: TextStyle(
                                         color: _textColor,
                                         fontSize: 18,
-                                        fontWeight:
-                                            FontWeight.w700,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                     const SizedBox(height: 6),
@@ -284,12 +239,10 @@ class ManageOrdersScreen extends StatelessWidget {
                       final doc = orders[index - 1];
                       final data = doc.data();
 
-                      final items = (data['items'] as List?)
+                      final items =
+                          (data['items'] as List?)
                               ?.whereType<Map>()
-                              .where(
-                                (item) =>
-                                    item['sellerId'] == user.uid,
-                              )
+                              .where((item) => item['sellerId'] == user.uid)
                               .toList() ??
                           [];
 
@@ -297,19 +250,16 @@ class ManageOrdersScreen extends StatelessWidget {
                         0,
                         (total, item) =>
                             total +
-                            ((item['totalPrice'] as num?)
-                                    ?.toDouble() ??
-                                0),
+                            ((item['totalPrice'] as num?)?.toDouble() ?? 0),
                       );
 
                       final sellerStatuses =
-    data['sellerStatuses'] as Map<String, dynamic>? ?? {};
+                          data['sellerStatuses'] as Map<String, dynamic>? ?? {};
 
-final status =
-    (sellerStatuses[user.uid] ?? 'pending').toString();
+                      final status = (sellerStatuses[user.uid] ?? 'pending')
+                          .toString();
 
-                      final normalizedStatus =
-                          status.toLowerCase();
+                      final normalizedStatus = status.toLowerCase();
 
                       final shortId = doc.id.length > 8
                           ? doc.id.substring(0, 8)
@@ -320,35 +270,29 @@ final status =
                           ? orderDate.toDate()
                           : null;
 
-                      final deliveryMethod =
-                          (data['deliveryMethod'] ?? '').toString();
+                      final deliveryMethod = (data['deliveryMethod'] ?? '')
+                          .toString();
 
-                      final address =
-                          (data['deliveryAddress'] ?? '').toString();
+                      final address = (data['deliveryAddress'] ?? '')
+                          .toString();
 
-                      final paymentMethod =
-                          (data['paymentMethod'] ?? '').toString();
+                      final paymentMethod = (data['paymentMethod'] ?? '')
+                          .toString();
 
                       return Container(
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius:
-                              BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(0xFFE3EADF),
-                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFE3EADF)),
                         ),
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.stretch,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             // Order heading
                             Wrap(
-                              alignment:
-                                  WrapAlignment.spaceBetween,
-                              crossAxisAlignment:
-                                  WrapCrossAlignment.center,
+                              alignment: WrapAlignment.spaceBetween,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               spacing: 12,
                               runSpacing: 10,
                               children: [
@@ -373,34 +317,23 @@ final status =
                               'Customer ID: '
                               '${data['customerId'] ?? ''}',
                             ),
-                            const Divider(
-                              height: 28,
-                              color: Color(0xFFE3EADF),
-                            ),
+                            const Divider(height: 28, color: Color(0xFFE3EADF)),
 
                             // Seller's order items
                             ...items.map((item) {
-                              final name =
-                                  (item['name'] ?? 'Product')
-                                      .toString();
+                              final name = (item['name'] ?? 'Product')
+                                  .toString();
 
-                              final quantity =
-                                  (item['quantity'] ?? 0)
-                                      .toString();
+                              final quantity = (item['quantity'] ?? 0)
+                                  .toString();
 
                               final total =
-                                  (item['totalPrice'] as num?)
-                                          ?.toDouble() ??
-                                      0;
+                                  (item['totalPrice'] as num?)?.toDouble() ?? 0;
 
                               return Padding(
-                                padding:
-                                    const EdgeInsets.only(
-                                  bottom: 12,
-                                ),
+                                padding: const EdgeInsets.only(bottom: 12),
                                 child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(
                                       flex: 3,
@@ -409,8 +342,7 @@ final status =
                                         style: const TextStyle(
                                           color: _textColor,
                                           fontSize: 14,
-                                          fontWeight:
-                                              FontWeight.w600,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ),
@@ -419,13 +351,11 @@ final status =
                                       flex: 2,
                                       child: Text(
                                         'Rs. ${total.toStringAsFixed(2)}',
-                                        textAlign:
-                                            TextAlign.right,
+                                        textAlign: TextAlign.right,
                                         style: const TextStyle(
                                           color: _green,
                                           fontSize: 13,
-                                          fontWeight:
-                                              FontWeight.w700,
+                                          fontWeight: FontWeight.w700,
                                         ),
                                       ),
                                     ),
@@ -444,26 +374,18 @@ final status =
                               ),
                             if (deliveryMethod == 'delivery' &&
                                 address.trim().isNotEmpty)
-                              _detailRow(
-                                Icons.location_on_outlined,
-                                address,
-                              ),
+                              _detailRow(Icons.location_on_outlined, address),
                             if (paymentMethod.isNotEmpty)
                               _detailRow(
                                 Icons.payments_outlined,
                                 paymentMethod,
                               ),
-                            const Divider(
-                              height: 28,
-                              color: Color(0xFFE3EADF),
-                            ),
+                            const Divider(height: 28, color: Color(0xFFE3EADF)),
 
                             // Seller total
                             Wrap(
-                              alignment:
-                                  WrapAlignment.spaceBetween,
-                              crossAxisAlignment:
-                                  WrapCrossAlignment.center,
+                              alignment: WrapAlignment.spaceBetween,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               spacing: 12,
                               runSpacing: 8,
                               children: [
@@ -489,32 +411,28 @@ final status =
 
                             // Order status control
                             Container(
-                              padding:
-                                  const EdgeInsets.symmetric(
+                              padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
                                 color: _background,
-                                borderRadius:
-                                    BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color:
-                                      const Color(0xFFE3EADF),
+                                  color: const Color(0xFFE3EADF),
                                 ),
                               ),
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
-                                  value: const [
-                                    'pending',
-                                    'processing',
-                                    'completed',
-                                  ].contains(normalizedStatus)
+                                  value:
+                                      const [
+                                        'pending',
+                                        'processing',
+                                        'completed',
+                                      ].contains(normalizedStatus)
                                       ? normalizedStatus
                                       : null,
-                                  hint: const Text(
-                                    'Change Status',
-                                  ),
+                                  hint: const Text('Change Status'),
                                   isExpanded: true,
                                   dropdownColor: Colors.white,
                                   icon: const Icon(
@@ -542,10 +460,9 @@ final status =
                                   ],
                                   onChanged: (newStatus) {
                                     if (normalizedStatus == 'cancelled') return;
-                                    
+
                                     if (newStatus != null &&
-                                        newStatus !=
-                                            normalizedStatus) {
+                                        newStatus != normalizedStatus) {
                                       _updateOrderStatus(
                                         context,
                                         doc.id,

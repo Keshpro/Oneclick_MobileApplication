@@ -6,10 +6,7 @@ import '../services/vault_service.dart';
 import 'document_pack_matches_screen.dart';
 
 class SavedDocumentPackDetailsScreen extends StatefulWidget {
-  const SavedDocumentPackDetailsScreen({
-    super.key,
-    required this.pack,
-  });
+  const SavedDocumentPackDetailsScreen({super.key, required this.pack});
 
   final DocumentPack pack;
 
@@ -69,9 +66,7 @@ class _SavedDocumentPackDetailsScreenState
           }
 
           if (!snapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(color: mauve),
-            );
+            return const Center(child: CircularProgressIndicator(color: mauve));
           }
 
           final recordsById = {
@@ -207,7 +202,8 @@ class _SavedDocumentPackDetailsScreenState
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => DocumentPackMatchesScreen(pack: pack),
+                                builder: (_) =>
+                                    DocumentPackMatchesScreen(pack: pack),
                               ),
                             );
                           },
@@ -235,7 +231,8 @@ class _SavedDocumentPackDetailsScreenState
     DocumentRequirement requirement,
     VaultRecord? record,
   ) {
-    final hasFile = record != null &&
+    final hasFile =
+        record != null &&
         ((record.fileUrl?.trim().isNotEmpty ?? false) ||
             (record.filePath?.trim().isNotEmpty ?? false));
 
@@ -283,11 +280,11 @@ class _SavedDocumentPackDetailsScreenState
                 Text(
                   available
                       ? (record.fileName?.trim().isNotEmpty ?? false)
-                          ? record.fileName!
-                          : record.title
+                            ? record.fileName!
+                            : record.title
                       : requirement.isMatched
-                          ? 'Linked Vault document unavailable'
-                          : 'No document matched yet',
+                      ? 'Linked Vault document unavailable'
+                      : 'No document matched yet',
                   style: const TextStyle(
                     color: muted,
                     fontSize: 12,
@@ -353,10 +350,7 @@ class _SavedDocumentPackDetailsScreenState
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: muted,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: muted, fontSize: 12),
             ),
           ],
         ),
@@ -366,11 +360,7 @@ class _SavedDocumentPackDetailsScreenState
 
   static List<BoxShadow> _shadow() {
     return const [
-      BoxShadow(
-        color: Color(0x12000000),
-        offset: Offset(0, 5),
-        blurRadius: 18,
-      ),
+      BoxShadow(color: Color(0x12000000), offset: Offset(0, 5), blurRadius: 18),
     ];
   }
 }

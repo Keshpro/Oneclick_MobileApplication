@@ -1,14 +1,6 @@
-
 import '../models/payment_request.dart';
 
-enum PaymentStatus {
-  pending,
-  processing,
-  paid,
-  failed,
-  cancelled,
-  refunded,
-}
+enum PaymentStatus { pending, processing, paid, failed, cancelled, refunded }
 
 class PaymentSession {
   final String paymentId;
@@ -29,13 +21,9 @@ abstract class PaymentService {
   // - calculate total from stored order
   // - create/reuse payment attempt
   // - return gateway checkout parameters
-  Future<PaymentSession> createPaymentSession(
-    PaymentRequest request,
-  );
+  Future<PaymentSession> createPaymentSession(PaymentRequest request);
 
   // Status must come from backend verification,
   // never from a success button in the Flutter UI.
-  Future<PaymentStatus> getPaymentStatus(
-    String paymentId,
-  );
+  Future<PaymentStatus> getPaymentStatus(String paymentId);
 }

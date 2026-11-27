@@ -167,9 +167,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                           isSelected
                               ? Icons.radio_button_checked_rounded
                               : Icons.radio_button_unchecked_rounded,
-                          color: isSelected
-                              ? colors.accent
-                              : colors.textMuted,
+                          color: isSelected ? colors.accent : colors.textMuted,
                         ),
                         const SizedBox(width: 12),
                         Expanded(

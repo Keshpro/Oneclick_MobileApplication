@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -11,8 +10,7 @@ class AppointmentRequestsScreen extends StatefulWidget {
       _AppointmentRequestsScreenState();
 }
 
-class _AppointmentRequestsScreenState
-    extends State<AppointmentRequestsScreen> {
+class _AppointmentRequestsScreenState extends State<AppointmentRequestsScreen> {
   static const Color _green = Color(0xFF059669);
   static const Color _darkGreen = Color(0xFF064E3B);
   static const Color _background = Color(0xFFF7FAF9);
@@ -24,8 +22,7 @@ class _AppointmentRequestsScreenState
   static const Color _purple = Color(0xFF7C3AED);
   static const Color _red = Color(0xFFDC2626);
 
-  final TextEditingController _searchController =
-      TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   String _search = '';
   String _filter = 'All';
@@ -47,19 +44,13 @@ class _AppointmentRequestsScreenState
         content: Text(message),
         backgroundColor: error ? _red : _darkGreen,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
   bool _isPending(String status) {
-    return [
-      'pending',
-      'upcoming',
-      'requested',
-    ].contains(status.toLowerCase());
+    return ['pending', 'upcoming', 'requested'].contains(status.toLowerCase());
   }
 
   Color _statusColor(String status) {
@@ -96,26 +87,20 @@ class _AppointmentRequestsScreenState
     if (_processingId != null) return;
 
     final data = doc.data();
-    final appointmentId =
-        (data['id'] ?? doc.id).toString();
-    final patientEmail =
-        (data['userEmail'] ?? 'Patient').toString();
+    final appointmentId = (data['id'] ?? doc.id).toString();
+    final patientEmail = (data['userEmail'] ?? 'Patient').toString();
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: Row(
           children: [
             Icon(
               newStatus == 'Approved'
                   ? Icons.check_circle_rounded
                   : Icons.cancel_rounded,
-              color: newStatus == 'Approved'
-                  ? _green
-                  : _red,
+              color: newStatus == 'Approved' ? _green : _red,
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -131,29 +116,21 @@ class _AppointmentRequestsScreenState
         content: Text(
           newStatus == 'Approved'
               ? 'Confirm appointment $appointmentId '
-                  'for $patientEmail?'
+                    'for $patientEmail?'
               : 'Are you sure you want to decline '
-                  'appointment $appointmentId?',
+                    'appointment $appointmentId?',
         ),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Go Back'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: newStatus == 'Approved'
-                  ? _green
-                  : _red,
+              backgroundColor: newStatus == 'Approved' ? _green : _red,
             ),
-            onPressed: () =>
-                Navigator.pop(dialogContext, true),
-            child: Text(
-              newStatus == 'Approved'
-                  ? 'Accept'
-                  : 'Decline',
-            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(newStatus == 'Approved' ? 'Accept' : 'Decline'),
           ),
         ],
       ),
@@ -176,14 +153,10 @@ class _AppointmentRequestsScreenState
           throw StateError('Appointment no longer exists.');
         }
 
-        final latestStatus =
-            (latest.data()?['status'] ?? '')
-                .toString();
+        final latestStatus = (latest.data()?['status'] ?? '').toString();
 
         if (!_isPending(latestStatus)) {
-          throw StateError(
-            'This appointment has already been processed.',
-          );
+          throw StateError('This appointment has already been processed.');
         }
 
         transaction.update(doc.reference, {
@@ -191,8 +164,7 @@ class _AppointmentRequestsScreenState
           'updatedAt': FieldValue.serverTimestamp(),
         });
 
-        final logRef =
-            firestore.collection('activity_logs').doc();
+        final logRef = firestore.collection('activity_logs').doc();
 
         transaction.set(logRef, {
           'action': 'Appointment $newStatus',
@@ -212,10 +184,7 @@ class _AppointmentRequestsScreenState
             : 'Appointment declined successfully.',
       );
     } catch (e) {
-      _message(
-        'Unable to update appointment: $e',
-        error: true,
-      );
+      _message('Unable to update appointment: $e', error: true);
     } finally {
       if (mounted) {
         setState(() => _processingId = null);
@@ -241,17 +210,11 @@ class _AppointmentRequestsScreenState
           children: [
             Text(
               'Appointments',
-              style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w800,
-              ),
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
             ),
             Text(
               'Doctor workspace',
-              style: TextStyle(
-                color: _muted,
-                fontSize: 11,
-              ),
+              style: TextStyle(color: _muted, fontSize: 11),
             ),
           ],
         ),
@@ -276,8 +239,7 @@ class _AppointmentRequestsScreenState
               'Doctor account required',
               'Please sign in to manage appointments.',
             )
-          : StreamBuilder<
-              QuerySnapshot<Map<String, dynamic>>>(
+          : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: FirebaseFirestore.instance
                   .collection('appointments')
                   .where('doctorId', isEqualTo: uid)
@@ -292,19 +254,14 @@ class _AppointmentRequestsScreenState
 
                 if (!snapshot.hasData) {
                   return const Center(
-                    child: CircularProgressIndicator(
-                      color: _green,
-                    ),
+                    child: CircularProgressIndicator(color: _green),
                   );
                 }
 
                 final docs = snapshot.data!.docs;
 
                 final pending = docs.where((doc) {
-                  return _isPending(
-                    (doc.data()['status'] ?? '')
-                        .toString(),
-                  );
+                  return _isPending((doc.data()['status'] ?? '').toString());
                 }).length;
 
                 final approved = docs.where((doc) {
@@ -323,32 +280,27 @@ class _AppointmentRequestsScreenState
 
                 final filtered = docs.where((doc) {
                   final data = doc.data();
-                  final status =
-                      (data['status'] ?? 'Upcoming')
-                          .toString();
+                  final status = (data['status'] ?? 'Upcoming').toString();
 
-                  final matchesFilter = _filter == 'All' ||
+                  final matchesFilter =
+                      _filter == 'All' ||
                       (_filter == 'Pending'
                           ? _isPending(status)
-                          : status.toLowerCase() ==
-                              _filter.toLowerCase());
+                          : status.toLowerCase() == _filter.toLowerCase());
 
                   final query = _search.trim().toLowerCase();
 
-                  final name =
-                      (data['patientName'] ?? '')
-                          .toString()
-                          .toLowerCase();
+                  final name = (data['patientName'] ?? '')
+                      .toString()
+                      .toLowerCase();
 
-                  final email =
-                      (data['userEmail'] ?? '')
-                          .toString()
-                          .toLowerCase();
+                  final email = (data['userEmail'] ?? '')
+                      .toString()
+                      .toLowerCase();
 
-                  final bookingId =
-                      (data['id'] ?? doc.id)
-                          .toString()
-                          .toLowerCase();
+                  final bookingId = (data['id'] ?? doc.id)
+                      .toString()
+                      .toLowerCase();
 
                   return matchesFilter &&
                       (query.isEmpty ||
@@ -358,10 +310,8 @@ class _AppointmentRequestsScreenState
                 }).toList();
 
                 filtered.sort((a, b) {
-                  final dateA =
-                      _dateText(a.data()['date']);
-                  final dateB =
-                      _dateText(b.data()['date']);
+                  final dateA = _dateText(a.data()['date']);
+                  final dateB = _dateText(b.data()['date']);
                   return dateA.compareTo(dateB);
                 });
 
@@ -369,12 +319,9 @@ class _AppointmentRequestsScreenState
                   slivers: [
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          18, 20, 18, 0,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _hero(pending),
                             const SizedBox(height: 24),
@@ -425,8 +372,7 @@ class _AppointmentRequestsScreenState
                                 setState(() => _search = value);
                               },
                               decoration: InputDecoration(
-                                hintText:
-                                    'Search patient or booking ID',
+                                hintText: 'Search patient or booking ID',
                                 prefixIcon: const Icon(
                                   Icons.search_rounded,
                                   color: _green,
@@ -435,34 +381,23 @@ class _AppointmentRequestsScreenState
                                     ? IconButton(
                                         onPressed: () {
                                           _searchController.clear();
-                                          setState(
-                                            () => _search = '',
-                                          );
+                                          setState(() => _search = '');
                                         },
-                                        icon: const Icon(
-                                          Icons.close_rounded,
-                                        ),
+                                        icon: const Icon(Icons.close_rounded),
                                       )
                                     : null,
                                 filled: true,
                                 fillColor: Colors.white,
                                 border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(16),
-                                  borderSide: const BorderSide(
-                                    color: _border,
-                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: const BorderSide(color: _border),
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(16),
-                                  borderSide: const BorderSide(
-                                    color: _border,
-                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: const BorderSide(color: _border),
                                 ),
                                 focusedBorder: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(16),
                                   borderSide: const BorderSide(
                                     color: _green,
                                     width: 1.5,
@@ -474,48 +409,43 @@ class _AppointmentRequestsScreenState
                             SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               child: Row(
-                                children: [
-                                  'All',
-                                  'Pending',
-                                  'Approved',
-                                  'Rescheduled',
-                                  'Cancelled',
-                                ].map((filter) {
-                                  final selected =
-                                      _filter == filter;
+                                children:
+                                    [
+                                      'All',
+                                      'Pending',
+                                      'Approved',
+                                      'Rescheduled',
+                                      'Cancelled',
+                                    ].map((filter) {
+                                      final selected = _filter == filter;
 
-                                  return Padding(
-                                    padding: const EdgeInsets.only(
-                                      right: 8,
-                                    ),
-                                    child: ChoiceChip(
-                                      label: Text(filter),
-                                      selected: selected,
-                                      showCheckmark: false,
-                                      selectedColor:
-                                          const Color(0xFFD1FAE5),
-                                      backgroundColor:
-                                          Colors.white,
-                                      side: BorderSide(
-                                        color: selected
-                                            ? _green
-                                            : _border,
-                                      ),
-                                      labelStyle: TextStyle(
-                                        color: selected
-                                            ? _darkGreen
-                                            : _muted,
-                                        fontWeight:
-                                            FontWeight.w700,
-                                      ),
-                                      onSelected: (_) {
-                                        setState(
-                                          () => _filter = filter,
-                                        );
-                                      },
-                                    ),
-                                  );
-                                }).toList(),
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 8,
+                                        ),
+                                        child: ChoiceChip(
+                                          label: Text(filter),
+                                          selected: selected,
+                                          showCheckmark: false,
+                                          selectedColor: const Color(
+                                            0xFFD1FAE5,
+                                          ),
+                                          backgroundColor: Colors.white,
+                                          side: BorderSide(
+                                            color: selected ? _green : _border,
+                                          ),
+                                          labelStyle: TextStyle(
+                                            color: selected
+                                                ? _darkGreen
+                                                : _muted,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                          onSelected: (_) {
+                                            setState(() => _filter = filter);
+                                          },
+                                        ),
+                                      );
+                                    }).toList(),
                               ),
                             ),
                             const SizedBox(height: 17),
@@ -547,18 +477,12 @@ class _AppointmentRequestsScreenState
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           return Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              18, 0, 18, 12,
-                            ),
-                            child: _appointmentCard(
-                              filtered[index],
-                            ),
+                            padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                            child: _appointmentCard(filtered[index]),
                           );
                         },
                       ),
-                    const SliverToBoxAdapter(
-                      child: SizedBox(height: 30),
-                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 30)),
                   ],
                 );
               },
@@ -574,10 +498,7 @@ class _AppointmentRequestsScreenState
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            _darkGreen,
-            _green,
-          ],
+          colors: [_darkGreen, _green],
         ),
         borderRadius: BorderRadius.circular(26),
       ),
@@ -622,17 +543,9 @@ class _AppointmentRequestsScreenState
     );
   }
 
-  Widget _statCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _statCard(String title, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 11,
-        vertical: 15,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 15),
       decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -643,11 +556,7 @@ class _AppointmentRequestsScreenState
               color: color.withValues(alpha: 0.11),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 21,
-            ),
+            child: Icon(icon, color: color, size: 21),
           ),
           const SizedBox(height: 12),
           Text(
@@ -658,39 +567,27 @@ class _AppointmentRequestsScreenState
               fontWeight: FontWeight.w800,
             ),
           ),
-          Text(
-            title,
-            style: const TextStyle(
-              color: _muted,
-              fontSize: 11,
-            ),
-          ),
+          Text(title, style: const TextStyle(color: _muted, fontSize: 11)),
         ],
       ),
     );
   }
 
-  Widget _appointmentCard(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
+  Widget _appointmentCard(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
 
-    final patientName =
-        (data['patientName'] ?? data['userEmail'] ?? 'Patient')
-            .toString();
+    final patientName = (data['patientName'] ?? data['userEmail'] ?? 'Patient')
+        .toString();
 
-    final patientEmail =
-        (data['userEmail'] ?? '').toString();
+    final patientEmail = (data['userEmail'] ?? '').toString();
 
-    final appointmentId =
-        (data['id'] ?? doc.id).toString();
+    final appointmentId = (data['id'] ?? doc.id).toString();
 
     final date = _dateText(data['date']);
     final time = (data['time'] ?? 'Not set').toString();
     final type = (data['type'] ?? 'In-person').toString();
     final status = (data['status'] ?? 'Upcoming').toString();
-    final reason =
-        (data['reason'] ?? '').toString().trim();
+    final reason = (data['reason'] ?? '').toString().trim();
 
     final color = _statusColor(status);
     final pending = _isPending(status);
@@ -738,10 +635,7 @@ class _AppointmentRequestsScreenState
                       'Booking #$appointmentId',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _muted,
-                        fontSize: 11,
-                      ),
+                      style: const TextStyle(color: _muted, fontSize: 11),
                     ),
                     if (patientEmail.isNotEmpty &&
                         patientEmail != patientName) ...[
@@ -750,10 +644,7 @@ class _AppointmentRequestsScreenState
                         patientEmail,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: _muted,
-                          fontSize: 11,
-                        ),
+                        style: const TextStyle(color: _muted, fontSize: 11),
                       ),
                     ],
                   ],
@@ -765,27 +656,14 @@ class _AppointmentRequestsScreenState
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: [
-              _statusChip(status, color),
-              _statusChip(type, _blue),
-            ],
+            children: [_statusChip(status, color), _statusChip(type, _blue)],
           ),
           const SizedBox(height: 15),
           const Divider(height: 1, color: _border),
           const SizedBox(height: 14),
-          _detailRow(
-            Icons.calendar_today_rounded,
-            'Date',
-            date,
-            _blue,
-          ),
+          _detailRow(Icons.calendar_today_rounded, 'Date', date, _blue),
           const SizedBox(height: 10),
-          _detailRow(
-            Icons.access_time_rounded,
-            'Time',
-            time,
-            _purple,
-          ),
+          _detailRow(Icons.access_time_rounded, 'Time', time, _purple),
           if (reason.isNotEmpty) ...[
             const SizedBox(height: 13),
             Container(
@@ -798,11 +676,7 @@ class _AppointmentRequestsScreenState
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.notes_rounded,
-                    color: _orange,
-                    size: 18,
-                  ),
+                  const Icon(Icons.notes_rounded, color: _orange, size: 18),
                   const SizedBox(width: 9),
                   Expanded(
                     child: Text(
@@ -824,9 +698,7 @@ class _AppointmentRequestsScreenState
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(10),
-                  child: CircularProgressIndicator(
-                    color: _green,
-                  ),
+                  child: CircularProgressIndicator(color: _green),
                 ),
               )
             else
@@ -836,26 +708,15 @@ class _AppointmentRequestsScreenState
                     child: OutlinedButton.icon(
                       onPressed: _processingId != null
                           ? null
-                          : () => _updateAppointmentStatus(
-                                doc,
-                                'Cancelled',
-                              ),
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        size: 18,
-                      ),
+                          : () => _updateAppointmentStatus(doc, 'Cancelled'),
+                      icon: const Icon(Icons.close_rounded, size: 18),
                       label: const Text('Decline'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: _red,
-                        side: const BorderSide(
-                          color: _red,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 13,
-                        ),
+                        side: const BorderSide(color: _red),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(13),
+                          borderRadius: BorderRadius.circular(13),
                         ),
                       ),
                     ),
@@ -865,25 +726,16 @@ class _AppointmentRequestsScreenState
                     child: ElevatedButton.icon(
                       onPressed: _processingId != null
                           ? null
-                          : () => _updateAppointmentStatus(
-                                doc,
-                                'Approved',
-                              ),
-                      icon: const Icon(
-                        Icons.check_rounded,
-                        size: 18,
-                      ),
+                          : () => _updateAppointmentStatus(doc, 'Approved'),
+                      icon: const Icon(Icons.check_rounded, size: 18),
                       label: const Text('Accept'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _green,
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 13,
-                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(13),
+                          borderRadius: BorderRadius.circular(13),
                         ),
                       ),
                     ),
@@ -898,10 +750,7 @@ class _AppointmentRequestsScreenState
 
   Widget _statusChip(String label, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 11,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(30),
@@ -917,12 +766,7 @@ class _AppointmentRequestsScreenState
     );
   }
 
-  Widget _detailRow(
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
+  Widget _detailRow(IconData icon, String label, String value, Color color) {
     return Row(
       children: [
         Container(
@@ -931,20 +775,10 @@ class _AppointmentRequestsScreenState
             color: color.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(9),
           ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 18,
-          ),
+          child: Icon(icon, color: color, size: 18),
         ),
         const SizedBox(width: 10),
-        Text(
-          '$label:',
-          style: const TextStyle(
-            color: _muted,
-            fontSize: 12,
-          ),
-        ),
+        Text('$label:', style: const TextStyle(color: _muted, fontSize: 12)),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -974,13 +808,7 @@ class _AppointmentRequestsScreenState
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            color: _muted,
-            fontSize: 12,
-          ),
-        ),
+        Text(subtitle, style: const TextStyle(color: _muted, fontSize: 12)),
       ],
     );
   }
@@ -1026,10 +854,7 @@ class _AppointmentRequestsScreenState
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: _muted,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: _muted, fontSize: 12),
             ),
           ],
         ),

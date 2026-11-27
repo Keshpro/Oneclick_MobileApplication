@@ -5,23 +5,19 @@ import '../models/subscription_record.dart';
 
 class SubscriptionService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   String get _userId {
     final user = _auth.currentUser;
 
     if (user == null) {
-      throw Exception(
-        'No logged-in user found.',
-      );
+      throw Exception('No logged-in user found.');
     }
 
     return user.uid;
   }
 
-  CollectionReference<Map<String, dynamic>>
-      get _subscriptionsCollection {
+  CollectionReference<Map<String, dynamic>> get _subscriptionsCollection {
     return _firestore
         .collection('users')
         .doc(_userId)
@@ -44,41 +40,23 @@ class SubscriptionService {
     String? billingCycle,
     DateTime? renewalDate,
   }) async {
-    final doc =
-        _subscriptionsCollection.doc();
+    final doc = _subscriptionsCollection.doc();
 
     final parsedAmount =
-        amount ??
-        double.tryParse(
-          price.replaceAll(
-            RegExp(r'[^0-9.]'),
-            '',
-          ),
-        );
+        amount ?? double.tryParse(price.replaceAll(RegExp(r'[^0-9.]'), ''));
 
     final detectedCurrency =
         currency ??
-        (
-          price.trim().toUpperCase().startsWith(
-                    'USD',
-                  ) ||
-                  price.trim().startsWith(r'$')
-              ? 'USD'
-              : 'LKR'
-        );
+        (price.trim().toUpperCase().startsWith('USD') ||
+                price.trim().startsWith(r'$')
+            ? 'USD'
+            : 'LKR');
 
     final detectedBillingCycle =
         billingCycle ??
-        (
-          subtitle.toLowerCase().contains(
-                'annual',
-              )
-              ? 'Annual'
-              : 'Monthly'
-        );
+        (subtitle.toLowerCase().contains('annual') ? 'Annual' : 'Monthly');
 
-    final subscription =
-        SubscriptionRecord(
+    final subscription = SubscriptionRecord(
       id: doc.id,
       userId: _userId,
       name: name,
@@ -92,36 +70,21 @@ class SubscriptionService {
       createdAt: DateTime.now(),
       amount: parsedAmount,
       currency: detectedCurrency,
-      billingCycle:
-          detectedBillingCycle,
+      billingCycle: detectedBillingCycle,
       renewalDate: renewalDate,
     );
 
-    await doc.set(
-      subscription.toMap(),
-    );
+    await doc.set(subscription.toMap());
   }
 
-  Stream<List<SubscriptionRecord>>
-      getSubscriptions() {
+  Stream<List<SubscriptionRecord>> getSubscriptions() {
     return _subscriptionsCollection
-        .orderBy(
-          'createdAt',
-          descending: true,
-        )
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
-          (snapshot) =>
-              snapshot.docs
-                  .map(
-                    (doc) =>
-                        SubscriptionRecord
-                            .fromMap(
-                      doc.id,
-                      doc.data(),
-                    ),
-                  )
-                  .toList(),
+          (snapshot) => snapshot.docs
+              .map((doc) => SubscriptionRecord.fromMap(doc.id, doc.data()))
+              .toList(),
         );
   }
 
@@ -143,8 +106,7 @@ class SubscriptionService {
     DateTime? renewalDate,
     DateTime? cancelledAt,
   }) async {
-    final updateData =
-        <String, dynamic>{
+    final updateData = <String, dynamic>{
       'name': name,
       'subtitle': subtitle,
       'price': price,
@@ -164,69 +126,46 @@ class SubscriptionService {
     }
 
     if (billingCycle != null) {
-      updateData['billingCycle'] =
-          billingCycle;
+      updateData['billingCycle'] = billingCycle;
     }
 
     if (renewalDate != null) {
-      updateData['renewalDate'] =
-          Timestamp.fromDate(
-        renewalDate,
-      );
+      updateData['renewalDate'] = Timestamp.fromDate(renewalDate);
     }
 
     if (cancelledAt != null) {
-      updateData['cancelledAt'] =
-          Timestamp.fromDate(
-        cancelledAt,
-      );
+      updateData['cancelledAt'] = Timestamp.fromDate(cancelledAt);
     }
 
-    await _subscriptionsCollection
-        .doc(subscriptionId)
-        .update(updateData);
+    await _subscriptionsCollection.doc(subscriptionId).update(updateData);
   }
 
   Future<void> updateRenewalReminders({
-  required String subscriptionId,
-  required bool enabled,
-}) async {
-  await _subscriptionsCollection
-      .doc(subscriptionId)
-      .update({
-    'renewalReminders': enabled,
-  });
-}
+    required String subscriptionId,
+    required bool enabled,
+  }) async {
+    await _subscriptionsCollection.doc(subscriptionId).update({
+      'renewalReminders': enabled,
+    });
+  }
 
-  Future<void> cancelSubscription(
-  String subscriptionId,
-) async {
-  await _subscriptionsCollection
-      .doc(subscriptionId)
-      .update({
-    'status': 'Cancelled',
-    'cancelledAt':
-        Timestamp.fromDate(DateTime.now()),
-  });
-}
+  Future<void> cancelSubscription(String subscriptionId) async {
+    await _subscriptionsCollection.doc(subscriptionId).update({
+      'status': 'Cancelled',
+      'cancelledAt': Timestamp.fromDate(DateTime.now()),
+    });
+  }
 
-Future<void> keepSubscriptionRenewal({
-  required String subscriptionId,
-  required DateTime renewalDate,
-}) async {
-  await _subscriptionsCollection
-      .doc(subscriptionId)
-      .update({
-    'renewalActionHandledFor':
-        Timestamp.fromDate(renewalDate),
-  });
-}
+  Future<void> keepSubscriptionRenewal({
+    required String subscriptionId,
+    required DateTime renewalDate,
+  }) async {
+    await _subscriptionsCollection.doc(subscriptionId).update({
+      'renewalActionHandledFor': Timestamp.fromDate(renewalDate),
+    });
+  }
 
-  Future<void> deleteSubscription(
-    String subscriptionId,
-  ) async {
-    await _subscriptionsCollection
-        .doc(subscriptionId)
-        .delete();
+  Future<void> deleteSubscription(String subscriptionId) async {
+    await _subscriptionsCollection.doc(subscriptionId).delete();
   }
 }

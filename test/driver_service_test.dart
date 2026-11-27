@@ -33,28 +33,31 @@ void main() {
       expect(service.isCurrentDriverApproved(), false);
     });
 
-    test('isCurrentDriverApproved returns true only when status is APPROVED', () {
-      final service = DriverService();
+    test(
+      'isCurrentDriverApproved returns true only when status is APPROVED',
+      () {
+        final service = DriverService();
 
-      final app = service.submitApplication(
-        fullName: 'John Doe',
-        dateOfBirth: '1995-05-12',
-        phone: '0712345678',
-        address: '123 Main St, Kandy',
-        licenceNumber: 'B9876543',
-        licenceType: 'Light Car',
-        licenceExpiry: '2030-01-01',
-        drivingExperienceYears: 5,
-        canDriveManual: true,
-        canDriveAutomatic: true,
-        documentType: 'NIC',
-        documentNumber: '951330999V',
-      );
+        final app = service.submitApplication(
+          fullName: 'John Doe',
+          dateOfBirth: '1995-05-12',
+          phone: '0712345678',
+          address: '123 Main St, Kandy',
+          licenceNumber: 'B9876543',
+          licenceType: 'Light Car',
+          licenceExpiry: '2030-01-01',
+          drivingExperienceYears: 5,
+          canDriveManual: true,
+          canDriveAutomatic: true,
+          documentType: 'NIC',
+          documentNumber: '951330999V',
+        );
 
-      expect(service.isCurrentDriverApproved(), false);
+        expect(service.isCurrentDriverApproved(), false);
 
-      service.debugUpdateStatus(app.id, DriverApplicationStatus.approved);
-      expect(service.isCurrentDriverApproved(), true);
-    });
+        service.debugUpdateStatus(app.id, DriverApplicationStatus.approved);
+        expect(service.isCurrentDriverApproved(), true);
+      },
+    );
   });
 }

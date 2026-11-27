@@ -5,11 +5,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'home_screen.dart';
 import 'register_screen.dart'; // Direct RegisterScreen import
+
 import 'package:oneclick/admin/screens/admin_dashboard.dart';
 import 'package:oneclick/features/doctor/doctor/screens/doctor_dashboard.dart';
 import 'package:oneclick/features/quickfix/worker/screens/worker_dashboard.dart'; // Worker Dashboard Import
+
 import '../../../shared/models/user_model.dart';
+
 import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
+
 import '../../drunk_drive/services/driver_entry_router.dart';
 
 class AuthService {
@@ -30,8 +34,10 @@ class AuthService {
     }
 
     // 2. Firestore 'users' collection check
-    final userDoc =
-        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
 
     if (userDoc.exists) {
       final data = userDoc.data();
@@ -42,26 +48,34 @@ class AuthService {
     }
 
     // 3. Provider collections check (workers, doctors, drivers, food_sellers)
-    final workerDoc =
-        await FirebaseFirestore.instance.collection('workers').doc(uid).get();
+    final workerDoc = await FirebaseFirestore.instance
+        .collection('workers')
+        .doc(uid)
+        .get();
     if (workerDoc.exists) {
       return 'worker';
     }
 
-    final doctorDoc =
-        await FirebaseFirestore.instance.collection('doctors').doc(uid).get();
+    final doctorDoc = await FirebaseFirestore.instance
+        .collection('doctors')
+        .doc(uid)
+        .get();
     if (doctorDoc.exists) {
       return 'doctor';
     }
 
-    final driverDoc =
-        await FirebaseFirestore.instance.collection('drivers').doc(uid).get();
+    final driverDoc = await FirebaseFirestore.instance
+        .collection('drivers')
+        .doc(uid)
+        .get();
     if (driverDoc.exists) {
       return 'driver';
     }
 
-    final foodSellerDoc =
-        await FirebaseFirestore.instance.collection('food_sellers').doc(uid).get();
+    final foodSellerDoc = await FirebaseFirestore.instance
+        .collection('food_sellers')
+        .doc(uid)
+        .get();
     if (foodSellerDoc.exists) {
       return 'foodSeller';
     }
@@ -97,12 +111,20 @@ class PendingApprovalScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.hourglass_top_rounded, size: 48, color: AppColors.primary),
+              Icon(
+                Icons.hourglass_top_rounded,
+                size: 48,
+                color: AppColors.primary,
+              ),
               SizedBox(height: 16),
               Text(
                 'Your account is pending approval. Please wait for activation.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, height: 1.5, color: AppColors.textDark),
+                style: TextStyle(
+                  fontSize: 16,
+                  height: 1.5,
+                  color: AppColors.textDark,
+                ),
               ),
             ],
           ),
@@ -132,7 +154,9 @@ class _LoginScreenState extends State<LoginScreen> {
   void _goToRegister() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const RegisterScreen(role: UserRole.user)),
+      MaterialPageRoute(
+        builder: (_) => const RegisterScreen(role: UserRole.user),
+      ),
     );
   }
 
@@ -158,9 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // Worker Dashboard Navigation
         if (role == 'worker') {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => const WorkerDashboard(),
-            ),
+            MaterialPageRoute(builder: (context) => const WorkerDashboard()),
             (Route<dynamic> route) => false,
           );
           return;
@@ -254,7 +276,10 @@ class _LoginScreenState extends State<LoginScreen> {
       debugPrint('[DD_ROUTE_V3] login using existing non-driver routing');
       // 4. Preserve the existing provider routing for other modules.
       if (currentUser != null &&
-          (role == 'worker' || role == 'doctor' || role == 'driver' || role == 'foodSeller')) {
+          (role == 'worker' ||
+              role == 'doctor' ||
+              role == 'driver' ||
+              role == 'foodSeller')) {
         await _checkProviderStatusAndNavigate(currentUser.uid, role);
       } else {
         Navigator.of(context).pushAndRemoveUntil(
@@ -296,7 +321,8 @@ class _LoginScreenState extends State<LoginScreen> {
     Widget? suffix,
   }) {
     const lineColor = Color(0xFFD9ECEA);
-    OutlineInputBorder outline(Color color, [double width = 1]) => OutlineInputBorder(
+    OutlineInputBorder outline(Color color, [double width = 1]) =>
+        OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.button),
           borderSide: BorderSide(color: color, width: width),
         );
@@ -345,7 +371,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         end: Alignment.bottomRight,
                         colors: [AppColors.primary, AppColors.primaryDark],
                       ),
-                      borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+                      borderRadius: BorderRadius.vertical(
+                        bottom: Radius.circular(32),
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -360,17 +388,22 @@ class _LoginScreenState extends State<LoginScreen> {
                               } else {
                                 Navigator.of(context).pushReplacement(
                                   MaterialPageRoute(
-                                      builder: (context) => const HomeScreen()),
+                                    builder: (context) => const HomeScreen(),
+                                  ),
                                 );
                               }
                             },
-                            borderRadius: BorderRadius.circular(AppRadius.button),
+                            borderRadius: BorderRadius.circular(
+                              AppRadius.button,
+                            ),
                             child: Container(
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: .16),
-                                borderRadius: BorderRadius.circular(AppRadius.button),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.button,
+                                ),
                               ),
                               child: const Icon(
                                 Icons.arrow_back_rounded,
@@ -390,7 +423,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.textDark.withValues(alpha: .20),
+                                  color: AppColors.textDark.withValues(
+                                    alpha: .20,
+                                  ),
                                   blurRadius: 16,
                                   offset: const Offset(0, 8),
                                 ),
@@ -500,7 +535,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppRadius.button),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.button,
+                                ),
                               ),
                             ),
                             child: _isLoading
@@ -515,7 +552,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 : const Text(
                                     'Login',
                                     style: TextStyle(
-                                        fontSize: 16, fontWeight: FontWeight.w700),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                           ),
                         ),
@@ -526,7 +565,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           children: [
                             const Text(
                               "Don't have an account? ",
-                              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 14,
+                              ),
                             ),
                             GestureDetector(
                               onTap: _goToRegister,

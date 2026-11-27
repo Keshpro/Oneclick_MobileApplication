@@ -71,15 +71,20 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
 
     // Do not allow LocationService's legacy 10 km fallback to quote a fare.
     if (coordinates.any((value) => value == null) ||
-        pickup.latitude! < -90 || pickup.latitude! > 90 ||
-        destination.latitude! < -90 || destination.latitude! > 90 ||
-        pickup.longitude! < -180 || pickup.longitude! > 180 ||
-        destination.longitude! < -180 || destination.longitude! > 180 ||
+        pickup.latitude! < -90 ||
+        pickup.latitude! > 90 ||
+        destination.latitude! < -90 ||
+        destination.latitude! > 90 ||
+        pickup.longitude! < -180 ||
+        pickup.longitude! > 180 ||
+        destination.longitude! < -180 ||
+        destination.longitude! > 180 ||
         coordinates.any((value) => value != null && !value.isFinite)) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _fareError = 'Pickup or destination coordinates are unavailable. '
+        _fareError =
+            'Pickup or destination coordinates are unavailable. '
             'Go back and select both locations on the map again.';
       });
       return;
@@ -96,7 +101,9 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
       final route = await RoadRoutingService().route(pickup, destination);
       if (!mounted) return;
       final distanceKm = route?.distanceKm ?? directDistanceKm;
-      final durationMinutes = route?.durationMinutes ?? _locationService.estimatedDurationMinutes(distanceKm);
+      final durationMinutes =
+          route?.durationMinutes ??
+          _locationService.estimatedDurationMinutes(distanceKm);
       final estimate = _fareService.estimateFare(
         distanceKm: distanceKm,
         durationMinutes: durationMinutes,
@@ -113,7 +120,8 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _fareError = 'Unable to estimate this trip. Check that pickup and '
+        _fareError =
+            'Unable to estimate this trip. Check that pickup and '
             'destination are different, then select the locations again.';
         _isLoading = false;
       });
@@ -140,7 +148,8 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
         createdAt: DateTime.now(),
       );
 
-      final bookingId = _createdBookingId ??= await _bookingService.createBookingModel(booking);
+      final bookingId = _createdBookingId ??= await _bookingService
+          .createBookingModel(booking);
       // Read the saved booking so navigation uses its actual Firestore ID.
       final savedBooking = await _bookingService.watchBooking(bookingId).first;
       if (savedBooking == null) {
@@ -157,7 +166,11 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to confirm booking. Check your connection and trip history before trying again.')),
+        SnackBar(
+          content: Text(
+            'Unable to confirm booking. Check your connection and trip history before trying again.',
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isConfirming = false);
@@ -280,10 +293,7 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
               _fareRow('Service Fee', estimate.serviceFee, colors),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Divider(
-                  color: colors.surfaceBorder,
-                  height: 1,
-                ),
+                child: Divider(color: colors.surfaceBorder, height: 1),
               ),
               _fareRow(
                 'Estimated Total',
@@ -302,8 +312,14 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                _roadRouteUsed ? 'Estimated using road routing; live traffic is not included.' : 'Estimated using straight-line distance and approximate travel time. Road routing is unavailable.',
-                style: TextStyle(color: colors.textMuted, fontSize: 12, height: 1.4),
+                _roadRouteUsed
+                    ? 'Estimated using road routing; live traffic is not included.'
+                    : 'Estimated using straight-line distance and approximate travel time. Road routing is unavailable.',
+                style: TextStyle(
+                  color: colors.textMuted,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
               ),
             ),
           ],
@@ -323,17 +339,33 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _summaryRow(Icons.my_location_rounded, colors.success,
-              widget.pickup.name, colors),
+          _summaryRow(
+            Icons.my_location_rounded,
+            colors.success,
+            widget.pickup.name,
+            colors,
+          ),
           const SizedBox(height: 12),
-          _summaryRow(Icons.location_on_rounded, colors.danger,
-              widget.destination.name, colors),
+          _summaryRow(
+            Icons.location_on_rounded,
+            colors.danger,
+            widget.destination.name,
+            colors,
+          ),
           const SizedBox(height: 12),
-          _summaryRow(Icons.directions_car_rounded, colors.accent,
-              widget.vehicle.displayName, colors),
+          _summaryRow(
+            Icons.directions_car_rounded,
+            colors.accent,
+            widget.vehicle.displayName,
+            colors,
+          ),
           const SizedBox(height: 12),
-          _summaryRow(Icons.info_outline_rounded, colors.textMuted,
-              widget.reason.label, colors),
+          _summaryRow(
+            Icons.info_outline_rounded,
+            colors.textMuted,
+            widget.reason.label,
+            colors,
+          ),
           const SizedBox(height: 12),
           _summaryRow(
             Icons.route_rounded,
@@ -432,7 +464,8 @@ class _FareEstimateScreenState extends State<FareEstimateScreen> {
                     height: 20,
                     width: 20,
                     child: CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2,
+                      color: Colors.white,
+                      strokeWidth: 2,
                     ),
                   )
                 : const Text(

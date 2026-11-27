@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -9,15 +8,10 @@ class WorkerDashboard extends StatefulWidget {
   final VoidCallback? onSignedOut;
   final VoidCallback? onSwitchToUserMode;
 
-  const WorkerDashboard({
-    super.key,
-    this.onSignedOut,
-    this.onSwitchToUserMode,
-  });
+  const WorkerDashboard({super.key, this.onSignedOut, this.onSwitchToUserMode});
 
   @override
-  State<WorkerDashboard> createState() =>
-      _WorkerDashboardState();
+  State<WorkerDashboard> createState() => _WorkerDashboardState();
 }
 
 class _WorkerDashboardState extends State<WorkerDashboard> {
@@ -38,14 +32,11 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   static const Color blue = Color(0xFF2563EB);
   static const Color red = Color(0xFFDC2626);
 
-  final FirebaseFirestore _db =
-      FirebaseFirestore.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  final FirebaseAuth _auth =
-      FirebaseAuth.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  late final Stream<User?> _authStream =
-      _auth.authStateChanges();
+  late final Stream<User?> _authStream = _auth.authStateChanges();
 
   int _tab = 0;
 
@@ -74,27 +65,20 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
   String? _streamUid;
 
-  Stream<DocumentSnapshot<Map<String, dynamic>>>?
-      _profileStream;
+  Stream<DocumentSnapshot<Map<String, dynamic>>>? _profileStream;
 
-  Stream<QuerySnapshot<Map<String, dynamic>>>?
-      _bookingStream;
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _bookingStream;
 
-  Stream<QuerySnapshot<Map<String, dynamic>>>?
-      _paymentStream;
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _paymentStream;
 
-  Stream<QuerySnapshot<Map<String, dynamic>>>?
-      _notificationStream;
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _notificationStream;
 
   void _bindStreams(String userId) {
     if (_streamUid == userId) return;
 
     _streamUid = userId;
 
-    _profileStream = _db
-        .collection('workers')
-        .doc(userId)
-        .snapshots();
+    _profileStream = _db.collection('workers').doc(userId).snapshots();
 
     _bookingStream = _db
         .collection('work_appointments')
@@ -124,8 +108,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   }
 
   String _status(Map<String, dynamic> data) {
-    return _text(data['status'], 'Unknown')
-        .toLowerCase();
+    return _text(data['status'], 'Unknown').toLowerCase();
   }
 
   String _statusLabel(String status) {
@@ -186,11 +169,8 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     return DateTime.tryParse(value.toString());
   }
 
-  DateTime? _appointmentDate(
-    Map<String, dynamic> data,
-  ) {
-    return _parseDate(data['appointmentDate']) ??
-        _parseDate(data['date']);
+  DateTime? _appointmentDate(Map<String, dynamic> data) {
+    return _parseDate(data['appointmentDate']) ?? _parseDate(data['date']);
   }
 
   bool _isToday(DateTime? date) {
@@ -208,8 +188,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
     final now = DateTime.now();
 
-    return date.year == now.year &&
-        date.month == now.month;
+    return date.year == now.year && date.month == now.month;
   }
 
   String _dateText(DateTime? date) {
@@ -244,8 +223,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   String _money(int minor) {
     final whole = minor ~/ 100;
 
-    final cents =
-        (minor % 100).toString().padLeft(2, '0');
+    final cents = (minor % 100).toString().padLeft(2, '0');
 
     final digits = whole.toString();
 
@@ -265,15 +243,10 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   String _initial(String name) {
     final value = name.trim();
 
-    return value.isEmpty
-        ? 'W'
-        : value.characters.first.toUpperCase();
+    return value.isEmpty ? 'W' : value.characters.first.toUpperCase();
   }
 
-  void _message(
-    String message, {
-    bool error = false,
-  }) {
+  void _message(String message, {bool error = false}) {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context)
@@ -313,8 +286,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
             ),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor:
-                    destructive ? red : primary,
+                backgroundColor: destructive ? red : primary,
               ),
               onPressed: () {
                 Navigator.pop(dialogContext, true);
@@ -341,24 +313,16 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     setState(() => _availabilityBusy = true);
 
     try {
-      await _db
-          .collection('workers')
-          .doc(userId)
-          .update({
+      await _db.collection('workers').doc(userId).update({
         'isAvailable': value,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
       _message(
-        value
-            ? 'You are now available for work.'
-            : 'You are now offline.',
+        value ? 'You are now available for work.' : 'You are now offline.',
       );
     } catch (_) {
-      _message(
-        'Could not update availability.',
-        error: true,
-      );
+      _message('Could not update availability.', error: true);
     } finally {
       if (mounted) {
         setState(() => _availabilityBusy = false);
@@ -370,14 +334,10 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   // BOOKING STATUS MANAGEMENT
   // ======================================================
 
-  Future<void> _updateJobStatus(
-    String appointmentId,
-    String newStatus,
-  ) async {
+  Future<void> _updateJobStatus(String appointmentId, String newStatus) async {
     final userId = uid;
 
-    if (userId.isEmpty ||
-        _busyIds.contains(appointmentId)) {
+    if (userId.isEmpty || _busyIds.contains(appointmentId)) {
       return;
     }
 
@@ -389,8 +349,8 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
       action: newStatus == 'Accepted'
           ? 'Approve'
           : newStatus == 'Rejected'
-              ? 'Reject'
-              : 'Complete',
+          ? 'Reject'
+          : 'Complete',
       destructive: newStatus == 'Rejected',
     );
 
@@ -404,13 +364,10 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     setState(() => _busyIds.add(appointmentId));
 
     try {
-      final reference = _db
-          .collection('work_appointments')
-          .doc(appointmentId);
+      final reference = _db.collection('work_appointments').doc(appointmentId);
 
       await _db.runTransaction((transaction) async {
-        final snapshot =
-            await transaction.get(reference);
+        final snapshot = await transaction.get(reference);
 
         if (!snapshot.exists) {
           throw StateError('Appointment not found.');
@@ -418,15 +375,13 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
         final data = snapshot.data()!;
 
-        if (data['workerId'] != userId ||
-            uid != userId) {
+        if (data['workerId'] != userId || uid != userId) {
           throw StateError('Unauthorized appointment.');
         }
 
         final serviceType = data['serviceType'];
 
-        if (serviceType != null &&
-            serviceType != 'quickfix') {
+        if (serviceType != null && serviceType != 'quickfix') {
           throw StateError('Invalid service type.');
         }
 
@@ -434,16 +389,12 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
         final validTransition =
             (currentStatus == 'pending' &&
-                (newStatus == 'Accepted' ||
-                    newStatus == 'Rejected')) ||
-            ((currentStatus == 'accepted' ||
-                    currentStatus == 'approved') &&
+                (newStatus == 'Accepted' || newStatus == 'Rejected')) ||
+            ((currentStatus == 'accepted' || currentStatus == 'approved') &&
                 newStatus == 'Completed');
 
         if (!validTransition) {
-          throw StateError(
-            'This appointment status has already changed.',
-          );
+          throw StateError('This appointment status has already changed.');
         }
 
         final updates = <String, dynamic>{
@@ -452,18 +403,15 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
         };
 
         if (newStatus == 'Accepted') {
-          updates['acceptedAt'] =
-              FieldValue.serverTimestamp();
+          updates['acceptedAt'] = FieldValue.serverTimestamp();
         }
 
         if (newStatus == 'Completed') {
-          updates['completedAt'] =
-              FieldValue.serverTimestamp();
+          updates['completedAt'] = FieldValue.serverTimestamp();
         }
 
         if (newStatus == 'Rejected') {
-          updates['rejectedAt'] =
-              FieldValue.serverTimestamp();
+          updates['rejectedAt'] = FieldValue.serverTimestamp();
         }
 
         transaction.update(reference, updates);
@@ -474,9 +422,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
       );
     } catch (error) {
       _message(
-        error is StateError
-            ? error.message
-            : 'Could not update appointment.',
+        error is StateError ? error.message : 'Could not update appointment.',
         error: true,
       );
     } finally {
@@ -518,29 +464,20 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     }
 
     try {
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/home',
-        (route) => false,
-      );
+      Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
     } catch (_) {
-      _message(
-        'User Mode navigation is not configured.',
-        error: true,
-      );
+      _message('User Mode navigation is not configured.', error: true);
     }
   }
 
   Future<void> _logout() async {
-    if (_accountBusy ||
-        _availabilityBusy ||
-        _busyIds.isNotEmpty) {
+    if (_accountBusy || _availabilityBusy || _busyIds.isNotEmpty) {
       return;
     }
 
     final confirmed = await _confirm(
       title: 'Log out?',
-      message:
-          'You will need to sign in again to manage your worker account.',
+      message: 'You will need to sign in again to manage your worker account.',
       action: 'Log out',
       destructive: true,
     );
@@ -559,16 +496,11 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
       if (callback != null) {
         callback();
       } else {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/login',
-          (route) => false,
-        );
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil('/login', (route) => false);
       }
     } catch (_) {
-      _message(
-        'Could not complete logout or navigation.',
-        error: true,
-      );
+      _message('Could not complete logout or navigation.', error: true);
     } finally {
       if (mounted) {
         setState(() => _accountBusy = false);
@@ -581,22 +513,14 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) =>
-            const WorkerEditProfileScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const WorkerEditProfileScreen()),
     );
   }
 
-  void _showAccountSheet(
-    Map<String, dynamic> worker,
-  ) {
+  void _showAccountSheet(Map<String, dynamic> worker) {
     final user = _auth.currentUser;
 
-    final name = _text(
-      worker['name'],
-      'Worker account',
-    );
+    final name = _text(worker['name'], 'Worker account');
 
     final email = _text(user?.email, '');
 
@@ -606,91 +530,84 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
       showDragHandle: true,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetContext) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              20,
-              0,
-              20,
-              20,
-            ),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
             child: SingleChildScrollView(
               child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    radius: 28,
-                    backgroundColor: primarySoft,
-                    child: Text(
-                      _initial(name),
-                      style: const TextStyle(
-                        color: primary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      radius: 28,
+                      backgroundColor: primarySoft,
+                      child: Text(
+                        _initial(name),
+                        style: const TextStyle(
+                          color: primary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                  title: Text(
-                    name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                    title: Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
+                    subtitle: Text(email),
                   ),
-                  subtitle: Text(email),
-                ),
 
-                const Divider(),
+                  const Divider(),
 
-                _accountTile(
-                  icon: Icons.person_outline,
-                  title: 'Edit Profile',
-                  subtitle: 'Manage professional details',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _editProfile();
-                  },
-                ),
+                  _accountTile(
+                    icon: Icons.person_outline,
+                    title: 'Edit Profile',
+                    subtitle: 'Manage professional details',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _editProfile();
+                    },
+                  ),
 
-                _accountTile(
-                  icon: Icons.account_balance_wallet_outlined,
-                  title: 'Income & Transactions',
-                  subtitle: 'View payment history',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
+                  _accountTile(
+                    icon: Icons.account_balance_wallet_outlined,
+                    title: 'Income & Transactions',
+                    subtitle: 'View payment history',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
 
-                    setState(() => _tab = 2);
-                  },
-                ),
+                      setState(() => _tab = 2);
+                    },
+                  ),
 
-                _accountTile(
-                  icon: Icons.swap_horiz_rounded,
-                  title: 'Switch to User Mode',
-                  subtitle: 'Continue in User Mode',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _switchToUserMode();
-                  },
-                ),
+                  _accountTile(
+                    icon: Icons.swap_horiz_rounded,
+                    title: 'Switch to User Mode',
+                    subtitle: 'Continue in User Mode',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _switchToUserMode();
+                    },
+                  ),
 
-                _accountTile(
-                  icon: Icons.logout_rounded,
-                  title: 'Log Out',
-                  color: red,
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _logout();
-                  },
-                ),
-              ],
-            ),
+                  _accountTile(
+                    icon: Icons.logout_rounded,
+                    title: 'Log Out',
+                    color: red,
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _logout();
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -706,10 +623,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     Color color = primary,
   }) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 4,
-        vertical: 4,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       leading: Container(
         padding: const EdgeInsets.all(11),
         decoration: BoxDecoration(
@@ -725,12 +639,8 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           fontWeight: FontWeight.w600,
         ),
       ),
-      subtitle:
-          subtitle == null ? null : Text(subtitle),
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        color: muted,
-      ),
+      subtitle: subtitle == null ? null : Text(subtitle),
+      trailing: const Icon(Icons.chevron_right_rounded, color: muted),
       onTap: onTap,
     );
   }
@@ -741,8 +651,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
   Widget _card({
     required Widget child,
-    EdgeInsetsGeometry padding =
-        const EdgeInsets.all(16),
+    EdgeInsetsGeometry padding = const EdgeInsets.all(16),
   }) {
     return Container(
       width: double.infinity,
@@ -758,10 +667,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
   Widget _sectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(
-        top: 24,
-        bottom: 12,
-      ),
+      padding: const EdgeInsets.only(top: 24, bottom: 12),
       child: Text(
         title,
         style: const TextStyle(
@@ -775,10 +681,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
   Widget _pill(String text, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 11,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
@@ -798,29 +701,18 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     return const Center(
       child: Padding(
         padding: EdgeInsets.all(24),
-        child: CircularProgressIndicator(
-          color: primary,
-        ),
+        child: CircularProgressIndicator(color: primary),
       ),
     );
   }
 
-  Widget _empty(
-    IconData icon,
-    String message,
-  ) {
+  Widget _empty(IconData icon, String message) {
     return _card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 18,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 18),
         child: Column(
           children: [
-            Icon(
-              icon,
-              size: 40,
-              color: muted,
-            ),
+            Icon(icon, size: 40, color: muted),
             const SizedBox(height: 12),
             Text(
               message,
@@ -837,16 +729,10 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     return _card(
       child: Row(
         children: [
-          const Icon(
-            Icons.error_outline,
-            color: red,
-          ),
+          const Icon(Icons.error_outline, color: red),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(color: red),
-            ),
+            child: Text(message, style: const TextStyle(color: red)),
           ),
         ],
       ),
@@ -857,37 +743,25 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   // WORKER PROFILE HEADER
   // ======================================================
 
-  Widget _workerHeader(
-    Map<String, dynamic> worker,
-  ) {
-    final name = _text(
-      worker['name'],
-      'Worker',
-    );
+  Widget _workerHeader(Map<String, dynamic> worker) {
+    final name = _text(worker['name'], 'Worker');
 
-    final category = _text(
-      worker['category'],
-      'Service provider',
-    );
+    final category = _text(worker['category'], 'Service provider');
 
     final details = worker['providerDetails'];
 
     final rate =
         (details is Map ? details['hourlyRate'] : null) ??
-            worker['hourlyRate'] ??
-            worker['rate'];
+        worker['hourlyRate'] ??
+        worker['rate'];
 
-    final available =
-        worker['isAvailable'] == true;
+    final available = worker['isAvailable'] == true;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF1E293B),
-            Color(0xFF334155),
-          ],
+          colors: [Color(0xFF1E293B), Color(0xFF334155)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -912,8 +786,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
             children: [
               CircleAvatar(
                 radius: 30,
-                backgroundColor:
-                    Colors.white.withValues(alpha: 0.12),
+                backgroundColor: Colors.white.withValues(alpha: 0.12),
                 child: Text(
                   _initial(name),
                   style: const TextStyle(
@@ -928,8 +801,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       name,
@@ -971,10 +843,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
               IconButton(
                 onPressed: _editProfile,
                 tooltip: 'Edit profile',
-                icon: const Icon(
-                  Icons.edit_outlined,
-                  color: Colors.white,
-                ),
+                icon: const Icon(Icons.edit_outlined, color: Colors.white),
               ),
             ],
           ),
@@ -982,13 +851,9 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           const SizedBox(height: 20),
 
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 5,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
             decoration: BoxDecoration(
-              color:
-                  Colors.white.withValues(alpha: 0.10),
+              color: Colors.white.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
@@ -997,9 +862,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                   width: 9,
                   height: 9,
                   decoration: BoxDecoration(
-                    color: available
-                        ? const Color(0xFF4ADE80)
-                        : Colors.grey,
+                    color: available ? const Color(0xFF4ADE80) : Colors.grey,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -1008,9 +871,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
                 Expanded(
                   child: Text(
-                    available
-                        ? 'Available for work'
-                        : 'Currently offline',
+                    available ? 'Available for work' : 'Currently offline',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
@@ -1020,11 +881,8 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
                 Switch(
                   value: available,
-                  activeTrackColor:
-                      const Color(0xFF10B981),
-                  onChanged: _availabilityBusy
-                      ? null
-                      : _updateAvailability,
+                  activeTrackColor: const Color(0xFF10B981),
+                  onChanged: _availabilityBusy ? null : _updateAvailability,
                 ),
               ],
             ),
@@ -1038,9 +896,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.white,
 
-                side: const BorderSide(
-                  color: Colors.white54,
-                ),
+                side: const BorderSide(color: Colors.white54),
 
                 minimumSize: const Size(0, 46),
 
@@ -1049,19 +905,14 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                 ),
               ),
 
-              onPressed: _accountBusy ||
-                      _availabilityBusy ||
-                      _busyIds.isNotEmpty
+              onPressed:
+                  _accountBusy || _availabilityBusy || _busyIds.isNotEmpty
                   ? null
                   : _switchToUserMode,
 
-              icon: const Icon(
-                Icons.swap_horiz_rounded,
-              ),
+              icon: const Icon(Icons.swap_horiz_rounded),
 
-              label: const Text(
-                'Switch to User Mode',
-              ),
+              label: const Text('Switch to User Mode'),
             ),
           ),
 
@@ -1081,21 +932,16 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                 ),
               ),
 
-              onPressed: _accountBusy ||
-                      _availabilityBusy ||
-                      _busyIds.isNotEmpty
+              onPressed:
+                  _accountBusy || _availabilityBusy || _busyIds.isNotEmpty
                   ? null
                   : _logout,
 
-              icon: const Icon(
-                Icons.logout_rounded,
-              ),
+              icon: const Icon(Icons.logout_rounded),
 
               label: const Text(
                 'Log Out',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -1134,21 +980,15 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.10),
-                    borderRadius:
-                        BorderRadius.circular(11),
+                    borderRadius: BorderRadius.circular(11),
                   ),
-                  child: Icon(
-                    icon,
-                    color: color,
-                    size: 21,
-                  ),
+                  child: Icon(icon, color: color, size: 21),
                 ),
 
                 const SizedBox(height: 13),
@@ -1164,13 +1004,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
                 const SizedBox(height: 4),
 
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: muted,
-                  ),
-                ),
+                Text(title, style: const TextStyle(fontSize: 12, color: muted)),
               ],
             ),
           ),
@@ -1179,10 +1013,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     );
   }
 
-  Widget _statistics(
-    List<QueryDocumentSnapshot<Map<String, dynamic>>>
-        docs,
-  ) {
+  Widget _statistics(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
     final pending = docs.where((doc) {
       return _status(doc.data()) == 'pending';
     }).length;
@@ -1190,8 +1021,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     final approved = docs.where((doc) {
       final status = _status(doc.data());
 
-      return status == 'accepted' ||
-          status == 'approved';
+      return status == 'accepted' || status == 'approved';
     }).length;
 
     final completed = docs.where((doc) {
@@ -1318,12 +1148,9 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   }
 
   Widget _incomeSummary(
-    List<QueryDocumentSnapshot<Map<String, dynamic>>>
-        docs,
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) {
-    final paid = docs.where(
-      (doc) => _isDemoPaid(doc.data()),
-    );
+    final paid = docs.where((doc) => _isDemoPaid(doc.data()));
 
     int total = 0;
     int today = 0;
@@ -1363,10 +1190,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF087F6D),
-            Color(0xFF065F52),
-          ],
+          colors: [Color(0xFF087F6D), Color(0xFF065F52)],
         ),
         borderRadius: BorderRadius.circular(22),
       ),
@@ -1425,10 +1249,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
           Text(
             '${paid.length} simulated card payments',
-            style: const TextStyle(
-              color: Color(0xFFD1FAE5),
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Color(0xFFD1FAE5), fontSize: 12),
           ),
 
           const SizedBox(height: 16),
@@ -1439,21 +1260,11 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
           Row(
             children: [
-              Expanded(
-                child: _incomeCell(
-                  'Today',
-                  _money(today),
-                ),
-              ),
+              Expanded(child: _incomeCell('Today', _money(today))),
 
               const SizedBox(width: 10),
 
-              Expanded(
-                child: _incomeCell(
-                  'This Month',
-                  _money(monthly),
-                ),
-              ),
+              Expanded(child: _incomeCell('This Month', _money(monthly))),
             ],
           ),
 
@@ -1478,10 +1289,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                 const Expanded(
                   child: Text(
                     'Pending cash',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: Colors.white, fontSize: 13),
                   ),
                 ),
 
@@ -1513,19 +1321,13 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     );
   }
 
-  Widget _incomeCell(
-    String title,
-    String value,
-  ) {
+  Widget _incomeCell(String title, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: Color(0xFFD1FAE5),
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Color(0xFFD1FAE5), fontSize: 12),
         ),
 
         const SizedBox(height: 6),
@@ -1546,11 +1348,8 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     );
   }
 
-  Widget _income({
-    bool showTransactions = false,
-  }) {
-    return StreamBuilder<
-        QuerySnapshot<Map<String, dynamic>>>(
+  Widget _income({bool showTransactions = false}) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       key: ValueKey('income-$uid'),
       stream: _paymentStream,
       builder: (context, snapshot) {
@@ -1566,19 +1365,15 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
         final docs = snapshot.data!.docs.toList()
           ..sort((a, b) {
-            final x =
-                _parseDate(a.data()['createdAt']);
+            final x = _parseDate(a.data()['createdAt']);
 
-            final y =
-                _parseDate(b.data()['createdAt']);
+            final y = _parseDate(b.data()['createdAt']);
 
-            return (y ?? DateTime(1970))
-                .compareTo(x ?? DateTime(1970));
+            return (y ?? DateTime(1970)).compareTo(x ?? DateTime(1970));
           });
 
         return Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _incomeSummary(docs),
 
@@ -1599,21 +1394,16 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     );
   }
 
-  Widget _transactionCard(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
+  Widget _transactionCard(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
 
-    final status =
-        _text(data['status'], 'unknown');
+    final status = _text(data['status'], 'unknown');
 
     final paid = _isDemoPaid(data);
 
-    final method =
-        _text(data['method'], 'Unknown');
+    final method = _text(data['method'], 'Unknown');
 
-    final date =
-        _parseDate(data['createdAt']);
+    final date = _parseDate(data['createdAt']);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -1631,18 +1421,11 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           ),
           title: Text(
             _money(_amountMinor(data)),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: ink,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.bold, color: ink),
           ),
-          subtitle: Text(
-            '$method • ${_dateText(date)}',
-          ),
+          subtitle: Text('$method • ${_dateText(date)}'),
           trailing: _pill(
-            paid
-                ? 'Demo paid'
-                : status.replaceAll('_', ' '),
+            paid ? 'Demo paid' : status.replaceAll('_', ' '),
             paid ? green : amber,
           ),
           onTap: () {
@@ -1668,8 +1451,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
@@ -1683,48 +1465,27 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
                 const SizedBox(height: 20),
 
-                _detailRow(
-                  'Payment ID',
-                  _text(data['paymentId'], doc.id),
-                ),
+                _detailRow('Payment ID', _text(data['paymentId'], doc.id)),
 
-                _detailRow(
-                  'Booking ID',
-                  _text(data['bookingId']),
-                ),
+                _detailRow('Booking ID', _text(data['bookingId'])),
 
-                _detailRow(
-                  'Service',
-                  _text(data['title'], 'QuickFix'),
-                ),
+                _detailRow('Service', _text(data['title'], 'QuickFix')),
 
-                _detailRow(
-                  'Amount',
-                  _money(_amountMinor(data)),
-                ),
+                _detailRow('Amount', _money(_amountMinor(data))),
 
-                _detailRow(
-                  'Method',
-                  _text(data['method']),
-                ),
+                _detailRow('Method', _text(data['method'])),
 
                 _detailRow(
                   'Status',
-                  _text(data['status'])
-                      .replaceAll('_', ' '),
+                  _text(data['status']).replaceAll('_', ' '),
                 ),
 
                 _detailRow(
                   'Date',
-                  _dateTimeText(
-                    _parseDate(data['createdAt']),
-                  ),
+                  _dateTimeText(_parseDate(data['createdAt'])),
                 ),
 
-                _detailRow(
-                  'Environment',
-                  _text(data['environment']),
-                ),
+                _detailRow('Environment', _text(data['environment'])),
               ],
             ),
           ),
@@ -1733,22 +1494,14 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     );
   }
 
-  Widget _detailRow(
-    String label,
-    String value,
-  ) {
+  Widget _detailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: muted,
-              ),
-            ),
+            child: Text(label, style: const TextStyle(color: muted)),
           ),
 
           const SizedBox(width: 12),
@@ -1757,10 +1510,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
             child: SelectableText(
               value,
               textAlign: TextAlign.end,
-              style: const TextStyle(
-                color: ink,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(color: ink, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -1772,9 +1522,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   // APPOINTMENT CARD
   // ======================================================
 
-  Widget _bookingCard(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
+  Widget _bookingCard(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
 
     final status = _status(data);
@@ -1784,32 +1532,23 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     final busy = _busyIds.contains(doc.id);
 
     final customer = _text(
-      data['customerName'] ??
-          data['customerEmail'],
+      data['customerName'] ?? data['customerEmail'],
       'Customer',
     );
 
-    final category = _text(
-      data['category'],
-      'QuickFix service',
-    );
+    final category = _text(data['category'], 'QuickFix service');
 
-    final paymentStatus = _text(
-      data['paymentStatus'],
-      'Not recorded',
-    );
+    final paymentStatus = _text(data['paymentStatus'], 'Not recorded');
 
     final canApprove = status == 'pending';
 
-    final canComplete = status == 'accepted' ||
-        status == 'approved';
+    final canComplete = status == 'accepted' || status == 'approved';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: _card(
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
@@ -1828,8 +1567,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
                 Expanded(
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         customer,
@@ -1846,10 +1584,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
                       Text(
                         category,
-                        style: const TextStyle(
-                          color: muted,
-                          fontSize: 12,
-                        ),
+                        style: const TextStyle(color: muted, fontSize: 12),
                       ),
                     ],
                   ),
@@ -1857,10 +1592,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
                 const SizedBox(width: 8),
 
-                _pill(
-                  _statusLabel(status),
-                  color,
-                ),
+                _pill(_statusLabel(status), color),
               ],
             ),
 
@@ -1875,17 +1607,11 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
               _dateText(_appointmentDate(data)),
             ),
 
-            _information(
-              Icons.access_time_rounded,
-              _text(data['time']),
-            ),
+            _information(Icons.access_time_rounded, _text(data['time'])),
 
             _information(
               Icons.location_on_outlined,
-              _text(
-                data['address'],
-                'Address unavailable',
-              ),
+              _text(data['address'], 'Address unavailable'),
             ),
 
             if (_text(data['issue'], '').isNotEmpty)
@@ -1895,16 +1621,11 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: background,
-                  borderRadius:
-                      BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   'Issue: ${_text(data['issue'])}',
-                  style: const TextStyle(
-                    color: ink,
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
+                  style: const TextStyle(color: ink, fontSize: 13, height: 1.4),
                 ),
               ),
 
@@ -1916,25 +1637,17 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
               children: [
                 _pill(
                   'Payment: ${paymentStatus.replaceAll('_', ' ')}',
-                  paymentStatus == 'demo_paid'
-                      ? green
-                      : muted,
+                  paymentStatus == 'demo_paid' ? green : muted,
                 ),
 
                 if (_amountMinor(data) > 0)
-                  _pill(
-                    _money(_amountMinor(data)),
-                    primary,
-                  ),
+                  _pill(_money(_amountMinor(data)), primary),
               ],
             ),
 
             const SizedBox(height: 14),
 
-            if (busy)
-              const LinearProgressIndicator(
-                color: primary,
-              ),
+            if (busy) const LinearProgressIndicator(color: primary),
 
             if (canApprove)
               Row(
@@ -1947,10 +1660,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                       ),
                       onPressed: busy
                           ? null
-                          : () => _updateJobStatus(
-                                doc.id,
-                                'Rejected',
-                              ),
+                          : () => _updateJobStatus(doc.id, 'Rejected'),
                       child: const Text('Reject'),
                     ),
                   ),
@@ -1959,15 +1669,10 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
                   Expanded(
                     child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: primary,
-                      ),
+                      style: FilledButton.styleFrom(backgroundColor: primary),
                       onPressed: busy
                           ? null
-                          : () => _updateJobStatus(
-                                doc.id,
-                                'Accepted',
-                              ),
+                          : () => _updateJobStatus(doc.id, 'Accepted'),
                       child: const Text('Approve'),
                     ),
                   ),
@@ -1978,41 +1683,25 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: navy,
-                  ),
+                  style: FilledButton.styleFrom(backgroundColor: navy),
                   onPressed: busy
                       ? null
-                      : () => _updateJobStatus(
-                            doc.id,
-                            'Completed',
-                          ),
-                  icon: const Icon(
-                    Icons.check_circle_outline,
-                  ),
-                  label: const Text(
-                    'Mark as Completed',
-                  ),
+                      : () => _updateJobStatus(doc.id, 'Completed'),
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('Mark as Completed'),
                 ),
               ),
 
             if (status == 'completed')
               const Row(
                 children: [
-                  Icon(
-                    Icons.task_alt_rounded,
-                    color: green,
-                    size: 19,
-                  ),
+                  Icon(Icons.task_alt_rounded, color: green, size: 19),
 
                   SizedBox(width: 8),
 
                   Text(
                     'Service completed',
-                    style: TextStyle(
-                      color: green,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(color: green, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -2022,30 +1711,20 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     );
   }
 
-  Widget _information(
-    IconData icon,
-    String value,
-  ) {
+  Widget _information(IconData icon, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 7),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 17,
-            color: muted,
-          ),
+          Icon(icon, size: 17, color: muted),
 
           const SizedBox(width: 9),
 
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                color: muted,
-                fontSize: 13,
-              ),
+              style: const TextStyle(color: muted, fontSize: 13),
             ),
           ),
         ],
@@ -2059,8 +1738,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
   Widget _dashboardHome(
     Map<String, dynamic> worker,
-    List<QueryDocumentSnapshot<Map<String, dynamic>>>
-        docs,
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) {
     final pending = docs.where((doc) {
       return _status(doc.data()) == 'pending';
@@ -2069,17 +1747,11 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     final approved = docs.where((doc) {
       final status = _status(doc.data());
 
-      return status == 'accepted' ||
-          status == 'approved';
+      return status == 'accepted' || status == 'approved';
     }).toList();
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        16,
-        10,
-        16,
-        28,
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
       children: [
         _workerHeader(worker),
 
@@ -2095,32 +1767,20 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
         Row(
           children: [
-            _quickAction(
-              Icons.calendar_month_outlined,
-              'Bookings',
-              () {
-                setState(() {
-                  _tab = 1;
-                  _filter = 'All';
-                });
-              },
-            ),
+            _quickAction(Icons.calendar_month_outlined, 'Bookings', () {
+              setState(() {
+                _tab = 1;
+                _filter = 'All';
+              });
+            }),
 
-            _quickAction(
-              Icons.wallet_outlined,
-              'Income',
-              () {
-                setState(() => _tab = 2);
-              },
-            ),
+            _quickAction(Icons.wallet_outlined, 'Income', () {
+              setState(() => _tab = 2);
+            }),
 
-            _quickAction(
-              Icons.notifications_outlined,
-              'Alerts',
-              () {
-                setState(() => _tab = 3);
-              },
-            ),
+            _quickAction(Icons.notifications_outlined, 'Alerts', () {
+              setState(() => _tab = 3);
+            }),
 
             _quickAction(
               Icons.person_outline,
@@ -2133,20 +1793,14 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
         _sectionTitle('New Job Requests'),
 
         if (pending.isEmpty)
-          _empty(
-            Icons.assignment_outlined,
-            'No pending job requests.',
-          )
+          _empty(Icons.assignment_outlined, 'No pending job requests.')
         else
           ...pending.take(5).map(_bookingCard),
 
         _sectionTitle('Approved Appointments'),
 
         if (approved.isEmpty)
-          _empty(
-            Icons.event_available_outlined,
-            'No approved appointments.',
-          )
+          _empty(Icons.event_available_outlined, 'No approved appointments.')
         else
           ...approved.take(5).map(_bookingCard),
 
@@ -2159,30 +1813,20 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
               _filter = 'All';
             });
           },
-          icon: const Icon(
-            Icons.calendar_month_outlined,
-          ),
-          label: const Text(
-            'View All Appointments',
-          ),
+          icon: const Icon(Icons.calendar_month_outlined),
+          label: const Text('View All Appointments'),
         ),
       ],
     );
   }
 
-  Widget _quickAction(
-    IconData icon,
-    String title,
-    VoidCallback action,
-  ) {
+  Widget _quickAction(IconData icon, String title, VoidCallback action) {
     return Expanded(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: action,
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: 6,
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(
             children: [
               Container(
@@ -2191,11 +1835,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                   color: primarySoft,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
-                  icon,
-                  color: primary,
-                  size: 24,
-                ),
+                child: Icon(icon, color: primary, size: 24),
               ),
 
               const SizedBox(height: 9),
@@ -2219,10 +1859,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   // BOOKINGS TAB
   // ======================================================
 
-  Widget _bookings(
-    List<QueryDocumentSnapshot<Map<String, dynamic>>>
-        docs,
-  ) {
+  Widget _bookings(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
     final filtered = docs.where((doc) {
       final data = doc.data();
 
@@ -2237,8 +1874,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
       }
 
       if (_filter == 'Approved') {
-        return status == 'accepted' ||
-            status == 'approved';
+        return status == 'accepted' || status == 'approved';
       }
 
       return status == _filter.toLowerCase();
@@ -2250,13 +1886,9 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           height: 60,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 10,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             itemCount: _filters.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(width: 8),
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
               final filter = _filters[index];
 
@@ -2268,12 +1900,8 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                 showCheckmark: false,
                 selectedColor: navy,
                 backgroundColor: Colors.white,
-                side: BorderSide(
-                  color: selected ? navy : line,
-                ),
-                labelStyle: TextStyle(
-                  color: selected ? Colors.white : ink,
-                ),
+                side: BorderSide(color: selected ? navy : line),
+                labelStyle: TextStyle(color: selected ? Colors.white : ink),
                 onSelected: (_) {
                   setState(() => _filter = filter);
                 },
@@ -2283,20 +1911,12 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
         ),
 
         Padding(
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            5,
-            16,
-            12,
-          ),
+          padding: const EdgeInsets.fromLTRB(16, 5, 16, 12),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
               '${filtered.length} appointments',
-              style: const TextStyle(
-                color: muted,
-                fontSize: 13,
-              ),
+              style: const TextStyle(color: muted, fontSize: 13),
             ),
           ),
         ),
@@ -2313,18 +1933,10 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                   ),
                 )
               : ListView.builder(
-                  padding:
-                      const EdgeInsets.fromLTRB(
-                    16,
-                    0,
-                    16,
-                    24,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
-                    return _bookingCard(
-                      filtered[index],
-                    );
+                    return _bookingCard(filtered[index]);
                   },
                 ),
         ),
@@ -2341,35 +1953,28 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   ) async {
     final userId = uid;
 
-    if (userId.isEmpty ||
-        doc.data()['receiverId'] != userId) {
+    if (userId.isEmpty || doc.data()['receiverId'] != userId) {
       return;
     }
 
     try {
-      await doc.reference.update({
-        'isRead': true,
-      });
+      await doc.reference.update({'isRead': true});
     } catch (_) {
-      _message(
-        'Could not update notification.',
-        error: true,
-      );
+      _message('Could not update notification.', error: true);
     }
   }
 
   Widget _notificationButton() {
-    return StreamBuilder<
-        QuerySnapshot<Map<String, dynamic>>>(
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       key: ValueKey('notification-badge-$uid'),
       stream: _notificationStream,
       builder: (context, snapshot) {
         final unread = snapshot.hasError
             ? 0
             : snapshot.data?.docs.where((doc) {
-                  return doc.data()['isRead'] != true;
-                }).length ??
-                0;
+                    return doc.data()['isRead'] != true;
+                  }).length ??
+                  0;
 
         return IconButton(
           tooltip: 'Notifications',
@@ -2379,10 +1984,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           icon: Stack(
             clipBehavior: Clip.none,
             children: [
-              const Icon(
-                Icons.notifications_outlined,
-                size: 26,
-              ),
+              const Icon(Icons.notifications_outlined, size: 26),
 
               if (unread > 0)
                 Positioned(
@@ -2417,8 +2019,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   }
 
   Widget _notifications() {
-    return StreamBuilder<
-        QuerySnapshot<Map<String, dynamic>>>(
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       key: ValueKey('notifications-$uid'),
       stream: _notificationStream,
       builder: (context, snapshot) {
@@ -2426,9 +2027,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(20),
-              child: _error(
-                'Unable to load notifications.',
-              ),
+              child: _error('Unable to load notifications.'),
             ),
           );
         }
@@ -2439,14 +2038,11 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
         final docs = snapshot.data!.docs.toList()
           ..sort((a, b) {
-            final x =
-                _parseDate(a.data()['createdAt']);
+            final x = _parseDate(a.data()['createdAt']);
 
-            final y =
-                _parseDate(b.data()['createdAt']);
+            final y = _parseDate(b.data()['createdAt']);
 
-            return (y ?? DateTime(1970))
-                .compareTo(x ?? DateTime(1970));
+            return (y ?? DateTime(1970)).compareTo(x ?? DateTime(1970));
           });
 
         if (docs.isEmpty) {
@@ -2473,17 +2069,14 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
             return Card(
               elevation: 0,
-              color: unread
-                  ? primarySoft
-                  : Colors.white,
+              color: unread ? primarySoft : Colors.white,
               margin: const EdgeInsets.only(bottom: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: const BorderSide(color: line),
               ),
               child: ListTile(
-                contentPadding:
-                    const EdgeInsets.all(14),
+                contentPadding: const EdgeInsets.all(14),
                 leading: CircleAvatar(
                   backgroundColor: Colors.white,
                   child: Icon(
@@ -2494,49 +2087,30 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                   ),
                 ),
                 title: Text(
-                  _text(
-                    data['title'],
-                    'Notification',
-                  ),
+                  _text(data['title'], 'Notification'),
                   style: TextStyle(
-                    fontWeight: unread
-                        ? FontWeight.w700
-                        : FontWeight.w500,
+                    fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
                 subtitle: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 5),
 
-                    Text(
-                      _text(data['message'], ''),
-                    ),
+                    Text(_text(data['message'], '')),
 
                     const SizedBox(height: 8),
 
                     Text(
-                      _dateTimeText(
-                        _parseDate(data['createdAt']),
-                      ),
-                      style: const TextStyle(
-                        color: muted,
-                        fontSize: 11,
-                      ),
+                      _dateTimeText(_parseDate(data['createdAt'])),
+                      style: const TextStyle(color: muted, fontSize: 11),
                     ),
                   ],
                 ),
                 trailing: unread
-                    ? const Icon(
-                        Icons.circle,
-                        color: primary,
-                        size: 10,
-                      )
+                    ? const Icon(Icons.circle, color: primary, size: 10)
                     : null,
-                onTap: unread
-                    ? () => _markAsRead(doc)
-                    : null,
+                onTap: unread ? () => _markAsRead(doc) : null,
               ),
             );
           },
@@ -2549,11 +2123,8 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   // MAIN DASHBOARD
   // ======================================================
 
-  Widget _appointmentContent(
-    Map<String, dynamic> worker,
-  ) {
-    return StreamBuilder<
-        QuerySnapshot<Map<String, dynamic>>>(
+  Widget _appointmentContent(Map<String, dynamic> worker) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       key: ValueKey('bookings-$uid'),
       stream: _bookingStream,
       builder: (context, snapshot) {
@@ -2561,9 +2132,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(20),
-              child: _error(
-                'Could not load appointments.',
-              ),
+              child: _error('Could not load appointments.'),
             ),
           );
         }
@@ -2572,23 +2141,21 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           return _loading();
         }
 
-        final docs = snapshot.data!.docs
-            .where((doc) {
-          final data = doc.data();
+        final docs =
+            snapshot.data!.docs.where((doc) {
+              final data = doc.data();
 
-          // Preserve existing QuickFix bookings that
-          // were created without serviceType.
-          return data['serviceType'] == 'quickfix' ||
-              data['serviceType'] == null;
-        }).toList()
-          ..sort((a, b) {
-            final x = _appointmentDate(a.data());
+              // Preserve existing QuickFix bookings that
+              // were created without serviceType.
+              return data['serviceType'] == 'quickfix' ||
+                  data['serviceType'] == null;
+            }).toList()..sort((a, b) {
+              final x = _appointmentDate(a.data());
 
-            final y = _appointmentDate(b.data());
+              final y = _appointmentDate(b.data());
 
-            return (x ?? DateTime(2100))
-                .compareTo(y ?? DateTime(2100));
-          });
+              return (x ?? DateTime(2100)).compareTo(y ?? DateTime(2100));
+            });
 
         if (_tab == 0) {
           return _dashboardHome(worker, docs);
@@ -2632,9 +2199,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     }
   }
 
-  Widget _workspace(
-    Map<String, dynamic> worker,
-  ) {
+  Widget _workspace(Map<String, dynamic> worker) {
     return Scaffold(
       backgroundColor: background,
 
@@ -2646,10 +2211,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
         title: const Text(
           'OneClick QuickFix',
-          style: TextStyle(
-            fontSize: 19,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
         ),
 
         actions: [
@@ -2660,26 +2222,17 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
             onPressed: () {
               _showAccountSheet(worker);
             },
-            icon: const Icon(
-              Icons.account_circle_outlined,
-              size: 28,
-            ),
+            icon: const Icon(Icons.account_circle_outlined, size: 28),
           ),
 
           IconButton(
             tooltip: 'Log Out',
 
-            onPressed: _accountBusy ||
-                    _availabilityBusy ||
-                    _busyIds.isNotEmpty
+            onPressed: _accountBusy || _availabilityBusy || _busyIds.isNotEmpty
                 ? null
                 : _logout,
 
-            icon: const Icon(
-              Icons.logout_rounded,
-              color: red,
-              size: 24,
-            ),
+            icon: const Icon(Icons.logout_rounded, color: red, size: 24),
           ),
 
           const SizedBox(width: 5),
@@ -2701,43 +2254,25 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(
-              Icons.dashboard_rounded,
-              color: primary,
-            ),
+            selectedIcon: Icon(Icons.dashboard_rounded, color: primary),
             label: 'Dashboard',
           ),
 
           NavigationDestination(
-            icon: Icon(
-              Icons.calendar_month_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.calendar_month_rounded,
-              color: primary,
-            ),
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month_rounded, color: primary),
             label: 'Bookings',
           ),
 
           NavigationDestination(
-            icon: Icon(
-              Icons.account_balance_wallet_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.account_balance_wallet,
-              color: primary,
-            ),
+            icon: Icon(Icons.account_balance_wallet_outlined),
+            selectedIcon: Icon(Icons.account_balance_wallet, color: primary),
             label: 'Income',
           ),
 
           NavigationDestination(
-            icon: Icon(
-              Icons.notifications_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.notifications_rounded,
-              color: primary,
-            ),
+            icon: Icon(Icons.notifications_outlined),
+            selectedIcon: Icon(Icons.notifications_rounded, color: primary),
             label: 'Alerts',
           ),
         ],
@@ -2750,12 +2285,8 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     return StreamBuilder<User?>(
       stream: _authStream,
       builder: (context, authSnapshot) {
-        if (authSnapshot.connectionState ==
-            ConnectionState.waiting) {
-          return Scaffold(
-            backgroundColor: background,
-            body: _loading(),
-          );
+        if (authSnapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(backgroundColor: background, body: _loading());
         }
 
         final user = authSnapshot.data;
@@ -2774,25 +2305,20 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Please sign in as a worker.',
-                  ),
+                  const Text('Please sign in as a worker.'),
 
                   const SizedBox(height: 15),
 
                   FilledButton(
                     onPressed: () {
-                      final callback =
-                          widget.onSignedOut;
+                      final callback = widget.onSignedOut;
 
                       if (callback != null) {
                         callback();
                       } else {
-                        Navigator.of(context)
-                            .pushNamedAndRemoveUntil(
-                          '/login',
-                          (route) => false,
-                        );
+                        Navigator.of(
+                          context,
+                        ).pushNamedAndRemoveUntil('/login', (route) => false);
                       }
                     },
                     child: const Text('Sign In'),
@@ -2805,8 +2331,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
         _bindStreams(user.uid);
 
-        return StreamBuilder<
-            DocumentSnapshot<Map<String, dynamic>>>(
+        return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
           key: ValueKey('worker-${user.uid}'),
           stream: _profileStream,
           builder: (context, snapshot) {
@@ -2825,19 +2350,14 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                 body: Center(
                   child: Padding(
                     padding: const EdgeInsets.all(20),
-                    child: _error(
-                      'Unable to load worker profile.',
-                    ),
+                    child: _error('Unable to load worker profile.'),
                   ),
                 ),
               );
             }
 
             if (!snapshot.hasData) {
-              return Scaffold(
-                backgroundColor: background,
-                body: _loading(),
-              );
+              return Scaffold(backgroundColor: background, body: _loading());
             }
 
             final worker = snapshot.data!.data();
@@ -2854,11 +2374,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                     ),
                   ],
                 ),
-                body: const Center(
-                  child: Text(
-                    'Worker profile not found.',
-                  ),
-                ),
+                body: const Center(child: Text('Worker profile not found.')),
               );
             }
 

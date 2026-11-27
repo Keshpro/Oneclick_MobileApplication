@@ -32,19 +32,21 @@ class DriverRatingService {
   }
 
   Stream<List<DriverRatingModel>> watchRatingsForDriver(String driverId) {
-    return _ratings.where('driverId', isEqualTo: driverId).snapshots().map(
-      (snapshot) {
-        final results = snapshot.docs
-            .map((doc) => _parse(doc.id, doc.data()))
-            .toList();
-        _cachedByDriver[driverId] = results;
-        return results;
-      },
-    );
+    return _ratings.where('driverId', isEqualTo: driverId).snapshots().map((
+      snapshot,
+    ) {
+      final results = snapshot.docs
+          .map((doc) => _parse(doc.id, doc.data()))
+          .toList();
+      _cachedByDriver[driverId] = results;
+      return results;
+    });
   }
 
   Future<List<DriverRatingModel>> fetchRatingsForDriver(String driverId) async {
-    final snapshot = await _ratings.where('driverId', isEqualTo: driverId).get();
+    final snapshot = await _ratings
+        .where('driverId', isEqualTo: driverId)
+        .get();
     final results = snapshot.docs
         .map((doc) => _parse(doc.id, doc.data()))
         .toList();
@@ -83,7 +85,9 @@ class DriverRatingService {
     final ratingRef = _ratings.doc(bookingId);
     final text = review?.trim();
 
-    final saved = await _db.runTransaction<DriverRatingModel?>((transaction) async {
+    final saved = await _db.runTransaction<DriverRatingModel?>((
+      transaction,
+    ) async {
       // Read before writing: this prevents two simultaneous duplicate ratings.
       final bookingSnapshot = await transaction.get(bookingRef);
       final ratingSnapshot = await transaction.get(ratingRef);

@@ -130,7 +130,8 @@ class _DoctorPaymentSectionState extends State<DoctorPaymentSection> {
 
       final data = payment.data()!;
 
-      final validPayment = data['userId'] == user.uid &&
+      final validPayment =
+          data['userId'] == user.uid &&
           data['bookingId'] == widget.bookingId &&
           data['module'] == 'doctor' &&
           data['amountMinor'] == widget.amountMinor &&
@@ -375,11 +376,7 @@ class _DoctorPaymentSectionState extends State<DoctorPaymentSection> {
               'Pay now and confirm instantly',
             ),
             const SizedBox(width: 12),
-            _methodTile(
-              Icons.payments_outlined,
-              'Cash',
-              'Pay at the clinic',
-            ),
+            _methodTile(Icons.payments_outlined, 'Cash', 'Pay at the clinic'),
           ],
         ),
       ],
@@ -483,8 +480,8 @@ class _DoctorPaymentSectionState extends State<DoctorPaymentSection> {
                       Text(
                         cash
                             ? 'Your appointment is booked. Bring '
-                                'LKR ${_formatAmount(widget.amountMinor)} '
-                                'to your visit.'
+                                  'LKR ${_formatAmount(widget.amountMinor)} '
+                                  'to your visit.'
                             : 'Your appointment is confirmed.',
                         style: const TextStyle(
                           color: ink,
@@ -686,8 +683,8 @@ class _DoctorPaymentSectionState extends State<DoctorPaymentSection> {
               _loadingStatus
                   ? 'loading'
                   : _loadError != null
-                      ? 'error'
-                      : (_paymentStatus ?? 'unpaid'),
+                  ? 'error'
+                  : (_paymentStatus ?? 'unpaid'),
             ),
             child: _body(),
           ),

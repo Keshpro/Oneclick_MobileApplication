@@ -19,8 +19,10 @@ class DriverEntryRouter {
 
     final firestore = FirebaseFirestore.instance;
     final suffix = uid.length > 6 ? uid.substring(uid.length - 6) : uid;
-    debugPrint('[DD_ROUTE_V3] check uid=...$suffix role=$normalizedRole '
-        'project=${firestore.app.options.projectId}');
+    debugPrint(
+      '[DD_ROUTE_V3] check uid=...$suffix role=$normalizedRole '
+      'project=${firestore.app.options.projectId}',
+    );
 
     // Check the actual Drunk & Drive application BEFORE considering other
     // account roles, including legacy or differently named passenger roles.
@@ -29,8 +31,10 @@ class DriverEntryRouter {
     );
     if (application?.exists == true) {
       final status = application!.data()?['status']?.toString();
-      debugPrint('[DD_ROUTE_V3] application exists status=$status '
-          'cached=${application.metadata.isFromCache}');
+      debugPrint(
+        '[DD_ROUTE_V3] application exists status=$status '
+        'cached=${application.metadata.isFromCache}',
+      );
       if (status == 'approved') {
         // Open the real driver dashboard directly, not a passenger screen.
         debugPrint('[DD_ROUTE_V3] destination=DriverHomeScreen');
@@ -43,14 +47,21 @@ class DriverEntryRouter {
 
     // A missing dedicated application does not change other provider roles.
     // The shared provider registration does not itself grant trip access.
-    if (!{'user', 'customer', 'passenger', 'driver', 'patient', ''}
-        .contains(normalizedRole)) {
+    if (!{
+      'user',
+      'customer',
+      'passenger',
+      'driver',
+      'patient',
+      '',
+    }.contains(normalizedRole)) {
       debugPrint('[DD_ROUTE_V3] destination=existing provider route');
       return null;
     }
     final sharedDriver = normalizedRole == 'driver'
         ? true
-        : (await _read(firestore.collection('drivers').doc(uid)))?.exists == true;
+        : (await _read(firestore.collection('drivers').doc(uid)))?.exists ==
+              true;
     if (sharedDriver) {
       debugPrint('[DD_ROUTE_V3] destination=driver application flow');
       return const DrunkDriveHomeScreen(preferDriverMode: true);
@@ -64,8 +75,10 @@ class DriverEntryRouter {
   ) async {
     try {
       final snapshot = await reference.get();
-      debugPrint('[DD_ROUTE_V3] ${reference.parent.id} '
-          'exists=${snapshot.exists} cached=${snapshot.metadata.isFromCache}');
+      debugPrint(
+        '[DD_ROUTE_V3] ${reference.parent.id} '
+        'exists=${snapshot.exists} cached=${snapshot.metadata.isFromCache}',
+      );
       return snapshot;
     } on FirebaseException catch (error) {
       debugPrint('[DD_ROUTE_V3] ${reference.parent.id} error=${error.code}');

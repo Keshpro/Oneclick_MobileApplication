@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -9,14 +8,10 @@ import '../../../payment/screens/checkout_screen.dart';
 class BookAppointmentScreen extends StatefulWidget {
   final Map<String, dynamic> doctor;
 
-  const BookAppointmentScreen({
-    super.key,
-    required this.doctor,
-  });
+  const BookAppointmentScreen({super.key, required this.doctor});
 
   @override
-  State<BookAppointmentScreen> createState() =>
-      _BookAppointmentScreenState();
+  State<BookAppointmentScreen> createState() => _BookAppointmentScreenState();
 }
 
 class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
@@ -33,8 +28,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
   bool _isLoading = false;
 
-  final TextEditingController _reasonController =
-      TextEditingController();
+  final TextEditingController _reasonController = TextEditingController();
 
   String get _doctorId {
     return (widget.doctor['uid'] ??
@@ -45,9 +39,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   }
 
   String get _doctorName {
-    return (widget.doctor['name'] ??
-            widget.doctor['doctorName'] ??
-            'Doctor')
+    return (widget.doctor['name'] ?? widget.doctor['doctorName'] ?? 'Doctor')
         .toString();
   }
 
@@ -123,10 +115,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     return (amountMinor / 100).toStringAsFixed(2);
   }
 
-  void _showMessage(
-    String message, {
-    bool isError = false,
-  }) {
+  void _showMessage(String message, {bool isError = false}) {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -153,9 +142,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         .get();
 
     if (!doctorDoc.exists) {
-      throw StateError(
-        'Doctor record was not found in Firestore.',
-      );
+      throw StateError('Doctor record was not found in Firestore.');
     }
 
     final data = doctorDoc.data()!;
@@ -165,8 +152,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     dynamic rawFee = data['consultationFee'] ?? data['fee'];
 
     if (rawFee == null && providerDetails is Map) {
-      rawFee = providerDetails['consultationFee'] ??
-          providerDetails['fee'];
+      rawFee = providerDetails['consultationFee'] ?? providerDetails['fee'];
     }
 
     final fee = rawFee is num
@@ -181,9 +167,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
           );
 
     if (fee == null || fee <= 0) {
-      throw StateError(
-        'Consultation fee is unavailable for this doctor.',
-      );
+      throw StateError('Consultation fee is unavailable for this doctor.');
     }
 
     return (fee * 100).round();
@@ -199,14 +183,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? now,
-      firstDate: DateTime(
-        now.year,
-        now.month,
-        now.day,
-      ),
-      lastDate: now.add(
-        const Duration(days: 365),
-      ),
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: now.add(const Duration(days: 365)),
       helpText: 'Select Appointment Date',
     );
 
@@ -252,9 +230,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
     final name = user.displayName?.trim() ?? '';
 
-    final parts = name.isEmpty
-        ? <String>[]
-        : name.split(RegExp(r'\s+'));
+    final parts = name.isEmpty ? <String>[] : name.split(RegExp(r'\s+'));
 
     return PaymentRequest(
       bookingId: appointmentId,
@@ -262,8 +238,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       title: 'Doctor Consultation - $_doctorName',
       amountMinor: amountMinor,
       firstName: parts.isNotEmpty ? parts.first : '',
-      lastName:
-          parts.length > 1 ? parts.skip(1).join(' ') : '',
+      lastName: parts.length > 1 ? parts.skip(1).join(' ') : '',
       email: user.email ?? '',
       phone: user.phoneNumber ?? '',
       address: '',
@@ -294,14 +269,12 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         .collection('appointments')
         .doc();
 
-    final patientName =
-        user.displayName?.trim().isNotEmpty == true
-            ? user.displayName!.trim()
-            : (user.email ?? 'Patient');
+    final patientName = user.displayName?.trim().isNotEmpty == true
+        ? user.displayName!.trim()
+        : (user.email ?? 'Patient');
 
     await appointmentRef.set({
-      'id':
-          'OC-${appointmentRef.id.substring(0, 5).toUpperCase()}',
+      'id': 'OC-${appointmentRef.id.substring(0, 5).toUpperCase()}',
       'docId': appointmentRef.id,
 
       // Patient
@@ -319,8 +292,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       'hospital': _hospital,
 
       // Appointment
-      'appointmentDate':
-          Timestamp.fromDate(appointmentDate),
+      'appointmentDate': Timestamp.fromDate(appointmentDate),
       'date': _appointmentDateText(appointmentDate),
       'day': _dayName(appointmentDate),
       'time': appointmentTime,
@@ -356,18 +328,12 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     final time = _selectedTime;
 
     if (date == null) {
-      _showMessage(
-        'Please select an appointment date.',
-        isError: true,
-      );
+      _showMessage('Please select an appointment date.', isError: true);
       return;
     }
 
     if (time == null) {
-      _showMessage(
-        'Please select an appointment time.',
-        isError: true,
-      );
+      _showMessage('Please select an appointment time.', isError: true);
       return;
     }
 
@@ -380,10 +346,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     );
 
     if (!appointmentDateTime.isAfter(DateTime.now())) {
-      _showMessage(
-        'Please select a future date and time.',
-        isError: true,
-      );
+      _showMessage('Please select a future date and time.', isError: true);
       return;
     }
 
@@ -413,9 +376,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       // Step 4: Open existing common checkout.
       final completed = await Navigator.of(context).push<bool>(
         MaterialPageRoute(
-          builder: (_) => CheckoutScreen(
-            request: paymentRequest,
-          ),
+          builder: (_) => CheckoutScreen(request: paymentRequest),
         ),
       );
 
@@ -436,24 +397,21 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
           .get();
 
       if (!booking.exists) {
-        throw StateError(
-          'Appointment record not found.',
-        );
+        throw StateError('Appointment record not found.');
       }
 
       final data = booking.data()!;
 
       final status = data['status']?.toString();
-      final paymentStatus =
-          data['paymentStatus']?.toString();
+      final paymentStatus = data['paymentStatus']?.toString();
 
       final paymentId = data['paymentId']?.toString();
 
-      final isConfirmed = status == 'confirmed' &&
+      final isConfirmed =
+          status == 'confirmed' &&
           paymentId != null &&
           paymentId.isNotEmpty &&
-          (paymentStatus == 'demo_paid' ||
-              paymentStatus == 'pending_cash');
+          (paymentStatus == 'demo_paid' || paymentStatus == 'pending_cash');
 
       if (!isConfirmed) {
         throw StateError(
@@ -475,10 +433,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         Navigator.of(context).pop(true);
       }
     } catch (error) {
-      _showMessage(
-        'Booking failed: $error',
-        isError: true,
-      );
+      _showMessage('Booking failed: $error', isError: true);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -515,9 +470,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                cash
-                    ? 'Appointment Confirmed'
-                    : 'Booking Successful!',
+                cash ? 'Appointment Confirmed' : 'Booking Successful!',
                 textAlign: TextAlign.center,
               ),
             ],
@@ -528,37 +481,29 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
               Text(
                 cash
                     ? 'Your appointment is confirmed. '
-                        'Cash payment is pending.'
+                          'Cash payment is pending.'
                     : 'Your appointment is confirmed '
-                        'with a simulated card payment.',
+                          'with a simulated card payment.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 15),
               SelectableText(
                 'Booking ID:\n$appointmentId',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               const Text(
                 'The doctor will receive an '
                 'in-app notification.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: muted,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: muted, fontSize: 12),
               ),
               const SizedBox(height: 10),
               const Text(
                 'DEMO PAYMENT - No real money charged.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.orange,
-                  fontSize: 11,
-                ),
+                style: TextStyle(color: Colors.orange, fontSize: 11),
               ),
             ],
           ),
@@ -566,9 +511,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: primary,
-                ),
+                style: FilledButton.styleFrom(backgroundColor: primary),
                 onPressed: () {
                   Navigator.pop(dialogContext);
                 },
@@ -587,10 +530,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
   Widget _sectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(
-        top: 22,
-        bottom: 12,
-      ),
+      padding: const EdgeInsets.only(top: 22, bottom: 12),
       child: Text(
         title,
         style: const TextStyle(
@@ -643,18 +583,12 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                 const SizedBox(height: 5),
                 Text(
                   _specialty,
-                  style: const TextStyle(
-                    color: primaryDark,
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(color: primaryDark, fontSize: 13),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _hospital,
-                  style: const TextStyle(
-                    color: muted,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: muted, fontSize: 12),
                 ),
               ],
             ),
@@ -675,28 +609,15 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFE2E8F0),
-        ),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: ListTile(
         onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 6,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         leading: Icon(icon, color: primary),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(subtitle),
-        trailing: const Icon(
-          Icons.chevron_right,
-          color: muted,
-        ),
+        trailing: const Icon(Icons.chevron_right, color: muted),
       ),
     );
   }
@@ -735,10 +656,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       appBar: AppBar(
         title: const Text(
           'Book Appointment',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: textDark,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: textDark),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -782,24 +700,15 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                   TextField(
                     controller: _reasonController,
                     maxLines: 4,
-                    style: const TextStyle(
-                      color: textDark,
-                      fontSize: 15,
-                    ),
+                    style: const TextStyle(color: textDark, fontSize: 15),
                     decoration: InputDecoration(
-                      hintText:
-                          'Describe your reason for consultation...',
-                      hintStyle: const TextStyle(
-                        color: muted,
-                      ),
+                      hintText: 'Describe your reason for consultation...',
+                      hintStyle: const TextStyle(color: muted),
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(16),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFE2E8F0),
-                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                       ),
                     ),
                   ),
@@ -813,10 +722,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       padding: EdgeInsets.all(15),
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: primaryDark,
-                          ),
+                          Icon(Icons.info_outline, color: primaryDark),
                           SizedBox(width: 12),
                           Expanded(
                             child: Text(
@@ -844,11 +750,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
               padding: const EdgeInsets.all(16),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                border: Border(
-                  top: BorderSide(
-                    color: Color(0xFFE2E8F0),
-                  ),
-                ),
+                border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
               ),
               child: SafeArea(
                 top: false,
@@ -856,8 +758,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                   width: double.infinity,
                   height: 54,
                   child: ElevatedButton.icon(
-                    onPressed:
-                        _isLoading ? null : _confirmBooking,
+                    onPressed: _isLoading ? null : _confirmBooking,
                     icon: _isLoading
                         ? const SizedBox(
                             height: 20,
@@ -867,9 +768,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Icon(
-                            Icons.arrow_forward_rounded,
-                          ),
+                        : const Icon(Icons.arrow_forward_rounded),
                     label: Text(
                       _isLoading
                           ? 'Processing Booking...'
@@ -878,11 +777,9 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primary,
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor:
-                          const Color(0xFF9DD9C1),
+                      disabledBackgroundColor: const Color(0xFF9DD9C1),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                       textStyle: const TextStyle(
                         fontSize: 16,

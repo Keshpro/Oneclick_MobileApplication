@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+
 import '../../models/driver_application_model.dart';
 import '../../services/driver_firestore_service.dart';
 import '../../services/booking_policy.dart';
 import '../../theme/drunk_drive_colors.dart';
+
 class DriverApplicationScreen extends StatefulWidget {
   const DriverApplicationScreen({super.key});
   @override
   State<DriverApplicationScreen> createState() =>
       _DriverApplicationScreenState();
 }
+
 class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
   final DriverFirestoreService _driverService = DriverFirestoreService();
 
@@ -37,6 +40,7 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
     super.initState();
     _loadApplication();
   }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -50,6 +54,7 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
     _docNumberController.dispose();
     super.dispose();
   }
+
   Future<void> _loadApplication() async {
     if (!mounted) return;
     setState(() {
@@ -72,10 +77,13 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
       });
     }
   }
+
   Future<void> _onSubmitForm() async {
     if (_isLoading || !_formKey.currentState!.validate()) return;
     if (!_canManual && !_canAutomatic) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select at least one transmission type.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select at least one transmission type.')),
+      );
       return;
     }
     final application = DriverApplicationModel(
@@ -113,6 +121,7 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
       );
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -123,16 +132,15 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
         iconTheme: IconThemeData(color: _palette.textPrimary),
         title: Text(
           'Become a Driver',
-          style: TextStyle(color: _palette.textPrimary, fontWeight: FontWeight.w800),
+          style: TextStyle(
+            color: _palette.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
       body: SafeArea(
         child: _isLoading
-            ? Center(
-                child: CircularProgressIndicator(
-                  color: _palette.accent,
-                ),
-              )
+            ? Center(child: CircularProgressIndicator(color: _palette.accent))
             : _loadFailed
             ? _buildLoadError()
             : _application != null
@@ -141,6 +149,7 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
       ),
     );
   }
+
   Widget _buildLoadError() {
     return Center(
       child: Padding(
@@ -230,10 +239,7 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
                     ? 'Congratulations! Your driver application has been verified and approved.'
                     : 'Your application status is: ${status.label}.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: _palette.textMuted,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: _palette.textMuted, fontSize: 13),
               ),
               if (_application!.adminNotes != null) ...[
                 const SizedBox(height: 14),
@@ -276,8 +282,12 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
               _summaryRow('Phone', _application!.phone),
               _summaryRow('Licence No', _application!.licenceNumber),
               _summaryRow('Licence expiry', _application!.licenceExpiry),
-              if (status == DriverApplicationStatus.approved && !BookingPolicy.licenceValid(_application!.licenceExpiry))
-                Text('Your licence is expired or its date needs correction. Contact admin before going online.', style: TextStyle(color: _palette.danger)),
+              if (status == DriverApplicationStatus.approved &&
+                  !BookingPolicy.licenceValid(_application!.licenceExpiry))
+                Text(
+                  'Your licence is expired or its date needs correction. Contact admin before going online.',
+                  style: TextStyle(color: _palette.danger),
+                ),
               _summaryRow(
                 'Experience',
                 '${_application!.drivingExperienceYears} years',
@@ -307,6 +317,7 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
       ],
     );
   }
+
   Widget _summaryRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -315,24 +326,25 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
         children: [
           Text(
             label,
-            style: TextStyle(
-              color: _palette.textMuted,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: _palette.textMuted, fontSize: 13),
           ),
           const SizedBox(width: 12),
-          Flexible(child: Text(
-            value, textAlign: TextAlign.end,
-            style: TextStyle(
-              color: _palette.textPrimary,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                color: _palette.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
             ),
-          )),
+          ),
         ],
       ),
     );
   }
+
   Widget _buildApplicationForm() {
     return Form(
       key: _formKey,
@@ -476,6 +488,7 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
       ),
     );
   }
+
   Widget _buildTextField(
     TextEditingController controller,
     String label,
@@ -495,20 +508,25 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
             return '$label is required';
           }
           final text = value.trim();
-          if (controller == _licenceExpiryController && !BookingPolicy.licenceValid(text)) {
+          if (controller == _licenceExpiryController &&
+              !BookingPolicy.licenceValid(text)) {
             return 'Enter a valid, unexpired date (YYYY-MM-DD)';
           }
           if (controller == _dobController) {
             final birth = BookingPolicy.parseDate(text);
             final now = DateTime.now();
             final cutoff = DateTime(now.year - 18, now.month, now.day);
-            if (birth == null || birth.isAfter(cutoff)) return 'Enter a valid date; age must be 18+';
+            if (birth == null || birth.isAfter(cutoff))
+              return 'Enter a valid date; age must be 18+';
           }
           if (controller == _expYearsController) {
             final years = int.tryParse(text);
-            if (years == null || years < 0 || years > 70) return 'Enter valid years of experience';
+            if (years == null || years < 0 || years > 70)
+              return 'Enter valid years of experience';
           }
-          if (controller == _phoneController && !RegExp(r'^\+?[0-9]{9,15}$').hasMatch(text.replaceAll(' ', ''))) return 'Enter a valid phone number';
+          if (controller == _phoneController &&
+              !RegExp(r'^\+?[0-9]{9,15}$').hasMatch(text.replaceAll(' ', '')))
+            return 'Enter a valid phone number';
           return null;
         },
         decoration: InputDecoration(

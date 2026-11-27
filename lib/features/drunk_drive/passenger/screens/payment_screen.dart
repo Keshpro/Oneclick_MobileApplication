@@ -30,19 +30,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
   void initState() {
     super.initState();
     _booking = widget.booking;
-    _bookingSubscription = _bookingService.watchBooking(widget.booking.id).listen(
-      (booking) {
-        if (!mounted) return;
-        setState(() {
-          if (booking != null) _booking = booking;
-          _loadError = booking == null ? 'Booking could not be found.' : null;
-        });
-      },
-      onError: (Object _) {
-        if (!mounted) return;
-        setState(() => _loadError = 'Unable to load payment details. Check your connection and reopen this screen.');
-      },
-    );
+    _bookingSubscription = _bookingService
+        .watchBooking(widget.booking.id)
+        .listen(
+          (booking) {
+            if (!mounted) return;
+            setState(() {
+              if (booking != null) _booking = booking;
+              _loadError = booking == null
+                  ? 'Booking could not be found.'
+                  : null;
+            });
+          },
+          onError: (Object _) {
+            if (!mounted) return;
+            setState(
+              () => _loadError = 'Unable to load payment details. Check your connection and reopen this screen.',
+            );
+          },
+        );
   }
 
   @override
@@ -125,9 +131,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           content: Text(
             isCash
                 ? 'Please pay the driver directly. Your payment stays pending '
-                    'until the driver confirms receiving the cash.'
+                      'until the driver confirms receiving the cash.'
                 : 'This is a demonstration only. No real card was charged '
-                    'and this booking is not marked as paid.',
+                      'and this booking is not marked as paid.',
             style: TextStyle(color: palette.textMuted),
           ),
           actions: [
@@ -142,23 +148,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
       Navigator.pop(context, true);
     } catch (_) {
       if (!mounted) return;
-      _showMessage('Payment could not be updated. Please check your connection and try again.');
+      _showMessage(
+        'Payment could not be updated. Please check your connection and try again.',
+      );
     } finally {
       if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = DrunkDrivePalette.of(context);
     final booking = _booking;
-    final canRequest = booking.status == BookingStatus.completed &&
+    final canRequest =
+        booking.status == BookingStatus.completed &&
         booking.paymentStatus == 'unpaid' &&
         _loadError == null;
 
@@ -169,7 +177,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
         foregroundColor: palette.textPrimary,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Payment', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text(
+          'Payment',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
       ),
       body: SafeArea(
         child: ListView(
@@ -189,8 +200,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Customer to Pay',
-                      style: TextStyle(color: palette.textMuted, fontSize: 12)),
+                  Text(
+                    'Customer to Pay',
+                    style: TextStyle(color: palette.textMuted, fontSize: 12),
+                  ),
                   const SizedBox(height: 6),
                   Text(
                     'Rs. ${booking.customerAmountDue.toStringAsFixed(0)}',
@@ -205,8 +218,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   const SizedBox(height: 10),
                   _summaryRow('To', booking.destination.name, palette),
                   const SizedBox(height: 10),
-                  _summaryRow('Distance',
-                      '${booking.distanceKm.toStringAsFixed(1)} km', palette),
+                  _summaryRow(
+                    'Distance',
+                    '${booking.distanceKm.toStringAsFixed(1)} km',
+                    palette,
+                  ),
                 ],
               ),
             ),
@@ -228,14 +244,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
               ),
             ),
-            if (booking.status == BookingStatus.completed && (booking.paymentStatus == 'paid' || booking.paymentStatus == 'simulated')) ...[
+            if (booking.status == BookingStatus.completed &&
+                (booking.paymentStatus == 'paid' ||
+                    booking.paymentStatus == 'simulated')) ...[
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 icon: const Icon(Icons.receipt_long_outlined),
-                label: Text(booking.paymentStatus == 'paid' ? 'Copy payment receipt' : 'Copy simulation summary'),
+                label: Text(
+                  booking.paymentStatus == 'paid'
+                      ? 'Copy payment receipt'
+                      : 'Copy simulation summary',
+                ),
                 onPressed: () async {
                   final receipt = [
-                    booking.paymentStatus == 'paid' ? 'ONECLICK CASH RECEIPT' : 'ONECLICK DEMO — NO PAYMENT CHARGED',
+                    booking.paymentStatus == 'paid'
+                        ? 'ONECLICK CASH RECEIPT'
+                        : 'ONECLICK DEMO — NO PAYMENT CHARGED',
                     'Booking: ${booking.id}',
                     'Date: ${(booking.completedAt ?? booking.createdAt).toLocal()}',
                     'Route: ${booking.pickup.name} to ${booking.destination.name}',
@@ -253,12 +277,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ],
             if (canRequest) ...[
               const SizedBox(height: 24),
-              Text('Payment Method',
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  )),
+              Text(
+                'Payment Method',
+                style: TextStyle(
+                  color: palette.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               const SizedBox(height: 12),
               _paymentOption(
                 value: 'Cash',
@@ -289,13 +315,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline_rounded, color: palette.accent, size: 20),
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: palette.accent,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Cash payment is only recorded as paid after driver confirmation. '
                       'Card payments are simulated and do not transfer money.',
-                      style: TextStyle(color: palette.textMuted, fontSize: 12, height: 1.4),
+                      style: TextStyle(
+                        color: palette.textMuted,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
@@ -320,22 +354,27 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 backgroundColor: palette.accent,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               child: _isProcessing
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : Text(
                       !canRequest
                           ? booking.paymentStatus == 'unpaid'
-                              ? 'Available After Trip Completion'
-                              : _statusText(booking)
+                                ? 'Available After Trip Completion'
+                                : _statusText(booking)
                           : _selectedMethod == 'Cash'
-                              ? 'Request Cash Payment'
-                              : 'Simulate Card Payment',
+                          ? 'Request Cash Payment'
+                          : 'Simulate Card Payment',
                       style: const TextStyle(fontWeight: FontWeight.w800),
                       textAlign: TextAlign.center,
                     ),
@@ -358,7 +397,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
       color: palette.surface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        onTap: _isProcessing ? null : () => setState(() => _selectedMethod = value),
+        onTap: _isProcessing
+            ? null
+            : () => setState(() => _selectedMethod = value),
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -377,14 +418,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        style: TextStyle(
-                          color: palette.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        )),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: palette.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 3),
-                    Text(subtitle,
-                        style: TextStyle(color: palette.textMuted, fontSize: 11)),
+                    Text(
+                      subtitle,
+                      style: TextStyle(color: palette.textMuted, fontSize: 11),
+                    ),
                   ],
                 ),
               ),
@@ -407,7 +452,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
       children: [
         SizedBox(
           width: 75,
-          child: Text(label, style: TextStyle(color: palette.textMuted, fontSize: 12)),
+          child: Text(
+            label,
+            style: TextStyle(color: palette.textMuted, fontSize: 12),
+          ),
         ),
         Expanded(
           child: Text(

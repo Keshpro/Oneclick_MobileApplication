@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -9,12 +8,10 @@ class DoctorScheduleScreen extends StatefulWidget {
   const DoctorScheduleScreen({super.key});
 
   @override
-  State<DoctorScheduleScreen> createState() =>
-      _DoctorScheduleScreenState();
+  State<DoctorScheduleScreen> createState() => _DoctorScheduleScreenState();
 }
 
-class _DoctorScheduleScreenState
-    extends State<DoctorScheduleScreen> {
+class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
   static const Color _green = Color(0xFF059669);
   static const Color _darkGreen = Color(0xFF064E3B);
   static const Color _background = Color(0xFFF7FAF9);
@@ -44,16 +41,23 @@ class _DoctorScheduleScreenState
   }
 
   bool _sameDay(DateTime a, DateTime b) {
-    return a.year == b.year &&
-        a.month == b.month &&
-        a.day == b.day;
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   String _displayDate(DateTime date) {
     const months = [
-      'January', 'February', 'March', 'April',
-      'May', 'June', 'July', 'August',
-      'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
 
     return '${date.day} ${months[date.month - 1]} ${date.year}';
@@ -62,15 +66,18 @@ class _DoctorScheduleScreenState
   String _dayLabel(DateTime date) {
     if (_sameDay(date, DateTime.now())) return 'Today';
 
-    final tomorrow = DateTime.now().add(
-      const Duration(days: 1),
-    );
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
 
     if (_sameDay(date, tomorrow)) return 'Tomorrow';
 
     const days = [
-      'Monday', 'Tuesday', 'Wednesday',
-      'Thursday', 'Friday', 'Saturday', 'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
     ];
 
     return days[date.weekday - 1];
@@ -94,9 +101,7 @@ class _DoctorScheduleScreenState
   int _timeMinutes(dynamic raw) {
     final value = raw.toString().trim().toUpperCase();
 
-    final match = RegExp(
-      r'^(\d{1,2}):(\d{2})\s*(AM|PM)?$',
-    ).firstMatch(value);
+    final match = RegExp(r'^(\d{1,2}):(\d{2})\s*(AM|PM)?$').firstMatch(value);
 
     if (match == null) return 9999;
 
@@ -120,9 +125,7 @@ class _DoctorScheduleScreenState
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(
-        const Duration(days: 730),
-      ),
+      lastDate: DateTime.now().add(const Duration(days: 730)),
       helpText: 'Select schedule date',
     );
 
@@ -133,17 +136,13 @@ class _DoctorScheduleScreenState
 
   void _changeDay(int days) {
     setState(() {
-      _selectedDate = _selectedDate.add(
-        Duration(days: days),
-      );
+      _selectedDate = _selectedDate.add(Duration(days: days));
     });
   }
 
   void _openManageSchedule() {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const DoctorScheduleManageScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const DoctorScheduleManageScreen()),
     );
   }
 
@@ -165,17 +164,11 @@ class _DoctorScheduleScreenState
           children: [
             Text(
               'My Schedule',
-              style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w800,
-              ),
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
             ),
             Text(
               'Doctor workspace',
-              style: TextStyle(
-                color: _muted,
-                fontSize: 11,
-              ),
+              style: TextStyle(color: _muted, fontSize: 11),
             ),
           ],
         ),
@@ -183,20 +176,14 @@ class _DoctorScheduleScreenState
           IconButton(
             tooltip: 'Manage schedule',
             onPressed: _openManageSchedule,
-            icon: const Icon(
-              Icons.settings_rounded,
-              color: _purple,
-            ),
+            icon: const Icon(Icons.settings_rounded, color: _purple),
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: uid == null
-          ? const Center(
-              child: Text('Please sign in as a doctor.'),
-            )
-          : StreamBuilder<
-              QuerySnapshot<Map<String, dynamic>>>(
+          ? const Center(child: Text('Please sign in as a doctor.'))
+          : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: FirebaseFirestore.instance
                   .collection('appointments')
                   .where('doctorId', isEqualTo: uid)
@@ -211,9 +198,7 @@ class _DoctorScheduleScreenState
 
                 if (!snapshot.hasData) {
                   return const Center(
-                    child: CircularProgressIndicator(
-                      color: _green,
-                    ),
+                    child: CircularProgressIndicator(color: _green),
                   );
                 }
 
@@ -238,11 +223,8 @@ class _DoctorScheduleScreenState
                       .toLowerCase();
 
                   return date != null &&
-                      !date.isBefore(
-                        DateTime(now.year, now.month, now.day),
-                      ) &&
-                      !['cancelled', 'completed']
-                          .contains(status);
+                      !date.isBefore(DateTime(now.year, now.month, now.day)) &&
+                      !['cancelled', 'completed'].contains(status);
                 }).length;
 
                 final completedCount = docs.where((doc) {
@@ -254,21 +236,16 @@ class _DoctorScheduleScreenState
 
                 final selectedDocs = docs.where((doc) {
                   final date = _parseDate(doc.data()['date']);
-                  return date != null &&
-                      _sameDay(date, _selectedDate);
+                  return date != null && _sameDay(date, _selectedDate);
                 }).toList();
 
                 selectedDocs.sort((a, b) {
                   return _timeMinutes(a.data()['time'])
-                      .compareTo(
-                    _timeMinutes(b.data()['time']),
-                  );
+                      .compareTo(_timeMinutes(b.data()['time']));
                 });
 
                 return ListView(
-                  padding: const EdgeInsets.fromLTRB(
-                    18, 20, 18, 35,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(18, 20, 18, 35),
                   children: [
                     _hero(),
                     const SizedBox(height: 24),
@@ -348,10 +325,7 @@ class _DoctorScheduleScreenState
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            _darkGreen,
-            _green,
-          ],
+          colors: [_darkGreen, _green],
         ),
         borderRadius: BorderRadius.circular(26),
       ),
@@ -397,20 +371,14 @@ class _DoctorScheduleScreenState
 
   Widget _dateSelector() {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 10,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       decoration: _cardDecoration(),
       child: Row(
         children: [
           IconButton(
             tooltip: 'Previous day',
             onPressed: () => _changeDay(-1),
-            icon: const Icon(
-              Icons.chevron_left_rounded,
-              color: _green,
-            ),
+            icon: const Icon(Icons.chevron_left_rounded, color: _green),
           ),
           Expanded(
             child: InkWell(
@@ -443,37 +411,26 @@ class _DoctorScheduleScreenState
           IconButton(
             tooltip: 'Next day',
             onPressed: () => _changeDay(1),
-            icon: const Icon(
-              Icons.chevron_right_rounded,
-              color: _green,
-            ),
+            icon: const Icon(Icons.chevron_right_rounded, color: _green),
           ),
         ],
       ),
     );
   }
 
-  Widget _appointmentCard(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
+  Widget _appointmentCard(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
 
-    final name = (data['patientName'] ??
-            data['userEmail'] ??
-            'Patient')
+    final name = (data['patientName'] ?? data['userEmail'] ?? 'Patient')
         .toString();
 
-    final status =
-        (data['status'] ?? 'Upcoming').toString();
+    final status = (data['status'] ?? 'Upcoming').toString();
 
-    final time =
-        (data['time'] ?? 'Time not set').toString();
+    final time = (data['time'] ?? 'Time not set').toString();
 
-    final type =
-        (data['type'] ?? 'In-person').toString();
+    final type = (data['type'] ?? 'In-person').toString();
 
-    final reason =
-        (data['reason'] ?? '').toString().trim();
+    final reason = (data['reason'] ?? '').toString().trim();
 
     final color = _statusColor(status);
 
@@ -486,10 +443,7 @@ class _DoctorScheduleScreenState
         children: [
           Row(
             children: [
-              _iconBox(
-                Icons.person_rounded,
-                _blue,
-              ),
+              _iconBox(Icons.person_rounded, _blue),
               const SizedBox(width: 11),
               Expanded(
                 child: Text(
@@ -531,16 +485,8 @@ class _DoctorScheduleScreenState
             spacing: 15,
             runSpacing: 10,
             children: [
-              _detail(
-                Icons.access_time_rounded,
-                time,
-                _purple,
-              ),
-              _detail(
-                Icons.medical_services_outlined,
-                type,
-                _green,
-              ),
+              _detail(Icons.access_time_rounded, time, _purple),
+              _detail(Icons.medical_services_outlined, type, _green),
             ],
           ),
           if (reason.isNotEmpty) ...[
@@ -555,11 +501,7 @@ class _DoctorScheduleScreenState
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.notes_rounded,
-                    color: _orange,
-                    size: 18,
-                  ),
+                  const Icon(Icons.notes_rounded, color: _orange, size: 18),
                   const SizedBox(width: 9),
                   Expanded(
                     child: Text(
@@ -580,11 +522,7 @@ class _DoctorScheduleScreenState
     );
   }
 
-  Widget _detail(
-    IconData icon,
-    String value,
-    Color color,
-  ) {
+  Widget _detail(IconData icon, String value, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -602,17 +540,9 @@ class _DoctorScheduleScreenState
     );
   }
 
-  Widget _statCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _statCard(String title, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 15,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
       decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -627,13 +557,7 @@ class _DoctorScheduleScreenState
               fontWeight: FontWeight.w800,
             ),
           ),
-          Text(
-            title,
-            style: const TextStyle(
-              color: _muted,
-              fontSize: 11,
-            ),
-          ),
+          Text(title, style: const TextStyle(color: _muted, fontSize: 11)),
         ],
       ),
     );
@@ -664,13 +588,7 @@ class _DoctorScheduleScreenState
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            color: _muted,
-            fontSize: 12,
-          ),
-        ),
+        Text(subtitle, style: const TextStyle(color: _muted, fontSize: 12)),
       ],
     );
   }
@@ -682,9 +600,7 @@ class _DoctorScheduleScreenState
       child: ElevatedButton.icon(
         onPressed: _openManageSchedule,
         icon: const Icon(Icons.settings_rounded),
-        label: const Text(
-          'Manage Schedule & Availability',
-        ),
+        label: const Text('Manage Schedule & Availability'),
         style: ElevatedButton.styleFrom(
           backgroundColor: _green,
           foregroundColor: Colors.white,
@@ -708,19 +624,12 @@ class _DoctorScheduleScreenState
   Widget _emptyState(String title, String subtitle) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 32,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
       decoration: _cardDecoration(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.event_available_rounded,
-            color: _green,
-            size: 37,
-          ),
+          const Icon(Icons.event_available_rounded, color: _green, size: 37),
           const SizedBox(height: 13),
           Text(
             title,
@@ -735,10 +644,7 @@ class _DoctorScheduleScreenState
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: _muted,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: _muted, fontSize: 12),
           ),
         ],
       ),

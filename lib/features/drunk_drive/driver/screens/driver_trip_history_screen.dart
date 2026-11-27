@@ -22,12 +22,22 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
   String _filter = 'All';
   List<BookingModel> get _visibleTrips => _trips.where((b) {
     switch (_filter) {
-      case 'Completed': return b.status == BookingStatus.completed;
-      case 'Cancelled': return b.status == BookingStatus.cancelledByUser || b.status == BookingStatus.cancelledByDriver;
-      case 'Payment due': return b.status == BookingStatus.completed && (b.paymentStatus == 'unpaid' || b.paymentStatus == 'pending');
-      case 'Paid': return b.paymentStatus == 'paid';
-      case 'Last 7 days': return !b.createdAt.isBefore(DateTime.now().subtract(const Duration(days: 7)));
-      default: return true;
+      case 'Completed':
+        return b.status == BookingStatus.completed;
+      case 'Cancelled':
+        return b.status == BookingStatus.cancelledByUser ||
+            b.status == BookingStatus.cancelledByDriver;
+      case 'Payment due':
+        return b.status == BookingStatus.completed &&
+            (b.paymentStatus == 'unpaid' || b.paymentStatus == 'pending');
+      case 'Paid':
+        return b.paymentStatus == 'paid';
+      case 'Last 7 days':
+        return !b.createdAt.isBefore(
+          DateTime.now().subtract(const Duration(days: 7)),
+        );
+      default:
+        return true;
     }
   }).toList();
 
@@ -95,8 +105,8 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
     final hour = date.hour == 0
         ? 12
         : date.hour > 12
-            ? date.hour - 12
-            : date.hour;
+        ? date.hour - 12
+        : date.hour;
 
     final minute = date.minute.toString().padLeft(2, '0');
     final period = date.hour >= 12 ? 'PM' : 'AM';
@@ -115,11 +125,21 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
         backgroundColor: colors.background,
         foregroundColor: colors.textPrimary,
         elevation: 0,
-        actions: [PopupMenuButton<String>(
-          tooltip: 'Filter trips', initialValue: _filter,
-          onSelected: (value) => setState(() => _filter = value),
-          itemBuilder: (_) => ['All', 'Completed', 'Cancelled', 'Payment due', 'Paid', 'Last 7 days'].map((s) => PopupMenuItem(value: s, child: Text(s))).toList(),
-        )],
+        actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Filter trips',
+            initialValue: _filter,
+            onSelected: (value) => setState(() => _filter = value),
+            itemBuilder: (_) => [
+              'All',
+              'Completed',
+              'Cancelled',
+              'Payment due',
+              'Paid',
+              'Last 7 days',
+            ].map((s) => PopupMenuItem(value: s, child: Text(s))).toList(),
+          ),
+        ],
         title: Text(
           'Trip History',
           style: TextStyle(
@@ -131,68 +151,76 @@ class _DriverTripHistoryScreenState extends State<DriverTripHistoryScreen> {
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: colors.accent))
           : _loadError != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.wifi_off_rounded,
+                      size: 48,
+                      color: colors.textMuted,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _loadError!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: colors.textMuted, fontSize: 14),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _loadTrips,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadTrips,
+              color: colors.accent,
+              backgroundColor: colors.surface,
+              child: visible.isEmpty
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       children: [
-                        Icon(Icons.wifi_off_rounded, size: 48, color: colors.textMuted),
-                        const SizedBox(height: 12),
-                        Text(
-                          _loadError!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: colors.textMuted, fontSize: 14),
+                        const SizedBox(height: 180),
+                        Icon(
+                          Icons.history_rounded,
+                          size: 56,
+                          color: colors.textMuted,
                         ),
                         const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: _loadTrips,
-                          icon: const Icon(Icons.refresh_rounded),
-                          label: const Text('Retry'),
+                        Center(
+                          child: Text(
+                            'No trips match this filter.',
+                            style: TextStyle(
+                              color: colors.textMuted,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ],
+                    )
+                  : ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(20),
+                      itemCount: visible.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final booking = visible[index];
+                        return _TripHistoryCard(
+                          booking: booking,
+                          statusLabel: _statusLabel(booking.status),
+                          statusColor: _statusColor(booking.status, colors),
+                          dateText: _formatDate(booking),
+                        );
+                      },
                     ),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadTrips,
-                  color: colors.accent,
-                  backgroundColor: colors.surface,
-                  child: visible.isEmpty
-                      ? ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          children: [
-                            const SizedBox(height: 180),
-                            Icon(Icons.history_rounded, size: 56, color: colors.textMuted),
-                            const SizedBox(height: 16),
-                            Center(
-                              child: Text(
-                                'No trips match this filter.',
-                                style: TextStyle(
-                                  color: colors.textMuted,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : ListView.separated(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.all(20),
-                          itemCount: visible.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final booking = visible[index];
-                            return _TripHistoryCard(
-                              booking: booking,
-                              statusLabel: _statusLabel(booking.status),
-                              statusColor: _statusColor(booking.status, colors),
-                              dateText: _formatDate(booking),
-                            );
-                          },
-                        ),
-                ),
+            ),
     );
   }
 }
@@ -269,22 +297,30 @@ class _TripHistoryCard extends StatelessWidget {
           ),
           if (isCompleted) ...[
             const SizedBox(height: 8),
-            _InfoRow(icon: Icons.payments_outlined, text: booking.paymentStatus == 'paid' ? 'Cash confirmed' : booking.paymentStatus == 'pending' ? 'Cash pending' : booking.paymentStatus == 'simulated' ? 'Simulated (not paid)' : 'Unpaid'),
+            _InfoRow(
+              icon: Icons.payments_outlined,
+              text: booking.paymentStatus == 'paid'
+                  ? 'Cash confirmed'
+                  : booking.paymentStatus == 'pending'
+                  ? 'Cash pending'
+                  : booking.paymentStatus == 'simulated'
+                  ? 'Simulated (not paid)'
+                  : 'Unpaid',
+            ),
           ],
           if (booking.cancellationReason != null) ...[
             const SizedBox(height: 8),
-            _InfoRow(icon: Icons.info_outline, text: 'Cancellation: ${booking.cancellationReason}'),
+            _InfoRow(
+              icon: Icons.info_outline,
+              text: 'Cancellation: ${booking.cancellationReason}',
+            ),
           ],
           const SizedBox(height: 14),
           Divider(color: colors.surfaceBorder, height: 1),
           const SizedBox(height: 12),
           Row(
             children: [
-              Icon(
-                Icons.schedule_rounded,
-                color: colors.textMuted,
-                size: 16,
-              ),
+              Icon(Icons.schedule_rounded, color: colors.textMuted, size: 16),
               const SizedBox(width: 6),
               Flexible(
                 child: Text(

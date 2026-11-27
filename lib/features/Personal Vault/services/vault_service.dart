@@ -27,146 +27,138 @@ class VaultService {
         .doc(_userId)
         .collection('vaultRecords');
   }
-    Future<String?> uploadFile({
+
+  Future<String?> uploadFile({
     required String fileName,
     required Uint8List bytes,
   }) async {
-    return _storageService.uploadFile(
-      fileName: fileName,
-      bytes: bytes,
-    );
+    return _storageService.uploadFile(fileName: fileName, bytes: bytes);
   }
 
-Future<void> addRecord({
-  required String title,
-  required String recordType,
-  required String category,
-  required String notes,
-  required List<String> tags,
-  required DateTime renewalDate,
-  required bool expiryNotification,
-  String? fileName,
-  String? fileUrl,
-  String? filePath,
-  String? merchant,
-  DateTime? purchaseDate,
-  String? amount,
-}) async {
+  Future<void> addRecord({
+    required String title,
+    required String recordType,
+    required String category,
+    required String notes,
+    required List<String> tags,
+    required DateTime renewalDate,
+    required bool expiryNotification,
+    String? fileName,
+    String? fileUrl,
+    String? filePath,
+    String? merchant,
+    DateTime? purchaseDate,
+    String? amount,
+  }) async {
     final doc = _recordsCollection.doc();
 
-final record = VaultRecord(
-  id: doc.id,
-  userId: _userId,
-  title: title,
-  recordType: recordType,
-  category: category,
-  notes: notes,
-  tags: tags,
-  renewalDate: renewalDate,
-  expiryNotification: expiryNotification,
-  fileName: fileName,
-  fileUrl: fileUrl,
-  filePath: filePath,
-  merchant: merchant,
-  purchaseDate: purchaseDate,
-  amount: amount,
-  createdAt: DateTime.now(),
-);
+    final record = VaultRecord(
+      id: doc.id,
+      userId: _userId,
+      title: title,
+      recordType: recordType,
+      category: category,
+      notes: notes,
+      tags: tags,
+      renewalDate: renewalDate,
+      expiryNotification: expiryNotification,
+      fileName: fileName,
+      fileUrl: fileUrl,
+      filePath: filePath,
+      merchant: merchant,
+      purchaseDate: purchaseDate,
+      amount: amount,
+      createdAt: DateTime.now(),
+    );
 
     await doc.set(record.toMap());
   }
 
-Future<void> deleteRecord(String recordId) async {
-  final recordRef = _recordsCollection.doc(recordId);
+  Future<void> deleteRecord(String recordId) async {
+    final recordRef = _recordsCollection.doc(recordId);
 
-  // Retrieve the record before deleting it.
-  final snapshot = await recordRef.get();
+    // Retrieve the record before deleting it.
+    final snapshot = await recordRef.get();
 
-  if (!snapshot.exists) {
-    throw Exception('Record not found.');
+    if (!snapshot.exists) {
+      throw Exception('Record not found.');
+    }
+
+    final data = snapshot.data();
+    final filePath = data?['filePath'] as String?;
+
+    // Delete the uploaded file from Supabase first.
+    if (filePath != null && filePath.isNotEmpty) {
+      await _storageService.deleteFile(path: filePath);
+    }
+
+    // Delete the Firestore record after successful file deletion.
+    await recordRef.delete();
   }
 
-  final data = snapshot.data();
-  final filePath = data?['filePath'] as String?;
+  Future<void> updateRecord({
+    required String recordId,
+    required String title,
+    required String category,
+    required String recordType,
+    required String notes,
+    required List<String> tags,
+    DateTime? renewalDate,
+    bool? expiryNotification,
+    String? merchant,
+    DateTime? purchaseDate,
+    String? amount,
+  }) async {
+    final updates = <String, dynamic>{
+      'title': title,
+      'category': category,
+      'recordType': recordType,
+      'notes': notes,
+      'tags': tags,
+    };
 
-  // Delete the uploaded file from Supabase first.
-  if (filePath != null && filePath.isNotEmpty) {
-    await _storageService.deleteFile(path: filePath);
+    if (renewalDate != null) {
+      updates['renewalDate'] = Timestamp.fromDate(renewalDate);
+    }
+
+    if (expiryNotification != null) {
+      updates['expiryNotification'] = expiryNotification;
+    }
+
+    if (merchant != null) {
+      updates['merchant'] = merchant;
+    }
+
+    if (purchaseDate != null) {
+      updates['purchaseDate'] = Timestamp.fromDate(purchaseDate);
+    }
+
+    if (amount != null) {
+      updates['amount'] = amount;
+    }
+
+    await _recordsCollection.doc(recordId).update(updates);
   }
 
-  // Delete the Firestore record after successful file deletion.
-  await recordRef.delete();
-}
-
-Future<void> updateRecord({
-  required String recordId,
-  required String title,
-  required String category,
-  required String recordType,
-  required String notes,
-  required List<String> tags,
-  DateTime? renewalDate,
-  bool? expiryNotification,
-  String? merchant,
-  DateTime? purchaseDate,
-  String? amount,
-}) async {
-  final updates = <String, dynamic>{
-    'title': title,
-    'category': category,
-    'recordType': recordType,
-    'notes': notes,
-    'tags': tags,
-  };
-
-  if (renewalDate != null) {
-    updates['renewalDate'] = Timestamp.fromDate(renewalDate);
+  Future<void> updateRecordCategory({
+    required String recordId,
+    required String category,
+  }) async {
+    await _recordsCollection.doc(recordId).update({'category': category});
   }
 
-  if (expiryNotification != null) {
-    updates['expiryNotification'] = expiryNotification;
+  Future<void> updateFavorite({
+    required String recordId,
+    required bool isFavorite,
+  }) async {
+    await _recordsCollection.doc(recordId).update({'isFavorite': isFavorite});
   }
 
-  if (merchant != null) {
-    updates['merchant'] = merchant;
+  Future<void> markRecordOpened({required String recordId}) async {
+    await _recordsCollection.doc(recordId).update({
+      'lastOpenedAt': FieldValue.serverTimestamp(),
+    });
   }
-
-  if (purchaseDate != null) {
-    updates['purchaseDate'] = Timestamp.fromDate(purchaseDate);
-  }
-
-  if (amount != null) {
-    updates['amount'] = amount;
-  }
-
-  await _recordsCollection.doc(recordId).update(updates);
-}
-
-Future<void> updateRecordCategory({
-  required String recordId,
-  required String category,
-}) async {
-  await _recordsCollection.doc(recordId).update({
-    'category': category,
-  });
-}
-
-Future<void> updateFavorite({
-  required String recordId,
-  required bool isFavorite,
-}) async {
-  await _recordsCollection.doc(recordId).update({
-    'isFavorite': isFavorite,
-  });
-}
-
-Future<void> markRecordOpened({
-  required String recordId,
-}) async {
-  await _recordsCollection.doc(recordId).update({
-    'lastOpenedAt': FieldValue.serverTimestamp(),
-  });
-}
 
   Stream<List<VaultRecord>> getRecords() {
     return _recordsCollection
@@ -174,12 +166,7 @@ Future<void> markRecordOpened({
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-              .map(
-                (doc) => VaultRecord.fromMap(
-                  doc.id,
-                  doc.data(),
-                ),
-              )
+              .map((doc) => VaultRecord.fromMap(doc.id, doc.data()))
               .toList(),
         );
   }

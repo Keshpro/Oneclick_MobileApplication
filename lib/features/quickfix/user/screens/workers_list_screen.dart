@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'worker_profile_screen.dart'; // Import Worker Profile Screen
+
 import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
 
 class WorkersListScreen extends StatelessWidget {
@@ -10,16 +12,17 @@ class WorkersListScreen extends StatelessWidget {
   const WorkersListScreen({super.key, required this.categoryName});
 
   void _navigateToWorkerProfile(
-      BuildContext context, Map<String, dynamic> workerData, String workerDocId) {
+    BuildContext context,
+    Map<String, dynamic> workerData,
+    String workerDocId,
+  ) {
     final Map<String, dynamic> fullData = Map.from(workerData);
     fullData['id'] = workerDocId;
     fullData['category'] = categoryName;
 
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => WorkerProfileScreen(worker: fullData),
-      ),
+      MaterialPageRoute(builder: (_) => WorkerProfileScreen(worker: fullData)),
     );
   }
 
@@ -57,15 +60,19 @@ class WorkersListScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.person_off_outlined,
-                        size: 64,
-                        color: AppColors.textSecondary.withValues(alpha: 0.6)),
+                    Icon(
+                      Icons.person_off_outlined,
+                      size: 64,
+                      color: AppColors.textSecondary.withValues(alpha: 0.6),
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       'No $categoryName experts available right now.',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                          color: AppColors.textSecondary, fontSize: 14),
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -82,10 +89,11 @@ class WorkersListScreen extends StatelessWidget {
               final name = worker['name'] ?? 'Expert Technician';
               final providerDetails =
                   worker['providerDetails'] as Map<String, dynamic>? ?? {};
-              final experience =
-                  providerDetails['experienceYears'] ?? '3+';
+              final experience = providerDetails['experienceYears'] ?? '3+';
               final hourlyRate =
-                  providerDetails['hourlyRate'] ?? worker['hourlyRate'] ?? '1500';
+                  providerDetails['hourlyRate'] ??
+                  worker['hourlyRate'] ??
+                  '1500';
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -94,8 +102,8 @@ class WorkersListScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppRadius.card),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(AppRadius.card),
-                    onTap: () => _navigateToWorkerProfile(
-                        context, worker, workerDoc.id),
+                    onTap: () =>
+                        _navigateToWorkerProfile(context, worker, workerDoc.id),
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -112,10 +120,14 @@ class WorkersListScreen extends StatelessWidget {
                         children: [
                           CircleAvatar(
                             radius: 28,
-                            backgroundColor:
-                                AppColors.primary.withValues(alpha: 0.12),
-                            child: const Icon(Icons.handyman_rounded,
-                                color: AppColors.primary, size: 28),
+                            backgroundColor: AppColors.primary.withValues(
+                              alpha: 0.12,
+                            ),
+                            child: const Icon(
+                              Icons.handyman_rounded,
+                              color: AppColors.primary,
+                              size: 28,
+                            ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -134,8 +146,9 @@ class WorkersListScreen extends StatelessWidget {
                                 Text(
                                   'Exp: $experience yrs • LKR $hourlyRate/hr',
                                   style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary),
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                  ),
                                 ),
                               ],
                             ),

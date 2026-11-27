@@ -5,6 +5,7 @@ import '../../../core/services/auth_service.dart';
 import '../../../shared/models/user_model.dart';
 import 'pending_approval_screen.dart';
 import 'provider_rules_screen.dart';
+
 import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
 
 class RegisterScreen extends StatefulWidget {
@@ -288,7 +289,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           )
                         : const Text(
                             'CREATE ACCOUNT',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                   ),
                 ),
@@ -353,7 +357,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             height: 48,
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: .12),
-                              borderRadius: BorderRadius.circular(AppRadius.button),
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.button,
+                              ),
                             ),
                             child: const Icon(
                               Icons.work_outline_rounded,
@@ -401,7 +407,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const Text(
                   'Provider applications are reviewed before activation.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -418,7 +427,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required IconData icon,
     Widget? suffix,
   }) {
-    OutlineInputBorder outline(Color color, [double width = 1]) => OutlineInputBorder(
+    OutlineInputBorder outline(Color color, [double width = 1]) =>
+        OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.button),
           borderSide: BorderSide(color: color, width: width),
         );

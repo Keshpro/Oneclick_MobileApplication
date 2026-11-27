@@ -34,7 +34,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Edit $title', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Edit $title',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: TextField(
           controller: controller,
           decoration: InputDecoration(
@@ -50,20 +53,28 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           ElevatedButton(
             onPressed: () async {
               final newValue = controller.text.trim();
-              await FirebaseFirestore.instance.collection('users').doc(uid).set({
-                firestoreKey: newValue,
-                'updatedAt': FieldValue.serverTimestamp(),
-              }, SetOptions(merge: true));
+              await FirebaseFirestore.instance.collection('users').doc(uid).set(
+                {
+                  firestoreKey: newValue,
+                  'updatedAt': FieldValue.serverTimestamp(),
+                },
+                SetOptions(merge: true),
+              );
 
               if (!dialogContext.mounted) return;
               Navigator.pop(dialogContext);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('$title updated successfully!'), backgroundColor: _primary),
+                SnackBar(
+                  content: Text('$title updated successfully!'),
+                  backgroundColor: _primary,
+                ),
               );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: _primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: const Text('Save', style: TextStyle(color: Colors.white)),
           ),
@@ -99,14 +110,21 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
       ),
       body: SafeArea(
         child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
 
             final data = snapshot.data?.data() ?? {};
-            final name = data['name'] ?? user.displayName ?? user.email?.split('@').first ?? 'Patient';
+            final name =
+                data['name'] ??
+                user.displayName ??
+                user.email?.split('@').first ??
+                'Patient';
             final email = user.email ?? 'patient@oneclick.health';
             final bloodGroup = data['bloodGroup'] ?? 'O+';
             final height = data['height'] ?? '172 cm';
@@ -159,7 +177,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 email,
-                                style: const TextStyle(fontSize: 12, color: _muted),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: _muted,
+                                ),
                               ),
                               const SizedBox(height: 8),
                               Container(
@@ -194,7 +215,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     children: [
                       Expanded(
                         child: InkWell(
-                          onTap: () => _showEditDialog(title: 'Blood Group', initialValue: bloodGroup, firestoreKey: 'bloodGroup'),
+                          onTap: () => _showEditDialog(
+                            title: 'Blood Group',
+                            initialValue: bloodGroup,
+                            firestoreKey: 'bloodGroup',
+                          ),
                           borderRadius: BorderRadius.circular(18),
                           child: _vitalCard(
                             icon: Icons.bloodtype_outlined,
@@ -207,7 +232,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: InkWell(
-                          onTap: () => _showEditDialog(title: 'Height', initialValue: height, firestoreKey: 'height'),
+                          onTap: () => _showEditDialog(
+                            title: 'Height',
+                            initialValue: height,
+                            firestoreKey: 'height',
+                          ),
                           borderRadius: BorderRadius.circular(18),
                           child: _vitalCard(
                             icon: Icons.height_rounded,
@@ -220,7 +249,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: InkWell(
-                          onTap: () => _showEditDialog(title: 'Weight', initialValue: weight, firestoreKey: 'weight'),
+                          onTap: () => _showEditDialog(
+                            title: 'Weight',
+                            initialValue: weight,
+                            firestoreKey: 'weight',
+                          ),
                           borderRadius: BorderRadius.circular(18),
                           child: _vitalCard(
                             icon: Icons.monitor_weight_outlined,
@@ -253,7 +286,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       title: 'Allergies',
                       subtitle: allergies,
                       iconColor: Colors.amber[700]!,
-                      onTap: () => _showEditDialog(title: 'Allergies', initialValue: allergies, firestoreKey: 'allergies'),
+                      onTap: () => _showEditDialog(
+                        title: 'Allergies',
+                        initialValue: allergies,
+                        firestoreKey: 'allergies',
+                      ),
                     ),
                     const Divider(height: 1),
                     _profileListTile(
@@ -261,7 +298,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       title: 'Chronic Conditions',
                       subtitle: conditions,
                       iconColor: _primary,
-                      onTap: () => _showEditDialog(title: 'Chronic Conditions', initialValue: conditions, firestoreKey: 'conditions'),
+                      onTap: () => _showEditDialog(
+                        title: 'Chronic Conditions',
+                        initialValue: conditions,
+                        firestoreKey: 'conditions',
+                      ),
                     ),
                     const Divider(height: 1),
                     _profileListTile(
@@ -269,7 +310,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       title: 'Emergency Contact',
                       subtitle: emergencyContact,
                       iconColor: _red,
-                      onTap: () => _showEditDialog(title: 'Emergency Contact', initialValue: emergencyContact, firestoreKey: 'emergencyContact'),
+                      onTap: () => _showEditDialog(
+                        title: 'Emergency Contact',
+                        initialValue: emergencyContact,
+                        firestoreKey: 'emergencyContact',
+                      ),
                     ),
                   ]),
 
@@ -295,7 +340,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       iconColor: Colors.purple,
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Notifications are managed via system settings.')),
+                          const SnackBar(
+                            content: Text(
+                              'Notifications are managed via system settings.',
+                            ),
+                          ),
                         );
                       },
                     ),
@@ -307,7 +356,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       iconColor: Colors.indigo,
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Account secured with Firebase Authentication.')),
+                          const SnackBar(
+                            content: Text(
+                              'Account secured with Firebase Authentication.',
+                            ),
+                          ),
                         );
                       },
                     ),
@@ -368,10 +421,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
         children: [
           Icon(icon, color: color, size: 22),
           const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 10, color: _muted),
-          ),
+          Text(title, style: const TextStyle(fontSize: 10, color: _muted)),
           const SizedBox(height: 2),
           Text(
             value,
@@ -410,7 +460,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.1),
+          color: iconColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: iconColor, size: 20),

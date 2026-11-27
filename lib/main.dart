@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -14,13 +13,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 1. Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // 2. Supabase Configuration
-  const supabaseUrl =
-      'https://ptustmvvlnddubqqowmp.supabase.co';
+  const supabaseUrl = 'https://ptustmvvlnddubqqowmp.supabase.co';
 
   const supabasePublishableKey =
       'sb_publishable_XSwpu4rj_ZBjMS-GKdo1rA_S0Nga1A9';
@@ -47,14 +43,11 @@ Future<void> main() async {
   } else {
     // Configure a real reCAPTCHA v3 site key
     // before enabling Web App Check.
-    const recaptchaSiteKey =
-        String.fromEnvironment('RECAPTCHA_V3_SITE_KEY');
+    const recaptchaSiteKey = String.fromEnvironment('RECAPTCHA_V3_SITE_KEY');
 
     if (recaptchaSiteKey.isNotEmpty) {
       await FirebaseAppCheck.instance.activate(
-        providerWeb: ReCaptchaV3Provider(
-          recaptchaSiteKey,
-        ),
+        providerWeb: ReCaptchaV3Provider(recaptchaSiteKey),
       );
     }
   }

@@ -1,7 +1,9 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
 import 'add_record_screen.dart';
 import 'record_details_screen.dart';
 import 'subscriptions_screen.dart';
@@ -10,7 +12,9 @@ import 'dashboard.dart';
 import 'sharing_center_screen.dart';
 import 'share_record_screen.dart';
 import '../services/vault_service.dart';
+
 import 'dart:async';
+
 import '../models/vault_record.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -36,7 +40,7 @@ class _VaultScreenState extends State<VaultScreen> {
     'Work',
     'Finance',
     'Medical',
-    'Identity'
+    'Identity',
   ];
   // ignore: unused_field
   static const List<String> tags = [
@@ -44,7 +48,7 @@ class _VaultScreenState extends State<VaultScreen> {
     'Urgent',
     'Taxes',
     'Insurance',
-    'Bills'
+    'Bills',
   ];
 
   String _query = '';
@@ -93,9 +97,7 @@ class _VaultScreenState extends State<VaultScreen> {
   }
 
   void _showSearchFilterPanel() {
-    final searchController = TextEditingController(
-      text: _query,
-    );
+    final searchController = TextEditingController(text: _query);
 
     String tempFilter = _filter;
     bool tempAscending = _ascending;
@@ -105,9 +107,7 @@ class _VaultScreenState extends State<VaultScreen> {
       isScrollControlled: true,
       backgroundColor: const Color(0xFFF8FAFC),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetContext) {
         return StatefulBuilder(
@@ -117,11 +117,11 @@ class _VaultScreenState extends State<VaultScreen> {
             final matches = searchText.isEmpty
                 ? <_VaultItem>[]
                 : _items
-                    .where(
-                      (item) => item.title.toLowerCase().contains(searchText),
-                    )
-                    .take(5)
-                    .toList();
+                      .where(
+                        (item) => item.title.toLowerCase().contains(searchText),
+                      )
+                      .take(5)
+                      .toList();
 
             return SafeArea(
               child: Padding(
@@ -151,10 +151,7 @@ class _VaultScreenState extends State<VaultScreen> {
                           onPressed: () {
                             Navigator.pop(sheetContext);
                           },
-                          icon: const Icon(
-                            Icons.close,
-                            color: muted,
-                          ),
+                          icon: const Icon(Icons.close, color: muted),
                         ),
                       ],
                     ),
@@ -167,10 +164,7 @@ class _VaultScreenState extends State<VaultScreen> {
                       },
                       decoration: InputDecoration(
                         hintText: 'Search Vault records...',
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: muted,
-                        ),
+                        prefixIcon: const Icon(Icons.search, color: muted),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -210,8 +204,8 @@ class _VaultScreenState extends State<VaultScreen> {
                                   item.type == 'Account'
                                       ? Icons.account_circle_outlined
                                       : item.type == 'Receipt'
-                                          ? Icons.receipt_long_outlined
-                                          : Icons.description_outlined,
+                                      ? Icons.receipt_long_outlined
+                                      : Icons.description_outlined,
                                   color: purple,
                                 ),
                                 title: Text(item.title),
@@ -235,7 +229,8 @@ class _VaultScreenState extends State<VaultScreen> {
                                         purchaseDate: item.purchaseDate,
                                         amount: item.amount,
                                         renewalDate: item.renewalDate,
-                                        expiryNotification: item.expiryNotification,
+                                        expiryNotification:
+                                            item.expiryNotification,
                                       ),
                                     ),
                                   );
@@ -258,31 +253,29 @@ class _VaultScreenState extends State<VaultScreen> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: [
-                        'All',
-                        'Documents',
-                        'Accounts',
-                        'Receipts',
-                        'Favorites',
-                      ].map((filter) {
-                        return ChoiceChip(
-                          label: Text(filter),
-                          selected: tempFilter == filter,
-                          onSelected: (_) {
-                            setModalState(() {
-                              tempFilter = filter;
-                            });
-                          },
-                        );
-                      }).toList(),
+                      children:
+                          [
+                            'All',
+                            'Documents',
+                            'Accounts',
+                            'Receipts',
+                            'Favorites',
+                          ].map((filter) {
+                            return ChoiceChip(
+                              label: Text(filter),
+                              selected: tempFilter == filter,
+                              onSelected: (_) {
+                                setModalState(() {
+                                  tempFilter = filter;
+                                });
+                              },
+                            );
+                          }).toList(),
                     ),
                     const SizedBox(height: 22),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const Icon(
-                        Icons.swap_vert,
-                        color: purple,
-                      ),
+                      leading: const Icon(Icons.swap_vert, color: purple),
                       title: const Text(
                         'Sort records',
                         style: TextStyle(
@@ -290,9 +283,7 @@ class _VaultScreenState extends State<VaultScreen> {
                           color: ink,
                         ),
                       ),
-                      subtitle: Text(
-                        tempAscending ? 'A to Z' : 'Z to A',
-                      ),
+                      subtitle: Text(tempAscending ? 'A to Z' : 'Z to A'),
                       trailing: Switch(
                         value: tempAscending,
                         activeThumbColor: purple,
@@ -319,18 +310,14 @@ class _VaultScreenState extends State<VaultScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: purple,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 15,
-                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
                         child: const Text(
                           'Apply',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),
@@ -370,11 +357,12 @@ class _VaultScreenState extends State<VaultScreen> {
         ...item.tags,
       ].join(' ').toLowerCase().contains(query);
 
-      final matchesFilter = _filter == 'All' ||
-        (_filter == 'Documents' && item.type == 'Document') ||
-        (_filter == 'Accounts' && item.type == 'Account') ||
-        (_filter == 'Receipts' && item.type == 'Receipt') ||
-        (_filter == 'Favorites' && item.favorite);
+      final matchesFilter =
+          _filter == 'All' ||
+          (_filter == 'Documents' && item.type == 'Document') ||
+          (_filter == 'Accounts' && item.type == 'Account') ||
+          (_filter == 'Receipts' && item.type == 'Receipt') ||
+          (_filter == 'Favorites' && item.favorite);
 
       final matchesFolder = _folder == null || item.folder == _folder;
       final matchesTag = _tag == null || item.tags.contains(_tag);
@@ -661,8 +649,7 @@ class _VaultScreenState extends State<VaultScreen> {
                     style: const TextStyle(color: muted),
                   ),
                   const SizedBox(height: 24),
-                  
-                  
+
                   _VaultSearchSurface(
                     padding: EdgeInsets.zero,
                     child: InkWell(
@@ -675,30 +662,20 @@ class _VaultScreenState extends State<VaultScreen> {
                         ),
                         child: Row(
                           children: [
-                            _VaultReferenceIcon(
-                              Icons.search,
-                              color: muted,
-                            ),
+                            _VaultReferenceIcon(Icons.search, color: muted),
                             SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 'Search items, tags, folders...',
-                                style: TextStyle(
-                                  color: muted,
-                                  fontSize: 14,
-                                ),
+                                style: TextStyle(color: muted, fontSize: 14),
                               ),
                             ),
-                            _VaultReferenceIcon(
-                              Icons.tune,
-                              color: purple,
-                            ),
+                            _VaultReferenceIcon(Icons.tune, color: purple),
                           ],
                         ),
                       ),
                     ),
                   ),
-
 
                   const SizedBox(height: 28),
 
@@ -930,11 +907,11 @@ class _VaultScreenState extends State<VaultScreen> {
             Row(
               children: [
                 Expanded(
-                child: Text(
-                  item.folder,
-                  style: const TextStyle(color: muted, fontSize: 12),
+                  child: Text(
+                    item.folder,
+                    style: const TextStyle(color: muted, fontSize: 12),
+                  ),
                 ),
-              ),
                 IconButton(
                   tooltip: 'Share',
                   onPressed: () => _shareRecord(item),
@@ -1170,10 +1147,10 @@ class _VaultScreenState extends State<VaultScreen> {
   }
 
   @override
-void dispose() {
-  _recordsSubscription?.cancel();
-  super.dispose();
-}
+  void dispose() {
+    _recordsSubscription?.cancel();
+    super.dispose();
+  }
 }
 
 class _VaultItem {
@@ -1399,31 +1376,19 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) => SizedBox(
-          width: widget.size,
-          height: widget.size,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              if (widget.ping)
-                Transform.scale(
-                  scale: 1 + _controller.value,
-                  child: Opacity(
-                    opacity: (1 - _controller.value) * 0.75,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: widget.color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                ),
-              Opacity(
-                opacity: widget.ping || !widget.animate
-                    ? 1
-                    : 1 - _controller.value * 0.5,
+    animation: _controller,
+    builder: (context, child) => SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          if (widget.ping)
+            Transform.scale(
+              scale: 1 + _controller.value,
+              child: Opacity(
+                opacity: (1 - _controller.value) * 0.75,
                 child: Container(
                   decoration: BoxDecoration(
                     color: widget.color,
@@ -1431,18 +1396,30 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
                   ),
                 ),
               ),
-            ],
+            ),
+          Opacity(
+            opacity: widget.ping || !widget.animate
+                ? 1
+                : 1 - _controller.value * 0.5,
+            child: Container(
+              decoration: BoxDecoration(
+                color: widget.color,
+                shape: BoxShape.circle,
+              ),
+            ),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 class _VaultNavGlyph extends StatefulWidget {
   const _VaultNavGlyph(
-  this.icon, {
-  // ignore: unused_element_parameter
-  this.color,
-});
+    this.icon, {
+    // ignore: unused_element_parameter
+    this.color,
+  });
   final IconData icon;
   final Color? color;
 
@@ -1456,30 +1433,31 @@ class _VaultNavGlyphState extends State<_VaultNavGlyph> {
 
   @override
   Widget build(BuildContext context) => MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() {
-          _hovered = false;
-          _pressed = false;
-        }),
-        child: Listener(
-          onPointerDown: (_) => setState(() => _pressed = true),
-          onPointerUp: (_) => setState(() => _pressed = false),
-          onPointerCancel: (_) => setState(() => _pressed = false),
-          child: AnimatedScale(
-            scale: _pressed ? 0.95 : 1,
-            duration: const Duration(milliseconds: 200),
-            child: _VaultReferenceIcon(
-              widget.icon,
-              size: 20,
-              color: widget.color ??
-                  (_hovered
-                      ? const Color(0xFF1E293B)
-                      : IconTheme.of(context).color ?? const Color(0xFF94A3B8)),
-            ),
-          ),
+    cursor: SystemMouseCursors.click,
+    onEnter: (_) => setState(() => _hovered = true),
+    onExit: (_) => setState(() {
+      _hovered = false;
+      _pressed = false;
+    }),
+    child: Listener(
+      onPointerDown: (_) => setState(() => _pressed = true),
+      onPointerUp: (_) => setState(() => _pressed = false),
+      onPointerCancel: (_) => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.95 : 1,
+        duration: const Duration(milliseconds: 200),
+        child: _VaultReferenceIcon(
+          widget.icon,
+          size: 20,
+          color:
+              widget.color ??
+              (_hovered
+                  ? const Color(0xFF1E293B)
+                  : IconTheme.of(context).color ?? const Color(0xFF94A3B8)),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _VaultReferenceIcon extends StatelessWidget {

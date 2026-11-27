@@ -11,10 +11,7 @@ class GroceryAudit extends StatefulWidget {
 class _GroceryAuditState extends State<GroceryAudit> {
   final Set<String> _updatingIds = {};
 
-  Future<void> _updateProductStatus(
-    String productId,
-    String status,
-  ) async {
+  Future<void> _updateProductStatus(String productId, String status) async {
     if (_updatingIds.contains(productId)) return;
 
     setState(() => _updatingIds.add(productId));
@@ -24,9 +21,9 @@ class _GroceryAuditState extends State<GroceryAudit> {
           .collection('grocery_products')
           .doc(productId)
           .update({
-        'status': status,
-        'reviewedAt': FieldValue.serverTimestamp(),
-      });
+            'status': status,
+            'reviewedAt': FieldValue.serverTimestamp(),
+          });
 
       if (!mounted) return;
 
@@ -42,9 +39,8 @@ class _GroceryAuditState extends State<GroceryAudit> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Update failed: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Update failed: $e')));
     } finally {
       if (mounted) {
         setState(() => _updatingIds.remove(productId));
@@ -66,23 +62,17 @@ class _GroceryAuditState extends State<GroceryAudit> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(
-              child: Text('Unable to load grocery products'),
-            );
+            return const Center(child: Text('Unable to load grocery products'));
           }
 
           if (!snapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           final items = snapshot.data!.docs;
 
           if (items.isEmpty) {
-            return const Center(
-              child: Text('No grocery products available'),
-            );
+            return const Center(child: Text('No grocery products available'));
           }
 
           return ListView.builder(
@@ -92,11 +82,9 @@ class _GroceryAuditState extends State<GroceryAudit> {
               final doc = items[index];
               final item = doc.data();
 
-              final status =
-                  (item['status'] ?? 'pending').toString();
+              final status = (item['status'] ?? 'pending').toString();
 
-              final price =
-                  (item['price'] as num?)?.toDouble() ?? 0.0;
+              final price = (item['price'] as num?)?.toDouble() ?? 0.0;
 
               final isUpdating = _updatingIds.contains(doc.id);
 
@@ -109,10 +97,7 @@ class _GroceryAuditState extends State<GroceryAudit> {
                     children: [
                       Row(
                         children: [
-                          const Icon(
-                            Icons.shopping_cart,
-                            color: Colors.purple,
-                          ),
+                          const Icon(Icons.shopping_cart, color: Colors.purple),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -127,31 +112,20 @@ class _GroceryAuditState extends State<GroceryAudit> {
                         ],
                       ),
                       const Divider(),
-                      Text(
-                        'Seller: ${item['sellerName'] ?? 'Unknown Seller'}',
-                      ),
-                      Text(
-                        'Item: ${item['name'] ?? 'Unknown Product'}',
-                      ),
-                      Text(
-                        'Category: ${item['category'] ?? 'Unknown'}',
-                      ),
+                      Text('Seller: ${item['sellerName'] ?? 'Unknown Seller'}'),
+                      Text('Item: ${item['name'] ?? 'Unknown Product'}'),
+                      Text('Category: ${item['category'] ?? 'Unknown'}'),
                       Text('Price: Rs. ${price.toStringAsFixed(2)}'),
                       const SizedBox(height: 15),
                       if (isUpdating)
-                        const Center(
-                          child: CircularProgressIndicator(),
-                        )
+                        const Center(child: CircularProgressIndicator())
                       else if (status == 'pending')
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             OutlinedButton(
                               onPressed: () =>
-                                  _updateProductStatus(
-                                    doc.id,
-                                    'rejected',
-                                  ),
+                                  _updateProductStatus(doc.id, 'rejected'),
                               child: const Text(
                                 'Reject',
                                 style: TextStyle(color: Colors.red),
@@ -160,10 +134,7 @@ class _GroceryAuditState extends State<GroceryAudit> {
                             const SizedBox(width: 10),
                             ElevatedButton(
                               onPressed: () =>
-                                  _updateProductStatus(
-                                    doc.id,
-                                    'active',
-                                  ),
+                                  _updateProductStatus(doc.id, 'active'),
                               child: const Text('Approve'),
                             ),
                           ],
@@ -184,30 +155,27 @@ class _GroceryAuditState extends State<GroceryAudit> {
     final rejected = status == 'rejected';
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 5,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: approved
             ? Colors.green.withValues(alpha: 0.15)
             : rejected
-                ? Colors.red.withValues(alpha: 0.15)
-                : Colors.orange.withValues(alpha: 0.15),
+            ? Colors.red.withValues(alpha: 0.15)
+            : Colors.orange.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         approved
             ? 'Approved'
             : rejected
-                ? 'Rejected'
-                : 'Pending',
+            ? 'Rejected'
+            : 'Pending',
         style: TextStyle(
           color: approved
               ? Colors.green
               : rejected
-                  ? Colors.red
-                  : Colors.orange,
+              ? Colors.red
+              : Colors.orange,
           fontWeight: FontWeight.bold,
         ),
       ),

@@ -32,20 +32,22 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/role-gate',
-        (route) => false,
-      );
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil('/role-gate', (route) => false);
     });
   }
 
   Future<String> _getProviderCollection(String uid) async {
-    final doctorDoc =
-        await FirebaseFirestore.instance.collection('doctors').doc(uid).get();
+    final doctorDoc = await FirebaseFirestore.instance
+        .collection('doctors')
+        .doc(uid)
+        .get();
     if (doctorDoc.exists) return 'doctors';
 
-    final driverDoc =
-        await FirebaseFirestore.instance.collection('drivers').doc(uid).get();
+    final driverDoc = await FirebaseFirestore.instance
+        .collection('drivers')
+        .doc(uid)
+        .get();
     if (driverDoc.exists) return 'drivers';
 
     return 'users';
@@ -107,13 +109,18 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                       onPressed: () {
                         Navigator.of(context).pushAndRemoveUntil(
                           MaterialPageRoute(
-                              builder: (_) => const LoginScreen()),
+                            builder: (_) => const LoginScreen(),
+                          ),
                           (route) => false,
                         );
                       },
-                      child: const Text('Back to Login',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'Back to Login',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ],

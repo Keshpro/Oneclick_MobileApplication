@@ -1,18 +1,13 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/document_pack.dart';
 
-
 class SavedDocumentPack {
   final String id;
   final DocumentPack pack;
 
-  const SavedDocumentPack({
-    required this.id,
-    required this.pack,
-  });
+  const SavedDocumentPack({required this.id, required this.pack});
 }
 
 class DocumentPackService {
@@ -59,17 +54,22 @@ class DocumentPackService {
   Stream<List<DocumentPack>> getPacks() {
     return _collection.snapshots().map(
       (snapshot) => snapshot.docs
-          .map((document) => DocumentPack.fromMap(document.data()).copyWith(savedId: document.id))
+          .map(
+            (document) =>
+                DocumentPack.fromMap(document.data())
+                    .copyWith(savedId: document.id),
+          )
           .toList(),
     );
   }
-  
+
   Stream<List<SavedDocumentPack>> getSavedPacks() {
     return _collection.snapshots().map(
       (snapshot) => snapshot.docs.map((document) {
         return SavedDocumentPack(
           id: document.id,
-          pack: DocumentPack.fromMap(document.data()).copyWith(savedId: document.id),
+          pack: DocumentPack.fromMap(document.data())
+              .copyWith(savedId: document.id),
         );
       }).toList(),
     );

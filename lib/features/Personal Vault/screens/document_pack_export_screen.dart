@@ -10,10 +10,7 @@ import '../services/document_pack_zip_service.dart';
 import 'document_pack_home_screen.dart';
 
 class DocumentPackExportScreen extends StatefulWidget {
-  const DocumentPackExportScreen({
-    super.key,
-    required this.pack,
-  });
+  const DocumentPackExportScreen({super.key, required this.pack});
 
   final DocumentPack pack;
 
@@ -22,8 +19,7 @@ class DocumentPackExportScreen extends StatefulWidget {
       _DocumentPackExportScreenState();
 }
 
-class _DocumentPackExportScreenState
-    extends State<DocumentPackExportScreen> {
+class _DocumentPackExportScreenState extends State<DocumentPackExportScreen> {
   late final DocumentPack pack;
 
   bool _isSaving = false;
@@ -99,11 +95,16 @@ class _DocumentPackExportScreenState
                           for (final requirement in pack.requirements) ...[
                             Builder(
                               builder: (context) {
-                                final record = recordsById[requirement.vaultRecordId];
+                                final record =
+                                    recordsById[requirement.vaultRecordId];
 
                                 if (record == null ||
-                                    ((record.fileUrl?.trim().isNotEmpty ?? false) == false &&
-                                    (record.filePath?.trim().isNotEmpty ?? false) == false)) {
+                                    ((record.fileUrl?.trim().isNotEmpty ??
+                                                false) ==
+                                            false &&
+                                        (record.filePath?.trim().isNotEmpty ??
+                                                false) ==
+                                            false)) {
                                   return _document(
                                     requirement.name,
                                     'Selected Vault document unavailable',
@@ -139,14 +140,12 @@ class _DocumentPackExportScreenState
                   ),
 
                   const SizedBox(height: 16),
-                  
 
                   _exportOption(
                     context,
                     icon: Icons.folder_zip_outlined,
                     title: 'Download ZIP',
-                    description:
-                        'Download the selected Vault documents as one ZIP file.',
+                    description: 'Download the selected Vault documents as one ZIP file.',
                     button: 'Download ZIP',
                     onPressed: _downloadZip,
                     isLoading: _isExportingZip,
@@ -163,10 +162,7 @@ class _DocumentPackExportScreenState
                       onPressed: () {
                         Navigator.pop(context);
                       },
-                      icon: const Icon(
-                        Icons.arrow_back_rounded,
-                        color: muted,
-                      ),
+                      icon: const Icon(Icons.arrow_back_rounded, color: muted),
                       label: const Text(
                         'Back to Gap Resolution',
                         style: TextStyle(color: muted),
@@ -185,10 +181,7 @@ class _DocumentPackExportScreenState
   Widget _header(BuildContext context) {
     return Row(
       children: [
-        _circle(
-          Icons.arrow_back_ios_new_rounded,
-          () => Navigator.pop(context),
-        ),
+        _circle(Icons.arrow_back_ios_new_rounded, () => Navigator.pop(context)),
         const SizedBox(width: 16),
         const Expanded(
           child: Text(
@@ -212,18 +205,12 @@ class _DocumentPackExportScreenState
             children: [
               Text(
                 'â— Step 4 of 4',
-                style: TextStyle(
-                  color: purple,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: purple, fontWeight: FontWeight.w600),
               ),
               Spacer(),
               Text(
                 'Ready to Export',
-                style: TextStyle(
-                  color: ink,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(color: ink, fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -246,67 +233,56 @@ class _DocumentPackExportScreenState
     );
   }
 
-  
-Widget _readyCard() {
-  final matched = pack.matchedRequirements;
-  final total = pack.totalRequirements;
-  final allMatched = total > 0 && matched == total;
+  Widget _readyCard() {
+    final matched = pack.matchedRequirements;
+    final total = pack.totalRequirements;
+    final allMatched = total > 0 && matched == total;
 
-  return _surface(
-    child: Row(
-      children: [
-        CircleAvatar(
-          radius: 28,
-          backgroundColor: allMatched
-              ? const Color(0xFFE5F2EB)
-              : const Color(0xFFF5EADD),
-          child: Icon(
-            allMatched
-                ? Icons.check_circle_outline
-                : Icons.info_outline,
-            color: allMatched ? green : purple,
-            size: 31,
+    return _surface(
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: allMatched
+                ? const Color(0xFFE5F2EB)
+                : const Color(0xFFF5EADD),
+            child: Icon(
+              allMatched ? Icons.check_circle_outline : Icons.info_outline,
+              color: allMatched ? green : purple,
+              size: 31,
+            ),
           ),
-        ),
-        const SizedBox(width: 17),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                allMatched
-                    ? 'All $total Requirements Matched'
-                    : '$matched of $total Requirements Matched',
-                style: const TextStyle(
-                  color: ink,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+          const SizedBox(width: 17),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  allMatched
+                      ? 'All $total Requirements Matched'
+                      : '$matched of $total Requirements Matched',
+                  style: const TextStyle(
+                    color: ink,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                allMatched
-                    ? 'Your confirmed Vault matches are ready for final review.'
-                    : 'Some requirements still need matching.',
-                style: const TextStyle(
-                  color: muted,
-                  fontSize: 12,
+                const SizedBox(height: 5),
+                Text(
+                  allMatched
+                      ? 'Your confirmed Vault matches are ready for final review.'
+                      : 'Some requirements still need matching.',
+                  style: const TextStyle(color: muted, fontSize: 12),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
-
-  Widget _document(
-  String requirement,
-  String file, {
-  bool available = true,
-}) {
+  Widget _document(String requirement, String file, {bool available = true}) {
     return _surface(
       child: Row(
         children: [
@@ -315,9 +291,7 @@ Widget _readyCard() {
                 ? const Color(0xFFE5F2EB)
                 : const Color(0xFFF5E7E9),
             child: Icon(
-              available
-                  ? Icons.check_rounded
-                  : Icons.error_outline,
+              available ? Icons.check_rounded : Icons.error_outline,
               color: available ? green : const Color(0xFFB96C75),
             ),
           ),
@@ -337,21 +311,12 @@ Widget _readyCard() {
                   ),
                 ),
                 const SizedBox(height: 5),
-                Text(
-                  file,
-                  style: const TextStyle(
-                    color: muted,
-                    fontSize: 12,
-                  ),
-                ),
+                Text(file, style: const TextStyle(color: muted, fontSize: 12)),
               ],
             ),
           ),
 
-          const Icon(
-            Icons.description_outlined,
-            color: purple,
-          ),
+          const Icon(Icons.description_outlined, color: purple),
         ],
       ),
     );
@@ -361,11 +326,7 @@ Widget _readyCard() {
     return _surface(
       child: Row(
         children: [
-          Icon(
-            Icons.folder_copy_outlined,
-            color: purple,
-            size: 28,
-          ),
+          Icon(Icons.folder_copy_outlined, color: purple, size: 28),
           SizedBox(width: 15),
           Expanded(
             child: Column(
@@ -391,58 +352,51 @@ Widget _readyCard() {
               ],
             ),
           ),
-          Icon(
-            Icons.edit_outlined,
-            color: purple,
-          ),
+          Icon(Icons.edit_outlined, color: purple),
         ],
       ),
     );
   }
 
   Future<void> _downloadZip() async {
-  if (_isExportingZip) return;
+    if (_isExportingZip) return;
 
-  setState(() {
-    _isExportingZip = true;
-  });
+    setState(() {
+      _isExportingZip = true;
+    });
 
-  try {
-    await DocumentPackZipService().exportPack(pack);
+    try {
+      await DocumentPackZipService().exportPack(pack);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('ZIP export completed successfully.'),
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ZIP export completed successfully.')),
+      );
     } catch (error) {
-    if (!mounted) return;
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Unable to export ZIP: $error'),
-      ),
-    );
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isExportingZip = false;
-      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to export ZIP: $error')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExportingZip = false;
+        });
+      }
     }
   }
-}
 
   Widget _exportOption(
-  BuildContext context, {
-  required IconData icon,
-  required String title,
-  required String description,
-  required String button,
-  VoidCallback? onPressed,
-  bool isLoading = false,
-}) {
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String description,
+    required String button,
+    VoidCallback? onPressed,
+    bool isLoading = false,
+  }) {
     return _surface(
       child: Column(
         children: [
@@ -456,10 +410,7 @@ Widget _readyCard() {
                   shape: BoxShape.circle,
                   boxShadow: _shadow(),
                 ),
-                child: Icon(
-                  icon,
-                  color: purple,
-                ),
+                child: Icon(icon, color: purple),
               ),
 
               const SizedBox(width: 15),
@@ -495,15 +446,15 @@ Widget _readyCard() {
 
           InkWell(
             onTap: isLoading
-              ? null
-              : onPressed ??
-                  () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('$button is not available yet.'),
-                      ),
-                    );
-                  },
+                ? null
+                : onPressed ??
+                      () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('$button is not available yet.'),
+                          ),
+                        );
+                      },
             borderRadius: BorderRadius.circular(25),
             child: Container(
               width: double.infinity,
@@ -530,103 +481,92 @@ Widget _readyCard() {
   }
 
   Future<void> _savePack() async {
-  if (_isSaving || _savedPackId != null) return;
-
-  setState(() {
-    _isSaving = true;
-  });
-
-  try {
-    final id = await DocumentPackService().savePack(pack);
-
-    if (!mounted) return;
+    if (_isSaving || _savedPackId != null) return;
 
     setState(() {
-      _savedPackId = id;
+      _isSaving = true;
     });
 
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (_) => const DocumentPackHomeScreen(),
-      ),
-      (route) => route.isFirst,
-    );
-  } catch (error) {
-    if (!mounted) return;
+    try {
+      final id = await DocumentPackService().savePack(pack);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Unable to save document pack. Please try again.'),
-      ),
-    );
-  } finally {
-    if (mounted) {
+      if (!mounted) return;
+
       setState(() {
-        _isSaving = false;
+        _savedPackId = id;
       });
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const DocumentPackHomeScreen()),
+        (route) => route.isFirst,
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to save document pack. Please try again.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
     }
   }
-}
 
-  
-Widget _saveButton(BuildContext context) {
-  final saved = _savedPackId != null;
+  Widget _saveButton(BuildContext context) {
+    final saved = _savedPackId != null;
 
-  return InkWell(
-    onTap: (_isSaving || saved) ? null : _savePack,
-    borderRadius: BorderRadius.circular(24),
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7F3F4),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: _shadow(),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (_isSaving)
-            const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: purple,
+    return InkWell(
+      onTap: (_isSaving || saved) ? null : _savePack,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7F3F4),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: _shadow(),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (_isSaving)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: purple),
+              )
+            else
+              Icon(
+                saved
+                    ? Icons.check_circle_outline
+                    : Icons.bookmark_add_outlined,
+                color: saved ? green : purple,
               ),
-            )
-          else
-            Icon(
-              saved
-                  ? Icons.check_circle_outline
-                  : Icons.bookmark_add_outlined,
-              color: saved ? green : purple,
+            const SizedBox(width: 9),
+            Text(
+              _isSaving
+                  ? 'Saving Pack...'
+                  : saved
+                  ? 'Pack Saved'
+                  : 'Save Pack to Vault',
+              style: TextStyle(
+                color: saved ? green : purple,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
             ),
-          const SizedBox(width: 9),
-          Text(
-            _isSaving
-                ? 'Saving Pack...'
-                : saved
-                    ? 'Pack Saved'
-                    : 'Save Pack to Vault',
-            style: TextStyle(
-              color: saved ? green : purple,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-
-  Widget _step(
-    String number,
-    String label,
-    bool active,
-  ) {
+  Widget _step(String number, String label, bool active) {
     return Expanded(
       child: Column(
         children: [
@@ -636,27 +576,23 @@ Widget _saveButton(BuildContext context) {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color:
-                  active ? purple : const Color(0xFFECE3E8),
+              color: active ? purple : const Color(0xFFECE3E8),
               boxShadow: _shadow(),
             ),
             child: number == '1' || number == '2' || number == '3'
-            ? const Icon(Icons.check_rounded, color: purple, size: 20)
-            : Text(
-                number,
-                style: TextStyle(
-                  color: active ? Colors.white : purple,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+                ? const Icon(Icons.check_rounded, color: purple, size: 20)
+                : Text(
+                    number,
+                    style: TextStyle(
+                      color: active ? Colors.white : purple,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
           const SizedBox(height: 8),
           Text(
             label,
-            style: TextStyle(
-              color: active ? purple : muted,
-              fontSize: 11,
-            ),
+            style: TextStyle(color: active ? purple : muted, fontSize: 11),
           ),
         ],
       ),
@@ -664,11 +600,7 @@ Widget _saveButton(BuildContext context) {
   }
 
   Widget _line() {
-    return Container(
-      width: 18,
-      height: 3,
-      color: purple,
-    );
+    return Container(width: 18, height: 3, color: purple);
   }
 
   Widget _surface({required Widget child}) {
@@ -684,10 +616,7 @@ Widget _saveButton(BuildContext context) {
     );
   }
 
-  Widget _circle(
-    IconData icon,
-    VoidCallback onTap,
-  ) {
+  Widget _circle(IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(50),
@@ -706,16 +635,8 @@ Widget _saveButton(BuildContext context) {
 
   static List<BoxShadow> _shadow() {
     return const [
-      BoxShadow(
-        color: Colors.white70,
-        offset: Offset(-3, -3),
-        blurRadius: 8,
-      ),
-      BoxShadow(
-        color: Color(0xFFE5DADF),
-        offset: Offset(4, 4),
-        blurRadius: 9,
-      ),
+      BoxShadow(color: Colors.white70, offset: Offset(-3, -3), blurRadius: 8),
+      BoxShadow(color: Color(0xFFE5DADF), offset: Offset(4, 4), blurRadius: 9),
     ];
   }
 }

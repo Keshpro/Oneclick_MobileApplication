@@ -15,29 +15,25 @@ class _ServicesScreenState extends State<ServicesScreen> {
   final List<Map<String, dynamic>> _services = [
     {
       'title': 'Doctor',
-      'description':
-          'Find doctors, book appointments and get medical support.',
+      'description': 'Find doctors, book appointments and get medical support.',
       'icon': Icons.medical_services_rounded,
       'color': const Color(0xFF2563EB),
     },
     {
       'title': 'Drunk & Drive',
-      'description':
-          'Find a trusted driver and get home safely.',
+      'description': 'Find a trusted driver and get home safely.',
       'icon': Icons.directions_car_filled_rounded,
       'color': const Color(0xFF7C3AED),
     },
     {
       'title': 'Service 03',
-      'description':
-          'Explore more services available through OneClick.',
+      'description': 'Explore more services available through OneClick.',
       'icon': Icons.home_repair_service_rounded,
       'color': const Color(0xFF059669),
     },
     {
       'title': 'Service 04',
-      'description':
-          'Discover another service available in OneClick.',
+      'description': 'Discover another service available in OneClick.',
       'icon': Icons.local_mall_rounded,
       'color': const Color(0xFFEA580C),
     },
@@ -52,8 +48,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
 
     return _services.where((service) {
       final title = service['title'].toString().toLowerCase();
-      final description =
-          service['description'].toString().toLowerCase();
+      final description = service['description'].toString().toLowerCase();
 
       return title.contains(query) || description.contains(query);
     }).toList();
@@ -72,17 +67,10 @@ class _ServicesScreenState extends State<ServicesScreen> {
       isScrollControlled: true,
       builder: (sheetContext) {
         return Container(
-          padding: const EdgeInsets.fromLTRB(
-            24,
-            14,
-            24,
-            30,
-          ),
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(28),
-            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: SafeArea(
             top: false,
@@ -150,18 +138,14 @@ class _ServicesScreenState extends State<ServicesScreen> {
                       backgroundColor: const Color(0xFF2563EB),
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 15,
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: const Text(
                       'Login',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -177,9 +161,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                     },
                     child: const Text(
                       'Create a new account',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -214,10 +196,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
             ),
             Text(
               'Choose what you need',
-              style: TextStyle(
-                color: Color(0xFF64748B),
-                fontSize: 11,
-              ),
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
             ),
           ],
         ),
@@ -227,19 +206,12 @@ class _ServicesScreenState extends State<ServicesScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                20,
-                18,
-                20,
-                12,
-              ),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFFE2E8F0),
-                  ),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
                 child: TextField(
                   controller: _searchController,
@@ -250,9 +222,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                   },
                   decoration: InputDecoration(
                     hintText: 'Search services...',
-                    hintStyle: const TextStyle(
-                      color: Color(0xFF94A3B8),
-                    ),
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
                     prefixIcon: const Icon(
                       Icons.search_rounded,
                       color: Color(0xFF64748B),
@@ -266,16 +236,11 @@ class _ServicesScreenState extends State<ServicesScreen> {
                                 _searchQuery = '';
                               });
                             },
-                            icon: const Icon(
-                              Icons.close_rounded,
-                            ),
+                            icon: const Icon(Icons.close_rounded),
                           )
                         : null,
                     border: InputBorder.none,
-                    contentPadding:
-                        const EdgeInsets.symmetric(
-                      vertical: 16,
-                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                 ),
               ),
@@ -305,23 +270,17 @@ class _ServicesScreenState extends State<ServicesScreen> {
                       ),
                     )
                   : GridView.builder(
-                      padding: const EdgeInsets.fromLTRB(
-                        20,
-                        10,
-                        20,
-                        30,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 14,
-                        mainAxisSpacing: 14,
-                        childAspectRatio: 0.88,
-                      ),
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
+                            childAspectRatio: 0.88,
+                          ),
                       itemCount: _filteredServices.length,
                       itemBuilder: (context, index) {
-                        final service =
-                            _filteredServices[index];
+                        final service = _filteredServices[index];
 
                         return ServiceItemCard(
                           title: service['title'],
@@ -329,9 +288,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                           icon: service['icon'],
                           color: service['color'],
                           onTap: () {
-                            _showLoginRequired(
-                              service['title'],
-                            );
+                            _showLoginRequired(service['title']);
                           },
                         );
                       },
@@ -372,9 +329,7 @@ class ServiceItemCard extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: const Color(0xFFE2E8F0),
-            ),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,11 +341,7 @@ class ServiceItemCard extends StatelessWidget {
                   color: color.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 27,
-                ),
+                child: Icon(icon, color: color, size: 27),
               ),
 
               const Spacer(),
@@ -432,11 +383,7 @@ class ServiceItemCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    color: color,
-                    size: 17,
-                  ),
+                  Icon(Icons.arrow_forward_rounded, color: color, size: 17),
                 ],
               ),
             ],

@@ -13,22 +13,15 @@ import 'vault_service.dart';
 
 class VaultBackupService {
   final VaultService _vaultService = VaultService();
-  final SubscriptionService _subscriptionService =
-      SubscriptionService();
-  final SupabaseStorageService _storageService =
-      SupabaseStorageService();
+  final SubscriptionService _subscriptionService = SubscriptionService();
+  final SupabaseStorageService _storageService = SupabaseStorageService();
 
   Future<void> createBackup() async {
-    final records =
-        await _vaultService.getRecords().first;
+    final records = await _vaultService.getRecords().first;
 
-    final subscriptions =
-        await _subscriptionService
-            .getSubscriptions()
-            .first;
+    final subscriptions = await _subscriptionService.getSubscriptions().first;
 
-    final preferences =
-        await _getVaultPreferences();
+    final preferences = await _getVaultPreferences();
 
     final archive = Archive();
 
@@ -39,31 +32,19 @@ class VaultBackupService {
 
       final storagePath = record.filePath;
 
-      if (storagePath != null &&
-          storagePath.trim().isNotEmpty) {
+      if (storagePath != null && storagePath.trim().isNotEmpty) {
         try {
-          final bytes =
-              await _storageService.downloadFile(
-            path: storagePath,
-          );
+          final bytes = await _storageService.downloadFile(path: storagePath);
 
-          final originalName =
-              record.fileName?.trim().isNotEmpty == true
-                  ? record.fileName!.trim()
-                  : 'vault_file';
+          final originalName = record.fileName?.trim().isNotEmpty == true
+              ? record.fileName!.trim()
+              : 'vault_file';
 
-          final safeName =
-              _safeFileName(originalName);
+          final safeName = _safeFileName(originalName);
 
-          final archiveName =
-              'files/${record.id}_$safeName';
+          final archiveName = 'files/${record.id}_$safeName';
 
-          archive.add(
-            ArchiveFile.bytes(
-              archiveName,
-              bytes,
-            ),
-          );
+          archive.add(ArchiveFile.bytes(archiveName, bytes));
 
           backupFilePath = archiveName;
         } catch (_) {
@@ -72,44 +53,29 @@ class VaultBackupService {
       }
 
       recordData.add(
-        _vaultRecordToJson(
-          record,
-          backupFilePath: backupFilePath,
-        ),
+        _vaultRecordToJson(record, backupFilePath: backupFilePath),
       );
     }
 
     final manifest = <String, dynamic>{
       'backupVersion': 1,
-      'createdAt':
-          DateTime.now().toUtc().toIso8601String(),
+      'createdAt': DateTime.now().toUtc().toIso8601String(),
       'vaultRecords': recordData,
-      'subscriptions': subscriptions
-          .map(_subscriptionToJson)
-          .toList(),
+      'subscriptions': subscriptions.map(_subscriptionToJson).toList(),
       'preferences': preferences,
     };
 
-    final manifestText =
-        const JsonEncoder.withIndent('  ')
-            .convert(manifest);
+    final manifestText = const JsonEncoder.withIndent('  ').convert(manifest);
 
-    archive.add(
-      ArchiveFile.string(
-        'manifest.json',
-        manifestText,
-      ),
-    );
+    archive.add(ArchiveFile.string('manifest.json', manifestText));
 
-    final zipBytes =
-        ZipEncoder().encodeBytes(archive);
+    final zipBytes = ZipEncoder().encodeBytes(archive);
 
-    final timestamp =
-        DateTime.now()
-            .toUtc()
-            .toIso8601String()
-            .replaceAll(':', '-')
-            .replaceAll('.', '-');
+    final timestamp = DateTime.now()
+        .toUtc()
+        .toIso8601String()
+        .replaceAll(':', '-')
+        .replaceAll('.', '-');
 
     await FileSaver.instance.saveFile(
       name: 'personal_vault_backup_$timestamp',
@@ -132,28 +98,21 @@ class VaultBackupService {
       'category': record.category,
       'notes': record.notes,
       'tags': record.tags,
-      'renewalDate':
-          record.renewalDate.toIso8601String(),
-      'expiryNotification':
-          record.expiryNotification,
+      'renewalDate': record.renewalDate.toIso8601String(),
+      'expiryNotification': record.expiryNotification,
       'isFavorite': record.isFavorite,
       'fileName': record.fileName,
       'originalFilePath': record.filePath,
       'backupFilePath': backupFilePath,
-      'createdAt':
-          record.createdAt.toIso8601String(),
-      'lastOpenedAt':
-          record.lastOpenedAt?.toIso8601String(),
+      'createdAt': record.createdAt.toIso8601String(),
+      'lastOpenedAt': record.lastOpenedAt?.toIso8601String(),
       'merchant': record.merchant,
-      'purchaseDate':
-          record.purchaseDate?.toIso8601String(),
+      'purchaseDate': record.purchaseDate?.toIso8601String(),
       'amount': record.amount,
     };
   }
 
-  Map<String, dynamic> _subscriptionToJson(
-    SubscriptionRecord subscription,
-  ) {
+  Map<String, dynamic> _subscriptionToJson(SubscriptionRecord subscription) {
     return {
       'id': subscription.id,
       'userId': subscription.userId,
@@ -165,53 +124,26 @@ class VaultBackupService {
       'category': subscription.category,
       'status': subscription.status,
       'priceHiked': subscription.priceHiked,
-      'createdAt':
-          subscription.createdAt.toIso8601String(),
+      'createdAt': subscription.createdAt.toIso8601String(),
     };
   }
 
-  Future<Map<String, dynamic>>
-      _getVaultPreferences() async {
-    final prefs =
-        await SharedPreferences.getInstance();
+  Future<Map<String, dynamic>> _getVaultPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
 
     return {
-      'biometricEnabled':
-          prefs.getBool(
-                'vault_biometric_enabled',
-              ) ??
-              false,
-      'pushNotifications':
-          prefs.getBool(
-                'vault_push_notifications',
-              ) ??
-              true,
-      'emailNotifications':
-          prefs.getBool(
-                'vault_email_notifications',
-              ) ??
-              false,
+      'biometricEnabled': prefs.getBool('vault_biometric_enabled') ?? false,
+      'pushNotifications': prefs.getBool('vault_push_notifications') ?? true,
+      'emailNotifications': prefs.getBool('vault_email_notifications') ?? false,
       'expiryWarnings':
-          prefs.getStringList(
-                'vault_expiry_warnings',
-              ) ??
-              [
-                '30 days',
-                '14 days',
-                '7 days',
-              ],
+          prefs.getStringList('vault_expiry_warnings') ??
+          ['30 days', '14 days', '7 days'],
       'renewalWarning':
-          prefs.getString(
-                'vault_renewal_warning',
-              ) ??
-              '3 days prior',
+          prefs.getString('vault_renewal_warning') ?? '3 days prior',
     };
   }
 
   String _safeFileName(String fileName) {
-    return fileName.replaceAll(
-      RegExp(r'[\\/:*?"<>|]'),
-      '_',
-    );
+    return fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
   }
 }

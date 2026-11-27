@@ -49,9 +49,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in first')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Please log in first')));
       return;
     }
 
@@ -71,17 +70,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
       }).toList();
 
       if (approvedApplications.isEmpty) {
-        throw Exception(
-          'Your grocery seller account is not approved.',
-        );
+        throw Exception('Your grocery seller account is not approved.');
       }
 
       final seller = approvedApplications.first.data();
       final sellerName = (seller['shopName'] ?? '').toString();
 
-      await FirebaseFirestore.instance
-          .collection('grocery_products')
-          .add({
+      await FirebaseFirestore.instance.collection('grocery_products').add({
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
         'category': _selectedCategory,
@@ -100,9 +95,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: _green,
-          content: Text(
-            'Product submitted for admin approval!',
-          ),
+          content: Text('Product submitted for admin approval!'),
         ),
       );
 
@@ -113,11 +106,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to add product: $e'),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Failed to add product: $e')));
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -133,55 +123,28 @@ class _AddProductScreenState extends State<AddProductScreen> {
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      labelStyle: const TextStyle(
-        color: _muted,
-        fontSize: 14,
-      ),
-      hintStyle: const TextStyle(
-        color: _muted,
-        fontSize: 13,
-      ),
-      prefixIcon: icon == null
-          ? null
-          : Icon(
-              icon,
-              color: _green,
-              size: 22,
-            ),
+      labelStyle: const TextStyle(color: _muted, fontSize: 14),
+      hintStyle: const TextStyle(color: _muted, fontSize: 13),
+      prefixIcon: icon == null ? null : Icon(icon, color: _green, size: 22),
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 18,
-      ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(
-          color: Color(0xFFE3EADF),
-        ),
+        borderSide: const BorderSide(color: Color(0xFFE3EADF)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(
-          color: _green,
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: _green, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(
-          color: Color(0xFFB83D3D),
-        ),
+        borderSide: const BorderSide(color: Color(0xFFB83D3D)),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(
-          color: Color(0xFFB83D3D),
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: Color(0xFFB83D3D), width: 1.5),
       ),
       errorMaxLines: 2,
     );
@@ -212,16 +175,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
         elevation: 0,
         title: const Text(
           'Add Product',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          keyboardDismissBehavior:
-              ScrollViewKeyboardDismissBehavior.onDrag,
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
           child: Form(
             key: _formKey,
@@ -232,10 +191,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFF175C38),
-                        Color(0xFF2E8B57),
-                      ],
+                      colors: [Color(0xFF175C38), Color(0xFF2E8B57)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -310,10 +266,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   initialValue: _selectedCategory,
                   isExpanded: true,
                   dropdownColor: Colors.white,
-                  style: const TextStyle(
-                    color: _textColor,
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(color: _textColor, fontSize: 14),
                   icon: const Icon(
                     Icons.keyboard_arrow_down_rounded,
                     color: _green,
@@ -325,10 +278,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   items: _categories.map((category) {
                     return DropdownMenuItem(
                       value: category,
-                      child: Text(
-                        category,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      child: Text(category, overflow: TextOverflow.ellipsis),
                     );
                   }).toList(),
                   onChanged: _isSaving
@@ -348,8 +298,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 TextFormField(
                   controller: _priceController,
                   enabled: !_isSaving,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(
+                  keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
                   textInputAction: TextInputAction.next,
@@ -360,12 +309,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     icon: Icons.payments_outlined,
                   ),
                   validator: (value) {
-                    final price =
-                        double.tryParse(value?.trim() ?? '');
+                    final price = double.tryParse(value?.trim() ?? '');
 
-                    if (price == null ||
-                        !price.isFinite ||
-                        price <= 0) {
+                    if (price == null || !price.isFinite || price <= 0) {
                       return 'Enter a valid price greater than zero';
                     }
                     return null;
@@ -384,8 +330,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     icon: Icons.inventory_2_outlined,
                   ),
                   validator: (value) {
-                    final stock =
-                        int.tryParse(value?.trim() ?? '');
+                    final stock = int.tryParse(value?.trim() ?? '');
 
                     if (stock == null || stock < 0) {
                       return 'Enter a valid quantity of zero or more';
@@ -413,8 +358,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       SizedBox(width: 12),
                       Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'Reviewed before going live',
@@ -447,8 +391,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _green,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor:
-                        const Color(0xFFDBE7DD),
+                    disabledBackgroundColor: const Color(0xFFDBE7DD),
                     disabledForegroundColor: _green,
                     elevation: 0,
                     minimumSize: const Size(double.infinity, 54),
@@ -472,9 +415,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         )
                       : const Icon(Icons.add_rounded),
                   label: Text(
-                    _isSaving
-                        ? 'Submitting...'
-                        : 'Submit for approval',
+                    _isSaving ? 'Submitting...' : 'Submit for approval',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 15,

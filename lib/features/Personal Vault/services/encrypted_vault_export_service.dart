@@ -15,11 +15,9 @@ import 'vault_service.dart';
 class EncryptedVaultExportService {
   final VaultService _vaultService = VaultService();
 
-  final SubscriptionService _subscriptionService =
-      SubscriptionService();
+  final SubscriptionService _subscriptionService = SubscriptionService();
 
-  final SupabaseStorageService _storageService =
-      SupabaseStorageService();
+  final SupabaseStorageService _storageService = SupabaseStorageService();
 
   final AesGcm _aesGcm = AesGcm.with256bits();
 
@@ -29,27 +27,18 @@ class EncryptedVaultExportService {
     bits: 256,
   );
 
-  Future<void> exportEncryptedVault({
-    required String password,
-  }) async {
+  Future<void> exportEncryptedVault({required String password}) async {
     final cleanPassword = password.trim();
 
     if (cleanPassword.length < 8) {
-      throw Exception(
-        'Password must contain at least 8 characters.',
-      );
+      throw Exception('Password must contain at least 8 characters.');
     }
 
-    final records =
-        await _vaultService.getRecords().first;
+    final records = await _vaultService.getRecords().first;
 
-    final subscriptions =
-        await _subscriptionService
-            .getSubscriptions()
-            .first;
+    final subscriptions = await _subscriptionService.getSubscriptions().first;
 
-    final preferences =
-        await _getVaultPreferences();
+    final preferences = await _getVaultPreferences();
 
     final archive = Archive();
 
@@ -60,31 +49,19 @@ class EncryptedVaultExportService {
 
       final storagePath = record.filePath;
 
-      if (storagePath != null &&
-          storagePath.trim().isNotEmpty) {
+      if (storagePath != null && storagePath.trim().isNotEmpty) {
         try {
-          final bytes =
-              await _storageService.downloadFile(
-            path: storagePath,
-          );
+          final bytes = await _storageService.downloadFile(path: storagePath);
 
-          final originalName =
-              record.fileName?.trim().isNotEmpty == true
-                  ? record.fileName!.trim()
-                  : 'vault_file';
+          final originalName = record.fileName?.trim().isNotEmpty == true
+              ? record.fileName!.trim()
+              : 'vault_file';
 
-          final safeName =
-              _safeFileName(originalName);
+          final safeName = _safeFileName(originalName);
 
-          final archivePath =
-              'files/${record.id}_$safeName';
+          final archivePath = 'files/${record.id}_$safeName';
 
-          archive.add(
-            ArchiveFile.bytes(
-              archivePath,
-              bytes,
-            ),
-          );
+          archive.add(ArchiveFile.bytes(archivePath, bytes));
 
           encryptedArchiveFilePath = archivePath;
         } catch (_) {
@@ -93,56 +70,37 @@ class EncryptedVaultExportService {
       }
 
       recordData.add(
-        _vaultRecordToJson(
-          record,
-          archiveFilePath:
-              encryptedArchiveFilePath,
-        ),
+        _vaultRecordToJson(record, archiveFilePath: encryptedArchiveFilePath),
       );
     }
 
     final manifest = <String, dynamic>{
       'exportVersion': 1,
       'format': 'oneclick-encrypted-vault',
-      'createdAt':
-          DateTime.now().toUtc().toIso8601String(),
+      'createdAt': DateTime.now().toUtc().toIso8601String(),
       'vaultRecords': recordData,
-      'subscriptions': subscriptions
-          .map(_subscriptionToJson)
-          .toList(),
+      'subscriptions': subscriptions.map(_subscriptionToJson).toList(),
       'preferences': preferences,
     };
 
-    final manifestText =
-        const JsonEncoder.withIndent('  ')
-            .convert(manifest);
+    final manifestText = const JsonEncoder.withIndent('  ').convert(manifest);
 
-    archive.add(
-      ArchiveFile.string(
-        'manifest.json',
-        manifestText,
-      ),
-    );
+    archive.add(ArchiveFile.string('manifest.json', manifestText));
 
-    final zipBytes =
-        ZipEncoder().encodeBytes(archive);
+    final zipBytes = ZipEncoder().encodeBytes(archive);
 
     final salt = _secureRandomBytes(16);
 
     final nonce = _secureRandomBytes(12);
 
-    final passwordKey = SecretKey(
-      utf8.encode(cleanPassword),
-    );
+    final passwordKey = SecretKey(utf8.encode(cleanPassword));
 
-    final derivedKey =
-        await _pbkdf2.deriveKey(
+    final derivedKey = await _pbkdf2.deriveKey(
       secretKey: passwordKey,
       nonce: salt,
     );
 
-    final secretBox =
-        await _aesGcm.encrypt(
+    final secretBox = await _aesGcm.encrypt(
       zipBytes,
       secretKey: derivedKey,
       nonce: nonce,
@@ -157,14 +115,11 @@ class EncryptedVaultExportService {
       'salt': base64Encode(salt),
       'nonce': base64Encode(nonce),
       'mac': base64Encode(secretBox.mac.bytes),
-      'cipherText':
-          base64Encode(secretBox.cipherText),
+      'cipherText': base64Encode(secretBox.cipherText),
     };
 
     final encryptedBytes = Uint8List.fromList(
-      utf8.encode(
-        jsonEncode(envelope),
-      ),
+      utf8.encode(jsonEncode(envelope)),
     );
 
     final timestamp = DateTime.now()
@@ -174,23 +129,18 @@ class EncryptedVaultExportService {
         .replaceAll('.', '-');
 
     await FileSaver.instance.saveFile(
-      name:
-          'oneclick_encrypted_vault_$timestamp',
+      name: 'oneclick_encrypted_vault_$timestamp',
       bytes: encryptedBytes,
       fileExtension: 'oneclick',
       mimeType: MimeType.other,
-      customMimeType:
-          'application/octet-stream',
+      customMimeType: 'application/octet-stream',
     );
   }
 
   List<int> _secureRandomBytes(int length) {
     final random = Random.secure();
 
-    return List<int>.generate(
-      length,
-      (_) => random.nextInt(256),
-    );
+    return List<int>.generate(length, (_) => random.nextInt(256));
   }
 
   Map<String, dynamic> _vaultRecordToJson(
@@ -205,28 +155,21 @@ class EncryptedVaultExportService {
       'category': record.category,
       'notes': record.notes,
       'tags': record.tags,
-      'renewalDate':
-          record.renewalDate.toIso8601String(),
-      'expiryNotification':
-          record.expiryNotification,
+      'renewalDate': record.renewalDate.toIso8601String(),
+      'expiryNotification': record.expiryNotification,
       'isFavorite': record.isFavorite,
       'fileName': record.fileName,
       'originalFilePath': record.filePath,
       'archiveFilePath': archiveFilePath,
-      'createdAt':
-          record.createdAt.toIso8601String(),
-      'lastOpenedAt':
-          record.lastOpenedAt?.toIso8601String(),
+      'createdAt': record.createdAt.toIso8601String(),
+      'lastOpenedAt': record.lastOpenedAt?.toIso8601String(),
       'merchant': record.merchant,
-      'purchaseDate':
-          record.purchaseDate?.toIso8601String(),
+      'purchaseDate': record.purchaseDate?.toIso8601String(),
       'amount': record.amount,
     };
   }
 
-  Map<String, dynamic> _subscriptionToJson(
-    SubscriptionRecord subscription,
-  ) {
+  Map<String, dynamic> _subscriptionToJson(SubscriptionRecord subscription) {
     return {
       'id': subscription.id,
       'userId': subscription.userId,
@@ -238,30 +181,21 @@ class EncryptedVaultExportService {
       'category': subscription.category,
       'status': subscription.status,
       'priceHiked': subscription.priceHiked,
-      'createdAt':
-          subscription.createdAt.toIso8601String(),
+      'createdAt': subscription.createdAt.toIso8601String(),
     };
   }
 
-  Future<Map<String, dynamic>>
-      _getVaultPreferences() async {
+  Future<Map<String, dynamic>> _getVaultPreferences() async {
     return {
       'biometricEnabled': false,
       'pushNotifications': true,
       'emailNotifications': false,
-      'expiryWarnings': [
-        '30 days',
-        '14 days',
-        '7 days',
-      ],
+      'expiryWarnings': ['30 days', '14 days', '7 days'],
       'renewalWarning': '3 days prior',
     };
   }
 
   String _safeFileName(String fileName) {
-    return fileName.replaceAll(
-      RegExp(r'[\\/:*?"<>|]'),
-      '_',
-    );
+    return fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
   }
 }

@@ -39,13 +39,13 @@ class SharingService {
   }
 
   Future<void> shareRecord({
-  required String recordTitle,
-  String? recordId,
-  required String recipientName,
-  required String recipientEmail,
-  required String permission,
-  DateTime? expiryDate,
-}) async {
+    required String recordTitle,
+    String? recordId,
+    required String recipientName,
+    required String recipientEmail,
+    required String permission,
+    DateTime? expiryDate,
+  }) async {
     final doc = _sharedRecordsCollection.doc();
 
     final sharedRecord = SharedRecord(
@@ -66,15 +66,9 @@ class SharingService {
 
     final batch = _firestore.batch();
 
-    batch.set(
-      doc,
-      data,
-    );
+    batch.set(doc, data);
 
-    batch.set(
-      _globalSharedRecordsCollection.doc(doc.id),
-      data,
-    );
+    batch.set(_globalSharedRecordsCollection.doc(doc.id), data);
 
     await batch.commit();
   }
@@ -85,12 +79,7 @@ class SharingService {
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-              .map(
-                (doc) => SharedRecord.fromMap(
-                  doc.id,
-                  doc.data(),
-                ),
-              )
+              .map((doc) => SharedRecord.fromMap(doc.id, doc.data()))
               .toList(),
         );
   }
@@ -102,40 +91,27 @@ class SharingService {
         .where('recipientEmail', isEqualTo: email)
         .snapshots()
         .map((snapshot) {
-      final records = snapshot.docs
-          .map(
-            (doc) => SharedRecord.fromMap(
-              doc.id,
-              doc.data(),
-            ),
-          )
-          .where((record) => record.status != 'Revoked')
-          .toList();
+          final records = snapshot.docs
+              .map((doc) => SharedRecord.fromMap(doc.id, doc.data()))
+              .where((record) => record.status != 'Revoked')
+              .toList();
 
-      records.sort(
-        (a, b) => b.createdAt.compareTo(a.createdAt),
-      );
+          records.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-      return records;
-    });
+          return records;
+        });
   }
 
   Future<void> revokeAccess(String sharedRecordId) async {
     final batch = _firestore.batch();
 
-    batch.update(
-      _sharedRecordsCollection.doc(sharedRecordId),
-      {
-        'status': 'Revoked',
-      },
-    );
+    batch.update(_sharedRecordsCollection.doc(sharedRecordId), {
+      'status': 'Revoked',
+    });
 
-    batch.update(
-      _globalSharedRecordsCollection.doc(sharedRecordId),
-      {
-        'status': 'Revoked',
-      },
-    );
+    batch.update(_globalSharedRecordsCollection.doc(sharedRecordId), {
+      'status': 'Revoked',
+    });
 
     await batch.commit();
   }
@@ -143,13 +119,9 @@ class SharingService {
   Future<void> deleteSharedRecord(String sharedRecordId) async {
     final batch = _firestore.batch();
 
-    batch.delete(
-      _sharedRecordsCollection.doc(sharedRecordId),
-    );
+    batch.delete(_sharedRecordsCollection.doc(sharedRecordId));
 
-    batch.delete(
-      _globalSharedRecordsCollection.doc(sharedRecordId),
-    );
+    batch.delete(_globalSharedRecordsCollection.doc(sharedRecordId));
 
     await batch.commit();
   }

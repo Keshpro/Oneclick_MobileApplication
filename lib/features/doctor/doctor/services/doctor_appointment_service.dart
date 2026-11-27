@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -14,41 +13,35 @@ class DoctorAppointmentService {
     return user.uid;
   }
 
-  static Stream<QuerySnapshot<Map<String, dynamic>>>
-      doctorAppointments() {
+  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorAppointments() {
     return _db
         .collection('appointments')
         .where('doctorId', isEqualTo: uid)
         .snapshots();
   }
 
-  static Stream<QuerySnapshot<Map<String, dynamic>>>
-      patientAppointments() {
+  static Stream<QuerySnapshot<Map<String, dynamic>>> patientAppointments() {
     return _db
         .collection('appointments')
         .where('userId', isEqualTo: uid)
         .snapshots();
   }
 
-  static Stream<QuerySnapshot<Map<String, dynamic>>>
-      doctorPayments() {
+  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorPayments() {
     return _db
         .collection('payments')
         .where('doctorId', isEqualTo: uid)
         .snapshots();
   }
 
-  static Stream<QuerySnapshot<Map<String, dynamic>>>
-      notifications() {
+  static Stream<QuerySnapshot<Map<String, dynamic>>> notifications() {
     return _db
         .collection('notifications')
         .where('userId', isEqualTo: uid)
         .snapshots();
   }
 
-  static DateTime? appointmentDateTime(
-    Map<String, dynamic> data,
-  ) {
+  static DateTime? appointmentDateTime(Map<String, dynamic> data) {
     final value = data['appointmentDate'];
 
     if (value is Timestamp) return value.toDate();
@@ -66,9 +59,8 @@ class DoctorAppointmentService {
     DateTime? date = DateTime.tryParse(dateText);
 
     if (date == null) {
-      final match = RegExp(
-        r'^(\d{1,2})/(\d{1,2})/(\d{4})$',
-      ).firstMatch(dateText);
+      final match = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$')
+          .firstMatch(dateText);
 
       if (match != null) {
         date = DateTime(
@@ -97,21 +89,13 @@ class DoctorAppointmentService {
 
     if (hour > 23 || minute > 59) return null;
 
-    return DateTime(
-      date.year,
-      date.month,
-      date.day,
-      hour,
-      minute,
-    );
+    return DateTime(date.year, date.month, date.day, hour, minute);
   }
 
   static bool isOverdue(Map<String, dynamic> data) {
-    final status =
-        (data['status'] ?? '').toString().toLowerCase();
+    final status = (data['status'] ?? '').toString().toLowerCase();
 
-    if (!['confirmed', 'approved', 'rescheduled']
-        .contains(status)) {
+    if (!['confirmed', 'approved', 'rescheduled'].contains(status)) {
       return false;
     }
 
@@ -119,18 +103,14 @@ class DoctorAppointmentService {
     return date != null && DateTime.now().isAfter(date);
   }
 
-  static Future<void> completeAppointment(
-    String appointmentId,
-  ) async {
+  static Future<void> completeAppointment(String appointmentId) async {
     await _finishAppointment(
       appointmentId: appointmentId,
       newStatus: 'completed',
     );
   }
 
-  static Future<void> markNoShow(
-    String appointmentId,
-  ) async {
+  static Future<void> markNoShow(String appointmentId) async {
     await _finishAppointment(
       appointmentId: appointmentId,
       newStatus: 'no_show',
@@ -143,11 +123,9 @@ class DoctorAppointmentService {
   }) async {
     final doctorId = uid;
 
-    final appointmentRef =
-        _db.collection('appointments').doc(appointmentId);
+    final appointmentRef = _db.collection('appointments').doc(appointmentId);
 
-    final notificationRef =
-        _db.collection('notifications').doc();
+    final notificationRef = _db.collection('notifications').doc();
 
     await _db.runTransaction((transaction) async {
       final snapshot = await transaction.get(appointmentRef);
@@ -164,44 +142,33 @@ class DoctorAppointmentService {
         );
       }
 
-      final currentStatus =
-          (data['status'] ?? '').toString().toLowerCase();
+      final currentStatus = (data['status'] ?? '').toString().toLowerCase();
 
-      if (!['confirmed', 'approved', 'rescheduled']
-          .contains(currentStatus)) {
-        throw StateError(
-          'This appointment cannot be updated.',
-        );
+      if (!['confirmed', 'approved', 'rescheduled'].contains(currentStatus)) {
+        throw StateError('This appointment cannot be updated.');
       }
 
       final scheduledTime = appointmentDateTime(data);
 
       if (scheduledTime == null) {
-        throw StateError(
-          'Appointment date or time is missing.',
-        );
+        throw StateError('Appointment date or time is missing.');
       }
 
       final now = DateTime.now();
 
       if (now.isBefore(scheduledTime)) {
-        throw StateError(
-          'The scheduled appointment time has not arrived.',
-        );
+        throw StateError('The scheduled appointment time has not arrived.');
       }
 
       // Allow a 30-minute grace period before no-show.
       if (newStatus == 'no_show' &&
-          now.isBefore(
-            scheduledTime.add(const Duration(minutes: 30)),
-          )) {
+          now.isBefore(scheduledTime.add(const Duration(minutes: 30)))) {
         throw StateError(
           'Wait at least 30 minutes after the appointment time.',
         );
       }
 
-      final patientId =
-          (data['userId'] ?? data['patientId'] ?? '').toString();
+      final patientId = (data['userId'] ?? data['patientId'] ?? '').toString();
 
       if (patientId.isEmpty) {
         throw StateError('Patient ID is missing.');
@@ -212,8 +179,7 @@ class DoctorAppointmentService {
         'updatedAt': FieldValue.serverTimestamp(),
         if (newStatus == 'completed')
           'completedAt': FieldValue.serverTimestamp(),
-        if (newStatus == 'no_show')
-          'noShowAt': FieldValue.serverTimestamp(),
+        if (newStatus == 'no_show') 'noShowAt': FieldValue.serverTimestamp(),
         'statusUpdatedBy': doctorId,
       });
 
@@ -238,9 +204,7 @@ class DoctorAppointmentService {
     });
   }
 
-  static Future<void> cancelAppointment(
-    String appointmentId,
-  ) async {
+  static Future<void> cancelAppointment(String appointmentId) async {
     await _updateAppointment(
       appointmentId: appointmentId,
       newStatus: 'cancelled',
@@ -272,11 +236,9 @@ class DoctorAppointmentService {
   }) async {
     final doctorId = uid;
 
-    final appointmentRef =
-        _db.collection('appointments').doc(appointmentId);
+    final appointmentRef = _db.collection('appointments').doc(appointmentId);
 
-    final notificationRef =
-        _db.collection('notifications').doc();
+    final notificationRef = _db.collection('notifications').doc();
 
     await _db.runTransaction((transaction) async {
       final snapshot = await transaction.get(appointmentRef);
@@ -293,18 +255,13 @@ class DoctorAppointmentService {
         );
       }
 
-      final currentStatus =
-          (data['status'] ?? '').toString().toLowerCase();
+      final currentStatus = (data['status'] ?? '').toString().toLowerCase();
 
-      if (!['confirmed', 'approved', 'rescheduled']
-          .contains(currentStatus)) {
-        throw StateError(
-          'This appointment cannot be changed.',
-        );
+      if (!['confirmed', 'approved', 'rescheduled'].contains(currentStatus)) {
+        throw StateError('This appointment cannot be changed.');
       }
 
-      final patientId =
-          (data['userId'] ?? data['patientId'] ?? '').toString();
+      final patientId = (data['userId'] ?? data['patientId'] ?? '').toString();
 
       if (patientId.isEmpty) {
         throw StateError('Patient ID is missing.');
@@ -316,12 +273,11 @@ class DoctorAppointmentService {
         'statusUpdatedBy': doctorId,
         if (newStatus == 'cancelled')
           'cancelledAt': FieldValue.serverTimestamp(),
-        if (date != null)
-          'appointmentDate': Timestamp.fromDate(date),
+        if (date != null) 'appointmentDate': Timestamp.fromDate(date),
         if (date != null)
           'date':
               '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
-        if (time != null) 'time': time,
+        'time': ?time,
       });
 
       transaction.set(notificationRef, {
@@ -338,8 +294,8 @@ class DoctorAppointmentService {
         'message': newStatus == 'cancelled'
             ? 'Your doctor has cancelled your appointment.'
             : 'Your appointment has been rescheduled to '
-                '${date?.day}/${date?.month}/${date?.year} '
-                'at ${time ?? ''}.',
+                  '${date?.day}/${date?.month}/${date?.year} '
+                  'at ${time ?? ''}.',
         'isRead': false,
         'timestamp': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),

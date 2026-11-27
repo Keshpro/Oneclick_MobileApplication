@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../models/payment_request.dart';
@@ -9,15 +8,10 @@ class CheckoutScreen extends StatefulWidget {
   // Connected when a trusted payment service is ready.
   final Future<void> Function(PaymentRequest request)? onPay;
 
-  const CheckoutScreen({
-    super.key,
-    required this.paymentRequest,
-    this.onPay,
-  });
+  const CheckoutScreen({super.key, required this.paymentRequest, this.onPay});
 
   @override
-  State<CheckoutScreen> createState() =>
-      _CheckoutScreenState();
+  State<CheckoutScreen> createState() => _CheckoutScreenState();
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
@@ -41,9 +35,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Unable to start payment. Please try again.',
-          ),
+          content: Text('Unable to start payment. Please try again.'),
         ),
       );
     } finally {
@@ -65,18 +57,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         elevation: 0,
         title: const Text(
           'OneClick Payment',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 19,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 19),
         ),
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 18),
-            child: Icon(
-              Icons.verified_user_rounded,
-              color: Colors.white,
-            ),
+            child: Icon(Icons.verified_user_rounded, color: Colors.white),
           ),
         ],
       ),
@@ -116,10 +102,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF0D9488),
-            Color(0xFF075B60),
-          ],
+          colors: [Color(0xFF0D9488), Color(0xFF075B60)],
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
@@ -161,10 +144,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
           const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 7,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: .15),
               borderRadius: BorderRadius.circular(20),
@@ -198,20 +178,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return _card(
       child: Column(
         children: [
-          _summaryRow(
-            'Service',
-            request.module.displayName,
-          ),
+          _summaryRow('Service', request.module.displayName),
           const SizedBox(height: 16),
-          _summaryRow(
-            'Order',
-            request.title,
-          ),
+          _summaryRow('Order', request.title),
           const SizedBox(height: 16),
-          _summaryRow(
-            'Order ID',
-            request.orderId,
-          ),
+          _summaryRow('Order ID', request.orderId),
           const SizedBox(height: 16),
           if (request.description.trim().isNotEmpty) ...[
             Align(
@@ -229,21 +200,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ],
           const Divider(),
           const SizedBox(height: 12),
-          _summaryRow(
-            'Total',
-            request.formattedAmount,
-            bold: true,
-          ),
+          _summaryRow('Total', request.formattedAmount, bold: true),
         ],
       ),
     );
   }
 
-  Widget _summaryRow(
-    String label,
-    String value, {
-    bool bold = false,
-  }) {
+  Widget _summaryRow(String label, String value, {bool bold = false}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -251,8 +214,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           label,
           style: TextStyle(
             color: bold ? dark : Colors.black54,
-            fontWeight:
-                bold ? FontWeight.w800 : FontWeight.w400,
+            fontWeight: bold ? FontWeight.w800 : FontWeight.w400,
             fontSize: 13,
           ),
         ),
@@ -264,8 +226,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             style: TextStyle(
               color: dark,
               fontSize: bold ? 17 : 13,
-              fontWeight:
-                  bold ? FontWeight.w800 : FontWeight.w600,
+              fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
             ),
           ),
         ),
@@ -306,18 +267,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 SizedBox(height: 5),
                 Text(
                   'PayHere Sandbox integration',
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.black54, fontSize: 12),
                 ),
               ],
             ),
           ),
-          const Icon(
-            Icons.radio_button_checked_rounded,
-            color: primary,
-          ),
+          const Icon(Icons.radio_button_checked_rounded, color: primary),
         ],
       ),
     );
@@ -329,18 +284,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       decoration: BoxDecoration(
         color: primary.withValues(alpha: .06),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: primary.withValues(alpha: .15),
-        ),
+        border: Border.all(color: primary.withValues(alpha: .15)),
       ),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.lock_outline_rounded,
-            color: primary,
-            size: 22,
-          ),
+          Icon(Icons.lock_outline_rounded, color: primary, size: 22),
           SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -348,11 +297,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               'the secure payment gateway. '
               'OneClick will verify payment status '
               'before confirming your order.',
-              style: TextStyle(
-                color: dark,
-                fontSize: 12,
-                height: 1.6,
-              ),
+              style: TextStyle(color: dark, fontSize: 12, height: 1.6),
             ),
           ),
         ],
@@ -367,11 +312,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: const Border(
-          top: BorderSide(
-            color: Color(0xFFE8EFF1),
-          ),
-        ),
+        border: const Border(top: BorderSide(color: Color(0xFFE8EFF1))),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: .04),
@@ -388,10 +329,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               const Expanded(
                 child: Text(
                   'Amount to pay',
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: Colors.black54, fontSize: 13),
                 ),
               ),
               Text(
@@ -409,12 +347,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             width: double.infinity,
             height: 54,
             child: FilledButton(
-              onPressed:
-                  ready && !_processing ? _startPayment : null,
+              onPressed: ready && !_processing ? _startPayment : null,
               style: FilledButton.styleFrom(
                 backgroundColor: primary,
-                disabledBackgroundColor:
-                    const Color(0xFFB5CCCA),
+                disabledBackgroundColor: const Color(0xFFB5CCCA),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -431,10 +367,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
-                          Icons.lock_rounded,
-                          size: 19,
-                        ),
+                        const Icon(Icons.lock_rounded, size: 19),
                         const SizedBox(width: 10),
                         Text(
                           ready
@@ -453,10 +386,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 9),
             const Text(
               'Sandbox gateway is not connected yet.',
-              style: TextStyle(
-                color: Colors.black54,
-                fontSize: 11,
-              ),
+              style: TextStyle(color: Colors.black54, fontSize: 11),
             ),
           ],
         ],
@@ -471,9 +401,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(19),
-        border: Border.all(
-          color: const Color(0xFFE5ECEF),
-        ),
+        border: Border.all(color: const Color(0xFFE5ECEF)),
       ),
       child: child,
     );

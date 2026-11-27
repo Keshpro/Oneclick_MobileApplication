@@ -25,10 +25,7 @@ class SellerDashboard extends StatelessWidget {
         elevation: 0,
         title: const Text(
           'Seller Dashboard',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
         ),
       ),
       body: SafeArea(
@@ -42,10 +39,7 @@ class SellerDashboard extends StatelessWidget {
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFF175C38),
-                      Color(0xFF2E8B57),
-                    ],
+                    colors: [Color(0xFF175C38), Color(0xFF2E8B57)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -95,7 +89,7 @@ class SellerDashboard extends StatelessWidget {
                   ],
                 ),
               ),
-                            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
               const _SellerStats(),
               const SizedBox(height: 28),
@@ -111,10 +105,7 @@ class SellerDashboard extends StatelessWidget {
               const SizedBox(height: 8),
               const Text(
                 'Everything you need, in one place.',
-                style: TextStyle(
-                  color: _muted,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: _muted, fontSize: 13),
               ),
               const SizedBox(height: 18),
 
@@ -125,9 +116,7 @@ class SellerDashboard extends StatelessWidget {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const AddProductScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const AddProductScreen()),
                   );
                 },
               ),
@@ -179,9 +168,7 @@ class SellerDashboard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(
-          color: Color(0xFFE3EADF),
-        ),
+        side: const BorderSide(color: Color(0xFFE3EADF)),
       ),
       child: InkWell(
         onTap: onTap,
@@ -196,11 +183,7 @@ class SellerDashboard extends StatelessWidget {
                   color: const Color(0xFFE7F2E8),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(
-                  icon,
-                  color: _green,
-                  size: 27,
-                ),
+                child: Icon(icon, color: _green, size: 27),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -228,11 +211,7 @@ class SellerDashboard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: _green,
-                size: 24,
-              ),
+              const Icon(Icons.chevron_right_rounded, color: _green, size: 24),
             ],
           ),
         ),
@@ -240,6 +219,7 @@ class SellerDashboard extends StatelessWidget {
     );
   }
 }
+
 class _SellerStats extends StatefulWidget {
   const _SellerStats();
 
@@ -309,15 +289,15 @@ class _SellerStatsState extends State<_SellerStats> {
 
                 final statuses =
                     data['sellerStatuses'] as Map<String, dynamic>? ?? {};
-                final status =
-                    (statuses[uid] ?? 'pending').toString().toLowerCase();
+                final status = (statuses[uid] ?? 'pending')
+                    .toString()
+                    .toLowerCase();
 
                 if (status == 'pending') pending++;
                 if (status == 'completed') {
                   completed++;
                   for (final item in items) {
-                    totalSales +=
-                        (item['totalPrice'] as num?)?.toDouble() ?? 0;
+                    totalSales += (item['totalPrice'] as num?)?.toDouble() ?? 0;
                   }
                 }
               }
@@ -417,10 +397,7 @@ class _SellerStatsState extends State<_SellerStats> {
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(
-              color: SellerDashboard._muted,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: SellerDashboard._muted, fontSize: 12),
           ),
         ],
       ),

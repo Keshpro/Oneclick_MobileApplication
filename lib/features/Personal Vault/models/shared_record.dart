@@ -37,16 +37,12 @@ class SharedRecord {
       'recipientEmail': recipientEmail,
       'permission': permission,
       'status': status,
-      'expiryDate':
-          expiryDate != null ? Timestamp.fromDate(expiryDate!) : null,
+      'expiryDate': expiryDate != null ? Timestamp.fromDate(expiryDate!) : null,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 
-  factory SharedRecord.fromMap(
-    String id,
-    Map<String, dynamic> map,
-  ) {
+  factory SharedRecord.fromMap(String id, Map<String, dynamic> map) {
     return SharedRecord(
       id: id,
       ownerId: map['ownerId'] ?? '',
@@ -58,8 +54,7 @@ class SharedRecord {
       permission: map['permission'] ?? 'View only',
       status: map['status'] ?? 'Active',
       expiryDate: (map['expiryDate'] as Timestamp?)?.toDate(),
-      createdAt:
-          (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 }

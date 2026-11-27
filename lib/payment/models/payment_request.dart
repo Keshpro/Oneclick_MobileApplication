@@ -1,11 +1,4 @@
-
-enum OneClickModule {
-  doctor,
-  food,
-  groceries,
-  drunkDrive,
-  quickFix,
-}
+enum OneClickModule { doctor, food, groceries, drunkDrive, quickFix }
 
 extension OneClickModuleName on OneClickModule {
   String get value {
@@ -64,8 +57,7 @@ class PaymentRequest {
 
   String get formattedAmount {
     final whole = amountMinor ~/ 100;
-    final fraction =
-        (amountMinor % 100).toString().padLeft(2, '0');
+    final fraction = (amountMinor % 100).toString().padLeft(2, '0');
 
     final digits = whole.toString();
     final buffer = StringBuffer();

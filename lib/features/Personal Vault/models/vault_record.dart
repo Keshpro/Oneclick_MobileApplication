@@ -56,19 +56,18 @@ class VaultRecord {
       'filePath': filePath,
       'createdAt': Timestamp.fromDate(createdAt),
       'isFavorite': isFavorite,
-      'lastOpenedAt':
-      lastOpenedAt != null ? Timestamp.fromDate(lastOpenedAt!) : null,
+      'lastOpenedAt': lastOpenedAt != null
+          ? Timestamp.fromDate(lastOpenedAt!)
+          : null,
       'merchant': merchant,
-      'purchaseDate':
-          purchaseDate != null ? Timestamp.fromDate(purchaseDate!) : null,
+      'purchaseDate': purchaseDate != null
+          ? Timestamp.fromDate(purchaseDate!)
+          : null,
       'amount': amount,
     };
   }
 
-  factory VaultRecord.fromMap(
-    String id,
-    Map<String, dynamic> map,
-  ) {
+  factory VaultRecord.fromMap(String id, Map<String, dynamic> map) {
     return VaultRecord(
       id: id,
       userId: map['userId'] ?? '',
@@ -84,14 +83,11 @@ class VaultRecord {
       fileName: map['fileName'],
       fileUrl: map['fileUrl'],
       filePath: map['filePath'],
-      createdAt:
-          (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      lastOpenedAt:
-          (map['lastOpenedAt'] as Timestamp?)?.toDate(),
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastOpenedAt: (map['lastOpenedAt'] as Timestamp?)?.toDate(),
       merchant: map['merchant'],
-      purchaseDate:
-          (map['purchaseDate'] as Timestamp?)?.toDate(),
-      amount: map['amount'], 
+      purchaseDate: (map['purchaseDate'] as Timestamp?)?.toDate(),
+      amount: map['amount'],
     );
   }
 }

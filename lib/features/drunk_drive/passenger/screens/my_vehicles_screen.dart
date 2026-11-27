@@ -59,9 +59,8 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
     if (added == true) {
       await _loadVehicles();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vehicle added')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Vehicle added')));
     }
   }
 
@@ -77,9 +76,8 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
     if (updated == true) {
       await _loadVehicles();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vehicle updated')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Vehicle updated')));
     }
   }
 
@@ -89,14 +87,16 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
       if (!mounted) return;
       await _loadVehicles();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Default vehicle updated')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Default vehicle updated')));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Could not update the default vehicle. Please try again.'),
+          content: Text(
+            'Could not update the default vehicle. Please try again.',
+          ),
         ),
       );
     }
@@ -136,13 +136,14 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
       if (!mounted) return;
       await _loadVehicles();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vehicle removed')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Vehicle removed')));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not remove the vehicle. Please try again.')),
+        const SnackBar(
+          content: Text('Could not remove the vehicle. Please try again.'),
+        ),
       );
     }
   }
@@ -182,7 +183,10 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
           children: [
             CircularProgressIndicator(color: colors.accent),
             const SizedBox(height: 16),
-            Text('Loading vehicles...', style: TextStyle(color: colors.textMuted)),
+            Text(
+              'Loading vehicles...',
+              style: TextStyle(color: colors.textMuted),
+            ),
           ],
         ),
       );
@@ -317,10 +321,7 @@ class _VehicleCard extends StatelessWidget {
                   color: colors.accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
-                  Icons.directions_car_rounded,
-                  color: colors.accent,
-                ),
+                child: Icon(Icons.directions_car_rounded, color: colors.accent),
               ),
               const SizedBox(width: 14),
               Expanded(

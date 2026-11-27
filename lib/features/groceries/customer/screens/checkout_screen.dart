@@ -6,10 +6,7 @@ import '../../models/grocery_order_model.dart';
 class CheckoutScreen extends StatefulWidget {
   final GroceryController controller;
 
-  const CheckoutScreen({
-    super.key,
-    required this.controller,
-  });
+  const CheckoutScreen({super.key, required this.controller});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -23,10 +20,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   DeliveryMethod _deliveryMethod = DeliveryMethod.delivery;
   String _paymentMethod = 'Cash on Delivery';
-    bool _isPlacing = false;
+  bool _isPlacing = false;
 
-  final TextEditingController _addressController =
-      TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
 
   @override
   void dispose() {
@@ -46,13 +42,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
 
     if (!mounted) return;
-     setState(() => _isPlacing = false);
+    setState(() => _isPlacing = false);
 
     if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-                        'Could not place the order. Please check your delivery '
+            'Could not place the order. Please check your delivery '
             'address, and make sure the items are still in stock.',
           ),
         ),
@@ -77,30 +73,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
           title: const Text(
             'Order Placed',
-            style: TextStyle(
-              color: _textColor,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(color: _textColor, fontWeight: FontWeight.w700),
           ),
           content: const Text(
             'Your grocery order has been placed successfully.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: _muted,
-              height: 1.5,
-            ),
+            style: TextStyle(color: _muted, height: 1.5),
           ),
           actions: [
             TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: _green,
-              ),
+              style: TextButton.styleFrom(foregroundColor: _green),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
 
-                Navigator.of(context).popUntil(
-                  (route) => route.isFirst,
-                );
+                Navigator.of(context).popUntil((route) => route.isFirst);
               },
               child: const Text('OK'),
             ),
@@ -115,11 +101,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: _green,
-            size: 22,
-          ),
+          Icon(icon, color: _green, size: 22),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -142,16 +124,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFFE3EADF),
-        ),
+        border: Border.all(color: const Color(0xFFE3EADF)),
       ),
       child: Material(
-  color: Colors.transparent,
-  borderRadius: BorderRadius.circular(20),
-  clipBehavior: Clip.antiAlias,
-  child: child,
-),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: child,
+      ),
     );
   }
 
@@ -166,10 +146,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         elevation: 0,
         title: const Text(
           'Checkout',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
         ),
       ),
       body: SafeArea(
@@ -226,10 +203,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               const SizedBox(height: 26),
 
               // Order summary
-              _sectionTitle(
-                'Order Summary',
-                Icons.receipt_long_outlined,
-              ),
+              _sectionTitle('Order Summary', Icons.receipt_long_outlined),
               _whiteCard(
                 Padding(
                   padding: const EdgeInsets.all(18),
@@ -238,18 +212,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     children: [
                       ...widget.controller.cartItems.map(
                         (item) => Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 9,
-                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 9),
                           child: Row(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 flex: 3,
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       item.product.name,
@@ -286,14 +256,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           ),
                         ),
                       ),
-                      const Divider(
-                        height: 30,
-                        color: Color(0xFFE3EADF),
-                      ),
+                      const Divider(height: 30, color: Color(0xFFE3EADF)),
                       Wrap(
                         alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment:
-                            WrapCrossAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         spacing: 16,
                         runSpacing: 8,
                         children: [
@@ -322,10 +288,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               const SizedBox(height: 26),
 
               // Delivery
-              _sectionTitle(
-                'Delivery Method',
-                Icons.local_shipping_outlined,
-              ),
+              _sectionTitle('Delivery Method', Icons.local_shipping_outlined),
               _whiteCard(
                 RadioGroup<DeliveryMethod>(
                   groupValue: _deliveryMethod,
@@ -349,19 +312,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                         subtitle: Text(
                           'Receive your groceries at your address',
-                          style: TextStyle(
-                            color: _muted,
-                            fontSize: 12,
-                          ),
+                          style: TextStyle(color: _muted, fontSize: 12),
                         ),
                         value: DeliveryMethod.delivery,
                       ),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Divider(
-                          height: 1,
-                          color: Color(0xFFEDF1EA),
-                        ),
+                        child: Divider(height: 1, color: Color(0xFFEDF1EA)),
                       ),
                       RadioListTile<DeliveryMethod>(
                         activeColor: _green,
@@ -374,10 +331,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                         subtitle: Text(
                           'Collect your order from the store',
-                          style: TextStyle(
-                            color: _muted,
-                            fontSize: 12,
-                          ),
+                          style: TextStyle(color: _muted, fontSize: 12),
                         ),
                         value: DeliveryMethod.pickup,
                       ),
@@ -390,18 +344,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 TextField(
                   controller: _addressController,
                   maxLines: 3,
-                  style: const TextStyle(
-                    color: _textColor,
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(color: _textColor, fontSize: 14),
                   decoration: InputDecoration(
                     labelText: 'Delivery Address',
                     hintText: 'Enter your delivery address',
                     labelStyle: const TextStyle(color: _muted),
-                    hintStyle: const TextStyle(
-                      color: _muted,
-                      fontSize: 13,
-                    ),
+                    hintStyle: const TextStyle(color: _muted, fontSize: 13),
                     prefixIcon: const Icon(
                       Icons.location_on_outlined,
                       color: _green,
@@ -414,16 +362,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFE3EADF),
-                      ),
+                      borderSide: const BorderSide(color: Color(0xFFE3EADF)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(
-                        color: _green,
-                        width: 1.5,
-                      ),
+                      borderSide: const BorderSide(color: _green, width: 1.5),
                     ),
                   ),
                 ),
@@ -431,10 +374,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               const SizedBox(height: 26),
 
               // Payment
-              _sectionTitle(
-                'Payment Method',
-                Icons.payments_outlined,
-              ),
+              _sectionTitle('Payment Method', Icons.payments_outlined),
               _whiteCard(
                 RadioGroup<String>(
                   groupValue: _paymentMethod,
@@ -460,10 +400,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Divider(
-                          height: 1,
-                          color: Color(0xFFEDF1EA),
-                        ),
+                        child: Divider(height: 1, color: Color(0xFFEDF1EA)),
                       ),
                       RadioListTile<String>(
                         activeColor: _green,
@@ -497,10 +434,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                                onPressed: _isPlacing ? null : _placeOrder,
-                icon: const Icon(
-                  Icons.check_circle_outline_rounded,
-                ),
+                onPressed: _isPlacing ? null : _placeOrder,
+                icon: const Icon(Icons.check_circle_outline_rounded),
                 label: Text(
                   'Place Order - Rs. '
                   '${widget.controller.cartTotal.toStringAsFixed(2)}',

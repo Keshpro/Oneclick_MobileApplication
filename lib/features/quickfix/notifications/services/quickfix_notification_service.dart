@@ -1,12 +1,9 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class QuickFixNotificationService {
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Stream<QuerySnapshot<Map<String, dynamic>>>
-      getNotifications(String userId) {
+  Stream<QuerySnapshot<Map<String, dynamic>>> getNotifications(String userId) {
     return _firestore
         .collection('quickfix_notifications')
         .where('receiverId', isEqualTo: userId)
@@ -15,9 +12,7 @@ class QuickFixNotificationService {
 
   Stream<int> getUnreadCount(String userId) {
     return getNotifications(userId).map((snapshot) {
-      return snapshot.docs
-          .where((doc) => doc.data()['isRead'] == false)
-          .length;
+      return snapshot.docs.where((doc) => doc.data()['isRead'] == false).length;
     });
   }
 

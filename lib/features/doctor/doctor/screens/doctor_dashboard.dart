@@ -9,6 +9,7 @@ class DoctorDashboardScreen extends StatefulWidget {
   /// Optional. Called after the doctor signs out (for example to open
   /// your login screen). If null, the app returns to its first route.
   final VoidCallback? onSignedOut;
+
   /// Parent router opens the existing normal-user home without signing out.
   final VoidCallback? onSwitchToUserMode;
 
@@ -19,12 +20,10 @@ class DoctorDashboardScreen extends StatefulWidget {
   });
 
   @override
-  State<DoctorDashboardScreen> createState() =>
-      _DoctorDashboardScreenState();
+  State<DoctorDashboardScreen> createState() => _DoctorDashboardScreenState();
 }
 
-class _DoctorDashboardScreenState
-    extends State<DoctorDashboardScreen> {
+class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   // Palette (UI only)
   static const Color brand = Color(0xFF087F6D);
   static const Color brandDark = Color(0xFF065F52);
@@ -44,8 +43,7 @@ class _DoctorDashboardScreenState
   int _tab = 0;
   String _filter = 'All';
 
-  String get uid =>
-      FirebaseAuth.instance.currentUser?.uid ?? '';
+  String get uid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
   final Set<String> _busyIds = {};
 
@@ -62,10 +60,7 @@ class _DoctorDashboardScreenState
   };
 
   String _status(Map<String, dynamic> data) =>
-      (data['status'] ?? '')
-          .toString()
-          .trim()
-          .toLowerCase();
+      (data['status'] ?? '').toString().trim().toLowerCase();
 
   DateTime? _date(dynamic value) {
     if (value is Timestamp) return value.toDate();
@@ -77,9 +72,7 @@ class _DoctorDashboardScreenState
     final iso = DateTime.tryParse(raw);
     if (iso != null) return iso;
 
-    final slash = RegExp(
-      r'^(\d{1,2})/(\d{1,2})/(\d{4})$',
-    ).firstMatch(raw);
+    final slash = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$').firstMatch(raw);
 
     if (slash != null) {
       return DateTime(
@@ -105,16 +98,13 @@ class _DoctorDashboardScreenState
       'dec': 12,
     };
 
-    final named = RegExp(
-      r'^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$',
-    ).firstMatch(raw);
+    final named = RegExp(r'^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$')
+        .firstMatch(raw);
 
     if (named != null) {
-      final monthName =
-          named.group(2)!.toLowerCase();
+      final monthName = named.group(2)!.toLowerCase();
 
-      final month = months[
-          monthName.substring(0, 3)];
+      final month = months[monthName.substring(0, 3)];
 
       if (month != null) {
         return DateTime(
@@ -128,9 +118,7 @@ class _DoctorDashboardScreenState
     return null;
   }
 
-  DateTime? _appointmentDate(
-    Map<String, dynamic> data,
-  ) {
+  DateTime? _appointmentDate(Map<String, dynamic> data) {
     final primary = _date(data['appointmentDate']);
 
     if (primary != null) {
@@ -143,9 +131,7 @@ class _DoctorDashboardScreenState
     return date;
   }
 
-  DateTime? _appointmentDateTime(
-    Map<String, dynamic> data,
-  ) {
+  DateTime? _appointmentDateTime(Map<String, dynamic> data) {
     final primary = _date(data['appointmentDate']);
 
     if (primary != null) {
@@ -156,8 +142,7 @@ class _DoctorDashboardScreenState
     final date = _date(data['date']);
     if (date == null) return null;
 
-    final rawTime =
-        (data['time'] ?? '').toString().trim();
+    final rawTime = (data['time'] ?? '').toString().trim();
 
     final match = RegExp(
       r'^(\d{1,2}):(\d{2})\s*(AM|PM)?$',
@@ -175,13 +160,7 @@ class _DoctorDashboardScreenState
 
     if (hour > 23 || minute > 59) return null;
 
-    return DateTime(
-      date.year,
-      date.month,
-      date.day,
-      hour,
-      minute,
-    );
+    return DateTime(date.year, date.month, date.day, hour, minute);
   }
 
   String _dateText(DateTime? date) {
@@ -223,8 +202,7 @@ class _DoctorDashboardScreenState
 
     final date = _appointmentDateTime(data);
 
-    return date != null &&
-        DateTime.now().isAfter(date);
+    return date != null && DateTime.now().isAfter(date);
   }
 
   void _message(String text) {
@@ -233,10 +211,7 @@ class _DoctorDashboardScreenState
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(
-          content: Text(text),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(text), behavior: SnackBarBehavior.floating),
       );
   }
 
@@ -250,20 +225,16 @@ class _DoctorDashboardScreenState
       builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(title),
         content: Text(message),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Back'),
           ),
           FilledButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(action),
           ),
         ],
@@ -310,8 +281,7 @@ class _DoctorDashboardScreenState
 
     await _runAction(
       id,
-      () => DoctorAppointmentService
-          .completeAppointment(id),
+      () => DoctorAppointmentService.completeAppointment(id),
       'Appointment completed successfully.',
     );
   }
@@ -347,8 +317,7 @@ class _DoctorDashboardScreenState
 
     await _runAction(
       id,
-      () => DoctorAppointmentService
-          .cancelAppointment(id),
+      () => DoctorAppointmentService.cancelAppointment(id),
       'Appointment cancelled.',
     );
   }
@@ -359,14 +328,8 @@ class _DoctorDashboardScreenState
     final date = await showDatePicker(
       context: context,
       initialDate: now,
-      firstDate: DateTime(
-        now.year,
-        now.month,
-        now.day,
-      ),
-      lastDate: now.add(
-        const Duration(days: 365),
-      ),
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: now.add(const Duration(days: 365)),
     );
 
     if (date == null || !mounted) return;
@@ -395,8 +358,7 @@ class _DoctorDashboardScreenState
 
     await _runAction(
       id,
-      () => DoctorAppointmentService
-          .rescheduleAppointment(
+      () => DoctorAppointmentService.rescheduleAppointment(
         appointmentId: id,
         date: selected,
         time: timeText,
@@ -490,32 +452,28 @@ class _DoctorDashboardScreenState
   }
 
   ButtonStyle get _outlinedStyle => OutlinedButton.styleFrom(
-        foregroundColor: brand,
-        minimumSize: const Size(0, 44),
-        side: const BorderSide(color: line),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-      );
+    foregroundColor: brand,
+    minimumSize: const Size(0, 44),
+    side: const BorderSide(color: line),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+  );
 
   ButtonStyle get _filledStyle => FilledButton.styleFrom(
-        backgroundColor: brand,
-        foregroundColor: Colors.white,
-        minimumSize: const Size(0, 44),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-      );
+    backgroundColor: brand,
+    foregroundColor: Colors.white,
+    minimumSize: const Size(0, 44),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+  );
 
   ButtonStyle _quietStyle(Color color) => TextButton.styleFrom(
-        foregroundColor: color,
-        minimumSize: const Size(0, 36),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-      );
+    foregroundColor: color,
+    minimumSize: const Size(0, 36),
+    padding: const EdgeInsets.symmetric(horizontal: 10),
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+  );
 
   Widget _pill(String text, Color fg, Color bg) {
     return Container(
@@ -526,11 +484,7 @@ class _DoctorDashboardScreenState
       ),
       child: Text(
         text,
-        style: TextStyle(
-          color: fg,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
+        style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -771,11 +725,7 @@ class _DoctorDashboardScreenState
               Text(
                 '${payments.length} simulated card payments. '
                 'Not actual bank revenue.',
-                style: const TextStyle(
-                  color: muted,
-                  fontSize: 12,
-                  height: 1.4,
-                ),
+                style: const TextStyle(color: muted, fontSize: 12, height: 1.4),
               ),
             ],
           ),
@@ -784,10 +734,7 @@ class _DoctorDashboardScreenState
     );
   }
 
-  Widget _sectionTitle(
-    String title, {
-    int? count,
-  }) {
+  Widget _sectionTitle(String title, {int? count}) {
     return Padding(
       padding: const EdgeInsets.only(top: 28, bottom: 12),
       child: Row(
@@ -870,9 +817,7 @@ class _DoctorDashboardScreenState
     );
   }
 
-  Widget _bookingCard(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
+  Widget _bookingCard(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
     final status = _status(data);
 
@@ -885,25 +830,25 @@ class _DoctorDashboardScreenState
     final canComplete =
         manageable && scheduled != null && !now.isBefore(scheduled);
 
-    final canNoShow = manageable &&
+    final canNoShow =
+        manageable &&
         scheduled != null &&
-        !now.isBefore(
-          scheduled.add(
-            const Duration(minutes: 30),
-          ),
-        );
+        !now.isBefore(scheduled.add(const Duration(minutes: 30)));
 
     final overdue = _isOverdue(data);
     final busy = _busyIds.contains(doc.id);
 
-    final patientName = (data['patientName'] ??
-            data['userName'] ??
-            data['userEmail'] ??
-            'Patient')
-        .toString();
+    final patientName =
+        (data['patientName'] ??
+                data['userName'] ??
+                data['userEmail'] ??
+                'Patient')
+            .toString();
 
     final isNew =
-        status == 'awaiting_payment' || status == 'pending' || status == 'requested';
+        status == 'awaiting_payment' ||
+        status == 'pending' ||
+        status == 'requested';
 
     final isCompleted = status == 'completed';
 
@@ -914,8 +859,9 @@ class _DoctorDashboardScreenState
         ? 'P'
         : patientName.trim().characters.first.toUpperCase();
     final time = (data['time'] ?? '').toString();
-    final paymentText =
-        (data['paymentStatus'] ?? 'unpaid').toString().replaceAll('_', ' ');
+    final paymentText = (data['paymentStatus'] ?? 'unpaid')
+        .toString()
+        .replaceAll('_', ' ');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -1010,11 +956,7 @@ class _DoctorDashboardScreenState
               runSpacing: 8,
               children: [
                 _pill(_statusLabel(status), statusFg, statusBg),
-                _pill(
-                  'Payment: $paymentText',
-                  muted,
-                  const Color(0xFFF1F5F9),
-                ),
+                _pill('Payment: $paymentText', muted, const Color(0xFFF1F5F9)),
               ],
             ),
           ),
@@ -1078,7 +1020,10 @@ class _DoctorDashboardScreenState
                                   ),
                                 );
                               },
-                        icon: const Icon(Icons.person_search_outlined, size: 18),
+                        icon: const Icon(
+                          Icons.person_search_outlined,
+                          size: 18,
+                        ),
                         label: const Text('Patient profile'),
                       ),
                     ),
@@ -1105,14 +1050,20 @@ class _DoctorDashboardScreenState
                           TextButton.icon(
                             style: _quietStyle(muted),
                             onPressed: busy ? null : () => _noShow(doc.id),
-                            icon: const Icon(Icons.person_off_outlined, size: 17),
+                            icon: const Icon(
+                              Icons.person_off_outlined,
+                              size: 17,
+                            ),
                             label: const Text('No-show'),
                           ),
                         if (manageable)
                           TextButton.icon(
                             style: _quietStyle(brand),
                             onPressed: busy ? null : () => _reschedule(doc.id),
-                            icon: const Icon(Icons.edit_calendar_outlined, size: 17),
+                            icon: const Icon(
+                              Icons.edit_calendar_outlined,
+                              size: 17,
+                            ),
                             label: const Text('Reschedule'),
                           ),
                         if (manageable)
@@ -1135,7 +1086,10 @@ class _DoctorDashboardScreenState
 
   Widget _doctorHeader() {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.collection('doctors').doc(uid).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('doctors')
+          .doc(uid)
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Text(
@@ -1231,20 +1185,17 @@ class _DoctorDashboardScreenState
                       activeTrackColor: const Color(0xFF34D399),
                       inactiveTrackColor: const Color(0x33FFFFFF),
                       thumbColor: const WidgetStatePropertyAll(Colors.white),
-                      trackOutlineColor:
-                          const WidgetStatePropertyAll(Colors.transparent),
+                      trackOutlineColor: const WidgetStatePropertyAll(
+                        Colors.transparent,
+                      ),
                       onChanged: (value) async {
                         try {
                           await FirebaseFirestore.instance
                               .collection('doctors')
                               .doc(uid)
-                              .update({
-                            'isAvailable': value,
-                          });
+                              .update({'isAvailable': value});
                         } catch (error) {
-                          _message(
-                            'Update failed: $error',
-                          );
+                          _message('Update failed: $error');
                         }
                       },
                     ),
@@ -1258,45 +1209,40 @@ class _DoctorDashboardScreenState
     );
   }
 
-  Widget _home(
-    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
-  ) {
+  Widget _home(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
     final today = docs.where((doc) {
-      return _isToday(
-        _appointmentDate(doc.data()),
-      );
+      return _isToday(_appointmentDate(doc.data()));
     }).toList();
 
-    final upcoming = docs.where((doc) {
-      return _isUpcoming(doc.data());
-    }).toList()
-      ..sort((a, b) {
-        final x = _appointmentDateTime(a.data());
-        final y = _appointmentDateTime(b.data());
+    final upcoming =
+        docs.where((doc) {
+          return _isUpcoming(doc.data());
+        }).toList()..sort((a, b) {
+          final x = _appointmentDateTime(a.data());
+          final y = _appointmentDateTime(b.data());
 
-        return (x ?? DateTime(2100)).compareTo(y ?? DateTime(2100));
-      });
+          return (x ?? DateTime(2100)).compareTo(y ?? DateTime(2100));
+        });
 
-    final newBookings = docs.where((doc) {
-      final status = _status(doc.data());
+    final newBookings =
+        docs.where((doc) {
+          final status = _status(doc.data());
 
-      return !_finishedStatuses.contains(status) &&
-          (status == 'awaiting_payment' ||
-              status == 'pending' ||
-              status == 'requested' ||
-              (_activeStatuses.contains(status) && _isUpcoming(doc.data())));
-    }).toList()
-      ..sort((a, b) {
-        final x = _appointmentDateTime(a.data());
-        final y = _appointmentDateTime(b.data());
+          return !_finishedStatuses.contains(status) &&
+              (status == 'awaiting_payment' ||
+                  status == 'pending' ||
+                  status == 'requested' ||
+                  (_activeStatuses.contains(status) &&
+                      _isUpcoming(doc.data())));
+        }).toList()..sort((a, b) {
+          final x = _appointmentDateTime(a.data());
+          final y = _appointmentDateTime(b.data());
 
-        return (x ?? DateTime(2100)).compareTo(y ?? DateTime(2100));
-      });
+          return (x ?? DateTime(2100)).compareTo(y ?? DateTime(2100));
+        });
 
     final confirmed = docs.where((doc) {
-      return _activeStatuses.contains(
-        _status(doc.data()),
-      );
+      return _activeStatuses.contains(_status(doc.data()));
     }).length;
 
     final completed = docs.where((doc) {
@@ -1325,26 +1271,17 @@ class _DoctorDashboardScreenState
         ),
         const SizedBox(height: 16),
         _income(),
-        _sectionTitle(
-          'New Appointments',
-          count: newBookings.length,
-        ),
+        _sectionTitle('New Appointments', count: newBookings.length),
         if (newBookings.isEmpty)
           _empty('No new appointments')
         else
           ...newBookings.map(_bookingCard),
-        _sectionTitle(
-          'Upcoming Appointments',
-          count: upcoming.length,
-        ),
+        _sectionTitle('Upcoming Appointments', count: upcoming.length),
         if (upcoming.isEmpty)
           _empty('No upcoming appointments')
         else
           ...upcoming.map(_bookingCard),
-        _sectionTitle(
-          "Today's Appointments",
-          count: today.length,
-        ),
+        _sectionTitle("Today's Appointments", count: today.length),
         if (today.isEmpty)
           _empty('No appointments today')
         else
@@ -1360,21 +1297,14 @@ class _DoctorDashboardScreenState
               _filter = 'All';
             });
           },
-          icon: const Icon(
-            Icons.calendar_month_outlined,
-            size: 20,
-          ),
-          label: const Text(
-            'View All Appointments',
-          ),
+          icon: const Icon(Icons.calendar_month_outlined, size: 20),
+          label: const Text('View All Appointments'),
         ),
       ],
     );
   }
 
-  Widget _bookings(
-    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
-  ) {
+  Widget _bookings(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
     final filtered = docs.where((doc) {
       if (_filter == 'All') return true;
 
@@ -1397,7 +1327,7 @@ class _DoctorDashboardScreenState
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             itemCount: _filters.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (_, index) {
               final value = _filters[index];
               final selected = _filter == value;
@@ -1454,9 +1384,7 @@ class _DoctorDashboardScreenState
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   itemCount: filtered.length,
-                  itemBuilder: (_, index) => _bookingCard(
-                    filtered[index],
-                  ),
+                  itemBuilder: (_, index) => _bookingCard(filtered[index]),
                 ),
         ),
       ],
@@ -1477,20 +1405,14 @@ class _DoctorDashboardScreenState
         }
 
         if (!snapshot.hasData) {
-          return const Center(
-            child: CircularProgressIndicator(color: brand),
-          );
+          return const Center(child: CircularProgressIndicator(color: brand));
         }
 
         final docs = snapshot.data!.docs.toList()
           ..sort((a, b) {
-            final x = _date(
-              a.data()['timestamp'],
-            );
+            final x = _date(a.data()['timestamp']);
 
-            final y = _date(
-              b.data()['timestamp'],
-            );
+            final y = _date(b.data()['timestamp']);
 
             return (y ?? DateTime(1970)).compareTo(x ?? DateTime(1970));
           });
@@ -1528,13 +1450,9 @@ class _DoctorDashboardScreenState
                   borderRadius: BorderRadius.circular(16),
                   onTap: () async {
                     try {
-                      await doc.reference.update({
-                        'isRead': true,
-                      });
+                      await doc.reference.update({'isRead': true});
                     } catch (error) {
-                      _message(
-                        'Could not mark as read: $error',
-                      );
+                      _message('Could not mark as read: $error');
                     }
                   },
                   child: Container(
@@ -1571,8 +1489,9 @@ class _DoctorDashboardScreenState
                                 style: TextStyle(
                                   color: ink,
                                   fontSize: 15,
-                                  fontWeight:
-                                      unread ? FontWeight.w700 : FontWeight.w600,
+                                  fontWeight: unread
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
                                 ),
                               ),
                               const SizedBox(height: 3),
@@ -1618,7 +1537,8 @@ class _DoctorDashboardScreenState
   Future<void> _switchToUserMode() async {
     final confirmed = await _confirm(
       title: 'Switch to User Mode?',
-      message: 'Continue using OneClick services with your current '
+      message:
+          'Continue using OneClick services with your current '
           'account. Your doctor profile and appointments stay unchanged.',
       action: 'Switch Mode',
     );
@@ -1629,10 +1549,7 @@ class _DoctorDashboardScreenState
     if (navigate != null) {
       navigate();
     } else {
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/home',
-        (route) => false,
-      );
+      Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
     }
   }
 
@@ -1656,10 +1573,8 @@ class _DoctorDashboardScreenState
       if (callback != null) {
         callback();
       } else {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/login',
-          (route) => false,
-        );
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil('/login', (route) => false);
       }
     } catch (error) {
       _message('Could not sign out: $error');
@@ -1833,11 +1748,7 @@ class _DoctorDashboardScreenState
     if (uid.isEmpty) {
       return const Scaffold(
         backgroundColor: background,
-        body: Center(
-          child: Text(
-            'Please sign in.',
-          ),
-        ),
+        body: Center(child: Text('Please sign in.')),
       );
     }
 
@@ -1887,9 +1798,7 @@ class _DoctorDashboardScreenState
           }
 
           if (!snapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(color: brand),
-            );
+            return const Center(child: CircularProgressIndicator(color: brand));
           }
 
           final docs = snapshot.data!.docs.toList()
@@ -1898,9 +1807,7 @@ class _DoctorDashboardScreenState
 
               final y = _appointmentDateTime(b.data());
 
-              return (x ?? DateTime(2100)).compareTo(
-                y ?? DateTime(2100),
-              );
+              return (x ?? DateTime(2100)).compareTo(y ?? DateTime(2100));
             });
 
           if (_tab == 0) {

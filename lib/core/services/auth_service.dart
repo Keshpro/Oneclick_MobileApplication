@@ -36,13 +36,9 @@ class AuthService {
       // 2. Decide whether admin approval is required
       final normalizedRole = role.trim().toLowerCase();
 
-      const approvalRequiredRoles = {
-        'doctor',
-        'driver',
-      };
+      const approvalRequiredRoles = {'doctor', 'driver'};
 
-      final requiresApproval =
-          approvalRequiredRoles.contains(normalizedRole);
+      final requiresApproval = approvalRequiredRoles.contains(normalizedRole);
 
       final status = requiresApproval ? 'pending' : 'approved';
 
@@ -55,8 +51,7 @@ class AuthService {
         'status': status,
         'requiresApproval': requiresApproval,
         'createdAt': FieldValue.serverTimestamp(),
-        'approvedAt':
-            requiresApproval ? null : FieldValue.serverTimestamp(),
+        'approvedAt': requiresApproval ? null : FieldValue.serverTimestamp(),
       });
 
       // 4. Provider accounts must wait for admin approval
@@ -92,8 +87,7 @@ class AuthService {
         throw Exception('Login failed.');
       }
 
-      final document =
-          await _firestore.collection('users').doc(user.uid).get();
+      final document = await _firestore.collection('users').doc(user.uid).get();
 
       if (!document.exists) {
         await _auth.signOut();
@@ -102,31 +96,28 @@ class AuthService {
 
       final data = document.data()!;
 
-      final role =
-          (data['role'] ?? 'user').toString().trim().toLowerCase();
+      final role = (data['role'] ?? 'user').toString().trim().toLowerCase();
 
       // Admins are never blocked by the approval flow
       if (role == 'admin') {
         return role;
       }
 
-      final status =
-          (data['status'] ?? 'pending').toString().trim().toLowerCase();
+      final status = (data['status'] ?? 'pending')
+          .toString()
+          .trim()
+          .toLowerCase();
 
       // Pending provider
       if (status == 'pending') {
         await _auth.signOut();
-        throw Exception(
-          'Your account is waiting for admin approval.',
-        );
+        throw Exception('Your account is waiting for admin approval.');
       }
 
       // Rejected provider
       if (status == 'rejected') {
         await _auth.signOut();
-        throw Exception(
-          'Your account verification was rejected.',
-        );
+        throw Exception('Your account verification was rejected.');
       }
 
       // 'active' and 'approved' both mean the account may log in
@@ -151,9 +142,7 @@ class AuthService {
           throw Exception('This account has been disabled.');
 
         case 'too-many-requests':
-          throw Exception(
-            'Too many attempts. Please try again later.',
-          );
+          throw Exception('Too many attempts. Please try again later.');
 
         default:
           throw Exception(e.message ?? 'Login failed.');
@@ -172,8 +161,7 @@ class AuthService {
 
     if (user == null) return null;
 
-    final document =
-        await _firestore.collection('users').doc(user.uid).get();
+    final document = await _firestore.collection('users').doc(user.uid).get();
 
     return document.data();
   }

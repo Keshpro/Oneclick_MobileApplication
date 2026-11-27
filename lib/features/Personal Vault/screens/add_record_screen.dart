@@ -7,10 +7,7 @@ import '../services/vault_service.dart';
 class AddRecordScreen extends StatefulWidget {
   final String initialRecordType;
 
-  const AddRecordScreen({
-    super.key,
-    this.initialRecordType = 'Document',
-  });
+  const AddRecordScreen({super.key, this.initialRecordType = 'Document'});
 
   @override
   State<AddRecordScreen> createState() => _AddRecordScreenState();
@@ -47,6 +44,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     _recordType = widget.initialRecordType;
     _category = _categoriesForRecordType.first;
   }
+
   String _category = 'Health & Medical';
   DateTime _renewalDate = DateTime.now();
   bool _renewalDateSelected = false;
@@ -55,59 +53,58 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   String? _selectedFileName;
   PlatformFile? _selectedFile;
 
-Future<void> _saveAccount() async {
-  final title = _titleController.text.trim();
-  final username = _usernameController.text.trim();
+  Future<void> _saveAccount() async {
+    final title = _titleController.text.trim();
+    final username = _usernameController.text.trim();
 
-  if (title.isEmpty || username.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please enter an account name and username.'),
-      ),
-    );
-    return;
+    if (title.isEmpty || username.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter an account name and username.'),
+        ),
+      );
+      return;
+    }
+
+    final notes = [
+      'Username: $username',
+      if (_recoveryEmailController.text.trim().isNotEmpty)
+        'Recovery Email: ${_recoveryEmailController.text.trim()}',
+      if (_recoveryPhoneController.text.trim().isNotEmpty)
+        'Recovery Phone: ${_recoveryPhoneController.text.trim()}',
+      'Two-Factor Authentication: ${_twoFactorEnabled ? 'Enabled' : 'Not enabled'}',
+      'Backup Codes: ${_hasBackupCodes ? 'Available' : 'Not available'}',
+      if (_recoveryInstructionsController.text.trim().isNotEmpty)
+        'Recovery Instructions: ${_recoveryInstructionsController.text.trim()}',
+      if (_notesController.text.trim().isNotEmpty)
+        'Notes: ${_notesController.text.trim()}',
+    ].join('\n');
+
+    try {
+      await _vaultService.addRecord(
+        title: title,
+        recordType: 'Account',
+        category: _category,
+        notes: notes,
+        tags: const ['account'],
+        renewalDate: DateTime.now(),
+        expiryNotification: false,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Account saved to Vault')));
+
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Failed to save account: $e')));
+    }
   }
-
-  final notes = [
-    'Username: $username',
-    if (_recoveryEmailController.text.trim().isNotEmpty)
-      'Recovery Email: ${_recoveryEmailController.text.trim()}',
-    if (_recoveryPhoneController.text.trim().isNotEmpty)
-      'Recovery Phone: ${_recoveryPhoneController.text.trim()}',
-    'Two-Factor Authentication: ${_twoFactorEnabled ? 'Enabled' : 'Not enabled'}',
-    'Backup Codes: ${_hasBackupCodes ? 'Available' : 'Not available'}',
-    if (_recoveryInstructionsController.text.trim().isNotEmpty)
-      'Recovery Instructions: ${_recoveryInstructionsController.text.trim()}',
-    if (_notesController.text.trim().isNotEmpty)
-      'Notes: ${_notesController.text.trim()}',
-  ].join('\n');
-
-  try {
-    await _vaultService.addRecord(
-      title: title,
-      recordType: 'Account',
-      category: _category,
-      notes: notes,
-      tags: const ['account'],
-      renewalDate: DateTime.now(),
-      expiryNotification: false,
-    );
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Account saved to Vault')),
-    );
-
-    Navigator.pop(context);
-  } catch (e) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to save account: $e')),
-    );
-  }
-}
 
   @override
   void dispose() {
@@ -122,7 +119,7 @@ Future<void> _saveAccount() async {
     _recoveryInstructionsController.dispose();
 
     super.dispose();
-}
+  }
 
   Future<void> _pickDate() async {
     final date = await showDatePicker(
@@ -141,27 +138,37 @@ Future<void> _saveAccount() async {
   }
 
   Future<void> _pickPurchaseDate() async {
-  final date = await showDatePicker(
-    context: context,
-    initialDate: _purchaseDate,
-    firstDate: DateTime(2000),
-    lastDate: DateTime.now(),
-  );
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _purchaseDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
 
-  if (!mounted || date == null) return;
+    if (!mounted || date == null) return;
 
-  setState(() {
-    _purchaseDate = date;
-  });
-}
+    setState(() {
+      _purchaseDate = date;
+    });
+  }
 
   String get _formattedDate {
     if (!_renewalDateSelected) {
-    return 'Select date';
-  }
+      return 'Select date';
+    }
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
 
     return '${_renewalDate.day} '
@@ -170,37 +177,43 @@ Future<void> _saveAccount() async {
   }
 
   String get _formattedPurchaseDate {
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
 
-  return '${_purchaseDate.day} '
-      '${months[_purchaseDate.month - 1]} '
-      '${_purchaseDate.year}';
-}
+    return '${_purchaseDate.day} '
+        '${months[_purchaseDate.month - 1]} '
+        '${_purchaseDate.year}';
+  }
 
-Future<void> _chooseFile() async {
-  final result = await FilePicker.pickFiles(
-  type: FileType.custom,
-  allowedExtensions: [
-    'pdf',
-    'jpg',
-    'jpeg',
-    'png',
-  ],
-);
+  Future<void> _chooseFile() async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    );
 
-  if (result.isEmpty) return;
+    if (result.isEmpty) return;
 
-  final file = result.first;
+    final file = result.first;
 
-setState(() {
-  _selectedFile = file;
-  _selectedFileName = file.name;
-  _showSampleFile = true;
-});
-}
+    setState(() {
+      _selectedFile = file;
+      _selectedFileName = file.name;
+      _showSampleFile = true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -267,10 +280,7 @@ setState(() {
                           const SizedBox(height: 6),
                           const Text(
                             'Add the basic information used to identify this account.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: muted,
-                            ),
+                            style: TextStyle(fontSize: 13, color: muted),
                           ),
                           const SizedBox(height: 24),
                         ],
@@ -278,41 +288,16 @@ setState(() {
                         _label(_titleLabel),
                         const SizedBox(height: 12),
                         _inputSurface(
-                        child: TextField(
-                          controller: _titleController,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: ink,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: _recordType == 'Account'
-                                ? 'e.g. Gmail, GitHub, NSBM Portal'
-                                : null,
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 18,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Account-specific fields
-                      if (_recordType == 'Account') ...[
-                        const SizedBox(height: 20),
-                        _categoryField(),
-                        const SizedBox(height: 24),
-
-                        _label('EMAIL OR USERNAME'),
-                        const SizedBox(height: 12),
-                        _inputSurface(
                           child: TextField(
-                            controller: _usernameController,
-                            decoration: const InputDecoration(
-                              hintText: 'e.g. name@gmail.com or username',
+                            controller: _titleController,
+                            style: const TextStyle(fontSize: 18, color: ink),
+                            decoration: InputDecoration(
+                              hintText: _recordType == 'Account'
+                                  ? 'e.g. Gmail, GitHub, NSBM Portal'
+                                  : null,
                               border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 20,
                                 vertical: 18,
                               ),
@@ -320,150 +305,168 @@ setState(() {
                           ),
                         ),
 
-                        const SizedBox(height: 32),
+                        // Account-specific fields
+                        if (_recordType == 'Account') ...[
+                          const SizedBox(height: 20),
+                          _categoryField(),
+                          const SizedBox(height: 24),
 
-                        const Text(
-                          'Recovery Information',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: ink,
+                          _label('EMAIL OR USERNAME'),
+                          const SizedBox(height: 12),
+                          _inputSurface(
+                            child: TextField(
+                              controller: _usernameController,
+                              decoration: const InputDecoration(
+                                hintText: 'e.g. name@gmail.com or username',
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 18,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Keep the information you may need if you lose account access.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: muted,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
 
-                        _label('RECOVERY EMAIL'),
-                        const SizedBox(height: 12),
-                        _inputSurface(
-                          child: TextField(
-                            controller: _recoveryEmailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              hintText: 'Enter recovery email (optional)',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
+                          const SizedBox(height: 32),
+
+                          const Text(
+                            'Recovery Information',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: ink,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Keep the information you may need if you lose account access.',
+                            style: TextStyle(fontSize: 13, color: muted),
+                          ),
+                          const SizedBox(height: 24),
+
+                          _label('RECOVERY EMAIL'),
+                          const SizedBox(height: 12),
+                          _inputSurface(
+                            child: TextField(
+                              controller: _recoveryEmailController,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: const InputDecoration(
+                                hintText: 'Enter recovery email (optional)',
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          _label('RECOVERY PHONE'),
+                          const SizedBox(height: 12),
+                          _inputSurface(
+                            child: TextField(
+                              controller: _recoveryPhoneController,
+                              keyboardType: TextInputType.phone,
+                              decoration: const InputDecoration(
+                                hintText: 'Enter recovery phone (optional)',
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Two-Factor Authentication box
+                          _inputSurface(
+                            radius: 28,
+                            child: SwitchListTile(
+                              contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 20,
-                                vertical: 18,
+                                vertical: 8,
                               ),
+                              title: const Text(
+                                'Two-Factor Authentication',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: ink,
+                                ),
+                              ),
+                              subtitle: const Text(
+                                'Is 2FA enabled for this account?',
+                                style: TextStyle(color: muted, fontSize: 13),
+                              ),
+                              value: _twoFactorEnabled,
+                              activeThumbColor: purple,
+                              onChanged: (value) {
+                                setState(() {
+                                  _twoFactorEnabled = value;
+                                });
+                              },
                             ),
                           ),
-                        ),
 
-                        const SizedBox(height: 20),
+                          const SizedBox(height: 16),
 
-                        _label('RECOVERY PHONE'),
-                        const SizedBox(height: 12),
-                        _inputSurface(
-                          child: TextField(
-                            controller: _recoveryPhoneController,
-                            keyboardType: TextInputType.phone,
-                            decoration: const InputDecoration(
-                              hintText: 'Enter recovery phone (optional)',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
+                          // Backup Codes box
+                          _inputSurface(
+                            radius: 28,
+                            child: SwitchListTile(
+                              contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 20,
-                                vertical: 18,
+                                vertical: 8,
+                              ),
+                              title: const Text(
+                                'Backup Codes',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: ink,
+                                ),
+                              ),
+                              subtitle: const Text(
+                                'Do you have backup codes stored safely?',
+                                style: TextStyle(color: muted, fontSize: 13),
+                              ),
+                              value: _hasBackupCodes,
+                              activeThumbColor: purple,
+                              onChanged: (value) {
+                                setState(() {
+                                  _hasBackupCodes = value;
+                                });
+                              },
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          const SizedBox(height: 20),
+
+                          _label('RECOVERY INSTRUCTIONS'),
+                          const SizedBox(height: 12),
+                          _inputSurface(
+                            radius: 28,
+                            child: TextField(
+                              controller: _recoveryInstructionsController,
+                              minLines: 3,
+                              maxLines: 5,
+                              decoration: const InputDecoration(
+                                hintText: 'Recovery steps (optional — no passwords or codes)',
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.all(20),
                               ),
                             ),
                           ),
-                        ),
+                        ],
 
-                        const SizedBox(height: 24),
-
-
-                        // Two-Factor Authentication box
-                        _inputSurface(
-                          radius: 28,
-                          child: SwitchListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 8,
-                            ),
-                            title: const Text(
-                              'Two-Factor Authentication',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: ink,
-                              ),
-                            ),
-                            subtitle: const Text(
-                              'Is 2FA enabled for this account?',
-                              style: TextStyle(color: muted, fontSize: 13),
-                            ),
-                            value: _twoFactorEnabled,
-                            activeThumbColor: purple,
-                            onChanged: (value) {
-                              setState(() {
-                                _twoFactorEnabled = value;
-                              });
-                            },
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Backup Codes box
-                        _inputSurface(
-                          radius: 28,
-                          child: SwitchListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 8,
-                            ),
-                            title: const Text(
-                              'Backup Codes',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: ink,
-                              ),
-                            ),
-                            subtitle: const Text(
-                              'Do you have backup codes stored safely?',
-                              style: TextStyle(color: muted, fontSize: 13),
-                            ),
-                            value: _hasBackupCodes,
-                            activeThumbColor: purple,
-                            onChanged: (value) {
-                              setState(() {
-                                _hasBackupCodes = value;
-                              });
-                            },
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        const SizedBox(height: 20),
-
-                        _label('RECOVERY INSTRUCTIONS'),
-                        const SizedBox(height: 12),
-                        _inputSurface(
-                          radius: 28,
-                          child: TextField(
-                            controller: _recoveryInstructionsController,
-                            minLines: 3,
-                            maxLines: 5,
-                            decoration: const InputDecoration(
-                              hintText: 'Recovery steps (optional — no passwords or codes)',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.all(20),
-                            ),
-                          ),
-                        ),
-                      ],
-
-                          // Receipt-specific fields
-                          if (_recordType == 'Receipt') ...[
+                        // Receipt-specific fields
+                        if (_recordType == 'Receipt') ...[
                           const SizedBox(height: 28),
 
                           _label('MERCHANT / STORE'),
@@ -539,9 +542,10 @@ setState(() {
                                     _inputSurface(
                                       child: TextField(
                                         controller: _amountController,
-                                        keyboardType: const TextInputType.numberWithOptions(
-                                          decimal: true,
-                                        ),
+                                        keyboardType:
+                                            const TextInputType.numberWithOptions(
+                                              decimal: true,
+                                            ),
                                         decoration: const InputDecoration(
                                           hintText: '0.00',
                                           border: InputBorder.none,
@@ -597,10 +601,7 @@ setState(() {
                           const SizedBox(height: 6),
                           const Text(
                             'Add any extra information about this account (optional).',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: muted,
-                            ),
+                            style: TextStyle(fontSize: 13, color: muted),
                           ),
                           const SizedBox(height: 16),
                         ] else ...[
@@ -650,7 +651,8 @@ setState(() {
                                 return;
                               }
 
-                              if (_recordType != 'Account' && !_renewalDateSelected) {
+                              if (_recordType != 'Account' &&
+                                  !_renewalDateSelected) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
@@ -665,24 +667,24 @@ setState(() {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => SmartUploadReviewScreen(
-                                  title: _titleController.text.trim(),
-                                  recordType: _recordType,
-                                  category: _category,
-                                  renewalDate: _renewalDate,
-                                  expiryNotification: _expiryNotification,
-                                  notes: _notesController.text.trim(),
-                                  tags: const [],
-                                  selectedFile: _selectedFile,
-                                  merchant: _recordType == 'Receipt'
-                                      ? _merchantController.text.trim()
-                                      : null,
-                                  purchaseDate: _recordType == 'Receipt'
-                                      ? _purchaseDate
-                                      : null,
-                                  amount: _recordType == 'Receipt'
-                                      ? _amountController.text.trim()
-                                      : null,
-                                ),
+                                    title: _titleController.text.trim(),
+                                    recordType: _recordType,
+                                    category: _category,
+                                    renewalDate: _renewalDate,
+                                    expiryNotification: _expiryNotification,
+                                    notes: _notesController.text.trim(),
+                                    tags: const [],
+                                    selectedFile: _selectedFile,
+                                    merchant: _recordType == 'Receipt'
+                                        ? _merchantController.text.trim()
+                                        : null,
+                                    purchaseDate: _recordType == 'Receipt'
+                                        ? _purchaseDate
+                                        : null,
+                                    amount: _recordType == 'Receipt'
+                                        ? _amountController.text.trim()
+                                        : null,
+                                  ),
                                 ),
                               );
                             },
@@ -700,19 +702,19 @@ setState(() {
                                     size: 21,
                                   ),
                                   SizedBox(width: 10),
-                                 Flexible(
-                                  child: Text(
-                                    _recordType == 'Account'
-                                        ? 'Save Account to Vault'
-                                        : 'Continue to Review',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      color: purple,
+                                  Flexible(
+                                    child: Text(
+                                      _recordType == 'Account'
+                                          ? 'Save Account to Vault'
+                                          : 'Continue to Review',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        color: purple,
+                                      ),
                                     ),
                                   ),
-                                ),
                                   SizedBox(width: 10),
                                   Icon(
                                     Icons.arrow_forward,
@@ -730,10 +732,7 @@ setState(() {
                             onPressed: () => Navigator.pop(context),
                             child: const Text(
                               'Cancel & Discard',
-                              style: TextStyle(
-                                color: muted,
-                                fontSize: 16,
-                              ),
+                              style: TextStyle(color: muted, fontSize: 16),
                             ),
                           ),
                         ),
@@ -749,56 +748,56 @@ setState(() {
     );
   }
 
-Widget _header() {
-  return Padding(
-    padding: const EdgeInsets.fromLTRB(22, 16, 22, 14),
-    child: Row(
-      children: [
-        _roundButton(
-          icon: Icons.arrow_back_ios_new,
-          onTap: () => Navigator.maybePop(context),
-        ),
-
-        const SizedBox(width: 16),
-
-        const Expanded(
-          child: Text(
-            'My Vault',
-            style: TextStyle(
-              fontSize: 21,
-              fontWeight: FontWeight.w600,
-              color: ink,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-  Widget _intro() {
-  return LayoutBuilder(
-    builder: (context, constraints) {
-      final heading = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _header() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 16, 22, 14),
+      child: Row(
         children: [
-          _label('STEP 1 OF 2'),
-          const SizedBox(height: 8),
-          const Text(
-            'Add New Record',
-            style: TextStyle(
-              fontSize: 27,
-              color: ink,
-              fontWeight: FontWeight.w600,
+          _roundButton(
+            icon: Icons.arrow_back_ios_new,
+            onTap: () => Navigator.maybePop(context),
+          ),
+
+          const SizedBox(width: 16),
+
+          const Expanded(
+            child: Text(
+              'My Vault',
+              style: TextStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.w600,
+                color: ink,
+              ),
             ),
           ),
         ],
-      );
+      ),
+    );
+  }
 
-      return heading;
-    },
-  );
-}
+  Widget _intro() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final heading = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label('STEP 1 OF 2'),
+            const SizedBox(height: 8),
+            const Text(
+              'Add New Record',
+              style: TextStyle(
+                fontSize: 27,
+                color: ink,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        );
+
+        return heading;
+      },
+    );
+  }
 
   Widget _typeCard(String title, String subtitle, IconData icon) {
     final selected = _recordType == title;
@@ -817,18 +816,12 @@ Widget _header() {
         child: Stack(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 6,
-                vertical: 20,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 20),
               child: SizedBox(
                 width: double.infinity,
                 child: Column(
                   children: [
-                    _iconDisc(
-                      icon,
-                      color: selected ? purple : muted,
-                    ),
+                    _iconDisc(icon, color: selected ? purple : muted),
                     const SizedBox(height: 14),
                     Text(
                       title,
@@ -842,10 +835,7 @@ Widget _header() {
                     Text(
                       subtitle,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: muted,
-                        fontSize: 12,
-                      ),
+                      style: const TextStyle(color: muted, fontSize: 12),
                     ),
                   ],
                 ),
@@ -855,11 +845,7 @@ Widget _header() {
               const Positioned(
                 top: 10,
                 right: 10,
-                child: Icon(
-                  Icons.circle,
-                  color: purple,
-                  size: 10,
-                ),
+                child: Icon(Icons.circle, color: purple, size: 10),
               ),
           ],
         ),
@@ -962,12 +948,9 @@ Widget _header() {
                           SizedBox(height: 3),
                           Text(
                             _selectedFile != null
-                              ? 'Selected file'
-                              : 'No file selected',
-                            style: TextStyle(
-                              color: muted,
-                              fontSize: 12,
-                            ),
+                                ? 'Selected file'
+                                : 'No file selected',
+                            style: TextStyle(color: muted, fontSize: 12),
                           ),
                         ],
                       ),
@@ -1005,53 +988,53 @@ Widget _header() {
           'Other',
         ];
 
-    case 'Receipt':
-      return [
-        'Electronics',
-        'Home',
-        'Vehicle',
-        'Clothing',
-        'Health',
-        'Other',
-      ];
+      case 'Receipt':
+        return [
+          'Electronics',
+          'Home',
+          'Vehicle',
+          'Clothing',
+          'Health',
+          'Other',
+        ];
 
-    case 'Document':
-    default:
-      return [
-        'Personal ID',
-        'Health & Medical',
-        'Insurance',
-        'Home & Lease',
-        'Education',
-        'Legal',
-        'Other',
-      ];
+      case 'Document':
+      default:
+        return [
+          'Personal ID',
+          'Health & Medical',
+          'Insurance',
+          'Home & Lease',
+          'Education',
+          'Legal',
+          'Other',
+        ];
+    }
   }
-}
 
-String get _titleLabel {
-  switch (_recordType) {
-    case 'Account':
-      return 'SERVICE / ACCOUNT NAME';
-    case 'Receipt':
-      return 'ITEM / PURCHASE TITLE';
-    case 'Document':
-    default:
-      return 'DOCUMENT TITLE';
+  String get _titleLabel {
+    switch (_recordType) {
+      case 'Account':
+        return 'SERVICE / ACCOUNT NAME';
+      case 'Receipt':
+        return 'ITEM / PURCHASE TITLE';
+      case 'Document':
+      default:
+        return 'DOCUMENT TITLE';
+    }
   }
-}
 
-String get _dateLabel {
-  switch (_recordType) {
-    case 'Receipt':
-      return 'WARRANTY / EXPIRY DATE';
-    case 'Account':
-      return 'REVIEW / RENEWAL DATE';
-    case 'Document':
-    default:
-      return 'RENEWAL / EXPIRY DATE';
+  String get _dateLabel {
+    switch (_recordType) {
+      case 'Receipt':
+        return 'WARRANTY / EXPIRY DATE';
+      case 'Account':
+        return 'REVIEW / RENEWAL DATE';
+      case 'Document':
+      default:
+        return 'RENEWAL / EXPIRY DATE';
+    }
   }
-}
 
   Widget _categoryField() {
     return Column(
@@ -1072,10 +1055,7 @@ String get _dateLabel {
                 items: _categoriesForRecordType.map((category) {
                   return DropdownMenuItem(
                     value: category,
-                    child: Text(
-                      category,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    child: Text(category, overflow: TextOverflow.ellipsis),
                   );
                 }).toList(),
                 onChanged: (value) {
@@ -1102,19 +1082,13 @@ String get _dateLabel {
             borderRadius: BorderRadius.circular(30),
             onTap: _pickDate,
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       _formattedDate,
-                      style: const TextStyle(
-                        color: ink,
-                        fontSize: 16,
-                      ),
+                      style: const TextStyle(color: ink, fontSize: 16),
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -1187,10 +1161,7 @@ String get _dateLabel {
     );
   }
 
-  Widget _roundButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
+  Widget _roundButton({required IconData icon, required VoidCallback onTap}) {
     return _surface(
       radius: 40,
       padding: EdgeInsets.zero,
@@ -1202,11 +1173,7 @@ String get _dateLabel {
     );
   }
 
-  Widget _iconDisc(
-    IconData icon, {
-    required Color color,
-    double size = 52,
-  }) {
+  Widget _iconDisc(IconData icon, {required Color color, double size = 52}) {
     return _surface(
       radius: size,
       padding: EdgeInsets.zero,
@@ -1280,10 +1247,7 @@ String get _dateLabel {
     );
   }
 
-  Widget _inputSurface({
-    required Widget child,
-    double radius = 30,
-  }) {
+  Widget _inputSurface({required Widget child, double radius = 30}) {
     // Layered gradients approximate the inset shadows in the reference.
     return Container(
       padding: const EdgeInsets.all(3),
@@ -1292,11 +1256,7 @@ String get _dateLabel {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFD6D8E1),
-            Color(0xFFE9EBF2),
-            Color(0xFFF7F8FC),
-          ],
+          colors: [Color(0xFFD6D8E1), Color(0xFFE9EBF2), Color(0xFFF7F8FC)],
           stops: [0, 0.5, 1],
         ),
       ),

@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -12,8 +11,7 @@ class DoctorProfileManageScreen extends StatefulWidget {
       _DoctorProfileManageScreenState();
 }
 
-class _DoctorProfileManageScreenState
-    extends State<DoctorProfileManageScreen> {
+class _DoctorProfileManageScreenState extends State<DoctorProfileManageScreen> {
   static const Color _green = Color(0xFF059669);
   static const Color _darkGreen = Color(0xFF064E3B);
   static const Color _background = Color(0xFFF7FAF9);
@@ -82,25 +80,18 @@ class _DoctorProfileManageScreenState
     if (_initialized) return;
 
     final provider = data['providerDetails'] is Map
-        ? Map<String, dynamic>.from(
-            data['providerDetails'] as Map,
-          )
+        ? Map<String, dynamic>.from(data['providerDetails'] as Map)
         : <String, dynamic>{};
 
-    _nameController.text =
-        (data['name'] ?? '').toString();
+    _nameController.text = (data['name'] ?? '').toString();
 
-    _phoneController.text =
-        (data['phone'] ?? '').toString();
+    _phoneController.text = (data['phone'] ?? '').toString();
 
-    _hospitalController.text =
-        (provider['hospital'] ?? '').toString();
+    _hospitalController.text = (provider['hospital'] ?? '').toString();
 
-    _experienceController.text =
-        (provider['experienceYears'] ?? '').toString();
+    _experienceController.text = (provider['experienceYears'] ?? '').toString();
 
-    final specialization =
-        (provider['specialization'] ?? '').toString();
+    final specialization = (provider['specialization'] ?? '').toString();
 
     if (specialization.isNotEmpty &&
         !_doctorCategories.contains(specialization)) {
@@ -123,9 +114,7 @@ class _DoctorProfileManageScreenState
         content: Text(message),
         backgroundColor: error ? _red : _darkGreen,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -140,19 +129,12 @@ class _DoctorProfileManageScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Row(
           children: [
-            Icon(
-              Icons.verified_user_rounded,
-              color: _green,
-            ),
+            Icon(Icons.verified_user_rounded, color: _green),
             SizedBox(width: 10),
-            Expanded(
-              child: Text('Save Profile Changes?'),
-            ),
+            Expanded(child: Text('Save Profile Changes?')),
           ],
         ),
         content: const Text(
@@ -161,16 +143,12 @@ class _DoctorProfileManageScreenState
         ),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: _green,
-            ),
-            onPressed: () =>
-                Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(backgroundColor: _green),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Save Changes'),
           ),
         ],
@@ -185,27 +163,22 @@ class _DoctorProfileManageScreenState
       final firestore = FirebaseFirestore.instance;
       final batch = firestore.batch();
 
-      final doctorRef =
-          firestore.collection('doctors').doc(uid);
+      final doctorRef = firestore.collection('doctors').doc(uid);
 
       batch.update(doctorRef, {
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
         'providerDetails.specialization': _selectedCategory,
-        'providerDetails.hospital':
-            _hospitalController.text.trim(),
-        'providerDetails.experienceYears':
-            _experienceController.text.trim(),
+        'providerDetails.hospital': _hospitalController.text.trim(),
+        'providerDetails.experienceYears': _experienceController.text.trim(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      final logRef =
-          firestore.collection('activity_logs').doc();
+      final logRef = firestore.collection('activity_logs').doc();
 
       batch.set(logRef, {
         'action': 'Doctor Profile Updated',
-        'details':
-            '${_nameController.text.trim()} updated profile details.',
+        'details': '${_nameController.text.trim()} updated profile details.',
         'performedBy': _doctor?.email ?? 'Doctor',
         'doctorId': uid,
         'timestamp': FieldValue.serverTimestamp(),
@@ -219,10 +192,7 @@ class _DoctorProfileManageScreenState
 
       _message('Profile updated successfully!');
     } catch (e) {
-      _message(
-        'Failed to update profile: $e',
-        error: true,
-      );
+      _message('Failed to update profile: $e', error: true);
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -236,9 +206,7 @@ class _DoctorProfileManageScreenState
     final leave = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Discard changes?'),
         content: const Text(
           'You have unsaved profile changes. '
@@ -246,16 +214,12 @@ class _DoctorProfileManageScreenState
         ),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Keep Editing'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: _red,
-            ),
-            onPressed: () =>
-                Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(backgroundColor: _red),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Discard'),
           ),
         ],
@@ -296,17 +260,11 @@ class _DoctorProfileManageScreenState
             children: [
               Text(
                 'My Profile',
-                style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
               ),
               Text(
                 'Doctor workspace',
-                style: TextStyle(
-                  color: _muted,
-                  fontSize: 11,
-                ),
+                style: TextStyle(color: _muted, fontSize: 11),
               ),
             ],
           ),
@@ -331,8 +289,7 @@ class _DoctorProfileManageScreenState
                 'Doctor account required',
                 'Please sign in to manage your profile.',
               )
-            : StreamBuilder<
-                DocumentSnapshot<Map<String, dynamic>>>(
+            : StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                 stream: FirebaseFirestore.instance
                     .collection('doctors')
                     .doc(uid)
@@ -347,9 +304,7 @@ class _DoctorProfileManageScreenState
 
                   if (!snapshot.hasData) {
                     return const Center(
-                      child: CircularProgressIndicator(
-                        color: _green,
-                      ),
+                      child: CircularProgressIndicator(color: _green),
                     );
                   }
 
@@ -360,53 +315,36 @@ class _DoctorProfileManageScreenState
                     );
                   }
 
-                  final data = snapshot.data!.data() ??
-                      <String, dynamic>{};
+                  final data = snapshot.data!.data() ?? <String, dynamic>{};
 
                   _initializeFields(data);
 
-                  final provider =
-                      data['providerDetails'] is Map
-                          ? Map<String, dynamic>.from(
-                              data['providerDetails'] as Map,
-                            )
-                          : <String, dynamic>{};
+                  final provider = data['providerDetails'] is Map
+                      ? Map<String, dynamic>.from(
+                          data['providerDetails'] as Map,
+                        )
+                      : <String, dynamic>{};
 
-                  final name =
-                      (data['name'] ?? 'Doctor').toString();
+                  final name = (data['name'] ?? 'Doctor').toString();
 
-                  final email =
-                      (data['email'] ??
-                              _doctor?.email ??
-                              '')
-                          .toString();
+                  final email = (data['email'] ?? _doctor?.email ?? '')
+                      .toString();
 
-                  final status =
-                      (data['status'] ?? 'pending')
-                          .toString();
+                  final status = (data['status'] ?? 'pending').toString();
 
                   final specialization =
-                      (provider['specialization'] ??
-                              'General Physician')
+                      (provider['specialization'] ?? 'General Physician')
                           .toString();
 
                   return SafeArea(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(
-                        18, 20, 18, 35,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(18, 20, 18, 35),
                       child: Form(
                         key: _formKey,
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _profileHeader(
-                              name,
-                              email,
-                              status,
-                              specialization,
-                            ),
+                            _profileHeader(name, email, status, specialization),
                             const SizedBox(height: 25),
                             _sectionTitle(
                               'Personal Information',
@@ -451,10 +389,7 @@ class _DoctorProfileManageScreenState
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            _darkGreen,
-            _green,
-          ],
+          colors: [_darkGreen, _green],
         ),
         borderRadius: BorderRadius.circular(26),
       ),
@@ -501,17 +436,11 @@ class _DoctorProfileManageScreenState
           Text(
             email,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFFD1FAE5),
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Color(0xFFD1FAE5), fontSize: 12),
           ),
           const SizedBox(height: 15),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 8,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(30),
@@ -520,9 +449,7 @@ class _DoctorProfileManageScreenState
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  active
-                      ? Icons.verified_rounded
-                      : Icons.hourglass_top_rounded,
+                  active ? Icons.verified_rounded : Icons.hourglass_top_rounded,
                   color: active
                       ? const Color(0xFF86EFAC)
                       : const Color(0xFFFDE68A),
@@ -585,7 +512,7 @@ class _DoctorProfileManageScreenState
           _fieldLabel('Medical Category / Specialization'),
           const SizedBox(height: 7),
           DropdownButtonFormField<String>(
-            value: _selectedCategory,
+            initialValue: _selectedCategory,
             isExpanded: true,
             decoration: _inputDecoration(
               Icons.medical_services_rounded,
@@ -594,10 +521,7 @@ class _DoctorProfileManageScreenState
             items: _doctorCategories.map((category) {
               return DropdownMenuItem<String>(
                 value: category,
-                child: Text(
-                  category,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                child: Text(category, overflow: TextOverflow.ellipsis),
               );
             }).toList(),
             onChanged: _isSaving
@@ -608,10 +532,9 @@ class _DoctorProfileManageScreenState
                       _hasChanges = true;
                     });
                   },
-            validator: (value) =>
-                value == null || value.isEmpty
-                    ? 'Please select a specialization'
-                    : null,
+            validator: (value) => value == null || value.isEmpty
+                ? 'Please select a specialization'
+                : null,
           ),
           const SizedBox(height: 18),
           _textField(
@@ -630,9 +553,7 @@ class _DoctorProfileManageScreenState
             color: _orange,
             hint: 'e.g. 5',
             keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-            ],
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             maxLength: 2,
             validator: (value) {
               final years = int.tryParse(value?.trim() ?? '');
@@ -673,11 +594,7 @@ class _DoctorProfileManageScreenState
             ],
           ),
           const SizedBox(height: 17),
-          _infoRow(
-            Icons.email_outlined,
-            'Email Address',
-            email,
-          ),
+          _infoRow(Icons.email_outlined, 'Email Address', email),
           const Divider(height: 24, color: _border),
           _infoRow(
             Icons.verified_user_outlined,
@@ -688,11 +605,7 @@ class _DoctorProfileManageScreenState
           const Text(
             'Email address and account approval status '
             'are managed separately and cannot be edited here.',
-            style: TextStyle(
-              color: _muted,
-              fontSize: 11,
-              height: 1.5,
-            ),
+            style: TextStyle(color: _muted, fontSize: 11, height: 1.5),
           ),
         ],
       ),
@@ -720,19 +633,13 @@ class _DoctorProfileManageScreenState
                   )
                 : const Icon(Icons.save_rounded),
             label: Text(
-              _isSaving
-                  ? 'Saving Changes...'
-                  : 'Save Profile Changes',
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-              ),
+              _isSaving ? 'Saving Changes...' : 'Save Profile Changes',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: _green,
               foregroundColor: Colors.white,
-              disabledBackgroundColor:
-                  _green.withValues(alpha: 0.45),
+              disabledBackgroundColor: _green.withValues(alpha: 0.45),
               disabledForegroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -746,11 +653,7 @@ class _DoctorProfileManageScreenState
           const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.info_outline_rounded,
-                color: _orange,
-                size: 15,
-              ),
+              Icon(Icons.info_outline_rounded, color: _orange, size: 15),
               SizedBox(width: 6),
               Text(
                 'You have unsaved changes',
@@ -792,11 +695,9 @@ class _DoctorProfileManageScreenState
           decoration: _inputDecoration(
             icon,
             color,
-          ).copyWith(
-            hintText: hint,
-            counterText: '',
-          ),
-          validator: validator ??
+          ).copyWith(hintText: hint, counterText: ''),
+          validator:
+              validator ??
               (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Please enter $label';
@@ -808,28 +709,19 @@ class _DoctorProfileManageScreenState
     );
   }
 
-  InputDecoration _inputDecoration(
-    IconData icon,
-    Color color,
-  ) {
+  InputDecoration _inputDecoration(IconData icon, Color color) {
     return InputDecoration(
       prefixIcon: Icon(icon, color: color),
       filled: true,
       fillColor: const Color(0xFFF8FAFC),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 16,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: _border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(
-          color: color,
-          width: 1.5,
-        ),
+        borderSide: BorderSide(color: color, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -837,10 +729,7 @@ class _DoctorProfileManageScreenState
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: _red,
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: _red, width: 1.5),
       ),
     );
   }
@@ -864,38 +753,20 @@ class _DoctorProfileManageScreenState
         color: color.withValues(alpha: 0.11),
         borderRadius: BorderRadius.circular(13),
       ),
-      child: Icon(
-        icon,
-        color: color,
-        size: 23,
-      ),
+      child: Icon(icon, color: color, size: 23),
     );
   }
 
-  Widget _infoRow(
-    IconData icon,
-    String label,
-    String value,
-  ) {
+  Widget _infoRow(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(
-          icon,
-          color: _blue,
-          size: 20,
-        ),
+        Icon(icon, color: _blue, size: 20),
         const SizedBox(width: 11),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: _muted,
-                  fontSize: 11,
-                ),
-              ),
+              Text(label, style: const TextStyle(color: _muted, fontSize: 11)),
               const SizedBox(height: 4),
               Text(
                 value,
@@ -925,13 +796,7 @@ class _DoctorProfileManageScreenState
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            color: _muted,
-            fontSize: 12,
-          ),
-        ),
+        Text(subtitle, style: const TextStyle(color: _muted, fontSize: 12)),
       ],
     );
   }
@@ -951,11 +816,7 @@ class _DoctorProfileManageScreenState
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.person_off_rounded,
-              color: _orange,
-              size: 40,
-            ),
+            const Icon(Icons.person_off_rounded, color: _orange, size: 40),
             const SizedBox(height: 14),
             Text(
               title,
@@ -970,10 +831,7 @@ class _DoctorProfileManageScreenState
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: _muted,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: _muted, fontSize: 12),
             ),
           ],
         ),

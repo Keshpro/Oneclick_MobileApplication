@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ExpenseRecord {
@@ -30,11 +29,9 @@ class ExpenseRecord {
     this.isRealPayment = false,
   });
 
-  bool get isDemoPaid =>
-      status == 'demo_paid' && !isRealPayment;
+  bool get isDemoPaid => status == 'demo_paid' && !isRealPayment;
 
-  bool get isPendingCash =>
-      status == 'pending_cash';
+  bool get isPendingCash => status == 'pending_cash';
 
   String get statusLabel {
     switch (status) {
@@ -62,17 +59,12 @@ class ExpenseRecord {
       case 'cash':
         return 'Cash';
       default:
-        return paymentMethod.isEmpty
-            ? 'Unknown'
-            : paymentMethod;
+        return paymentMethod.isEmpty ? 'Unknown' : paymentMethod;
     }
   }
 
   static String normalizeModule(String value) {
-    final key = value
-        .toLowerCase()
-        .trim()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final key = value.toLowerCase().trim().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
     switch (key) {
       case 'grocery':
@@ -109,22 +101,16 @@ class ExpenseRecord {
 
     final amount = minor is num
         ? minor / 100
-        : double.tryParse(
-              '${data['amount'] ?? ''}',
-            ) ??
-            0.0;
+        : double.tryParse('${data['amount'] ?? ''}') ?? 0.0;
 
     final rawDate = data['createdAt'];
 
     return ExpenseRecord(
       id: snapshot.id,
 
-      sourceModule: normalizeModule(
-        '${data['module'] ?? ''}',
-      ),
+      sourceModule: normalizeModule('${data['module'] ?? ''}'),
 
-      sourceTransactionId:
-          '${data['paymentId'] ?? snapshot.id}',
+      sourceTransactionId: '${data['paymentId'] ?? snapshot.id}',
 
       description: '${data['title'] ?? ''}',
 
@@ -136,11 +122,9 @@ class ExpenseRecord {
           ? rawDate.toDate().toLocal()
           : DateTime.fromMillisecondsSinceEpoch(0),
 
-      paymentMethod:
-          '${data['method'] ?? ''}'.toLowerCase(),
+      paymentMethod: '${data['method'] ?? ''}'.toLowerCase(),
 
-      status:
-          '${data['status'] ?? ''}'.toLowerCase(),
+      status: '${data['status'] ?? ''}'.toLowerCase(),
 
       bookingId: '${data['bookingId'] ?? ''}',
 

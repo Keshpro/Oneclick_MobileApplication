@@ -140,17 +140,13 @@ class VehicleFirestoreService {
       transaction.delete(document);
     });
   }
-  
+
   Future<void> setDefaultVehicle(String vehicleId) async {
     final userId = currentUserId;
 
-    final snapshot = await _vehicles
-        .where('ownerId', isEqualTo: userId)
-        .get();
+    final snapshot = await _vehicles.where('ownerId', isEqualTo: userId).get();
 
-    final selectedVehicle = snapshot.docs.where(
-      (doc) => doc.id == vehicleId,
-    );
+    final selectedVehicle = snapshot.docs.where((doc) => doc.id == vehicleId);
 
     if (selectedVehicle.isEmpty) {
       throw StateError('Vehicle not found in your account.');
@@ -159,12 +155,9 @@ class VehicleFirestoreService {
     final batch = _firestore.batch();
 
     for (final doc in snapshot.docs) {
-      batch.update(doc.reference, {
-        'isDefault': doc.id == vehicleId,
-      });
+      batch.update(doc.reference, {'isDefault': doc.id == vehicleId});
     }
 
     await batch.commit();
   }
-
 }

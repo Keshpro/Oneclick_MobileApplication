@@ -54,10 +54,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Save Settings Changes & Log to Firestore
   Future<void> _updateSetting(String key, bool value) async {
     try {
-      await _firestore
-          .collection('system_settings')
-          .doc('global_config')
-          .set({key: value}, SetOptions(merge: true));
+      await _firestore.collection('system_settings').doc('global_config').set({
+        key: value,
+      }, SetOptions(merge: true));
 
       // Audit Log Activity
       await _firestore.collection('activity_logs').add({
@@ -191,8 +190,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: const Text(
                           'Receive real-time push and operational alerts',
                         ),
-                        secondary: const Icon(Icons.notifications_active_outlined,
-                            color: _primary),
+                        secondary: const Icon(
+                          Icons.notifications_active_outlined,
+                          color: _primary,
+                        ),
                         value: _notifications,
                         activeThumbColor: _primary,
                         onChanged: (value) {
@@ -206,8 +207,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: const Text(
                           'Enable dark mode interface across dashboard',
                         ),
-                        secondary: const Icon(Icons.dark_mode_outlined,
-                            color: _primary),
+                        secondary: const Icon(
+                          Icons.dark_mode_outlined,
+                          color: _primary,
+                        ),
                         value: _darkMode,
                         activeThumbColor: _primary,
                         onChanged: (value) {
@@ -242,8 +245,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: const Text(
                       'Automatically approve pending service requests',
                     ),
-                    secondary:
-                        const Icon(Icons.verified_outlined, color: Colors.green),
+                    secondary: const Icon(
+                      Icons.verified_outlined,
+                      color: Colors.green,
+                    ),
                     value: _autoApproval,
                     activeThumbColor: Colors.green,
                     onChanged: (value) {
@@ -272,9 +277,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     side: const BorderSide(color: Color(0xFFE5E7EB)),
                   ),
                   child: ListTile(
-                    leading: const Icon(Icons.lock_reset_rounded, color: _primary),
+                    leading: const Icon(
+                      Icons.lock_reset_rounded,
+                      color: _primary,
+                    ),
                     title: const Text('Change Account Password'),
-                    subtitle: const Text('Update your login security credentials'),
+                    subtitle: const Text(
+                      'Update your login security credentials',
+                    ),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: _showChangePasswordDialog,
                   ),

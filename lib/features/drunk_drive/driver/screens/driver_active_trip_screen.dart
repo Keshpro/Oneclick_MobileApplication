@@ -22,9 +22,11 @@ class DriverActiveTripScreen extends StatefulWidget {
 class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
   final BookingFirestoreService _bookingService = BookingFirestoreService();
   late final Stream<DocumentSnapshot<Map<String, dynamic>>> _bookingStream;
-  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _trackingStatusListener;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
+  _trackingStatusListener;
 
-  final DriverTripLocationService _locationService = DriverTripLocationService();
+  final DriverTripLocationService _locationService =
+      DriverTripLocationService();
   bool _locationBusy = false;
   bool _locationSharing = false;
 
@@ -37,9 +39,13 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
       } else {
         await _locationService.start(widget.booking.id);
       }
-      if (mounted) setState(() => _locationSharing = _locationService.isSharing);
+      if (mounted)
+        setState(() => _locationSharing = _locationService.isSharing);
     } catch (_) {
-      if (mounted) _showMessage('Could not update location sharing. Check your GPS permissions and connection, then try again.');
+      if (mounted)
+        _showMessage(
+          'Could not update location sharing. Check your GPS permissions and connection, then try again.',
+        );
     } finally {
       if (mounted) setState(() => _locationBusy = false);
     }
@@ -66,26 +72,33 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
     _locationService.onError = (_) async {
       if (!mounted) return;
       setState(() => _locationSharing = false);
-      _showMessage('Location sharing stopped unexpectedly. Check your GPS and connection before restarting.');
+      _showMessage(
+        'Location sharing stopped unexpectedly. Check your GPS and connection before restarting.',
+      );
     };
     _bookingStream = FirebaseFirestore.instance
         .collection('drunkDriveBookings')
         .doc(widget.booking.id)
         .snapshots();
-    _trackingStatusListener = _bookingStream.listen((snapshot) {
-      final status = snapshot.data()?['status'];
-      if (status != 'tripStarted' && status != 'tripInProgress' &&
-          _locationService.isSharing) {
-        unawaited(_locationService.stop().catchError((Object _) {}));
-        if (mounted) setState(() => _locationSharing = false);
-      }
-    }, onError: (Object _) { if (mounted) _showMessage('Unable to monitor trip status.'); });
+    _trackingStatusListener = _bookingStream.listen(
+      (snapshot) {
+        final status = snapshot.data()?['status'];
+        if (status != 'tripStarted' &&
+            status != 'tripInProgress' &&
+            _locationService.isSharing) {
+          unawaited(_locationService.stop().catchError((Object _) {}));
+          if (mounted) setState(() => _locationSharing = false);
+        }
+      },
+      onError: (Object _) {
+        if (mounted) _showMessage('Unable to monitor trip status.');
+      },
+    );
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _onEndTrip() async {
@@ -98,7 +111,9 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
       );
       if (!mounted) return;
       if (updated == null) {
-        _showMessage('Unable to complete this trip. Please refresh and try again.');
+        _showMessage(
+          'Unable to complete this trip. Please refresh and try again.',
+        );
         return;
       }
       setState(() => _completedBooking = updated);
@@ -108,10 +123,13 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
         // Trip completion already succeeded. Do not report it as failed.
       }
       if (mounted) setState(() => _locationSharing = false);
-      if (mounted) _showMessage('Trip completed. Payment has not been confirmed yet.');
+      if (mounted)
+        _showMessage('Trip completed. Payment has not been confirmed yet.');
     } catch (_) {
       if (!mounted) return;
-      _showMessage('Could not complete the trip. Check your connection and trip status before trying again.');
+      _showMessage(
+        'Could not complete the trip. Check your connection and trip status before trying again.',
+      );
     } finally {
       if (mounted) setState(() => _isEnding = false);
     }
@@ -146,7 +164,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text('Cash Received', style: TextStyle(color: colors.accent)),
+            child: Text(
+              'Cash Received',
+              style: TextStyle(color: colors.accent),
+            ),
           ),
         ],
       ),
@@ -166,7 +187,9 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
       );
     } catch (_) {
       if (!mounted) return;
-      _showMessage('Could not confirm the payment. Check the payment status before trying again.');
+      _showMessage(
+        'Could not confirm the payment. Check the payment status before trying again.',
+      );
     } finally {
       if (mounted) setState(() => _isConfirmingCash = false);
     }
@@ -220,14 +243,16 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
           } else {
             final latest = BookingModel.fromMap(document.id, data);
             // A cached pre-completion snapshot must not undo a successful endTrip.
-            if (_completedBooking == null || latest.status == BookingStatus.completed) {
+            if (_completedBooking == null ||
+                latest.status == BookingStatus.completed) {
               booking = latest;
             }
           }
         }
 
         final completed = booking.status == BookingStatus.completed;
-        final canConfirmCash = completed &&
+        final canConfirmCash =
+            completed &&
             booking.paymentStatus == 'pending' &&
             booking.paymentMethod == 'cash';
 
@@ -278,7 +303,9 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                completed ? 'Trip Completed' : booking.status.label,
+                                completed
+                                    ? 'Trip Completed'
+                                    : booking.status.label,
                                 style: TextStyle(
                                   color: colors.success,
                                   fontWeight: FontWeight.w800,
@@ -301,27 +328,39 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(booking.paymentStatus == 'paid'
-                                  ? 'Amount received'
-                                  : booking.paymentStatus == 'simulated'
-                                      ? 'Simulated payment amount'
-                                      : 'Amount due from passenger',
-                                  style: TextStyle(color: colors.textPrimary,
-                                      fontWeight: FontWeight.w700)),
+                              Text(
+                                booking.paymentStatus == 'paid'
+                                    ? 'Amount received'
+                                    : booking.paymentStatus == 'simulated'
+                                    ? 'Simulated payment amount'
+                                    : 'Amount due from passenger',
+                                style: TextStyle(
+                                  color: colors.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                               const SizedBox(height: 8),
-                              Text('Rs. ${booking.customerAmountDue.toStringAsFixed(0)}',
-                                  style: TextStyle(color: colors.accent,
-                                      fontSize: 34, fontWeight: FontWeight.w900)),
+                              Text(
+                                'Rs. ${booking.customerAmountDue.toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  color: colors.accent,
+                                  fontSize: 34,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
                               const SizedBox(height: 8),
-                              Text(_paymentDescription(booking),
-                                  style: TextStyle(color: colors.textMuted)),
+                              Text(
+                                _paymentDescription(booking),
+                                style: TextStyle(color: colors.textMuted),
+                              ),
                             ],
                           ),
                         ),
                       ],
                       if (!completed &&
                           (booking.status == BookingStatus.tripStarted ||
-                              booking.status == BookingStatus.tripInProgress)) ...[
+                              booking.status ==
+                                  BookingStatus.tripInProgress)) ...[
                         const SizedBox(height: 16),
                         Card(
                           color: colors.surface,
@@ -330,24 +369,37 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Live location sharing', style: TextStyle(
-                                  color: colors.textPrimary,
-                                  fontWeight: FontWeight.bold,
-                                )),
+                                Text(
+                                  'Live location sharing',
+                                  style: TextStyle(
+                                    color: colors.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 const SizedBox(height: 8),
                                 Text(
                                   _locationSharing
-                                    ? 'Your location is being shared with this passenger while this screen is active.'
-                                    : 'Share your GPS position with the passenger during this trip. You can stop at any time.',
+                                      ? 'Your location is being shared with this passenger while this screen is active.'
+                                      : 'Share your GPS position with the passenger during this trip. You can stop at any time.',
                                   style: TextStyle(color: colors.textMuted),
                                 ),
                                 const SizedBox(height: 10),
                                 OutlinedButton.icon(
-                                  onPressed: _locationBusy ? null : _toggleLocation,
-                                  icon: Icon(_locationSharing ? Icons.location_off : Icons.my_location),
-                                  label: Text(_locationBusy
-                                      ? 'Updating…'
-                                      : _locationSharing ? 'Stop Sharing' : 'Start Sharing Location'),
+                                  onPressed: _locationBusy
+                                      ? null
+                                      : _toggleLocation,
+                                  icon: Icon(
+                                    _locationSharing
+                                        ? Icons.location_off
+                                        : Icons.my_location,
+                                  ),
+                                  label: Text(
+                                    _locationBusy
+                                        ? 'Updating…'
+                                        : _locationSharing
+                                        ? 'Stop Sharing'
+                                        : 'Start Sharing Location',
+                                  ),
                                 ),
                               ],
                             ),
@@ -365,11 +417,19 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _row(Icons.my_location_rounded, colors.success,
-                                'Pickup', booking.pickup.name),
+                            _row(
+                              Icons.my_location_rounded,
+                              colors.success,
+                              'Pickup',
+                              booking.pickup.name,
+                            ),
                             const SizedBox(height: 12),
-                            _row(Icons.location_on_rounded, colors.danger,
-                                'Destination', booking.destination.name),
+                            _row(
+                              Icons.location_on_rounded,
+                              colors.danger,
+                              'Destination',
+                              booking.destination.name,
+                            ),
                             const SizedBox(height: 12),
                             _row(
                               Icons.directions_car_rounded,
@@ -456,75 +516,79 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
                         child: const Text('Back to Dashboard'),
                       )
                     : !completed
-                        ? ElevatedButton(
-                            onPressed: _isEnding ? null : _onEndTrip,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: colors.danger,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+                    ? ElevatedButton(
+                        onPressed: _isEnding ? null : _onEndTrip,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colors.danger,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: _isEnding
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('End Trip'),
+                      )
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (canConfirmCash) ...[
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _isConfirmingCash
+                                    ? null
+                                    : () => _onConfirmCash(booking),
+                                icon: _isConfirmingCash
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(Icons.payments_rounded),
+                                label: Text(
+                                  _isConfirmingCash
+                                      ? 'Confirming...'
+                                      : 'Confirm Cash Received',
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: colors.success,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                ),
                               ),
                             ),
-                            child: _isEnding
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text('End Trip'),
-                          )
-                        : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (canConfirmCash) ...[
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton.icon(
-                                    onPressed: _isConfirmingCash
-                                        ? null
-                                        : () => _onConfirmCash(booking),
-                                    icon: _isConfirmingCash
-                                        ? const SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : const Icon(Icons.payments_rounded),
-                                    label: Text(
-                                      _isConfirmingCash
-                                          ? 'Confirming...'
-                                          : 'Confirm Cash Received',
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: colors.success,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                              ],
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton(
-                                  onPressed: () => Navigator.pop(context, true),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: colors.accent,
-                                    side: BorderSide(color: colors.accent),
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                  ),
-                                  child: const Text('Back to Dashboard'),
+                            const SizedBox(height: 10),
+                          ],
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: colors.accent,
+                                side: BorderSide(color: colors.accent),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
                                 ),
                               ),
-                            ],
+                              child: const Text('Back to Dashboard'),
+                            ),
                           ),
+                        ],
+                      ),
               ),
             ),
           ),
@@ -544,7 +608,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: TextStyle(color: colors.textMuted, fontSize: 11)),
+              Text(
+                label,
+                style: TextStyle(color: colors.textMuted, fontSize: 11),
+              ),
               const SizedBox(height: 2),
               Text(
                 value,

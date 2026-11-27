@@ -27,10 +27,7 @@ class _BecomeSellerScreenState extends State<BecomeSellerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Become a Seller'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Become a Seller'), centerTitle: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -38,19 +35,13 @@ class _BecomeSellerScreenState extends State<BecomeSellerScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(
-                Icons.storefront,
-                size: 80,
-              ),
+              const Icon(Icons.storefront, size: 80),
               const SizedBox(height: 20),
 
               const Text(
                 'Start selling with us',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
 
               const SizedBox(height: 30),
@@ -92,48 +83,52 @@ class _BecomeSellerScreenState extends State<BecomeSellerScreen> {
 
               const SizedBox(height: 25),
 
-             ElevatedButton(
-  onPressed: () async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) {
-  throw Exception('Please log in before applying as a seller.');
-}
+              ElevatedButton(
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    try {
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user == null) {
+                        throw Exception(
+                          'Please log in before applying as a seller.',
+                        );
+                      }
 
-        await FirebaseFirestore.instance
-            .collection('seller_applications')
-            .add({
-          'userId': user.uid,
-          'shopName': _shopNameController.text.trim(),
-          'phoneNumber': _phoneController.text.trim(),
-          'businessAddress': _addressController.text.trim(),
-          'status': 'pending',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+                      await FirebaseFirestore.instance
+                          .collection('seller_applications')
+                          .add({
+                            'userId': user.uid,
+                            'shopName': _shopNameController.text.trim(),
+                            'phoneNumber': _phoneController.text.trim(),
+                            'businessAddress': _addressController.text.trim(),
+                            'status': 'pending',
+                            'createdAt': FieldValue.serverTimestamp(),
+                          });
 
-        if (!mounted) return;
+                      if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Seller application submitted successfully!'),
-          ),
-        );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Seller application submitted successfully!',
+                          ),
+                        ),
+                      );
 
-        Navigator.pop(context);
-      } catch (e) {
-        if (!mounted) return;
+                      Navigator.pop(context);
+                    } catch (e) {
+                      if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to submit application: $e'),
-          ),
-        );
-      }
-    }
-  },
-  child: const Text('Submit Application'),
-),
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to submit application: $e'),
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Submit Application'),
+              ),
             ],
           ),
         ),

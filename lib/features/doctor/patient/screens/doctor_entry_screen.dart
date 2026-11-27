@@ -7,12 +7,10 @@ class DoctorEntryScreen extends StatefulWidget {
   const DoctorEntryScreen({super.key});
 
   @override
-  State<DoctorEntryScreen> createState() =>
-      _DoctorEntryScreenState();
+  State<DoctorEntryScreen> createState() => _DoctorEntryScreenState();
 }
 
-class _DoctorEntryScreenState
-    extends State<DoctorEntryScreen> {
+class _DoctorEntryScreenState extends State<DoctorEntryScreen> {
   late VideoPlayerController _videoController;
 
   bool _isVideoReady = false;
@@ -44,9 +42,7 @@ class _DoctorEntryScreenState
       // Entry animation does not need sound.
       await _videoController.setVolume(0);
 
-      _videoController.addListener(
-        _videoListener,
-      );
+      _videoController.addListener(_videoListener);
 
       if (!mounted) return;
 
@@ -56,21 +52,16 @@ class _DoctorEntryScreenState
 
       await _videoController.play();
     } catch (error) {
-      debugPrint(
-        'Doctor entry video error: $error',
-      );
+      debugPrint('Doctor entry video error: $error');
 
       // If video cannot load, don't trap the user
       // on this screen.
       if (mounted) {
-        Future.delayed(
-          const Duration(seconds: 1),
-          () {
-            if (mounted) {
-              _openPatientHome();
-            }
-          },
-        );
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) {
+            _openPatientHome();
+          }
+        });
       }
     }
   }
@@ -84,11 +75,9 @@ class _DoctorEntryScreenState
       return;
     }
 
-    final position =
-        _videoController.value.position;
+    final position = _videoController.value.position;
 
-    final duration =
-        _videoController.value.duration;
+    final duration = _videoController.value.duration;
 
     if (duration == Duration.zero) {
       return;
@@ -96,11 +85,7 @@ class _DoctorEntryScreenState
 
     // Navigate when video is almost finished.
     // 150ms tolerance avoids timing issues.
-    if (position >=
-        duration -
-            const Duration(
-              milliseconds: 150,
-            )) {
+    if (position >= duration - const Duration(milliseconds: 150)) {
       _openPatientHome();
     }
   }
@@ -118,46 +103,25 @@ class _DoctorEntryScreenState
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        transitionDuration:
-            const Duration(milliseconds: 550),
+        transitionDuration: const Duration(milliseconds: 550),
 
-        pageBuilder: (
-          context,
-          animation,
-          secondaryAnimation,
-        ) {
+        pageBuilder: (context, animation, secondaryAnimation) {
           return const PatientHomeScreen();
         },
 
-        transitionsBuilder: (
-          context,
-          animation,
-          secondaryAnimation,
-          child,
-        ) {
-          final fadeAnimation =
-              CurvedAnimation(
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final fadeAnimation = CurvedAnimation(
             parent: animation,
             curve: Curves.easeInOut,
           );
 
-          final scaleAnimation =
-              Tween<double>(
-            begin: 0.98,
-            end: 1.0,
-          ).animate(
-            CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            ),
+          final scaleAnimation = Tween<double>(begin: 0.98, end: 1.0).animate(
+            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
           );
 
           return FadeTransition(
             opacity: fadeAnimation,
-            child: ScaleTransition(
-              scale: scaleAnimation,
-              child: child,
-            ),
+            child: ScaleTransition(scale: scaleAnimation, child: child),
           );
         },
       ),
@@ -171,9 +135,7 @@ class _DoctorEntryScreenState
   @override
   void dispose() {
     if (_videoController.value.isInitialized) {
-      _videoController.removeListener(
-        _videoListener,
-      );
+      _videoController.removeListener(_videoListener);
     }
 
     _videoController.dispose();
@@ -188,8 +150,7 @@ class _DoctorEntryScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          const Color(0xFF064E3B),
+      backgroundColor: const Color(0xFF064E3B),
 
       body: Stack(
         fit: StackFit.expand,
@@ -201,31 +162,24 @@ class _DoctorEntryScreenState
           if (_isVideoReady)
             _buildFullScreenVideo()
           else
-            const ColoredBox(
-              color: Color(0xFF064E3B),
-            ),
+            const ColoredBox(color: Color(0xFF064E3B)),
 
           // ====================================================
           // SUBTLE DARK OVERLAY
           //
           // Keeps loading UI readable.
           // ====================================================
-
           if (_isVideoReady)
             IgnorePointer(
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin:
-                        Alignment.topCenter,
-                    end:
-                        Alignment.bottomCenter,
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
                       Colors.transparent,
-                      Colors.black.withValues(
-                        alpha: 0.03,
-                      ),
+                      Colors.black.withValues(alpha: 0.03),
                     ],
                   ),
                 ),
@@ -235,20 +189,13 @@ class _DoctorEntryScreenState
           // ====================================================
           // LOADING INDICATOR
           // ====================================================
-
           SafeArea(
             child: Align(
-              alignment:
-                  const Alignment(0, 0.47),
+              alignment: const Alignment(0, 0.47),
               child: AnimatedOpacity(
-                opacity:
-                    _isVideoReady ? 1 : 0.7,
-                duration:
-                    const Duration(
-                  milliseconds: 400,
-                ),
-                child:
-                    _buildLoadingIndicator(),
+                opacity: _isVideoReady ? 1 : 0.7,
+                duration: const Duration(milliseconds: 400),
+                child: _buildLoadingIndicator(),
               ),
             ),
           ),
@@ -256,11 +203,9 @@ class _DoctorEntryScreenState
           // ====================================================
           // INITIAL VIDEO LOADING
           // ====================================================
-
           if (!_isVideoReady)
             const Center(
-              child:
-                  CircularProgressIndicator(
+              child: CircularProgressIndicator(
                 strokeWidth: 2.5,
                 color: Color(0xFF6EE7B7),
               ),
@@ -275,14 +220,10 @@ class _DoctorEntryScreenState
   // ============================================================
 
   Widget _buildFullScreenVideo() {
-    final videoSize =
-        _videoController.value.size;
+    final videoSize = _videoController.value.size;
 
-    if (videoSize.width <= 0 ||
-        videoSize.height <= 0) {
-      return const ColoredBox(
-        color: Color(0xFF064E3B),
-      );
+    if (videoSize.width <= 0 || videoSize.height <= 0) {
+      return const ColoredBox(color: Color(0xFF064E3B));
     }
 
     return SizedBox.expand(
@@ -295,9 +236,7 @@ class _DoctorEntryScreenState
         child: SizedBox(
           width: videoSize.width,
           height: videoSize.height,
-          child: VideoPlayer(
-            _videoController,
-          ),
+          child: VideoPlayer(_videoController),
         ),
       ),
     );
@@ -309,52 +248,34 @@ class _DoctorEntryScreenState
 
   Widget _buildLoadingIndicator() {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 10,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
 
       decoration: BoxDecoration(
-        color: const Color(0xFF064E3B)
-            .withValues(
-          alpha: 0.82,
-        ),
+        color: const Color(0xFF064E3B).withValues(alpha: 0.82),
 
-        borderRadius:
-            BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(30),
 
-        border: Border.all(
-          color: Colors.white.withValues(
-            alpha: 0.10,
-          ),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
 
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(
-              alpha: 0.08,
-            ),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 15,
-            offset:
-                const Offset(0, 5),
+            offset: const Offset(0, 5),
           ),
         ],
       ),
 
       child: const Row(
-        mainAxisSize:
-            MainAxisSize.min,
+        mainAxisSize: MainAxisSize.min,
 
         children: [
           SizedBox(
             width: 14,
             height: 14,
-            child:
-                CircularProgressIndicator(
+            child: CircularProgressIndicator(
               strokeWidth: 2,
-              color:
-                  Color(0xFF6EE7B7),
+              color: Color(0xFF6EE7B7),
             ),
           ),
 
@@ -363,11 +284,9 @@ class _DoctorEntryScreenState
           Text(
             'Connecting you to care...',
             style: TextStyle(
-              color:
-                  Color(0xFFD1FAE5),
+              color: Color(0xFFD1FAE5),
               fontSize: 11,
-              fontWeight:
-                  FontWeight.w600,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

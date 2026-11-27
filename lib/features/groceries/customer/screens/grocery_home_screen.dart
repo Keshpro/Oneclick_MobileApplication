@@ -47,9 +47,8 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in first')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Please log in first')));
       return;
     }
 
@@ -64,9 +63,7 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
       if (applicationSnapshot.docs.isEmpty) {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => const ProviderRulesScreen(),
-          ),
+          MaterialPageRoute(builder: (_) => const ProviderRulesScreen()),
         );
         return;
       }
@@ -76,8 +73,9 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
           final aDate = a.data()['createdAt'] as Timestamp?;
           final bDate = b.data()['createdAt'] as Timestamp?;
 
-          return (bDate?.millisecondsSinceEpoch ?? 0)
-              .compareTo(aDate?.millisecondsSinceEpoch ?? 0);
+          return (bDate?.millisecondsSinceEpoch ?? 0).compareTo(
+            aDate?.millisecondsSinceEpoch ?? 0,
+          );
         });
 
       final status = (applications.first.data()['status'] ?? 'pending')
@@ -87,9 +85,7 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
       if (status == 'active') {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => const SellerDashboard(),
-          ),
+          MaterialPageRoute(builder: (_) => const SellerDashboard()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -122,10 +118,7 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
         elevation: 0,
         title: const Text(
           'Groceries',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
         ),
         actions: [
           IconButton(
@@ -139,9 +132,7 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const MyOrdersScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const MyOrdersScreen()),
               );
             },
           ),
@@ -154,9 +145,7 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => CartScreen(
-                        controller: _controller,
-                      ),
+                      builder: (_) => CartScreen(controller: _controller),
                     ),
                   );
                 },
@@ -194,78 +183,75 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
         ],
       ),
       body: SafeArea(
-       child: ListView(
-  children: [
+        child: ListView(
+          children: [
             Padding(
-  padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-  child: Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(22),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        colors: [
-          Color(0xFF175C38),
-          Color(0xFF2E8B57),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      borderRadius: BorderRadius.circular(22),
-    ),
-    child: Row(
-      children: [
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'FRESH PICKS, EVERY DAY',
-                style: TextStyle(
-                  color: Color(0xFFCDEBD5),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF175C38), Color(0xFF2E8B57)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'FRESH PICKS, EVERY DAY',
+                            style: TextStyle(
+                              color: Color(0xFFCDEBD5),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            'Good food.\nMade simple.',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              height: 1.15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            'Your everyday essentials,\nall in one basket.',
+                            style: TextStyle(
+                              color: Color(0xFFE1F2E5),
+                              fontSize: 12,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF439667),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: const Icon(
+                        Icons.shopping_basket_outlined,
+                        color: Colors.white,
+                        size: 44,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(height: 10),
-              Text(
-                'Good food.\nMade simple.',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  height: 1.15,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Your everyday essentials,\nall in one basket.',
-                style: TextStyle(
-                  color: Color(0xFFE1F2E5),
-                  fontSize: 12,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(width: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF439667),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: const Icon(
-            Icons.shopping_basket_outlined,
-            color: Colors.white,
-            size: 44,
-          ),
-        ),
-      ],
-    ),
-  ),
-),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: TextField(
@@ -277,10 +263,7 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                     color: Color(0xFF7A887D),
                     fontSize: 14,
                   ),
-                  prefixIcon: const Icon(
-                    Icons.search_rounded,
-                    color: _green,
-                  ),
+                  prefixIcon: const Icon(Icons.search_rounded, color: _green),
                   filled: true,
                   fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(
@@ -289,22 +272,15 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFE0E8DD),
-                    ),
+                    borderSide: const BorderSide(color: Color(0xFFE0E8DD)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFE0E8DD),
-                    ),
+                    borderSide: const BorderSide(color: Color(0xFFE0E8DD)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: _green,
-                      width: 1.5,
-                    ),
+                    borderSide: const BorderSide(color: _green, width: 1.5),
                   ),
                 ),
               ),
@@ -318,8 +294,7 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
                   final category = _controller.categories[index];
-                  final selected =
-                      _controller.selectedCategory == category;
+                  final selected = _controller.selectedCategory == category;
 
                   return Center(
                     child: ChoiceChip(
@@ -335,9 +310,7 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                         fontSize: 13,
                       ),
                       side: BorderSide(
-                        color: selected
-                            ? _green
-                            : const Color(0xFFE0E8DD),
+                        color: selected ? _green : const Color(0xFFE0E8DD),
                       ),
                       shape: const StadiumBorder(),
                       padding: const EdgeInsets.symmetric(
@@ -363,76 +336,63 @@ class _GroceryHomeScreenState extends State<GroceryHomeScreen> {
                 ),
               ),
             ),
-           Padding(
-  padding: const EdgeInsets.only(bottom: 20),
-  child: _controller.productsLoading
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: _controller.productsLoading
                   ? const Center(
-                      child: CircularProgressIndicator(
-                        color: _green,
-                      ),
+                      child: CircularProgressIndicator(color: _green),
                     )
                   : _controller.productsError != null
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: Text(
-                              'Failed to load products: '
-                              '${_controller.productsError}',
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        )
-                      : _controller.products.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'No approved products available',
-                                style: TextStyle(
-                                  color: Color(0xFF69796D),
-                                ),
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Text(
+                          'Failed to load products: '
+                          '${_controller.productsError}',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    )
+                  : _controller.products.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No approved products available',
+                        style: TextStyle(color: Color(0xFF69796D)),
+                      ),
+                    )
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final columns = constraints.maxWidth < 340
+                            ? 1
+                            : constraints.maxWidth >= 700
+                            ? 3
+                            : 2;
+
+                        final textScale = MediaQuery.textScalerOf(context)
+                            .scale(1);
+
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: columns,
+                                crossAxisSpacing: 14,
+                                mainAxisSpacing: 14,
+                                mainAxisExtent:
+                                    310 +
+                                    (textScale > 1 ? (textScale - 1) * 180 : 0),
                               ),
-                            )
-                          : LayoutBuilder(
-                              builder: (context, constraints) {
-                                final columns =
-                                    constraints.maxWidth < 340
-                                        ? 1
-                                        : constraints.maxWidth >= 700
-                                            ? 3
-                                            : 2;
-
-                                final textScale =
-                                    MediaQuery.textScalerOf(context)
-                                        .scale(1);
-
-                                return GridView.builder(
-                                  shrinkWrap: true,
-physics: const NeverScrollableScrollPhysics(),
-                                  padding: const EdgeInsets.fromLTRB(
-                                    20,
-                                    12,
-                                    20,
-                                    20,
-                                  ),
-                                  gridDelegate:
-                                      SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: columns,
-                                    crossAxisSpacing: 14,
-                                    mainAxisSpacing: 14,
-                                    mainAxisExtent: 310 +
-                                        (textScale > 1
-                                            ? (textScale - 1) * 180
-                                            : 0),
-                                  ),
-                                  itemCount:
-                                      _controller.products.length,
-                                  itemBuilder: (context, index) {
-                                    return _buildProductCard(
-                                      _controller.products[index],
-                                    );
-                                  },
-                                );
-                              },
-                            ),
+                          itemCount: _controller.products.length,
+                          itemBuilder: (context, index) {
+                            return _buildProductCard(
+                              _controller.products[index],
+                            );
+                          },
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -449,9 +409,7 @@ physics: const NeverScrollableScrollPhysics(),
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(
-          color: Color(0xFFE3EADF),
-        ),
+        side: const BorderSide(color: Color(0xFFE3EADF)),
       ),
       child: InkWell(
         onTap: () {
@@ -514,10 +472,7 @@ physics: const NeverScrollableScrollPhysics(),
                 product.category,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Color(0xFF78877A),
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: Color(0xFF78877A), fontSize: 12),
               ),
               if (product.sellerName.isNotEmpty) ...[
                 const SizedBox(height: 3),
@@ -550,8 +505,7 @@ physics: const NeverScrollableScrollPhysics(),
                     backgroundColor: _green,
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: const Color(0xFFEBEFE9),
-                    disabledForegroundColor:
-                        const Color(0xFF748074),
+                    disabledForegroundColor: const Color(0xFF748074),
                     elevation: 0,
                     minimumSize: const Size(0, 44),
                     padding: const EdgeInsets.symmetric(
@@ -570,17 +524,13 @@ physics: const NeverScrollableScrollPhysics(),
                             SnackBar(
                               backgroundColor: _green,
                               duration: const Duration(seconds: 1),
-                              content: Text(
-                                '${product.name} added to cart',
-                              ),
+                              content: Text('${product.name} added to cart'),
                             ),
                           );
                         }
                       : null,
                   child: Text(
-                    product.isAvailable
-                        ? 'Add to Cart'
-                        : 'Out of Stock',
+                    product.isAvailable ? 'Add to Cart' : 'Out of Stock',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 13,

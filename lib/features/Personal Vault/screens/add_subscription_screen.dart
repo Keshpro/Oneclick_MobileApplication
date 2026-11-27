@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
+
 import '../services/subscription_service.dart';
 
 class AddSubscriptionScreen extends StatefulWidget {
   const AddSubscriptionScreen({super.key});
 
   @override
-  State<AddSubscriptionScreen> createState() =>
-      _AddSubscriptionScreenState();
+  State<AddSubscriptionScreen> createState() => _AddSubscriptionScreenState();
 }
 
-class _AddSubscriptionScreenState
-    extends State<AddSubscriptionScreen> {
+class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
   static const Color bg = Color(0xFFF8F6FC);
   static const Color card = Color(0xFFF9F8FC);
   static const Color purple = Color(0xFF5049E8);
@@ -18,11 +17,11 @@ class _AddSubscriptionScreenState
   static const Color muted = Color(0xFF73758B);
   static const Color lightPurple = Color(0xFF6A63FF);
 
-  final TextEditingController _nameController =
-      TextEditingController(text: 'Netflix');
+  final TextEditingController _nameController = TextEditingController(
+    text: 'Netflix',
+  );
 
-  final TextEditingController _costController =
-    TextEditingController();
+  final TextEditingController _costController = TextEditingController();
 
   final SubscriptionService _subscriptionService = SubscriptionService();
 
@@ -35,10 +34,7 @@ class _AddSubscriptionScreenState
   bool freeTrial = false;
   bool advancedExpanded = false;
 
-  DateTime renewalDate =
-    DateTime.now().add(
-  const Duration(days: 30),
-);
+  DateTime renewalDate = DateTime.now().add(const Duration(days: 30));
 
   @override
   void dispose() {
@@ -58,24 +54,16 @@ class _AddSubscriptionScreenState
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 560,
-            ),
+            constraints: const BoxConstraints(maxWidth: 560),
             child: Column(
               children: [
                 _header(),
 
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(
-                      24,
-                      8,
-                      24,
-                      34,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 34),
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.stretch,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _titleSection(),
 
@@ -114,45 +102,40 @@ class _AddSubscriptionScreenState
   // HEADER
   // ============================================================
 
-Widget _header() {
-  return Container(
-    padding: const EdgeInsets.symmetric(
-      horizontal: 16,
-      vertical: 12,
-    ),
-    decoration: BoxDecoration(
-      color: bg,
-      border: Border(
-        bottom: BorderSide(
-          color: Colors.grey.withValues(alpha: 0.10),
+  Widget _header() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: bg,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.10)),
         ),
       ),
-    ),
-    child: Row(
-      children: [
-        _circleButton(
-          icon: Icons.arrow_back_ios_new,
-          onTap: () {
-            Navigator.pop(context);
-          },
-        ),
+      child: Row(
+        children: [
+          _circleButton(
+            icon: Icons.arrow_back_ios_new,
+            onTap: () {
+              Navigator.pop(context);
+            },
+          ),
 
-        const SizedBox(width: 12),
+          const SizedBox(width: 12),
 
-        const Expanded(
-          child: Text(
-            'Add / Edit Subscription',
-            style: TextStyle(
-              color: ink,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
+          const Expanded(
+            child: Text(
+              'Add / Edit Subscription',
+              style: TextStyle(
+                color: ink,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
   // ============================================================
   // TITLE
@@ -167,11 +150,7 @@ Widget _header() {
           child: CircleAvatar(
             radius: 12,
             backgroundColor: purple,
-            child: Icon(
-              Icons.add,
-              color: Colors.white,
-              size: 17,
-            ),
+            child: Icon(Icons.add, color: Colors.white, size: 17),
           ),
         ),
 
@@ -179,8 +158,7 @@ Widget _header() {
 
         Expanded(
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Add Subscription',
@@ -195,10 +173,7 @@ Widget _header() {
 
               Text(
                 'Track billing, renewal dates, and reminders.',
-                style: TextStyle(
-                  color: muted,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: muted, fontSize: 14),
               ),
             ],
           ),
@@ -214,8 +189,7 @@ Widget _header() {
   Widget _mainDetailsCard() {
     return _surface(
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -240,14 +214,8 @@ Widget _header() {
               controller: _nameController,
               decoration: const InputDecoration(
                 border: InputBorder.none,
-                prefixIcon: Icon(
-                  Icons.subscriptions_outlined,
-                  color: muted,
-                ),
-                contentPadding:
-                    EdgeInsets.symmetric(
-                  vertical: 18,
-                ),
+                prefixIcon: Icon(Icons.subscriptions_outlined, color: muted),
+                contentPadding: EdgeInsets.symmetric(vertical: 18),
               ),
               style: const TextStyle(
                 color: ink,
@@ -263,25 +231,13 @@ Widget _header() {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _serviceChip(
-                  'Netflix',
-                  const Color(0xFFB93C58),
-                ),
+                _serviceChip('Netflix', const Color(0xFFB93C58)),
                 const SizedBox(width: 8),
-                _serviceChip(
-                  'Spotify',
-                  const Color(0xFF22B65C),
-                ),
+                _serviceChip('Spotify', const Color(0xFF22B65C)),
                 const SizedBox(width: 8),
-                _serviceChip(
-                  'Apple',
-                  const Color(0xFF666979),
-                ),
+                _serviceChip('Apple', const Color(0xFF666979)),
                 const SizedBox(width: 8),
-                _serviceChip(
-                  'YouTube',
-                  const Color(0xFFFF1744),
-                ),
+                _serviceChip('YouTube', const Color(0xFFFF1744)),
               ],
             ),
           ),
@@ -306,28 +262,21 @@ Widget _header() {
                 child: _inputSurface(
                   child: TextField(
                     controller: _costController,
-                    keyboardType:
-                        const TextInputType
-                            .numberWithOptions(
+                    keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                    border: InputBorder.none,
-                    hintText: '300.00',
-                    hintStyle: const TextStyle(
-                      color: Color(0xFFB0B4C3),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    prefixIcon: Padding(
-                        padding: const EdgeInsets.only(
-                          left: 18,
-                          right: 8,
-                        ),
+                      border: InputBorder.none,
+                      hintText: '300.00',
+                      hintStyle: const TextStyle(
+                        color: Color(0xFFB0B4C3),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.only(left: 18, right: 8),
                         child: Text(
-                          selectedCurrency == 'USD'
-                              ? '\$'
-                              : 'Rs',
+                          selectedCurrency == 'USD' ? '\$' : 'Rs',
                           style: const TextStyle(
                             color: purple,
                             fontSize: 16,
@@ -335,14 +284,8 @@ Widget _header() {
                           ),
                         ),
                       ),
-                      prefixIconConstraints:
-                          const BoxConstraints(
-                        minWidth: 40,
-                      ),
-                      contentPadding:
-                          const EdgeInsets.symmetric(
-                        vertical: 18,
-                      ),
+                      prefixIconConstraints: const BoxConstraints(minWidth: 40),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 18),
                     ),
                     style: const TextStyle(
                       color: ink,
@@ -355,9 +298,7 @@ Widget _header() {
 
               const SizedBox(width: 14),
 
-              Expanded(
-                child: _billingCycleSelector(),
-              ),
+              Expanded(child: _billingCycleSelector()),
             ],
           ),
 
@@ -376,13 +317,11 @@ Widget _header() {
           const SizedBox(height: 12),
 
           InkWell(
-            borderRadius:
-                BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(24),
             onTap: _selectDate,
             child: _inputSurface(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 17,
                 ),
@@ -398,22 +337,16 @@ Widget _header() {
 
                     Expanded(
                       child: Text(
-                        _formattedDate(
-                          renewalDate,
-                        ),
+                        _formattedDate(renewalDate),
                         style: const TextStyle(
                           color: ink,
                           fontSize: 16,
-                          fontWeight:
-                              FontWeight.w500,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
 
-                    const Icon(
-                      Icons.edit_calendar_outlined,
-                      color: muted,
-                    ),
+                    const Icon(Icons.edit_calendar_outlined, color: muted),
                   ],
                 ),
               ),
@@ -428,60 +361,51 @@ Widget _header() {
   // BILLING CYCLE
   // ============================================================
 
-Widget _currencySelector() {
-  return Container(
-    height: 52,
-    padding: const EdgeInsets.all(5),
-    decoration: BoxDecoration(
-      color: bg,
-      borderRadius: BorderRadius.circular(28),
-      boxShadow: _softShadow(),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: _currencyButton('LKR'),
-        ),
-        Expanded(
-          child: _currencyButton('USD'),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _currencyButton(String value) {
-  final bool selected =
-      selectedCurrency == value;
-
-  return InkWell(
-    borderRadius: BorderRadius.circular(22),
-    onTap: () {
-      setState(() {
-        selectedCurrency = value;
-      });
-    },
-    child: Container(
-      alignment: Alignment.center,
+  Widget _currencySelector() {
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        color: selected
-            ? Colors.white
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(22),
+        color: bg,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: _softShadow(),
       ),
-      child: Text(
-        value,
-        style: TextStyle(
-          color: selected
-              ? purple
-              : const Color(0xFF64748B),
-          fontWeight: FontWeight.w700,
+      child: Row(
+        children: [
+          Expanded(child: _currencyButton('LKR')),
+          Expanded(child: _currencyButton('USD')),
+        ],
+      ),
+    );
+  }
+
+  Widget _currencyButton(String value) {
+    final bool selected = selectedCurrency == value;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: () {
+        setState(() {
+          selectedCurrency = value;
+        });
+      },
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Text(
+          value,
+          style: TextStyle(
+            color: selected ? purple : const Color(0xFF64748B),
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
-    ),
-  );
-}
- 
+    );
+  }
+
   Widget _billingCycleSelector() {
     return Container(
       height: 55,
@@ -493,24 +417,15 @@ Widget _currencyButton(String value) {
       ),
       child: Row(
         children: [
-          Expanded(
-            child: _cycleButton(
-              'Monthly',
-            ),
-          ),
-          Expanded(
-            child: _cycleButton(
-              'Yearly',
-            ),
-          ),
+          Expanded(child: _cycleButton('Monthly')),
+          Expanded(child: _cycleButton('Yearly')),
         ],
       ),
     );
   }
 
   Widget _cycleButton(String value) {
-    final bool selected =
-        billingCycle == value;
+    final bool selected = billingCycle == value;
 
     return InkWell(
       borderRadius: BorderRadius.circular(22),
@@ -522,21 +437,14 @@ Widget _currencyButton(String value) {
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected
-              ? Colors.white
-              : Colors.transparent,
-          borderRadius:
-              BorderRadius.circular(22),
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(22),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: Colors.black
-                        .withValues(
-                      alpha: 0.06,
-                    ),
+                    color: Colors.black.withValues(alpha: 0.06),
                     blurRadius: 8,
-                    offset:
-                        const Offset(2, 3),
+                    offset: const Offset(2, 3),
                   ),
                 ]
               : null,
@@ -544,12 +452,9 @@ Widget _currencyButton(String value) {
         child: Text(
           value,
           style: TextStyle(
-            color:
-                selected ? purple : muted,
+            color: selected ? purple : muted,
             fontSize: 14,
-            fontWeight: selected
-                ? FontWeight.w600
-                : FontWeight.w500,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
       ),
@@ -560,12 +465,8 @@ Widget _currencyButton(String value) {
   // SERVICE CHIP
   // ============================================================
 
-  Widget _serviceChip(
-    String name,
-    Color dotColor,
-  ) {
-    final bool selected =
-        selectedService == name;
+  Widget _serviceChip(String name, Color dotColor) {
+    final bool selected = selectedService == name;
 
     return InkWell(
       borderRadius: BorderRadius.circular(22),
@@ -576,15 +477,10 @@ Widget _currencyButton(String value) {
         });
       },
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 10,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius:
-              BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(22),
           boxShadow: _softShadow(),
         ),
         child: Row(
@@ -604,13 +500,9 @@ Widget _currencyButton(String value) {
             Text(
               name,
               style: TextStyle(
-                color: selected
-                    ? purple
-                    : ink,
+                color: selected ? purple : ink,
                 fontSize: 13,
-                fontWeight: selected
-                    ? FontWeight.w600
-                    : FontWeight.w400,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ],
@@ -629,33 +521,26 @@ Widget _currencyButton(String value) {
         children: [
           Row(
             children: [
-              _smallIcon(
-                Icons.notifications_active_outlined,
-              ),
+              _smallIcon(Icons.notifications_active_outlined),
 
               const SizedBox(width: 14),
 
               const Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Remind before renewal',
                       style: TextStyle(
                         color: ink,
                         fontSize: 15,
-                        fontWeight:
-                            FontWeight.w600,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     SizedBox(height: 3),
                     Text(
                       'Get notified before your card is charged',
-                      style: TextStyle(
-                        color: muted,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: muted, fontSize: 12),
                     ),
                   ],
                 ),
@@ -666,8 +551,7 @@ Widget _currencyButton(String value) {
                 activeThumbColor: purple,
                 onChanged: (value) {
                   setState(() {
-                    reminderEnabled =
-                        value;
+                    reminderEnabled = value;
                   });
                 },
               ),
@@ -683,64 +567,42 @@ Widget _currencyButton(String value) {
 
             Row(
               children: [
-                Expanded(
-                  child: _reminderOption(
-                    '3 days before',
-                  ),
-                ),
+                Expanded(child: _reminderOption('3 days before')),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: _reminderOption(
-                    '1 week before',
-                  ),
-                ),
+                Expanded(child: _reminderOption('1 week before')),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: _reminderOption(
-                    '1 day before',
-                  ),
-                ),
+                Expanded(child: _reminderOption('1 day before')),
               ],
             ),
           ],
 
           const Padding(
-            padding:
-                EdgeInsets.symmetric(
-              vertical: 18,
-            ),
+            padding: EdgeInsets.symmetric(vertical: 18),
             child: Divider(),
           ),
 
           Row(
             children: [
-              _smallIcon(
-                Icons.card_membership_outlined,
-              ),
+              _smallIcon(Icons.card_membership_outlined),
 
               const SizedBox(width: 14),
 
               const Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'This is a free trial',
                       style: TextStyle(
                         color: ink,
                         fontSize: 14,
-                        fontWeight:
-                            FontWeight.w600,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     SizedBox(height: 3),
                     Text(
                       'Track trial end to avoid unwanted charges',
-                      style: TextStyle(
-                        color: muted,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: muted, fontSize: 12),
                     ),
                   ],
                 ),
@@ -762,11 +624,8 @@ Widget _currencyButton(String value) {
     );
   }
 
-  Widget _reminderOption(
-    String value,
-  ) {
-    final bool selected =
-        reminderTime == value;
+  Widget _reminderOption(String value) {
+    final bool selected = reminderTime == value;
 
     return InkWell(
       borderRadius: BorderRadius.circular(22),
@@ -777,27 +636,19 @@ Widget _currencyButton(String value) {
       },
       child: Container(
         alignment: Alignment.center,
-        padding:
-            const EdgeInsets.symmetric(
-          horizontal: 7,
-          vertical: 11,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 11),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius:
-              BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(22),
           boxShadow: _softShadow(),
         ),
         child: Text(
           value,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color:
-                selected ? purple : muted,
+            color: selected ? purple : muted,
             fontSize: 12,
-            fontWeight: selected
-                ? FontWeight.w600
-                : FontWeight.w400,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
       ),
@@ -813,27 +664,20 @@ Widget _currencyButton(String value) {
       child: Column(
         children: [
           InkWell(
-            borderRadius:
-                BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(18),
             onTap: () {
               setState(() {
-                advancedExpanded =
-                    !advancedExpanded;
+                advancedExpanded = !advancedExpanded;
               });
             },
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(
-                vertical: 4,
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 children: [
                   Icon(
                     advancedExpanded
-                        ? Icons
-                            .keyboard_arrow_up
-                        : Icons
-                            .keyboard_arrow_down,
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
                     color: muted,
                   ),
 
@@ -841,53 +685,38 @@ Widget _currencyButton(String value) {
 
                   const Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment
-                              .start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Advanced & Cancellation Details',
                           style: TextStyle(
                             color: ink,
                             fontSize: 14,
-                            fontWeight:
-                                FontWeight.w600,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         SizedBox(height: 3),
                         Text(
                           'Optional: Direct cancel URL, vault login & notes',
-                          style: TextStyle(
-                            color: muted,
-                            fontSize: 12,
-                          ),
+                          style: TextStyle(color: muted, fontSize: 12),
                         ),
                       ],
                     ),
                   ),
 
                   Container(
-                    padding:
-                        const EdgeInsets
-                            .symmetric(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: 11,
                       vertical: 6,
                     ),
-                    decoration:
-                        BoxDecoration(
+                    decoration: BoxDecoration(
                       color: bg,
-                      borderRadius:
-                          BorderRadius
-                              .circular(16),
-                      boxShadow:
-                          _softShadow(),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: _softShadow(),
                     ),
                     child: const Text(
                       'Optional',
-                      style: TextStyle(
-                        color: purple,
-                        fontSize: 11,
-                      ),
+                      style: TextStyle(color: purple, fontSize: 11),
                     ),
                   ),
                 ],
@@ -900,51 +729,30 @@ Widget _currencyButton(String value) {
             const Divider(),
             const SizedBox(height: 14),
 
-            _advancedField(
-              'Cancellation URL',
-              Icons.link,
-            ),
+            _advancedField('Cancellation URL', Icons.link),
 
             const SizedBox(height: 12),
 
-            _advancedField(
-              'Vault Login Reference',
-              Icons.key_outlined,
-            ),
+            _advancedField('Vault Login Reference', Icons.key_outlined),
 
             const SizedBox(height: 12),
 
-            _advancedField(
-              'Additional Notes',
-              Icons.notes_outlined,
-            ),
+            _advancedField('Additional Notes', Icons.notes_outlined),
           ],
         ],
       ),
     );
   }
 
-  Widget _advancedField(
-    String hint,
-    IconData icon,
-  ) {
+  Widget _advancedField(String hint, IconData icon) {
     return _inputSurface(
       child: TextField(
         decoration: InputDecoration(
           border: InputBorder.none,
-          prefixIcon: Icon(
-            icon,
-            color: muted,
-          ),
+          prefixIcon: Icon(icon, color: muted),
           hintText: hint,
-          hintStyle: const TextStyle(
-            color: muted,
-            fontSize: 13,
-          ),
-          contentPadding:
-              const EdgeInsets.symmetric(
-            vertical: 17,
-          ),
+          hintStyle: const TextStyle(color: muted, fontSize: 13),
+          contentPadding: const EdgeInsets.symmetric(vertical: 17),
         ),
       ),
     );
@@ -959,27 +767,18 @@ Widget _currencyButton(String value) {
       height: 62,
       child: ElevatedButton.icon(
         onPressed: _saveSubscription,
-        icon: const Icon(
-          Icons.check,
-          color: Colors.white,
-        ),
+        icon: const Icon(Icons.check, color: Colors.white),
         label: const Text(
           'Save Subscription',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: purple,
           foregroundColor: Colors.white,
           elevation: 7,
-          shadowColor: purple.withValues(
-            alpha: 0.30,
-          ),
+          shadowColor: purple.withValues(alpha: 0.30),
           shape: RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(30),
           ),
         ),
       ),
@@ -997,16 +796,10 @@ Widget _currencyButton(String value) {
           foregroundColor: muted,
           backgroundColor: bg,
           shape: RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(30),
           ),
         ),
-        child: const Text(
-          'Cancel',
-          style: TextStyle(
-            fontSize: 15,
-          ),
-        ),
+        child: const Text('Cancel', style: TextStyle(fontSize: 15)),
       ),
     );
   }
@@ -1015,71 +808,58 @@ Widget _currencyButton(String value) {
   // SAVE FUNCTION
   // ============================================================
 
-Future<void> _saveSubscription() async {
-  final String name = _nameController.text.trim();
-  final String cost = _costController.text.trim();
+  Future<void> _saveSubscription() async {
+    final String name = _nameController.text.trim();
+    final String cost = _costController.text.trim();
 
-  if (name.isEmpty) {
-    _message('Please enter a subscription name.');
-    return;
+    if (name.isEmpty) {
+      _message('Please enter a subscription name.');
+      return;
+    }
+
+    if (cost.isEmpty) {
+      _message('Please enter the subscription cost.');
+      return;
+    }
+
+    final double? parsedCost = double.tryParse(cost.replaceAll(',', ''));
+
+    if (parsedCost == null || parsedCost < 0) {
+      _message('Please enter a valid subscription cost.');
+      return;
+    }
+
+    try {
+      await _subscriptionService.addSubscription(
+        name: name,
+        subtitle: '$selectedService • $billingCycle',
+        price: '$selectedCurrency ${parsedCost.toStringAsFixed(2)}',
+        renewal: 'Renews ${_formattedDate(renewalDate)}',
+        usage: reminderTime,
+        category: 'Productivity & AI',
+        status: freeTrial ? 'Free Trial' : 'Active',
+        priceHiked: false,
+
+        amount: parsedCost,
+        currency: selectedCurrency,
+        billingCycle: billingCycle,
+        renewalDate: renewalDate,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('$name subscription saved.')));
+
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save subscription: $e')),
+      );
+    }
   }
-
-  if (cost.isEmpty) {
-    _message('Please enter the subscription cost.');
-    return;
-  }
-
-  final double? parsedCost =
-    double.tryParse(
-  cost.replaceAll(',', ''),
-);
-
-if (parsedCost == null || parsedCost < 0) {
-  _message(
-    'Please enter a valid subscription cost.',
-  );
-  return;
-}
-
-  try {
-    await _subscriptionService.addSubscription(
-      name: name,
-      subtitle: '$selectedService • $billingCycle',
-      price:
-    '$selectedCurrency ${parsedCost.toStringAsFixed(2)}',
-      renewal: 'Renews ${_formattedDate(renewalDate)}',
-      usage: reminderTime,
-      category: 'Productivity & AI',
-      status: freeTrial
-    ? 'Free Trial'
-    : 'Active',
-      priceHiked: false,
-
-      amount: parsedCost,
-      currency: selectedCurrency,
-      billingCycle: billingCycle,
-      renewalDate: renewalDate,
-    );
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$name subscription saved.'),
-      ),
-    );
-
-    Navigator.pop(context);
-  } catch (e) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Failed to save subscription: $e'),
-      ),
-    );
-  }
-}
 
   // ============================================================
   // DATE PICKER
@@ -1088,16 +868,12 @@ if (parsedCost == null || parsedCost < 0) {
   Future<void> _selectDate() async {
     final DateTime today = DateTime.now();
 
-final DateTime? selected =
-    await showDatePicker(
-  context: context,
-  initialDate:
-      renewalDate.isBefore(today)
-          ? today
-          : renewalDate,
-  firstDate: today,
-  lastDate: DateTime(2035),
-);
+    final DateTime? selected = await showDatePicker(
+      context: context,
+      initialDate: renewalDate.isBefore(today) ? today : renewalDate,
+      firstDate: today,
+      lastDate: DateTime(2035),
+    );
 
     if (selected != null) {
       setState(() {
@@ -1106,9 +882,7 @@ final DateTime? selected =
     }
   }
 
-  String _formattedDate(
-    DateTime date,
-  ) {
+  String _formattedDate(DateTime date) {
     const List<String> months = [
       'Jan',
       'Feb',
@@ -1134,39 +908,31 @@ final DateTime? selected =
 
   Widget _surface({
     required Widget child,
-    EdgeInsetsGeometry padding =
-        const EdgeInsets.all(22),
+    EdgeInsetsGeometry padding = const EdgeInsets.all(22),
   }) {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
         color: card,
-        borderRadius:
-            BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: _softShadow(),
       ),
       child: child,
     );
   }
 
-  Widget _inputSurface({
-    required Widget child,
-  }) {
+  Widget _inputSurface({required Widget child}) {
     return Container(
       decoration: BoxDecoration(
         color: bg,
-        borderRadius:
-            BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: _softShadow(),
       ),
       child: child,
     );
   }
 
-  Widget _circleButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
+  Widget _circleButton({required IconData icon, required VoidCallback onTap}) {
     return Container(
       width: 52,
       height: 52,
@@ -1177,17 +943,12 @@ final DateTime? selected =
       ),
       child: IconButton(
         onPressed: onTap,
-        icon: Icon(
-          icon,
-          color: ink,
-        ),
+        icon: Icon(icon, color: ink),
       ),
     );
   }
 
-  Widget _smallIcon(
-    IconData icon,
-  ) {
+  Widget _smallIcon(IconData icon) {
     return Container(
       width: 42,
       height: 42,
@@ -1196,28 +957,19 @@ final DateTime? selected =
         shape: BoxShape.circle,
         boxShadow: _softShadow(),
       ),
-      child: Icon(
-        icon,
-        color: lightPurple,
-        size: 21,
-      ),
+      child: Icon(icon, color: lightPurple, size: 21),
     );
   }
 
   List<BoxShadow> _softShadow() {
     return [
       BoxShadow(
-        color: Colors.white.withValues(
-          alpha: 0.90,
-        ),
+        color: Colors.white.withValues(alpha: 0.90),
         offset: const Offset(-4, -4),
         blurRadius: 10,
       ),
       BoxShadow(
-        color: const Color(0xFFC9C6D2)
-            .withValues(
-          alpha: 0.35,
-        ),
+        color: const Color(0xFFC9C6D2).withValues(alpha: 0.35),
         offset: const Offset(4, 5),
         blurRadius: 12,
       ),
@@ -1225,11 +977,6 @@ final DateTime? selected =
   }
 
   void _message(String text) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
-      SnackBar(
-        content: Text(text),
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 }

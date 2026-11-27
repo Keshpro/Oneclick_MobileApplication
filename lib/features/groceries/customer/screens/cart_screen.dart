@@ -6,10 +6,7 @@ import 'checkout_screen.dart';
 class CartScreen extends StatefulWidget {
   final GroceryController controller;
 
-  const CartScreen({
-    super.key,
-    required this.controller,
-  });
+  const CartScreen({super.key, required this.controller});
 
   @override
   State<CartScreen> createState() => _CartScreenState();
@@ -41,11 +38,7 @@ class _CartScreenState extends State<CartScreen> {
 
   Widget _productImage(String path) {
     const placeholder = Center(
-      child: Icon(
-        Icons.shopping_basket_outlined,
-        color: _green,
-        size: 34,
-      ),
+      child: Icon(Icons.shopping_basket_outlined, color: _green, size: 34),
     );
 
     return Container(
@@ -76,10 +69,7 @@ class _CartScreenState extends State<CartScreen> {
       appBar: AppBar(
         title: const Text(
           'My Cart',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
         ),
         backgroundColor: _background,
         foregroundColor: _textColor,
@@ -105,9 +95,7 @@ class _CartScreenState extends State<CartScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFFE3EADF),
-                      ),
+                      border: Border.all(color: const Color(0xFFE3EADF)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,9 +143,7 @@ class _CartScreenState extends State<CartScreen> {
                             IconButton(
                               tooltip: 'Remove item',
                               onPressed: () {
-                                widget.controller.removeFromCart(
-                                  item.product,
-                                );
+                                widget.controller.removeFromCart(item.product);
                               },
                               icon: const Icon(
                                 Icons.delete_outline_rounded,
@@ -168,10 +154,7 @@ class _CartScreenState extends State<CartScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        const Divider(
-                          height: 1,
-                          color: Color(0xFFEDF1EA),
-                        ),
+                        const Divider(height: 1, color: Color(0xFFEDF1EA)),
                         const SizedBox(height: 12),
                         SizedBox(
                           width: double.infinity,
@@ -266,11 +249,7 @@ class _CartScreenState extends State<CartScreen> {
           const CircleAvatar(
             radius: 25,
             backgroundColor: Colors.white,
-            child: Icon(
-              Icons.shopping_bag_outlined,
-              color: _green,
-              size: 26,
-            ),
+            child: Icon(Icons.shopping_bag_outlined, color: _green, size: 26),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -334,11 +313,7 @@ class _CartScreenState extends State<CartScreen> {
             const Text(
               'Find your favourites and add them to your basket.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: _muted,
-                fontSize: 14,
-                height: 1.5,
-              ),
+              style: TextStyle(color: _muted, fontSize: 14, height: 1.5),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -371,9 +346,7 @@ class _CartScreenState extends State<CartScreen> {
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
             color: Color(0x0D203B2B),
@@ -431,19 +404,15 @@ class _CartScreenState extends State<CartScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => CheckoutScreen(
-                      controller: widget.controller,
-                    ),
+                    builder: (_) =>
+                        CheckoutScreen(controller: widget.controller),
                   ),
                 );
               },
               child: const Text(
                 'Proceed to Checkout',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
               ),
             ),
           ],

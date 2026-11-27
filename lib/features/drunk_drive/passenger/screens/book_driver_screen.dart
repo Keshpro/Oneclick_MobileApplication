@@ -63,7 +63,8 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Unable to load vehicles. Check your connection and try again.';
+        _errorMessage =
+            'Unable to load vehicles. Check your connection and try again.';
         _isLoading = false;
       });
     }
@@ -82,12 +83,11 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     final result = await Navigator.push<LocationModel>(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            LocationPickerScreen(
-              title: 'Pickup Location',
-              initialSelection: _pickup,
-              useGpsOnOpen: true,
-            ),
+        builder: (context) => LocationPickerScreen(
+          title: 'Pickup Location',
+          initialSelection: _pickup,
+          useGpsOnOpen: true,
+        ),
       ),
     );
     if (!mounted) return;
@@ -122,8 +122,10 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     final pickup = _pickup;
     final destination = _destination;
     if (pickup == null || destination == null) return false;
-    if (pickup.latitude != null && pickup.longitude != null &&
-        destination.latitude != null && destination.longitude != null) {
+    if (pickup.latitude != null &&
+        pickup.longitude != null &&
+        destination.latitude != null &&
+        destination.longitude != null) {
       return pickup.latitude == destination.latitude &&
           pickup.longitude == destination.longitude;
     }
@@ -184,7 +186,10 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
           children: [
             CircularProgressIndicator(color: colors.accent),
             const SizedBox(height: 16),
-            Text('Loading vehicles...', style: TextStyle(color: colors.textMuted)),
+            Text(
+              'Loading vehicles...',
+              style: TextStyle(color: colors.textMuted),
+            ),
           ],
         ),
       );
@@ -226,8 +231,11 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.directions_car_outlined,
-                  color: colors.textMuted, size: 48),
+              Icon(
+                Icons.directions_car_outlined,
+                color: colors.textMuted,
+                size: 48,
+              ),
               const SizedBox(height: 16),
               Text(
                 "You don't have a vehicle registered.",
@@ -344,7 +352,8 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
   Widget? _buildContinueBar(DrunkDrivePalette colors) {
     if (_isLoading || _errorMessage != null || _vehicles.isEmpty) return null;
 
-    final enabled = _selectedVehicleId != null &&
+    final enabled =
+        _selectedVehicleId != null &&
         _pickup != null &&
         _destination != null &&
         _selectedReason != null &&
@@ -461,7 +470,9 @@ class _SelectableVehicleCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: colors.success.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(20),

@@ -104,9 +104,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       if (!mounted) return;
 
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const DrunkDriveHomeScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const DrunkDriveHomeScreen()),
         (route) => route.isFirst,
       );
     } catch (error) {
@@ -269,7 +267,9 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               SizedBox(
                 width: double.infinity,
                 child: TextButton(
-                  onPressed: _isConfirming ? null : () => Navigator.pop(context),
+                  onPressed: _isConfirming
+                      ? null
+                      : () => Navigator.pop(context),
                   child: Text(
                     'Edit',
                     style: TextStyle(color: colors.textMuted),

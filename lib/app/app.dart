@@ -1,7 +1,7 @@
-
 import 'package:flutter/material.dart';
 import 'package:oneclick/core/theme/app_theme.dart';
 import 'package:oneclick/shared/models/user_model.dart';
+
 import '../features/auth/screens/splash_screen.dart';
 import '../features/auth/screens/home_screen.dart';
 import '../features/auth/screens/login_screen.dart';
@@ -52,8 +52,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
 
         // QuickFix Worker Dashboard
-        '/worker-dashboard': (context) =>
-            const WorkerDashboard(),
+        '/worker-dashboard': (context) => const WorkerDashboard(),
 
         // Register Screen
         '/register': (context) => RegisterScreen(role: UserRole.customer),
@@ -61,9 +60,7 @@ class MyApp extends StatelessWidget {
 
       // Handle unknown routes
       onUnknownRoute: (settings) {
-        return MaterialPageRoute(
-          builder: (context) => const HomeScreen(),
-        );
+        return MaterialPageRoute(builder: (context) => const HomeScreen());
       },
     );
   }

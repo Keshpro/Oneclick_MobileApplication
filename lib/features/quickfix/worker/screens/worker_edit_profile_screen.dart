@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -11,8 +10,7 @@ class WorkerEditProfileScreen extends StatefulWidget {
       _WorkerEditProfileScreenState();
 }
 
-class _WorkerEditProfileScreenState
-    extends State<WorkerEditProfileScreen> {
+class _WorkerEditProfileScreenState extends State<WorkerEditProfileScreen> {
   static const Color primaryNavy = Color(0xFF1E293B);
 
   final _formKey = GlobalKey<FormState>();
@@ -23,8 +21,7 @@ class _WorkerEditProfileScreenState
   final _experienceController = TextEditingController();
   final _hourlyRateController = TextEditingController();
 
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -47,10 +44,7 @@ class _WorkerEditProfileScreenState
         throw Exception('Worker not logged in');
       }
 
-      final doc = await _firestore
-          .collection('workers')
-          .doc(user.uid)
-          .get();
+      final doc = await _firestore.collection('workers').doc(user.uid).get();
 
       if (!doc.exists) {
         throw Exception('Worker profile not found');
@@ -58,38 +52,27 @@ class _WorkerEditProfileScreenState
 
       final data = doc.data()!;
 
-      final providerDetails =
-          Map<String, dynamic>.from(
-        data['providerDetails'] is Map
-            ? data['providerDetails'] as Map
-            : {},
+      final providerDetails = Map<String, dynamic>.from(
+        data['providerDetails'] is Map ? data['providerDetails'] as Map : {},
       );
 
       if (!mounted) return;
 
       setState(() {
-        _nameController.text =
-            data['name']?.toString() ?? '';
+        _nameController.text = data['name']?.toString() ?? '';
 
-        _phoneController.text =
-            data['phone']?.toString() ?? '';
+        _phoneController.text = data['phone']?.toString() ?? '';
 
-        _areaController.text =
-            data['area']?.toString() ?? '';
+        _areaController.text = data['area']?.toString() ?? '';
 
-        _category =
-            data['category']?.toString() ?? '';
+        _category = data['category']?.toString() ?? '';
 
         _experienceController.text =
-            (providerDetails['experienceYears'] ??
-                    data['experience'] ??
-                    '')
+            (providerDetails['experienceYears'] ?? data['experience'] ?? '')
                 .toString();
 
         _hourlyRateController.text =
-            (providerDetails['hourlyRate'] ??
-                    data['hourlyRate'] ??
-                    '')
+            (providerDetails['hourlyRate'] ?? data['hourlyRate'] ?? '')
                 .toString();
 
         _isLoading = false;
@@ -116,34 +99,23 @@ class _WorkerEditProfileScreenState
     final user = _auth.currentUser;
 
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please login again'),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Please login again')));
       return;
     }
 
     setState(() => _isSaving = true);
 
     try {
-      final experience = int.parse(
-        _experienceController.text.trim(),
-      );
+      final experience = int.parse(_experienceController.text.trim());
 
-      final hourlyRate = double.parse(
-        _hourlyRateController.text.trim(),
-      );
+      final hourlyRate = double.parse(_hourlyRateController.text.trim());
 
-      await _firestore
-          .collection('workers')
-          .doc(user.uid)
-          .update({
+      await _firestore.collection('workers').doc(user.uid).update({
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
         'area': _areaController.text.trim(),
-        'providerDetails.experienceYears':
-            experience.toString(),
+        'providerDetails.experienceYears': experience.toString(),
         'providerDetails.hourlyRate': hourlyRate,
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -184,30 +156,20 @@ class _WorkerEditProfileScreenState
     super.dispose();
   }
 
-  InputDecoration _inputDecoration(
-    String label,
-    IconData icon,
-  ) {
+  InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
       prefixIcon: Icon(icon, color: primaryNavy),
       filled: true,
       fillColor: Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: Color(0xFFE2E8F0),
-        ),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: primaryNavy,
-          width: 2,
-        ),
+        borderSide: const BorderSide(color: primaryNavy, width: 2),
       ),
     );
   }
@@ -225,7 +187,8 @@ class _WorkerEditProfileScreenState
         controller: controller,
         keyboardType: keyboardType,
         decoration: _inputDecoration(label, icon),
-        validator: validator ??
+        validator:
+            validator ??
             (value) {
               if (value == null || value.trim().isEmpty) {
                 return 'Please enter $label';
@@ -249,27 +212,20 @@ class _WorkerEditProfileScreenState
         foregroundColor: Colors.white,
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Form(
                 key: _formKey,
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.stretch,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 10),
 
                     const CircleAvatar(
                       radius: 45,
                       backgroundColor: Color(0xFFE2E8F0),
-                      child: Icon(
-                        Icons.person,
-                        size: 50,
-                        color: primaryNavy,
-                      ),
+                      child: Icon(Icons.person, size: 50, color: primaryNavy),
                     ),
 
                     const SizedBox(height: 14),
@@ -288,9 +244,7 @@ class _WorkerEditProfileScreenState
                     Text(
                       _category,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFF64748B),
-                      ),
+                      style: const TextStyle(color: Color(0xFF64748B)),
                     ),
 
                     const SizedBox(height: 30),
@@ -320,8 +274,7 @@ class _WorkerEditProfileScreenState
                       controller: _experienceController,
                       keyboardType: TextInputType.number,
                       validator: (value) {
-                        final years =
-                            int.tryParse(value?.trim() ?? '');
+                        final years = int.tryParse(value?.trim() ?? '');
 
                         if (years == null || years < 0) {
                           return 'Enter valid experience';
@@ -335,18 +288,13 @@ class _WorkerEditProfileScreenState
                       label: 'Hourly Rate (LKR)',
                       icon: Icons.payments_outlined,
                       controller: _hourlyRateController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(
+                      keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
                       validator: (value) {
-                        final rate = double.tryParse(
-                          value?.trim() ?? '',
-                        );
+                        final rate = double.tryParse(value?.trim() ?? '');
 
-                        if (rate == null ||
-                            !rate.isFinite ||
-                            rate <= 0) {
+                        if (rate == null || !rate.isFinite || rate <= 0) {
                           return 'Enter a valid hourly rate';
                         }
 
@@ -359,8 +307,7 @@ class _WorkerEditProfileScreenState
                     SizedBox(
                       height: 52,
                       child: ElevatedButton.icon(
-                        onPressed:
-                            _isSaving ? null : _saveProfile,
+                        onPressed: _isSaving ? null : _saveProfile,
                         icon: _isSaving
                             ? const SizedBox(
                                 height: 18,
@@ -371,17 +318,12 @@ class _WorkerEditProfileScreenState
                                 ),
                               )
                             : const Icon(Icons.save_outlined),
-                        label: Text(
-                          _isSaving
-                              ? 'Saving...'
-                              : 'Save Changes',
-                        ),
+                        label: Text(_isSaving ? 'Saving...' : 'Save Changes'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryNavy,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),

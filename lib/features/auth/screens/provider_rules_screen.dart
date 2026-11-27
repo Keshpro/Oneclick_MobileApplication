@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
+
 import 'provider_role_selection_screen.dart';
 
 class ProviderRulesScreen extends StatefulWidget {
   const ProviderRulesScreen({super.key});
 
   @override
-  State<ProviderRulesScreen> createState() =>
-      _ProviderRulesScreenState();
+  State<ProviderRulesScreen> createState() => _ProviderRulesScreenState();
 }
 
-class _ProviderRulesScreenState
-    extends State<ProviderRulesScreen> {
+class _ProviderRulesScreenState extends State<ProviderRulesScreen> {
   bool _accepted = false;
 
   @override
@@ -24,9 +23,7 @@ class _ProviderRulesScreenState
         surfaceTintColor: Colors.transparent,
         title: const Text(
           'Earn with OneClick',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
 
@@ -35,30 +32,18 @@ class _ProviderRulesScreenState
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.fromLTRB(
-                  24,
-                  16,
-                  24,
-                  20,
-                ),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        gradient:
-                            const LinearGradient(
-                          colors: [
-                            Color(0xFF5B4DFF),
-                            Color(0xFF2E1FA6),
-                          ],
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF5B4DFF), Color(0xFF2E1FA6)],
                         ),
-                        borderRadius:
-                            BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Icon(
                         Icons.handshake_outlined,
@@ -94,43 +79,37 @@ class _ProviderRulesScreenState
                     const _RuleCard(
                       number: '01',
                       title: 'Provide accurate information',
-                      description:
-                          'All personal, professional and verification information submitted must be accurate and belong to you.',
+                      description: 'All personal, professional and verification information submitted must be accurate and belong to you.',
                     ),
 
                     const _RuleCard(
                       number: '02',
                       title: 'Valid documents required',
-                      description:
-                          'You must provide valid professional or licence information required for your selected provider role.',
+                      description: 'You must provide valid professional or licence information required for your selected provider role.',
                     ),
 
                     const _RuleCard(
                       number: '03',
                       title: 'Verification required',
-                      description:
-                          'Submitting an application does not automatically activate a provider account. OneClick must review and approve it first.',
+                      description: 'Submitting an application does not automatically activate a provider account. OneClick must review and approve it first.',
                     ),
 
                     const _RuleCard(
                       number: '04',
                       title: 'Keep information updated',
-                      description:
-                          'Provider details, licences and professional information should remain accurate and up to date.',
+                      description: 'Provider details, licences and professional information should remain accurate and up to date.',
                     ),
 
                     const _RuleCard(
                       number: '05',
                       title: 'Responsible service',
-                      description:
-                          'Providers are expected to use OneClick responsibly and provide services professionally and respectfully.',
+                      description: 'Providers are expected to use OneClick responsibly and provide services professionally and respectfully.',
                     ),
 
                     const _RuleCard(
                       number: '06',
                       title: 'Account review',
-                      description:
-                          'OneClick may review provider information when necessary and may restrict provider access when submitted information cannot be verified.',
+                      description: 'OneClick may review provider information when necessary and may restrict provider access when submitted information cannot be verified.',
                     ),
 
                     const SizedBox(height: 8),
@@ -138,33 +117,24 @@ class _ProviderRulesScreenState
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius:
-                            BorderRadius.circular(18),
-                        border: Border.all(
-                          color:
-                              const Color(0xFFE4E2EC),
-                        ),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFE4E2EC)),
                       ),
                       child: CheckboxListTile(
                         value: _accepted,
-                        activeColor:
-                            const Color(0xFF5B4DFF),
-                        controlAffinity:
-                            ListTileControlAffinity
-                                .leading,
+                        activeColor: const Color(0xFF5B4DFF),
+                        controlAffinity: ListTileControlAffinity.leading,
                         title: const Text(
                           'I have read and agree to the OneClick provider rules and regulations.',
                           style: TextStyle(
                             fontSize: 13,
-                            fontWeight:
-                                FontWeight.w600,
+                            fontWeight: FontWeight.w600,
                             height: 1.4,
                           ),
                         ),
                         onChanged: (value) {
                           setState(() {
-                            _accepted =
-                                value ?? false;
+                            _accepted = value ?? false;
                           });
                         },
                       ),
@@ -175,20 +145,10 @@ class _ProviderRulesScreenState
             ),
 
             Container(
-              padding:
-                  const EdgeInsets.fromLTRB(
-                24,
-                14,
-                24,
-                18,
-              ),
+              padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                border: Border(
-                  top: BorderSide(
-                    color: Color(0xFFE4E2EC),
-                  ),
-                ),
+                border: Border(top: BorderSide(color: Color(0xFFE4E2EC))),
               ),
               child: SafeArea(
                 top: false,
@@ -207,29 +167,19 @@ class _ProviderRulesScreenState
                               ),
                             );
                           },
-                    style:
-                        ElevatedButton.styleFrom(
-                      backgroundColor:
-                          const Color(0xFF5B4DFF),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF5B4DFF),
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor:
-                          const Color(0xFFE1DFEA),
-                      disabledForegroundColor:
-                          const Color(0xFF9692A5),
+                      disabledBackgroundColor: const Color(0xFFE1DFEA),
+                      disabledForegroundColor: const Color(0xFF9692A5),
                       elevation: 0,
-                      shape:
-                          RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(
-                          16,
-                        ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
                     child: const Text(
                       'AGREE & CONTINUE',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
                 ),
@@ -261,23 +211,18 @@ class _RuleCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: const Color(0xFFE4E2EC),
-        ),
+        border: Border.all(color: const Color(0xFFE4E2EC)),
       ),
       child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 40,
             height: 40,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: const Color(0xFF5B4DFF)
-                  .withValues(alpha: .08),
-              borderRadius:
-                  BorderRadius.circular(12),
+              color: const Color(0xFF5B4DFF).withValues(alpha: .08),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               number,
@@ -290,16 +235,14 @@ class _RuleCard extends StatelessWidget {
           const SizedBox(width: 14),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
                   style: const TextStyle(
                     color: Color(0xFF17152A),
                     fontSize: 14,
-                    fontWeight:
-                        FontWeight.w800,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 5),

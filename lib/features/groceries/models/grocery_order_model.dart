@@ -1,9 +1,6 @@
 import 'cart_item_model.dart';
 
-enum DeliveryMethod {
-  delivery,
-  pickup,
-}
+enum DeliveryMethod { delivery, pickup }
 
 enum OrderStatus {
   pending,

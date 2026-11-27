@@ -11,10 +11,7 @@ class ManageProductsScreen extends StatelessWidget {
   static const _muted = Color(0xFF748074);
   static const _red = Color(0xFFB83D3D);
 
-  Future<void> _deleteProduct(
-    BuildContext context,
-    String productId,
-  ) async {
+  Future<void> _deleteProduct(BuildContext context, String productId) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -23,42 +20,26 @@ class ManageProductsScreen extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
-        ),
-        icon: const Icon(
-          Icons.delete_outline_rounded,
-          color: _red,
-          size: 36,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        icon: const Icon(Icons.delete_outline_rounded, color: _red, size: 36),
         title: const Text(
           'Delete Product',
-          style: TextStyle(
-            color: _textColor,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(color: _textColor, fontWeight: FontWeight.w700),
         ),
         content: const Text(
           'Are you sure you want to delete this product?',
-          style: TextStyle(
-            color: _muted,
-            height: 1.5,
-          ),
+          style: TextStyle(color: _muted, height: 1.5),
         ),
         actions: [
           TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: _muted,
-            ),
+            style: TextButton.styleFrom(foregroundColor: _muted),
             onPressed: () {
               Navigator.pop(dialogContext, false);
             },
             child: const Text('Cancel'),
           ),
           TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: _red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: _red),
             onPressed: () {
               Navigator.pop(dialogContext, true);
             },
@@ -94,9 +75,8 @@ class ManageProductsScreen extends StatelessWidget {
     } catch (e) {
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Delete failed: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Delete failed: $e')));
     }
   }
 
@@ -120,24 +100,21 @@ class ManageProductsScreen extends StatelessWidget {
           .collection('grocery_products')
           .doc(productId);
 
-      await FirebaseFirestore.instance.runTransaction(
-        (transaction) async {
-          final snapshot = await transaction.get(productRef);
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final snapshot = await transaction.get(productRef);
 
-          if (!snapshot.exists ||
-              snapshot.data()?['sellerId'] != user.uid) {
-            throw Exception('Product not found or access denied');
-          }
+        if (!snapshot.exists || snapshot.data()?['sellerId'] != user.uid) {
+          throw Exception('Product not found or access denied');
+        }
 
-          transaction.update(productRef, {
-            'description': result['description'],
-            'price': result['price'],
-            'stock': result['stock'],
-            'status': 'pending',
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
-        },
-      );
+        transaction.update(productRef, {
+          'description': result['description'],
+          'price': result['price'],
+          'stock': result['stock'],
+          'status': 'pending',
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      });
 
       if (!context.mounted) return;
 
@@ -150,9 +127,8 @@ class ManageProductsScreen extends StatelessWidget {
     } catch (e) {
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Update failed: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Update failed: $e')));
     }
   }
 
@@ -174,10 +150,7 @@ class ManageProductsScreen extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 7,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(20),
@@ -195,11 +168,7 @@ class ManageProductsScreen extends StatelessWidget {
 
   Widget _productImage(String path) {
     const fallback = Center(
-      child: Icon(
-        Icons.shopping_basket_outlined,
-        color: _green,
-        size: 32,
-      ),
+      child: Icon(Icons.shopping_basket_outlined, color: _green, size: 32),
     );
 
     return Container(
@@ -221,11 +190,7 @@ class ManageProductsScreen extends StatelessWidget {
     );
   }
 
-  Widget _message(
-    IconData icon,
-    String title,
-    String description,
-  ) {
+  Widget _message(IconData icon, String title, String description) {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(28),
@@ -247,10 +212,7 @@ class ManageProductsScreen extends StatelessWidget {
             Text(
               description,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: _muted,
-                height: 1.5,
-              ),
+              style: const TextStyle(color: _muted, height: 1.5),
             ),
           ],
         ),
@@ -271,10 +233,7 @@ class ManageProductsScreen extends StatelessWidget {
         elevation: 0,
         title: const Text(
           'Manage Products',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
         ),
       ),
       body: SafeArea(
@@ -300,9 +259,7 @@ class ManageProductsScreen extends StatelessWidget {
 
                   if (!snapshot.hasData) {
                     return const Center(
-                      child: CircularProgressIndicator(
-                        color: _green,
-                      ),
+                      child: CircularProgressIndicator(color: _green),
                     );
                   }
 
@@ -317,15 +274,9 @@ class ManageProductsScreen extends StatelessWidget {
                   }
 
                   return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(
-                      20,
-                      8,
-                      20,
-                      28,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
                     itemCount: products.length + 1,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: 14),
+                    separatorBuilder: (_, _) => const SizedBox(height: 14),
                     itemBuilder: (context, index) {
                       if (index == 0) {
                         return Container(
@@ -344,8 +295,7 @@ class ManageProductsScreen extends StatelessWidget {
                               const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
                                       'Your product collection',
@@ -376,42 +326,33 @@ class ManageProductsScreen extends StatelessWidget {
                       final productDoc = products[index - 1];
                       final product = productDoc.data();
 
-                      final name =
-                          (product['name'] ?? 'Unnamed Product')
-                              .toString();
+                      final name = (product['name'] ?? 'Unnamed Product')
+                          .toString();
 
-                      final category =
-                          (product['category'] ?? '').toString();
+                      final category = (product['category'] ?? '').toString();
 
-                      final image =
-                          (product['imageUrl'] ?? '').toString();
+                      final image = (product['imageUrl'] ?? '').toString();
 
                       final price =
-                          (product['price'] as num?)?.toDouble() ??
-                              0.0;
+                          (product['price'] as num?)?.toDouble() ?? 0.0;
 
-                      final stock =
-                          (product['stock'] as num?)?.toInt() ?? 0;
+                      final stock = (product['stock'] as num?)?.toInt() ?? 0;
 
-                      final status =
-                          (product['status'] ?? 'pending').toString();
+                      final status = (product['status'] ?? 'pending')
+                          .toString();
 
                       return Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(0xFFE3EADF),
-                          ),
+                          border: Border.all(color: const Color(0xFFE3EADF)),
                         ),
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.stretch,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Row(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 _productImage(image),
                                 const SizedBox(width: 12),
@@ -426,8 +367,7 @@ class ManageProductsScreen extends StatelessWidget {
                                         style: const TextStyle(
                                           color: _textColor,
                                           fontSize: 16,
-                                          fontWeight:
-                                              FontWeight.w700,
+                                          fontWeight: FontWeight.w700,
                                         ),
                                       ),
                                       const SizedBox(height: 5),
@@ -444,8 +384,7 @@ class ManageProductsScreen extends StatelessWidget {
                                         style: const TextStyle(
                                           color: _green,
                                           fontSize: 16,
-                                          fontWeight:
-                                              FontWeight.w800,
+                                          fontWeight: FontWeight.w800,
                                         ),
                                       ),
                                     ],
@@ -466,10 +405,7 @@ class ManageProductsScreen extends StatelessWidget {
                                         product,
                                       );
                                     } else if (value == 'delete') {
-                                      _deleteProduct(
-                                        context,
-                                        productDoc.id,
-                                      );
+                                      _deleteProduct(context, productDoc.id);
                                     }
                                   },
                                   itemBuilder: (_) => const [
@@ -505,15 +441,10 @@ class ManageProductsScreen extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            const Divider(
-                              height: 28,
-                              color: Color(0xFFEDF1EA),
-                            ),
+                            const Divider(height: 28, color: Color(0xFFEDF1EA)),
                             Wrap(
-                              alignment:
-                                  WrapAlignment.spaceBetween,
-                              crossAxisAlignment:
-                                  WrapCrossAlignment.center,
+                              alignment: WrapAlignment.spaceBetween,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               spacing: 12,
                               runSpacing: 10,
                               children: [
@@ -541,15 +472,12 @@ class ManageProductsScreen extends StatelessWidget {
 }
 
 class _EditProductDialog extends StatefulWidget {
-  const _EditProductDialog({
-    required this.product,
-  });
+  const _EditProductDialog({required this.product});
 
   final Map<String, dynamic> product;
 
   @override
-  State<_EditProductDialog> createState() =>
-      _EditProductDialogState();
+  State<_EditProductDialog> createState() => _EditProductDialogState();
 }
 
 class _EditProductDialogState extends State<_EditProductDialog> {
@@ -593,21 +521,14 @@ class _EditProductDialogState extends State<_EditProductDialog> {
       filled: true,
       fillColor: const Color(0xFFF5F8F4),
       contentPadding: const EdgeInsets.all(16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: Color(0xFFE3EADF),
-        ),
+        borderSide: const BorderSide(color: Color(0xFFE3EADF)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: _green,
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: _green, width: 1.5),
       ),
       errorMaxLines: 2,
     );
@@ -618,15 +539,10 @@ class _EditProductDialogState extends State<_EditProductDialog> {
     return AlertDialog(
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       title: const Text(
         'Edit Product',
-        style: TextStyle(
-          color: _textColor,
-          fontWeight: FontWeight.w700,
-        ),
+        style: TextStyle(color: _textColor, fontWeight: FontWeight.w700),
       ),
       content: SingleChildScrollView(
         child: Form(
@@ -637,11 +553,7 @@ class _EditProductDialogState extends State<_EditProductDialog> {
             children: [
               const Text(
                 'Saved changes will be submitted for admin approval.',
-                style: TextStyle(
-                  color: _muted,
-                  fontSize: 12,
-                  height: 1.5,
-                ),
+                style: TextStyle(color: _muted, fontSize: 12, height: 1.5),
               ),
               const SizedBox(height: 20),
               TextFormField(
@@ -653,19 +565,15 @@ class _EditProductDialogState extends State<_EditProductDialog> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _priceController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(
+                keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                                style: const TextStyle(color: _textColor),
+                style: const TextStyle(color: _textColor),
                 decoration: _decoration('Price (Rs.)'),
                 validator: (value) {
-                  final price =
-                      double.tryParse(value?.trim() ?? '');
+                  final price = double.tryParse(value?.trim() ?? '');
 
-                  if (price == null ||
-                      !price.isFinite ||
-                      price <= 0) {
+                  if (price == null || !price.isFinite || price <= 0) {
                     return 'Enter a positive price';
                   }
 
@@ -679,8 +587,7 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                 style: const TextStyle(color: _textColor),
                 decoration: _decoration('Stock Quantity'),
                 validator: (value) {
-                  final stock =
-                      int.tryParse(value?.trim() ?? '');
+                  final stock = int.tryParse(value?.trim() ?? '');
 
                   if (stock == null || stock < 0) {
                     return 'Enter a valid stock quantity';
@@ -695,9 +602,7 @@ class _EditProductDialogState extends State<_EditProductDialog> {
       ),
       actions: [
         TextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: _muted,
-          ),
+          style: TextButton.styleFrom(foregroundColor: _muted),
           onPressed: () {
             Navigator.pop(context);
           },

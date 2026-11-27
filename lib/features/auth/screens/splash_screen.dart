@@ -1,13 +1,16 @@
 import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'home_screen.dart';
 import 'pending_approval_screen.dart';
+
 import 'package:oneclick/admin/screens/admin_dashboard.dart';
 import 'package:oneclick/features/doctor/doctor/screens/doctor_dashboard.dart';
 import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
+
 import '../../drunk_drive/services/driver_entry_router.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -37,32 +40,21 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
     );
 
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeIn,
-    );
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
     _scaleAnimation = Tween<double>(
       begin: 0.8,
       end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOutBack,
-      ),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     _controller.forward();
 
     // ============================================================
     // AUTO LOGIN / SESSION CHECK LOGIC
     // ============================================================
-    _timer = Timer(
-      const Duration(seconds: 3),
-      () {
-        _checkUserSessionAndNavigate();
-      },
-    );
+    _timer = Timer(const Duration(seconds: 3), () {
+      _checkUserSessionAndNavigate();
+    });
   }
 
   Future<void> _checkUserSessionAndNavigate() async {
@@ -81,10 +73,14 @@ class _SplashScreenState extends State<SplashScreen>
 
     try {
       // Preserve admin routing and read the shared account role first.
-      final userDoc =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
       final role = (userDoc.data()?['role'] ?? 'user')
-          .toString().trim().toLowerCase();
+          .toString()
+          .trim()
+          .toLowerCase();
       if (role == 'admin') {
         _navigateTo(const AdminDashboard());
         return;
@@ -102,8 +98,10 @@ class _SplashScreenState extends State<SplashScreen>
       }
 
       // 2. Doctor කෙනෙක්දැයි 'doctors' collection එකෙන් පරීක්ෂා කිරීම
-      final doctorDoc =
-          await FirebaseFirestore.instance.collection('doctors').doc(uid).get();
+      final doctorDoc = await FirebaseFirestore.instance
+          .collection('doctors')
+          .doc(uid)
+          .get();
 
       if (doctorDoc.exists) {
         final status = doctorDoc.data()?['status'] ?? 'pending';
@@ -119,8 +117,10 @@ class _SplashScreenState extends State<SplashScreen>
       }
 
       // Preserve the existing fallback for other provider combinations.
-      final driverDoc =
-          await FirebaseFirestore.instance.collection('drivers').doc(uid).get();
+      final driverDoc = await FirebaseFirestore.instance
+          .collection('drivers')
+          .doc(uid)
+          .get();
 
       if (driverDoc.exists) {
         final status = driverDoc.data()?['status'] ?? 'pending';
@@ -142,11 +142,8 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _navigateTo(Widget targetScreen) {
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => targetScreen,
-      ),
-    );
+    Navigator.of(context)
+        .pushReplacement(MaterialPageRoute(builder: (context) => targetScreen));
   }
 
   @override
@@ -218,8 +215,9 @@ class _SplashScreenState extends State<SplashScreen>
                             borderRadius: BorderRadius.circular(32),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.textDark
-                                    .withValues(alpha: 0.20),
+                                color: AppColors.textDark.withValues(
+                                  alpha: 0.20,
+                                ),
                                 blurRadius: 32,
                                 offset: const Offset(0, 16),
                               ),

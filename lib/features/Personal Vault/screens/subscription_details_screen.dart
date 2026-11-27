@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../services/subscription_service.dart';
 
 class SubscriptionDetailsScreen extends StatefulWidget {
@@ -28,8 +29,7 @@ class SubscriptionDetailsScreen extends StatefulWidget {
       _SubscriptionDetailsScreenState();
 }
 
-class _SubscriptionDetailsScreenState
-    extends State<SubscriptionDetailsScreen> {
+class _SubscriptionDetailsScreenState extends State<SubscriptionDetailsScreen> {
   static const Color bg = Color(0xFFF9F7FF);
   static const Color surface = Color(0xFFFBF9FF);
   static const Color ink = Color(0xFF292B43);
@@ -47,134 +47,114 @@ class _SubscriptionDetailsScreenState
     _loadRenewalReminders();
   }
 
+  Future<void> _loadRenewalReminders() async {
+    try {
+      final records = await _subscriptionService.getSubscriptions().first;
 
-Future<void> _loadRenewalReminders() async {
-  try {
-    final records = await _subscriptionService
-        .getSubscriptions()
-        .first;
+      for (final record in records) {
+        if (record.id == widget.subscriptionId) {
+          if (!mounted) return;
 
-    for (final record in records) {
-      if (record.id == widget.subscriptionId) {
-        if (!mounted) return;
-
-        setState(() {
-          renewalReminders = record.renewalReminders;
-          _loadingRenewalReminders = false;
-        });
-        return;
+          setState(() {
+            renewalReminders = record.renewalReminders;
+            _loadingRenewalReminders = false;
+          });
+          return;
+        }
       }
+
+      if (!mounted) return;
+
+      setState(() {
+        _loadingRenewalReminders = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _loadingRenewalReminders = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not load reminder settings: $error')),
+      );
     }
-
-    if (!mounted) return;
-
-    setState(() {
-      _loadingRenewalReminders = false;
-    });
-  } catch (error) {
-    if (!mounted) return;
-
-    setState(() {
-      _loadingRenewalReminders = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Could not load reminder settings: $error',
-        ),
-      ),
-    );
   }
-}
 
-Future<void> _updateRenewalReminders(bool enabled) async {
-  if (_loadingRenewalReminders || _savingRenewalReminders) return;
+  Future<void> _updateRenewalReminders(bool enabled) async {
+    if (_loadingRenewalReminders || _savingRenewalReminders) return;
 
-  final previousValue = renewalReminders;
-
-  setState(() {
-    renewalReminders = enabled;
-    _savingRenewalReminders = true;
-  });
-
-  try {
-    await _subscriptionService.updateRenewalReminders(
-      subscriptionId: widget.subscriptionId,
-      enabled: enabled,
-    );
-
-    if (!mounted) return;
+    final previousValue = renewalReminders;
 
     setState(() {
-      _savingRenewalReminders = false;
-    });
-  } catch (error) {
-    if (!mounted) return;
-
-    setState(() {
-      renewalReminders = previousValue;
-      _savingRenewalReminders = false;
+      renewalReminders = enabled;
+      _savingRenewalReminders = true;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Could not save reminder setting: $error'),
-      ),
-    );
+    try {
+      await _subscriptionService.updateRenewalReminders(
+        subscriptionId: widget.subscriptionId,
+        enabled: enabled,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _savingRenewalReminders = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        renewalReminders = previousValue;
+        _savingRenewalReminders = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save reminder setting: $error')),
+      );
+    }
   }
-}
 
-  final SubscriptionService _subscriptionService =
-    SubscriptionService();
+  final SubscriptionService _subscriptionService = SubscriptionService();
 
   bool _markingEnded = false;
 
   Future<void> _markSubscriptionEnded() async {
-  if (_markingEnded) {
-    return;
-  }
-
-  setState(() {
-    _markingEnded = true;
-  });
-
-  try {
-    await _subscriptionService.cancelSubscription(
-      widget.subscriptionId,
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    Navigator.pop(context);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${widget.name} marked as cancelled.',
-        ),
-      ),
-    );
-  } catch (error) {
-    if (!mounted) {
+    if (_markingEnded) {
       return;
     }
 
     setState(() {
-      _markingEnded = false;
+      _markingEnded = true;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Could not update subscription: $error',
-        ),
-      ),
-    );
+    try {
+      await _subscriptionService.cancelSubscription(widget.subscriptionId);
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${widget.name} marked as cancelled.')),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _markingEnded = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update subscription: $error')),
+      );
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -253,100 +233,78 @@ Future<void> _updateRenewalReminders(bool enabled) async {
   // SUBSCRIPTION SUMMARY
   // ============================================================
 
-String _renewalLabel() {
-  final date = widget.renewalDate;
+  String _renewalLabel() {
+    final date = widget.renewalDate;
 
-  if (date == null) {
-    return 'No renewal date';
-  }
-
-  final today = DateTime.now();
-  final todayOnly = DateTime(
-    today.year,
-    today.month,
-    today.day,
-  );
-
-  final renewalOnly = DateTime(
-    date.year,
-    date.month,
-    date.day,
-  );
-
-  final days = renewalOnly
-      .difference(todayOnly)
-      .inDays;
-
-  if (days < 0) {
-    return 'Renewal passed';
-  }
-
-  if (days == 0) {
-    return 'Renews today';
-  }
-
-  if (days == 1) {
-    return 'Renews tomorrow';
-  }
-
-  return 'Renews in $days days';
-}
-
-double _detailsPriceAmount() {
-  return double.tryParse(
-        widget.price.replaceAll(
-          RegExp(r'[^0-9.]'),
-          '',
-        ),
-      ) ??
-      0;
-}
-
-String _detailsCurrency() {
-  final normalized =
-      widget.price.trim().toUpperCase();
-
-  return normalized.startsWith('USD') ||
-          normalized.startsWith(r'$')
-      ? 'USD'
-      : 'LKR';
-}
-
-String _formatAmount(double amount) {
-  final parts =
-      amount.toStringAsFixed(2).split('.');
-
-  final whole = parts[0];
-  final decimal = parts[1];
-
-  final buffer = StringBuffer();
-
-  for (int i = 0; i < whole.length; i++) {
-    if (i > 0 &&
-        (whole.length - i) % 3 == 0) {
-      buffer.write(',');
+    if (date == null) {
+      return 'No renewal date';
     }
 
-    buffer.write(whole[i]);
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+
+    final renewalOnly = DateTime(date.year, date.month, date.day);
+
+    final days = renewalOnly.difference(todayOnly).inDays;
+
+    if (days < 0) {
+      return 'Renewal passed';
+    }
+
+    if (days == 0) {
+      return 'Renews today';
+    }
+
+    if (days == 1) {
+      return 'Renews tomorrow';
+    }
+
+    return 'Renews in $days days';
   }
 
-  return '${buffer.toString()}.$decimal';
-}
+  double _detailsPriceAmount() {
+    return double.tryParse(widget.price.replaceAll(RegExp(r'[^0-9.]'), '')) ??
+        0;
+  }
 
-String _annualSpendLabel() {
-  final amount = _detailsPriceAmount();
+  String _detailsCurrency() {
+    final normalized = widget.price.trim().toUpperCase();
 
-  final annualAmount =
-      widget.billingCycle
-              .toLowerCase()
-              .contains('annual')
-          ? amount
-          : amount * 12;
+    return normalized.startsWith('USD') || normalized.startsWith(r'$')
+        ? 'USD'
+        : 'LKR';
+  }
 
-  return '${_detailsCurrency()} '
-      '${_formatAmount(annualAmount)} '
-      'estimated annual spend';
-}
+  String _formatAmount(double amount) {
+    final parts = amount.toStringAsFixed(2).split('.');
+
+    final whole = parts[0];
+    final decimal = parts[1];
+
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < whole.length; i++) {
+      if (i > 0 && (whole.length - i) % 3 == 0) {
+        buffer.write(',');
+      }
+
+      buffer.write(whole[i]);
+    }
+
+    return '${buffer.toString()}.$decimal';
+  }
+
+  String _annualSpendLabel() {
+    final amount = _detailsPriceAmount();
+
+    final annualAmount = widget.billingCycle.toLowerCase().contains('annual')
+        ? amount
+        : amount * 12;
+
+    return '${_detailsCurrency()} '
+        '${_formatAmount(annualAmount)} '
+        'estimated annual spend';
+  }
 
   Widget _buildSubscriptionSummary() {
     return _card(
@@ -355,48 +313,41 @@ String _annualSpendLabel() {
         children: [
           Row(
             children: [
-              _circleIcon(
-                Icons.layers,
-                color: purple,
-                size: 55,
+              _circleIcon(Icons.layers, color: purple, size: 55),
+
+              const SizedBox(width: 15),
+
+              const SizedBox(width: 15),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: ink,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.subtitle,
+                      style: const TextStyle(color: muted, fontSize: 13),
+                    ),
+                  ],
+                ),
               ),
 
-              const SizedBox(width: 15),
-
-              const SizedBox(width: 15),
-
-Expanded(
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        widget.name,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: ink,
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      const SizedBox(height: 4),
-      Text(
-        widget.subtitle,
-        style: const TextStyle(
-          color: muted,
-          fontSize: 13,
-        ),
-      ),
-    ],
-  ),
-),
-
-_badge(
-  widget.renewalDate == null
-      ? widget.status
-      : '${widget.status} • ${_renewalLabel()}',
-  purple,
-),
+              _badge(
+                widget.renewalDate == null
+                    ? widget.status
+                    : '${widget.status} • ${_renewalLabel()}',
+                purple,
+              ),
             ],
           ),
 
@@ -424,20 +375,14 @@ _badge(
                             ),
                           ),
                           Padding(
-                            padding: EdgeInsets.only(
-                              left: 5,
-                              bottom: 5,
-                            ),
+                            padding: EdgeInsets.only(left: 5, bottom: 5),
                             child: Text(
-                              widget.billingCycle
-                                      .toLowerCase()
-                                      .contains('annual')
+                              widget.billingCycle.toLowerCase().contains(
+                                    'annual',
+                                  )
                                   ? '/ year'
                                   : '/ month',
-                              style: TextStyle(
-                                color: muted,
-                                fontSize: 14,
-                              ),
+                              style: TextStyle(color: muted, fontSize: 14),
                             ),
                           ),
                         ],
@@ -445,10 +390,7 @@ _badge(
                       SizedBox(height: 3),
                       Text(
                         _annualSpendLabel(),
-                        style: TextStyle(
-                          color: muted,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: muted, fontSize: 12),
                       ),
                     ],
                   ),
@@ -470,13 +412,9 @@ _badge(
               Expanded(
                 child: _actionButton(
                   icon: Icons.check_circle_outline,
-                  text: _markingEnded
-                      ? 'Updating...'
-                      : 'Mark Ended',
+                  text: _markingEnded ? 'Updating...' : 'Mark Ended',
                   color: ink,
-                  onTap: _markingEnded
-                      ? () {}
-                      : _markSubscriptionEnded,
+                  onTap: _markingEnded ? () {} : _markSubscriptionEnded,
                 ),
               ),
 
@@ -490,11 +428,9 @@ _badge(
                   onTap: () {
                     Navigator.pop(context);
 
-                    WidgetsBinding.instance.addPostFrameCallback(
-                      (_) {
-                        widget.onEdit();
-                      },
-                    );
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      widget.onEdit();
+                    });
                   },
                 ),
               ),
@@ -509,206 +445,170 @@ _badge(
   // BILLING & USAGE
   // ============================================================
 
-  
-Widget _buildRenewalReminders() {
-  return _card(
-    child: Row(
-      children: [
-        _circleIcon(
-          Icons.notifications_active_outlined,
-          color: muted,
-          size: 42,
-        ),
-        const SizedBox(width: 13),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Renewal Reminders',
-                style: TextStyle(
-                  color: ink,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              SizedBox(height: 3),
-              Text(
-                'Reminder preference',
-                style: TextStyle(
-                  color: muted,
-                  fontSize: 11,
-                ),
-              ),
-            ],
+  Widget _buildRenewalReminders() {
+    return _card(
+      child: Row(
+        children: [
+          _circleIcon(
+            Icons.notifications_active_outlined,
+            color: muted,
+            size: 42,
           ),
-        ),
-        Switch(
-          value: renewalReminders,
-          activeThumbColor: purple,
-          onChanged: _loadingRenewalReminders ||
-                  _savingRenewalReminders
-              ? null
-              : _updateRenewalReminders,
-        ),
-      ],
-    ),
-  );
-}
+          const SizedBox(width: 13),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Renewal Reminders',
+                  style: TextStyle(
+                    color: ink,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  'Reminder preference',
+                  style: TextStyle(color: muted, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: renewalReminders,
+            activeThumbColor: purple,
+            onChanged: _loadingRenewalReminders || _savingRenewalReminders
+                ? null
+                : _updateRenewalReminders,
+          ),
+        ],
+      ),
+    );
+  }
 
   // ============================================================
   // VAULT & LEGAL
   // ============================================================
 
   Widget _buildVaultAndLegal() {
-  return _card(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(
-              Icons.lock_outline,
-              color: purple,
-              size: 22,
-            ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'VAULT & LEGAL',
-                style: TextStyle(
-                  color: Color(0xFF55576E),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: .4,
-                ),
-              ),
-            ),
-            _badge(
-              'SECURE',
-              muted,
-            ),
-          ],
-        ),
-        const SizedBox(height: 22),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(17),
-          decoration: _softDecoration(
-            radius: 26,
-          ),
-          child: const Row(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Icon(
-                Icons.shield_outlined,
-                color: purple,
-                size: 22,
-              ),
-              SizedBox(width: 12),
-              Expanded(
+              const Icon(Icons.lock_outline, color: purple, size: 22),
+              const SizedBox(width: 10),
+              const Expanded(
                 child: Text(
-                  'No account credentials, passwords, or legal documents are linked to this subscription.',
+                  'VAULT & LEGAL',
                   style: TextStyle(
-                    color: muted,
-                    fontSize: 13,
-                    height: 1.45,
+                    color: Color(0xFF55576E),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: .4,
                   ),
                 ),
               ),
+              _badge('SECURE', muted),
             ],
           ),
-        ),
-      ],
-    ),
-  );
-}
+          const SizedBox(height: 22),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(17),
+            decoration: _softDecoration(radius: 26),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.shield_outlined, color: purple, size: 22),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'No account credentials, passwords, or legal documents are linked to this subscription.',
+                    style: TextStyle(color: muted, fontSize: 13, height: 1.45),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   // ============================================================
   // CANCELLATION PROTOCOL
   // ============================================================
 
   Widget _buildCancellationProtocol() {
-  return _card(
-    child: Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
-      children: [
-        const Row(
-          children: [
-            Icon(
-              Icons.help_outline,
-              color: purple,
-              size: 21,
-            ),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'CANCELLATION GUIDE',
-                style: TextStyle(
-                  color: Color(0xFF55576E),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: .3,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: _softDecoration(
-            radius: 27,
-          ),
-          child: const Column(
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
             children: [
-              _CancellationStep(
-                number: '1',
-                children: [
-                  TextSpan(
-                    text:
-                        'Open the subscription provider\'s official app or website.',
+              Icon(Icons.help_outline, color: purple, size: 21),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'CANCELLATION GUIDE',
+                  style: TextStyle(
+                    color: Color(0xFF55576E),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: .3,
                   ),
-                ],
-              ),
-              SizedBox(height: 17),
-              _CancellationStep(
-                number: '2',
-                children: [
-                  TextSpan(
-                    text:
-                        'Open your plan, billing, or subscription settings.',
-                  ),
-                ],
-              ),
-              SizedBox(height: 17),
-              _CancellationStep(
-                number: '3',
-                children: [
-                  TextSpan(
-                    text:
-                        'Cancel the plan with the provider, then mark it as cancelled in OneClick.',
-                  ),
-                ],
+                ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'OneClick tracks your subscription status but does not cancel external provider accounts directly.',
-          style: TextStyle(
-            color: muted,
-            fontSize: 12,
-            height: 1.45,
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: _softDecoration(radius: 27),
+            child: const Column(
+              children: [
+                _CancellationStep(
+                  number: '1',
+                  children: [
+                    TextSpan(
+                      text: 'Open the subscription provider\'s official app or website.',
+                    ),
+                  ],
+                ),
+                SizedBox(height: 17),
+                _CancellationStep(
+                  number: '2',
+                  children: [
+                    TextSpan(
+                      text:
+                          'Open your plan, billing, or subscription settings.',
+                    ),
+                  ],
+                ),
+                SizedBox(height: 17),
+                _CancellationStep(
+                  number: '3',
+                  children: [
+                    TextSpan(
+                      text: 'Cancel the plan with the provider, then mark it as cancelled in OneClick.',
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+          const SizedBox(height: 16),
+          const Text(
+            'OneClick tracks your subscription status but does not cancel external provider accounts directly.',
+            style: TextStyle(color: muted, fontSize: 12, height: 1.45),
+          ),
+        ],
+      ),
+    );
+  }
 
   // ============================================================
   // CANCELLATION EVIDENCE
@@ -725,11 +625,7 @@ Widget _buildRenewalReminders() {
         children: [
           const Row(
             children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                color: danger,
-                size: 23,
-              ),
+              Icon(Icons.warning_amber_rounded, color: danger, size: 23),
 
               SizedBox(width: 10),
 
@@ -750,11 +646,7 @@ Widget _buildRenewalReminders() {
           const Text(
             'Permanently detach this recurring tracker, associated '
             'spend analytics, and historical snapshots from OneClick.',
-            style: TextStyle(
-              color: muted,
-              fontSize: 13,
-              height: 1.6,
-            ),
+            style: TextStyle(color: muted, fontSize: 13, height: 1.6),
           ),
 
           const SizedBox(height: 24),
@@ -764,18 +656,12 @@ Widget _buildRenewalReminders() {
             onTap: _showDeleteDialog,
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                vertical: 16,
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: _softDecoration(radius: 28),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.delete_outline,
-                    color: danger,
-                    size: 19,
-                  ),
+                  Icon(Icons.delete_outline, color: danger, size: 19),
 
                   SizedBox(width: 9),
 
@@ -826,19 +712,12 @@ Widget _buildRenewalReminders() {
       onTap: onTap,
       borderRadius: BorderRadius.circular(25),
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          vertical: 13,
-          horizontal: 8,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
         decoration: _softDecoration(radius: 25),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              color: color,
-              size: 17,
-            ),
+            Icon(icon, color: color, size: 17),
 
             const SizedBox(width: 6),
 
@@ -876,20 +755,12 @@ Widget _buildRenewalReminders() {
           shape: BoxShape.circle,
           boxShadow: _shadow(),
         ),
-        child: Icon(
-          icon,
-          color: muted,
-          size: size * .45,
-        ),
+        child: Icon(icon, color: muted, size: size * .45),
       ),
     );
   }
 
-  Widget _circleIcon(
-    IconData icon, {
-    required Color color,
-    double size = 50,
-  }) {
+  Widget _circleIcon(IconData icon, {required Color color, double size = 50}) {
     return Container(
       width: size,
       height: size,
@@ -898,23 +769,13 @@ Widget _buildRenewalReminders() {
         shape: BoxShape.circle,
         boxShadow: _shadow(),
       ),
-      child: Icon(
-        icon,
-        color: color,
-        size: size * .48,
-      ),
+      child: Icon(icon, color: color, size: size * .48),
     );
   }
 
-  Widget _badge(
-    String text,
-    Color color,
-  ) {
+  Widget _badge(String text, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 7,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: const Color(0xFFF6F4FC),
         borderRadius: BorderRadius.circular(20),
@@ -930,9 +791,7 @@ Widget _buildRenewalReminders() {
     );
   }
 
-  BoxDecoration _softDecoration({
-    double radius = 25,
-  }) {
+  BoxDecoration _softDecoration({double radius = 25}) {
     return BoxDecoration(
       color: const Color(0xFFFBFAFF),
       borderRadius: BorderRadius.circular(radius),
@@ -960,11 +819,7 @@ Widget _buildRenewalReminders() {
   // ============================================================
 
   void _message(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(text),
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   void _showDeleteDialog() {
@@ -975,43 +830,28 @@ Widget _buildRenewalReminders() {
           backgroundColor: surface,
           title: const Text(
             'Delete Subscription Record?',
-            style: TextStyle(
-              color: ink,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(color: ink, fontWeight: FontWeight.w700),
           ),
           content: const Text(
             'This will remove this subscription record from OneClick.',
-            style: TextStyle(
-              color: muted,
-            ),
+            style: TextStyle(color: muted),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  color: muted,
-                ),
-              ),
+              child: const Text('Cancel', style: TextStyle(color: muted)),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
 
-                _message(
-                  'Subscription record deletion selected.',
-                );
+                _message('Subscription record deletion selected.');
               },
               child: const Text(
                 'Delete',
-                style: TextStyle(
-                  color: danger,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(color: danger, fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -1029,10 +869,7 @@ class _CancellationStep extends StatelessWidget {
   final String number;
   final List<InlineSpan> children;
 
-  const _CancellationStep({
-    required this.number,
-    required this.children,
-  });
+  const _CancellationStep({required this.number, required this.children});
 
   @override
   Widget build(BuildContext context) {
@@ -1072,11 +909,7 @@ class _CancellationStep extends StatelessWidget {
         Expanded(
           child: Text.rich(
             TextSpan(
-              style: const TextStyle(
-                color: ink,
-                fontSize: 13,
-                height: 1.45,
-              ),
+              style: const TextStyle(color: ink, fontSize: 13, height: 1.45),
               children: children,
             ),
           ),

@@ -41,15 +41,16 @@ class AppTheme {
   AppTheme._();
 
   static ThemeData get light {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: AppColors.primary,
-      onPrimary: Colors.white,
-      surface: AppColors.surface,
-      onSurface: AppColors.textDark,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: AppColors.primary,
+          onPrimary: Colors.white,
+          surface: AppColors.surface,
+          onSurface: AppColors.textDark,
+        );
 
     return ThemeData(
       useMaterial3: true,

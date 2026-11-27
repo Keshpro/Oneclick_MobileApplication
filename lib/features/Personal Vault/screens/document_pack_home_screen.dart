@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import 'document_pack_requirements_screen.dart';
@@ -72,10 +71,7 @@ class DocumentPackHomeScreen extends StatelessWidget {
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFFF1EAE6),
-                          Color(0xFFE8D9D8),
-                        ],
+                        colors: [Color(0xFFF1EAE6), Color(0xFFE8D9D8)],
                       ),
                       borderRadius: BorderRadius.circular(28),
                     ),
@@ -83,8 +79,7 @@ class DocumentPackHomeScreen extends StatelessWidget {
                       children: [
                         const Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'Organize your\nimportant documents',
@@ -142,8 +137,7 @@ class DocumentPackHomeScreen extends StatelessWidget {
                   _optionCard(
                     icon: Icons.create_new_folder_outlined,
                     title: 'Create New Pack',
-                    description:
-                        'Build a checklist and match documents from your Vault.',
+                    description: 'Build a checklist and match documents from your Vault.',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -166,8 +160,7 @@ class DocumentPackHomeScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              const SavedDocumentPacksScreen(),
+                          builder: (_) => const SavedDocumentPacksScreen(),
                         ),
                       );
                     },
@@ -230,9 +223,7 @@ class DocumentPackHomeScreen extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: const Color(0xFFEDE6E9),
-            ),
+            border: Border.all(color: const Color(0xFFEDE6E9)),
           ),
           child: Row(
             children: [
@@ -243,11 +234,7 @@ class DocumentPackHomeScreen extends StatelessWidget {
                   color: softMauve,
                   borderRadius: BorderRadius.circular(18),
                 ),
-                child: Icon(
-                  icon,
-                  color: darkMauve,
-                  size: 28,
-                ),
+                child: Icon(icon, color: darkMauve, size: 28),
               ),
               const SizedBox(width: 16),
               Expanded(

@@ -24,19 +24,17 @@ class AuthService {
       throw Exception('User registration failed. Please try again.');
     }
 
-   
     await user.updateDisplayName(name.trim());
 
     final normalizedRole = role.trim().toLowerCase();
 
-  
     if (normalizedRole == 'doctor') {
       await firestore.collection('doctors').doc(user.uid).set({
         'uid': user.uid,
         'name': name.trim(),
         'email': email.trim(),
         'role': 'doctor',
-        'status': 'pending', 
+        'status': 'pending',
         'isAvailable': true,
         'createdAt': FieldValue.serverTimestamp(),
         'providerDetails': {
@@ -46,7 +44,6 @@ class AuthService {
         },
       });
     } else if (normalizedRole == 'driver') {
-     
       await firestore.collection('drivers').doc(user.uid).set({
         'uid': user.uid,
         'name': name.trim(),
@@ -56,7 +53,6 @@ class AuthService {
         'createdAt': FieldValue.serverTimestamp(),
       });
     }
-
 
     await firestore.collection('users').doc(user.uid).set({
       'uid': user.uid,

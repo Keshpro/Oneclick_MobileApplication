@@ -10,23 +10,18 @@ import '../services/encrypted_vault_export_service.dart';
 class VaultSettingsScreen extends StatefulWidget {
   final bool openBackupSection;
 
-  const VaultSettingsScreen({
-    super.key,
-    this.openBackupSection = false,
-  });
+  const VaultSettingsScreen({super.key, this.openBackupSection = false});
 
   @override
-  State<VaultSettingsScreen> createState() =>
-      _VaultSettingsScreenState();
+  State<VaultSettingsScreen> createState() => _VaultSettingsScreenState();
 }
+
 class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
   final GlobalKey _backupSectionKey = GlobalKey();
-  final VaultBackupService _backupService =
-    VaultBackupService();
-  final RecoveryKitService _recoveryKitService =
-    RecoveryKitService();
+  final VaultBackupService _backupService = VaultBackupService();
+  final RecoveryKitService _recoveryKitService = RecoveryKitService();
   final EncryptedVaultExportService _encryptedVaultExportService =
-    EncryptedVaultExportService();
+      EncryptedVaultExportService();
 
   static const background = Color(0xFFE9EBF2);
   static const purple = Color(0xFF6961FF);
@@ -34,256 +29,203 @@ class _VaultSettingsScreenState extends State<VaultSettingsScreen> {
   static const muted = Color(0xFF686C7C);
   static const softPurple = Color(0xFFDCD9FF);
 
-final LocalAuthentication _localAuth =
-    LocalAuthentication();
+  final LocalAuthentication _localAuth = LocalAuthentication();
 
-bool _biometric = false;
-bool _failedAttemptProtection = true;
-bool _biometricBusy = false;
+  bool _biometric = false;
+  bool _failedAttemptProtection = true;
+  bool _biometricBusy = false;
 
-static const String _biometricKey =
-    'vault_biometric_enabled';
+  static const String _biometricKey = 'vault_biometric_enabled';
 
-  static const String _pushNotificationsKey =
-    'vault_push_notifications';
+  static const String _pushNotificationsKey = 'vault_push_notifications';
 
-static const String _emailNotificationsKey =
-    'vault_email_notifications';
+  static const String _emailNotificationsKey = 'vault_email_notifications';
 
-static const String _expiryWarningsKey =
-    'vault_expiry_warnings';
+  static const String _expiryWarningsKey = 'vault_expiry_warnings';
 
-static const String _renewalWarningKey =
-    'vault_renewal_warning';
+  static const String _renewalWarningKey = 'vault_renewal_warning';
 
   bool _pushNotifications = true;
   bool _emailNotifications = false;
 
-  final Set<String> _expiryWarnings = {
-    '30 days',
-    '14 days',
-    '7 days',
-  };
+  final Set<String> _expiryWarnings = {'30 days', '14 days', '7 days'};
 
   String _renewalWarning = '3 days prior';
   bool _backupCreated = false;
   String _lastBackup = 'Not created';
 
-// Scroll to DATA & BACKUP when opened from Dashboard
-@override
-void initState() {
-  super.initState();
+  // Scroll to DATA & BACKUP when opened from Dashboard
+  @override
+  void initState() {
+    super.initState();
 
-  _loadBiometricPreference();
+    _loadBiometricPreference();
 
-  _loadReminderPreferences();
+    _loadReminderPreferences();
 
-  if (widget.openBackupSection) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final backupContext = _backupSectionKey.currentContext;
+    if (widget.openBackupSection) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final backupContext = _backupSectionKey.currentContext;
 
-      if (backupContext != null) {
-        Scrollable.ensureVisible(
-          backupContext,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-          alignment: 0.08,
-        );
-      }
-    });
-  }
-}
-
-Future<void> _loadBiometricPreference() async {
-  final prefs = await SharedPreferences.getInstance();
-
-  final enabled =
-      prefs.getBool(_biometricKey) ?? false;
-
-  if (!mounted) return;
-
-  setState(() {
-    _biometric = enabled;
-  });
-}
-
-Future<void> _saveBiometricPreference(
-  bool value,
-) async {
-  final prefs = await SharedPreferences.getInstance();
-
-  await prefs.setBool(
-    _biometricKey,
-    value,
-  );
-}
-
-Future<void> _loadReminderPreferences() async {
-  final prefs = await SharedPreferences.getInstance();
-
-  final pushNotifications =
-      prefs.getBool(_pushNotificationsKey) ?? true;
-
-  final emailNotifications =
-      prefs.getBool(_emailNotificationsKey) ?? false;
-
-  final expiryWarnings =
-      prefs.getStringList(_expiryWarningsKey) ??
-          ['30 days', '14 days', '7 days'];
-
-  final renewalWarning =
-      prefs.getString(_renewalWarningKey) ??
-          '3 days prior';
-
-  if (!mounted) return;
-
-  setState(() {
-    _pushNotifications = pushNotifications;
-    _emailNotifications = emailNotifications;
-
-    _expiryWarnings
-      ..clear()
-      ..addAll(expiryWarnings);
-
-    _renewalWarning = renewalWarning;
-  });
-}
-
-Future<void> _savePushNotifications(
-  bool value,
-) async {
-  final prefs = await SharedPreferences.getInstance();
-
-  await prefs.setBool(
-    _pushNotificationsKey,
-    value,
-  );
-}
-
-Future<void> _saveEmailNotifications(
-  bool value,
-) async {
-  final prefs = await SharedPreferences.getInstance();
-
-  await prefs.setBool(
-    _emailNotificationsKey,
-    value,
-  );
-}
-
-Future<void> _saveExpiryWarnings() async {
-  final prefs = await SharedPreferences.getInstance();
-
-  await prefs.setStringList(
-    _expiryWarningsKey,
-    _expiryWarnings.toList(),
-  );
-}
-
-Future<void> _saveRenewalWarning(
-  String value,
-) async {
-  final prefs = await SharedPreferences.getInstance();
-
-  await prefs.setString(
-    _renewalWarningKey,
-    value,
-  );
-}
-
-Future<void> _toggleBiometric(bool value) async {
-  if (_biometricBusy) return;
-
-if (!value) {
-  await _saveBiometricPreference(false);
-
-  if (!mounted) return;
-
-  setState(() {
-    _biometric = false;
-  });
-
-  _message('Biometric authentication disabled.');
-  return;
-}
-
-  if (kIsWeb) {
-    _message(
-      'Biometric authentication is not available on web.',
-    );
-    return;
-  }
-
-  setState(() {
-    _biometricBusy = true;
-  });
-
-  try {
-    final canCheckBiometrics =
-        await _localAuth.canCheckBiometrics;
-
-    final availableBiometrics =
-        await _localAuth.getAvailableBiometrics();
-
-    if (!canCheckBiometrics ||
-        availableBiometrics.isEmpty) {
-      if (!mounted) return;
-
-      _message(
-        'No fingerprint or face authentication is set up on this device.',
-      );
-
-      return;
-    }
-
-    final authenticated =
-        await _localAuth.authenticate(
-      localizedReason:
-          'Authenticate to enable biometric protection for Personal Vault',
-      biometricOnly: true,
-    );
-
-    if (!mounted) return;
-
-if (authenticated) {
-  await _saveBiometricPreference(true);
-
-  if (!mounted) return;
-
-  setState(() {
-    _biometric = true;
-  });
-
-  _message(
-    'Biometric authentication enabled.',
-  );
-} else {
-      _message(
-        'Biometric authentication was not completed.',
-      );
-    }
-  } catch (_) {
-    if (!mounted) return;
-
-    _message(
-      'Biometric authentication is not available on this device.',
-    );
-  } finally {
-    if (mounted) {
-      setState(() {
-        _biometricBusy = false;
+        if (backupContext != null) {
+          Scrollable.ensureVisible(
+            backupContext,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+            alignment: 0.08,
+          );
+        }
       });
     }
   }
-}
 
-void _message(String text) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(text),
-    ),
-  );
-}
+  Future<void> _loadBiometricPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final enabled = prefs.getBool(_biometricKey) ?? false;
+
+    if (!mounted) return;
+
+    setState(() {
+      _biometric = enabled;
+    });
+  }
+
+  Future<void> _saveBiometricPreference(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setBool(_biometricKey, value);
+  }
+
+  Future<void> _loadReminderPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final pushNotifications = prefs.getBool(_pushNotificationsKey) ?? true;
+
+    final emailNotifications = prefs.getBool(_emailNotificationsKey) ?? false;
+
+    final expiryWarnings =
+        prefs.getStringList(_expiryWarningsKey) ??
+        ['30 days', '14 days', '7 days'];
+
+    final renewalWarning =
+        prefs.getString(_renewalWarningKey) ?? '3 days prior';
+
+    if (!mounted) return;
+
+    setState(() {
+      _pushNotifications = pushNotifications;
+      _emailNotifications = emailNotifications;
+
+      _expiryWarnings
+        ..clear()
+        ..addAll(expiryWarnings);
+
+      _renewalWarning = renewalWarning;
+    });
+  }
+
+  Future<void> _savePushNotifications(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setBool(_pushNotificationsKey, value);
+  }
+
+  Future<void> _saveEmailNotifications(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setBool(_emailNotificationsKey, value);
+  }
+
+  Future<void> _saveExpiryWarnings() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setStringList(_expiryWarningsKey, _expiryWarnings.toList());
+  }
+
+  Future<void> _saveRenewalWarning(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString(_renewalWarningKey, value);
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (_biometricBusy) return;
+
+    if (!value) {
+      await _saveBiometricPreference(false);
+
+      if (!mounted) return;
+
+      setState(() {
+        _biometric = false;
+      });
+
+      _message('Biometric authentication disabled.');
+      return;
+    }
+
+    if (kIsWeb) {
+      _message('Biometric authentication is not available on web.');
+      return;
+    }
+
+    setState(() {
+      _biometricBusy = true;
+    });
+
+    try {
+      final canCheckBiometrics = await _localAuth.canCheckBiometrics;
+
+      final availableBiometrics = await _localAuth.getAvailableBiometrics();
+
+      if (!canCheckBiometrics || availableBiometrics.isEmpty) {
+        if (!mounted) return;
+
+        _message(
+          'No fingerprint or face authentication is set up on this device.',
+        );
+
+        return;
+      }
+
+      final authenticated = await _localAuth.authenticate(
+        localizedReason:
+            'Authenticate to enable biometric protection for Personal Vault',
+        biometricOnly: true,
+      );
+
+      if (!mounted) return;
+
+      if (authenticated) {
+        await _saveBiometricPreference(true);
+
+        if (!mounted) return;
+
+        setState(() {
+          _biometric = true;
+        });
+
+        _message('Biometric authentication enabled.');
+      } else {
+        _message('Biometric authentication was not completed.');
+      }
+    } catch (_) {
+      if (!mounted) return;
+
+      _message('Biometric authentication is not available on this device.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _biometricBusy = false;
+        });
+      }
+    }
+  }
+
+  void _message(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -296,25 +238,16 @@ void _message(String text) {
         elevation: 0,
         title: const Text(
           'Vault Settings',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
 
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            22,
-            12,
-            22,
-            50,
-          ),
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 50),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 600,
-              ),
+              constraints: const BoxConstraints(maxWidth: 600),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -325,17 +258,13 @@ void _message(String text) {
                   _surface(
                     child: Row(
                       children: [
-                        _roundIcon(
-                          Icons.shield_outlined,
-                          size: 48,
-                        ),
+                        _roundIcon(Icons.shield_outlined, size: 48),
 
                         const SizedBox(width: 16),
 
                         const Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
@@ -345,8 +274,7 @@ void _message(String text) {
                                       style: TextStyle(
                                         color: ink,
                                         fontSize: 17,
-                                        fontWeight:
-                                            FontWeight.w700,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                   ),
@@ -360,10 +288,7 @@ void _message(String text) {
                               SizedBox(height: 4),
                               Text(
                                 'Your Vault security preferences are enabled',
-                                style: TextStyle(
-                                  color: muted,
-                                  fontSize: 13,
-                                ),
+                                style: TextStyle(color: muted, fontSize: 13),
                               ),
                             ],
                           ),
@@ -371,10 +296,7 @@ void _message(String text) {
 
                         const SizedBox(width: 10),
 
-                        _statusChip(
-                          Icons.lock_outline,
-                          'Secured',
-                        ),
+                        _statusChip(Icons.lock_outline, 'Secured'),
                       ],
                     ),
                   ),
@@ -384,7 +306,6 @@ void _message(String text) {
                   // =================================================
                   // SECURITY
                   // =================================================
-
                   _sectionTitle(
                     Icons.lock_clock_outlined,
                     'SECURITY & MASTER LOCK',
@@ -393,47 +314,43 @@ void _message(String text) {
                   const SizedBox(height: 14),
 
                   _surface(
-  child: Column(
-    crossAxisAlignment:
-        CrossAxisAlignment.start,
-    children: [
-      _settingSwitch(
-  title: 'Biometric Authentication',
-  subtitle:
-      'Use fingerprint or face authentication to protect Personal Vault',
-  icon: Icons.fingerprint,
-  value: _biometric,
-  onChanged: (value) {
-    if (_biometricBusy) return;
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _settingSwitch(
+                          title: 'Biometric Authentication',
+                          subtitle: 'Use fingerprint or face authentication to protect Personal Vault',
+                          icon: Icons.fingerprint,
+                          value: _biometric,
+                          onChanged: (value) {
+                            if (_biometricBusy) return;
 
-    _toggleBiometric(value);
-  },
-),
+                            _toggleBiometric(value);
+                          },
+                        ),
 
-      const SizedBox(height: 12),
+                        const SizedBox(height: 12),
 
-      _settingSwitch(
-        title: 'Failed Attempt Protection',
-        subtitle:
-            'Protect the Vault after repeated failed authentication attempts',
-        icon: Icons.security_outlined,
-        value: _failedAttemptProtection,
-        onChanged: (value) {
-          setState(() {
-            _failedAttemptProtection = value;
-          });
-        },
-      ),
-    ],
-  ),
-),
+                        _settingSwitch(
+                          title: 'Failed Attempt Protection',
+                          subtitle: 'Protect the Vault after repeated failed authentication attempts',
+                          icon: Icons.security_outlined,
+                          value: _failedAttemptProtection,
+                          onChanged: (value) {
+                            setState(() {
+                              _failedAttemptProtection = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
 
                   const SizedBox(height: 32),
 
                   // =================================================
                   // REMINDERS
                   // =================================================
-
                   _sectionTitle(
                     Icons.notifications_active_outlined,
                     'REMINDER PREFERENCES',
@@ -443,8 +360,7 @@ void _message(String text) {
 
                   _surface(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
                           'Notification Channels',
@@ -459,10 +375,7 @@ void _message(String text) {
 
                         const Text(
                           'Choose how Vault reminders are delivered',
-                          style: TextStyle(
-                            color: muted,
-                            fontSize: 13,
-                          ),
+                          style: TextStyle(color: muted, fontSize: 13),
                         ),
 
                         const SizedBox(height: 14),
@@ -470,15 +383,11 @@ void _message(String text) {
                         Row(
                           children: [
                             _channelButton(
-                              icon: Icons
-                                  .phonelink_ring_outlined,
-                              selected:
-                                  _pushNotifications,
-                              tooltip:
-                                  'Device notifications',
+                              icon: Icons.phonelink_ring_outlined,
+                              selected: _pushNotifications,
+                              tooltip: 'Device notifications',
                               onTap: () {
-                                final newValue =
-                                    !_pushNotifications;
+                                final newValue = !_pushNotifications;
 
                                 setState(() {
                                   _pushNotifications = newValue;
@@ -492,13 +401,10 @@ void _message(String text) {
 
                             _channelButton(
                               icon: Icons.mail_outline,
-                              selected:
-                                  _emailNotifications,
-                              tooltip:
-                                  'Email reminders',
+                              selected: _emailNotifications,
+                              tooltip: 'Email reminders',
                               onTap: () {
-                                final newValue =
-                                    !_emailNotifications;
+                                final newValue = !_emailNotifications;
 
                                 setState(() {
                                   _emailNotifications = newValue;
@@ -525,10 +431,7 @@ void _message(String text) {
 
                         const Text(
                           'Schedule reminders before important documents expire',
-                          style: TextStyle(
-                            color: muted,
-                            fontSize: 13,
-                          ),
+                          style: TextStyle(color: muted, fontSize: 13),
                         ),
 
                         const SizedBox(height: 14),
@@ -536,46 +439,39 @@ void _message(String text) {
                         Wrap(
                           spacing: 8,
                           runSpacing: 10,
-                          children: [
-                            '60 days',
-                            '30 days',
-                            '14 days',
-                            '7 days',
-                            'Day of expiry',
-                          ].map((warning) {
-                            return _choiceButton(
-                              text: warning,
-                              selected: _expiryWarnings
-                                  .contains(warning),
-                              onTap: () {
-                                setState(() {
-                                  if (_expiryWarnings
-                                      .contains(warning)) {
-                                    _expiryWarnings
-                                        .remove(warning);
-                                  } else {
-                                    _expiryWarnings
-                                        .add(warning);
-                                  }
-                                });
-                                _saveExpiryWarnings();
-                              },
-                            );
-                          }).toList(),
+                          children:
+                              [
+                                '60 days',
+                                '30 days',
+                                '14 days',
+                                '7 days',
+                                'Day of expiry',
+                              ].map((warning) {
+                                return _choiceButton(
+                                  text: warning,
+                                  selected: _expiryWarnings.contains(warning),
+                                  onTap: () {
+                                    setState(() {
+                                      if (_expiryWarnings.contains(warning)) {
+                                        _expiryWarnings.remove(warning);
+                                      } else {
+                                        _expiryWarnings.add(warning);
+                                      }
+                                    });
+                                    _saveExpiryWarnings();
+                                  },
+                                );
+                              }).toList(),
                         ),
 
                         const SizedBox(height: 22),
 
                         _innerAction(
-                          icon:
-                              Icons.event_repeat_outlined,
-                          title:
-                              'Subscription Renewal Alerts',
-                          subtitle:
-                              'Early billing warning trigger',
+                          icon: Icons.event_repeat_outlined,
+                          title: 'Subscription Renewal Alerts',
+                          subtitle: 'Early billing warning trigger',
                           trailing: _renewalWarning,
-                          onTap:
-                              _selectRenewalWarning,
+                          onTap: _selectRenewalWarning,
                         ),
                       ],
                     ),
@@ -586,18 +482,13 @@ void _message(String text) {
                   // =================================================
                   // DATA & BACKUP
                   // =================================================
-
-                  _sectionTitle(
-                    Icons.settings_backup_restore,
-                    'DATA & BACKUP',
-                  ),
+                  _sectionTitle(Icons.settings_backup_restore, 'DATA & BACKUP'),
 
                   const SizedBox(height: 14),
 
                   _surface(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
                           'Secure Vault Export',
@@ -612,18 +503,14 @@ void _message(String text) {
 
                         const Text(
                           'Create a protected export of your Vault records and metadata',
-                          style: TextStyle(
-                            color: muted,
-                            fontSize: 13,
-                          ),
+                          style: TextStyle(color: muted, fontSize: 13),
                         ),
 
                         const SizedBox(height: 16),
 
                         _largeActionButton(
                           icon: Icons.download_outlined,
-                          text:
-                              'Export Encrypted Vault (.oneclick)',
+                          text: 'Export Encrypted Vault (.oneclick)',
                           onTap: () {
                             _showEncryptedExportDialog();
                           },
@@ -632,21 +519,16 @@ void _message(String text) {
                         const SizedBox(height: 16),
 
                         _innerAction(
-                          icon: Icons
-                              .medical_services_outlined,
-                          title:
-                              'Emergency Recovery Kit',
+                          icon: Icons.medical_services_outlined,
+                          title: 'Emergency Recovery Kit',
                           subtitle:
                               'Create recovery information for your Vault',
                           trailing: 'Create PDF',
                           onTap: () async {
                             try {
-                              _message(
-                                'Creating recovery kit PDF...',
-                              );
+                              _message('Creating recovery kit PDF...');
 
-                              await _recoveryKitService
-                                  .createRecoveryKitPdf();
+                              await _recoveryKitService.createRecoveryKitPdf();
 
                               if (!mounted) return;
 
@@ -656,9 +538,7 @@ void _message(String text) {
                             } catch (_) {
                               if (!mounted) return;
 
-                              _message(
-                                'Could not create recovery kit PDF.',
-                              );
+                              _message('Could not create recovery kit PDF.');
                             }
                           },
                         ),
@@ -666,8 +546,7 @@ void _message(String text) {
                         const SizedBox(height: 16),
 
                         _innerStatus(
-                          icon:
-                              Icons.cloud_done_outlined,
+                          icon: Icons.cloud_done_outlined,
                           title: 'Vault Backup',
                           subtitle: _backupCreated
                               ? 'Last backup: $_lastBackup'
@@ -675,8 +554,7 @@ void _message(String text) {
                           status: _backupCreated
                               ? 'BACKED UP'
                               : 'NOT BACKED UP',
-                          trailingIcon:
-                              Icons.chevron_right,
+                          trailingIcon: Icons.chevron_right,
                           onTap: () {
                             _showBackupOptions();
                           },
@@ -704,18 +582,11 @@ void _message(String text) {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.shield_outlined,
-                              color: muted,
-                              size: 14,
-                            ),
+                            Icon(Icons.shield_outlined, color: muted, size: 14),
                             SizedBox(width: 5),
                             Text(
                               'Security preferences managed in your Vault',
-                              style: TextStyle(
-                                color: muted,
-                                fontSize: 11,
-                              ),
+                              style: TextStyle(color: muted, fontSize: 11),
                             ),
                           ],
                         ),
@@ -732,7 +603,7 @@ void _message(String text) {
       ),
     );
   }
-    // ===============================================================
+  // ===============================================================
   // DIALOGS
   // ===============================================================
 
@@ -741,9 +612,7 @@ void _message(String text) {
       context: context,
       backgroundColor: background,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         const options = [
@@ -776,10 +645,7 @@ void _message(String text) {
                     contentPadding: EdgeInsets.zero,
                     title: Text(option),
                     trailing: _renewalWarning == option
-                        ? const Icon(
-                            Icons.check_circle,
-                            color: purple,
-                          )
+                        ? const Icon(Icons.check_circle, color: purple)
                         : null,
                     onTap: () {
                       setState(() {
@@ -801,218 +667,174 @@ void _message(String text) {
   }
 
   Future<void> _showEncryptedExportDialog() async {
-  final passwordController = TextEditingController();
-  final confirmController = TextEditingController();
+    final passwordController = TextEditingController();
+    final confirmController = TextEditingController();
 
-  bool obscurePassword = true;
-  bool obscureConfirm = true;
-  bool exporting = false;
+    bool obscurePassword = true;
+    bool obscureConfirm = true;
+    bool exporting = false;
 
-  await showDialog<void>(
-    context: context,
-    barrierDismissible: !exporting,
-    builder: (dialogContext) {
-      return StatefulBuilder(
-        builder: (context, setDialogState) {
-          Future<void> export() async {
-            if (exporting) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: !exporting,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> export() async {
+              if (exporting) return;
 
-            final password =
-                passwordController.text.trim();
+              final password = passwordController.text.trim();
 
-            final confirmPassword =
-                confirmController.text.trim();
+              final confirmPassword = confirmController.text.trim();
 
-            if (password.length < 8) {
-              _message(
-                'Password must contain at least 8 characters.',
-              );
-              return;
-            }
+              if (password.length < 8) {
+                _message('Password must contain at least 8 characters.');
+                return;
+              }
 
-            if (password != confirmPassword) {
-              _message(
-                'Passwords do not match.',
-              );
-              return;
-            }
-
-            setDialogState(() {
-              exporting = true;
-            });
-
-            try {
-              await _encryptedVaultExportService
-                  .exportEncryptedVault(
-                password: password,
-              );
-
-              if (!mounted) return;
-              if (!dialogContext.mounted) return;
-
-              Navigator.pop(dialogContext);
-
-              _message(
-                'Encrypted Vault export created successfully.',
-              );
-            } catch (_) {
-              if (!mounted) return;
-              if (!dialogContext.mounted) return;
+              if (password != confirmPassword) {
+                _message('Passwords do not match.');
+                return;
+              }
 
               setDialogState(() {
-                exporting = false;
+                exporting = true;
               });
 
-              _message(
-                'Could not create encrypted Vault export.',
-              );
+              try {
+                await _encryptedVaultExportService.exportEncryptedVault(
+                  password: password,
+                );
+
+                if (!mounted) return;
+                if (!dialogContext.mounted) return;
+
+                Navigator.pop(dialogContext);
+
+                _message('Encrypted Vault export created successfully.');
+              } catch (_) {
+                if (!mounted) return;
+                if (!dialogContext.mounted) return;
+
+                setDialogState(() {
+                  exporting = false;
+                });
+
+                _message('Could not create encrypted Vault export.');
+              }
             }
-          }
 
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-            title: const Text(
-              'Export Encrypted Vault',
-              style: TextStyle(
-                color: ink,
-                fontWeight: FontWeight.w700,
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
               ),
-            ),
-            content: SizedBox(
-              width: 420,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Create a password to protect this .oneclick export.',
-                    style: TextStyle(
-                      color: muted,
-                      height: 1.4,
+              title: const Text(
+                'Export Encrypted Vault',
+                style: TextStyle(color: ink, fontWeight: FontWeight.w700),
+              ),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Create a password to protect this .oneclick export.',
+                      style: TextStyle(color: muted, height: 1.4),
                     ),
-                  ),
-                  const SizedBox(height: 18),
+                    const SizedBox(height: 18),
 
-                  TextField(
-                    controller: passwordController,
-                    obscureText: obscurePassword,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      hintText:
-                          'Minimum 8 characters',
-                      prefixIcon:
-                          const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        onPressed: () {
-                          setDialogState(() {
-                            obscurePassword =
-                                !obscurePassword;
-                          });
-                        },
-                        icon: Icon(
-                          obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons
-                                  .visibility_off_outlined,
+                    TextField(
+                      controller: passwordController,
+                      obscureText: obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        hintText: 'Minimum 8 characters',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setDialogState(() {
+                              obscurePassword = !obscurePassword;
+                            });
+                          },
+                          icon: Icon(
+                            obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(14),
-                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 14),
+                    const SizedBox(height: 14),
 
-                  TextField(
-                    controller: confirmController,
-                    obscureText: obscureConfirm,
-                    decoration: InputDecoration(
-                      labelText: 'Confirm Password',
-                      prefixIcon: const Icon(
-                        Icons.lock_reset_outlined,
-                      ),
-                      suffixIcon: IconButton(
-                        onPressed: () {
-                          setDialogState(() {
-                            obscureConfirm =
-                                !obscureConfirm;
-                          });
-                        },
-                        icon: Icon(
-                          obscureConfirm
-                              ? Icons.visibility_outlined
-                              : Icons
-                                  .visibility_off_outlined,
+                    TextField(
+                      controller: confirmController,
+                      obscureText: obscureConfirm,
+                      decoration: InputDecoration(
+                        labelText: 'Confirm Password',
+                        prefixIcon: const Icon(Icons.lock_reset_outlined),
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setDialogState(() {
+                              obscureConfirm = !obscureConfirm;
+                            });
+                          },
+                          icon: Icon(
+                            obscureConfirm
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(14),
-                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 14),
+                    const SizedBox(height: 14),
 
-                  const Text(
-                    'Keep this password safe. It is not stored inside the export.',
-                    style: TextStyle(
-                      color: muted,
-                      fontSize: 12,
-                      height: 1.4,
+                    const Text(
+                      'Keep this password safe. It is not stored inside the export.',
+                      style: TextStyle(color: muted, fontSize: 12, height: 1.4),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: exporting
-                    ? null
-                    : () {
-                        Navigator.pop(
-                          dialogContext,
-                        );
-                      },
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton.icon(
-                onPressed:
-                    exporting ? null : export,
-                icon: exporting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child:
-                            CircularProgressIndicator(
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.lock_outline,
-                      ),
-                label: Text(
-                  exporting
-                      ? 'Encrypting...'
-                      : 'Create Export',
+                  ],
                 ),
               ),
-            ],
-          );
-        },
-      );
-    },
-  );
+              actions: [
+                TextButton(
+                  onPressed: exporting
+                      ? null
+                      : () {
+                          Navigator.pop(dialogContext);
+                        },
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: exporting ? null : export,
+                  icon: exporting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.lock_outline),
+                  label: Text(exporting ? 'Encrypting...' : 'Create Export'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
 
-  passwordController.dispose();
-  confirmController.dispose();
-}
+    passwordController.dispose();
+    confirmController.dispose();
+  }
 
   void _showBackupOptions() {
     showModalBottomSheet<void>(
@@ -1020,19 +842,12 @@ void _message(String text) {
       backgroundColor: background,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(28),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (sheetContext) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              22,
-              18,
-              22,
-              28,
-            ),
+            padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1042,11 +857,8 @@ void _message(String text) {
                     width: 42,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: muted.withValues(
-                        alpha: 0.25,
-                      ),
-                      borderRadius:
-                          BorderRadius.circular(20),
+                      color: muted.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                   ),
                 ),
@@ -1055,34 +867,26 @@ void _message(String text) {
 
                 Row(
                   children: [
-                    _roundIcon(
-                      Icons.cloud_sync_outlined,
-                      size: 48,
-                    ),
+                    _roundIcon(Icons.cloud_sync_outlined, size: 48),
 
                     const SizedBox(width: 14),
 
                     const Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Backup & Restore',
                             style: TextStyle(
                               color: ink,
                               fontSize: 20,
-                              fontWeight:
-                                  FontWeight.w700,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                           SizedBox(height: 4),
                           Text(
                             'Protect your Personal Vault data',
-                            style: TextStyle(
-                              color: muted,
-                              fontSize: 13,
-                            ),
+                            style: TextStyle(color: muted, fontSize: 13),
                           ),
                         ],
                       ),
@@ -1097,12 +901,10 @@ void _message(String text) {
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF0F1F7),
-                    borderRadius:
-                        BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
                         'Backup includes',
@@ -1125,20 +927,11 @@ void _message(String text) {
                         'Account access records',
                       ),
 
-                      _backupItem(
-                        Icons.credit_card_outlined,
-                        'Subscriptions',
-                      ),
+                      _backupItem(Icons.credit_card_outlined, 'Subscriptions'),
 
-                      _backupItem(
-                        Icons.folder_copy_outlined,
-                        'Document packs',
-                      ),
+                      _backupItem(Icons.folder_copy_outlined, 'Document packs'),
 
-                      _backupItem(
-                        Icons.settings_outlined,
-                        'Vault preferences',
-                      ),
+                      _backupItem(Icons.settings_outlined, 'Vault preferences'),
                     ],
                   ),
                 ),
@@ -1149,52 +942,38 @@ void _message(String text) {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () async {
-  Navigator.pop(sheetContext);
+                      Navigator.pop(sheetContext);
 
-  try {
-    _message(
-      'Creating Vault backup...',
-    );
+                      try {
+                        _message('Creating Vault backup...');
 
-    await _backupService.createBackup();
+                        await _backupService.createBackup();
 
-    if (!mounted) return;
+                        if (!mounted) return;
 
-    setState(() {
-      _backupCreated = true;
-      _lastBackup = 'Just now';
-    });
+                        setState(() {
+                          _backupCreated = true;
+                          _lastBackup = 'Just now';
+                        });
 
-    _message(
-      'Vault backup created successfully.',
-    );
-  } catch (error) {
-    if (!mounted) return;
+                        _message('Vault backup created successfully.');
+                      } catch (error) {
+                        if (!mounted) return;
 
-    _message(
-      'Could not create Vault backup.',
-    );
-  }
-},
-                    icon: const Icon(
-                      Icons.cloud_upload_outlined,
-                    ),
+                        _message('Could not create Vault backup.');
+                      }
+                    },
+                    icon: const Icon(Icons.cloud_upload_outlined),
                     label: Text(
-                      _backupCreated
-                          ? 'Create New Backup'
-                          : 'Create Backup',
+                      _backupCreated ? 'Create New Backup' : 'Create Backup',
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: purple,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding:
-                          const EdgeInsets.symmetric(
-                        vertical: 16,
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(18),
                       ),
                     ),
                   ),
@@ -1212,24 +991,14 @@ void _message(String text) {
                         'Backup file selection will be connected later.',
                       );
                     },
-                    icon: const Icon(
-                      Icons.settings_backup_restore,
-                    ),
-                    label: const Text(
-                      'Restore from Backup',
-                    ),
+                    icon: const Icon(Icons.settings_backup_restore),
+                    label: const Text('Restore from Backup'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: purple,
-                      side: const BorderSide(
-                        color: softPurple,
-                      ),
-                      padding:
-                          const EdgeInsets.symmetric(
-                        vertical: 16,
-                      ),
+                      side: const BorderSide(color: softPurple),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(18),
                       ),
                     ),
                   ),
@@ -1238,14 +1007,9 @@ void _message(String text) {
                 const SizedBox(height: 15),
 
                 const Row(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: muted,
-                      size: 18,
-                    ),
+                    Icon(Icons.info_outline, color: muted, size: 18),
                     SizedBox(width: 9),
                     Expanded(
                       child: Text(
@@ -1273,39 +1037,20 @@ void _message(String text) {
   // BACKUP ITEM
   // ===============================================================
 
-  Widget _backupItem(
-    IconData icon,
-    String text,
-  ) {
+  Widget _backupItem(IconData icon, String text) {
     return Padding(
-      padding: const EdgeInsets.only(
-        bottom: 11,
-      ),
+      padding: const EdgeInsets.only(bottom: 11),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: purple,
-            size: 19,
-          ),
+          Icon(icon, color: purple, size: 19),
 
           const SizedBox(width: 11),
 
           Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: ink,
-                fontSize: 13,
-              ),
-            ),
+            child: Text(text, style: const TextStyle(color: ink, fontSize: 13)),
           ),
 
-          const Icon(
-            Icons.check_circle_outline,
-            color: purple,
-            size: 18,
-          ),
+          const Icon(Icons.check_circle_outline, color: purple, size: 18),
         ],
       ),
     );
@@ -1315,17 +1060,10 @@ void _message(String text) {
   // UI COMPONENTS
   // ===============================================================
 
-  Widget _sectionTitle(
-    IconData icon,
-    String title,
-  ) {
+  Widget _sectionTitle(IconData icon, String title) {
     return Row(
       children: [
-        Icon(
-          icon,
-          color: purple,
-          size: 21,
-        ),
+        Icon(icon, color: purple, size: 21),
         const SizedBox(width: 9),
         Text(
           title,
@@ -1342,8 +1080,7 @@ void _message(String text) {
 
   Widget _surface({
     required Widget child,
-    EdgeInsetsGeometry padding =
-        const EdgeInsets.all(20),
+    EdgeInsetsGeometry padding = const EdgeInsets.all(20),
   }) {
     return Container(
       width: double.infinity,
@@ -1368,10 +1105,7 @@ void _message(String text) {
     );
   }
 
-  Widget _roundIcon(
-    IconData icon, {
-    double size = 42,
-  }) {
+  Widget _roundIcon(IconData icon, {double size = 42}) {
     return Container(
       width: size,
       height: size,
@@ -1379,23 +1113,13 @@ void _message(String text) {
         color: const Color(0xFFF0F1F7),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Icon(
-        icon,
-        color: purple,
-        size: size * 0.52,
-      ),
+      child: Icon(icon, color: purple, size: size * 0.52),
     );
   }
 
-  Widget _statusChip(
-    IconData icon,
-    String text,
-  ) {
+  Widget _statusChip(IconData icon, String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFF0F1F7),
         borderRadius: BorderRadius.circular(18),
@@ -1403,11 +1127,7 @@ void _message(String text) {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            color: purple,
-            size: 15,
-          ),
+          Icon(icon, color: purple, size: 15),
           const SizedBox(width: 5),
           Text(
             text,
@@ -1431,24 +1151,12 @@ void _message(String text) {
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(
-          milliseconds: 160,
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 17,
-          vertical: 11,
-        ),
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 11),
         decoration: BoxDecoration(
-          color: selected
-              ? const Color(0xFFF0F0F8)
-              : background,
+          color: selected ? const Color(0xFFF0F0F8) : background,
           borderRadius: BorderRadius.circular(22),
-          border: selected
-              ? Border.all(
-                  color: softPurple,
-                  width: 1.2,
-                )
-              : null,
+          border: selected ? Border.all(color: softPurple, width: 1.2) : null,
           boxShadow: const [
             BoxShadow(
               color: Colors.white70,
@@ -1466,15 +1174,14 @@ void _message(String text) {
           text,
           style: TextStyle(
             color: selected ? purple : muted,
-            fontWeight: selected
-                ? FontWeight.w600
-                : FontWeight.w500,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
       ),
     );
   }
-    Widget _settingSwitch({
+
+  Widget _settingSwitch({
     required String title,
     required String subtitle,
     required IconData icon,
@@ -1512,11 +1219,7 @@ void _message(String text) {
 
         const SizedBox(width: 12),
 
-        Switch(
-          value: value,
-          activeThumbColor: purple,
-          onChanged: onChanged,
-        ),
+        Switch(value: value, activeThumbColor: purple, onChanged: onChanged),
       ],
     );
   }
@@ -1536,9 +1239,7 @@ void _message(String text) {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: selected
-                ? const Color(0xFFDCD9FF)
-                : background,
+            color: selected ? const Color(0xFFDCD9FF) : background,
             borderRadius: BorderRadius.circular(16),
             boxShadow: const [
               BoxShadow(
@@ -1553,10 +1254,7 @@ void _message(String text) {
               ),
             ],
           ),
-          child: Icon(
-            icon,
-            color: selected ? purple : muted,
-          ),
+          child: Icon(icon, color: selected ? purple : muted),
         ),
       ),
     );
@@ -1592,11 +1290,7 @@ void _message(String text) {
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: purple,
-              size: 23,
-            ),
+            Icon(icon, color: purple, size: 23),
 
             const SizedBox(width: 13),
 
@@ -1617,10 +1311,7 @@ void _message(String text) {
 
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      color: muted,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: muted, fontSize: 12),
                   ),
                 ],
               ),
@@ -1638,11 +1329,7 @@ void _message(String text) {
 
             const SizedBox(width: 3),
 
-            const Icon(
-              Icons.chevron_right,
-              color: purple,
-              size: 18,
-            ),
+            const Icon(Icons.chevron_right, color: purple, size: 18),
           ],
         ),
       ),
@@ -1681,10 +1368,7 @@ void _message(String text) {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon,
-              color: purple,
-            ),
+            Icon(icon, color: purple),
 
             const SizedBox(width: 13),
 
@@ -1744,11 +1428,7 @@ void _message(String text) {
 
             const SizedBox(width: 8),
 
-            Icon(
-              trailingIcon,
-              color: purple,
-              size: 20,
-            ),
+            Icon(trailingIcon, color: purple, size: 20),
           ],
         ),
       ),
@@ -1765,10 +1445,7 @@ void _message(String text) {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          vertical: 16,
-          horizontal: 18,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(24),
@@ -1788,11 +1465,7 @@ void _message(String text) {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              color: purple,
-              size: 20,
-            ),
+            Icon(icon, color: purple, size: 20),
 
             const SizedBox(width: 9),
 

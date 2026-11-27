@@ -18,22 +18,23 @@ class _ScanUploadScreenState extends State<ScanUploadScreen> {
 
   PlatformFile? _selectedFile;
 
-Future<void> _chooseFile() async {
-  final result = await FilePicker.pickFiles(
-    type: FileType.custom,
-    allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-  );
+  Future<void> _chooseFile() async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    );
 
-  if (result.isEmpty) return;
+    if (result.isEmpty) return;
 
-  final file = result.first;
+    final file = result.first;
 
-  if (!mounted) return;
+    if (!mounted) return;
 
-  setState(() {
-    _selectedFile = file;
-  });
-}
+    setState(() {
+      _selectedFile = file;
+    });
+  }
+
   void _openCamera() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -52,15 +53,15 @@ Future<void> _chooseFile() async {
       context,
       MaterialPageRoute(
         builder: (_) => SmartUploadReviewScreen(
-  title: 'Scanned Document',
-  recordType: 'Document',
-  category: 'Other',
-  renewalDate: DateTime.now(),
-  expiryNotification: false,
-  notes: '',
-  tags: const [],
-  selectedFile: file,
-),
+          title: 'Scanned Document',
+          recordType: 'Document',
+          category: 'Other',
+          renewalDate: DateTime.now(),
+          expiryNotification: false,
+          notes: '',
+          tags: const [],
+          selectedFile: file,
+        ),
       ),
     );
   }
@@ -109,11 +110,7 @@ Future<void> _chooseFile() async {
                   const Text(
                     'Select a document to review its details '
                     'before saving it to your Vault.',
-                    style: TextStyle(
-                      color: _muted,
-                      fontSize: 14,
-                      height: 1.5,
-                    ),
+                    style: TextStyle(color: _muted, fontSize: 14, height: 1.5),
                   ),
 
                   const SizedBox(height: 30),
@@ -122,8 +119,7 @@ Future<void> _chooseFile() async {
                   _UploadOption(
                     icon: Icons.document_scanner_outlined,
                     title: 'Scan with Camera',
-                    subtitle:
-                        'Capture IDs, receipts, certificates and other documents.',
+                    subtitle: 'Capture IDs, receipts, certificates and other documents.',
                     buttonText: 'Open Camera',
                     onPressed: _openCamera,
                   ),
@@ -134,8 +130,7 @@ Future<void> _chooseFile() async {
                   _UploadOption(
                     icon: Icons.upload_file_rounded,
                     title: 'Upload from Device',
-                    subtitle:
-                        'Choose a PDF, JPG or PNG already saved on your device.',
+                    subtitle: 'Choose a PDF, JPG or PNG already saved on your device.',
                     buttonText: 'Choose File',
                     onPressed: _chooseFile,
                   ),
@@ -243,8 +238,9 @@ Future<void> _chooseFile() async {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _purple,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor:
-                            _purple.withValues(alpha: 0.25),
+                        disabledBackgroundColor: _purple.withValues(
+                          alpha: 0.25,
+                        ),
                         disabledForegroundColor: Colors.white70,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -266,10 +262,7 @@ Future<void> _chooseFile() async {
                   const Center(
                     child: Text(
                       'Supported formats: PDF, JPG, JPEG and PNG',
-                      style: TextStyle(
-                        color: _muted,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: _muted, fontSize: 12),
                     ),
                   ),
                 ],
@@ -325,11 +318,7 @@ class _UploadOption extends StatelessWidget {
               color: purple.withValues(alpha: 0.09),
               borderRadius: BorderRadius.circular(18),
             ),
-            child: Icon(
-              icon,
-              color: purple,
-              size: 28,
-            ),
+            child: Icon(icon, color: purple, size: 28),
           ),
           const SizedBox(width: 18),
           Expanded(
@@ -361,22 +350,15 @@ class _UploadOption extends StatelessWidget {
             onPressed: onPressed,
             style: OutlinedButton.styleFrom(
               foregroundColor: purple,
-              side: BorderSide(
-                color: purple.withValues(alpha: 0.30),
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
+              side: BorderSide(color: purple.withValues(alpha: 0.30)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
             child: Text(
               buttonText,
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
         ],

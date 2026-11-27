@@ -33,17 +33,14 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
 
-  Color get _background =>
-      _isDark ? const Color(0xFF101418) : Colors.white;
+  Color get _background => _isDark ? const Color(0xFF101418) : Colors.white;
 
   Color get _surface =>
       _isDark ? const Color(0xFF1B2329) : const Color(0xFFF4F7F7);
 
-  Color get _text =>
-      _isDark ? Colors.white : const Color(0xFF17252A);
+  Color get _text => _isDark ? Colors.white : const Color(0xFF17252A);
 
-  Color get _muted =>
-      _isDark ? Colors.white70 : const Color(0xFF60747A);
+  Color get _muted => _isDark ? Colors.white70 : const Color(0xFF60747A);
 
   Color get _border =>
       _isDark ? const Color(0xFF35444A) : const Color(0xFFE1E8E8);
@@ -116,9 +113,9 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to save vehicle: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to save vehicle: $error')));
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -149,7 +146,10 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       enabledBorder: outline(_border),
       focusedBorder: outline(_accent, width: 1.5),
       errorBorder: outline(Theme.of(context).colorScheme.error),
-      focusedErrorBorder: outline(Theme.of(context).colorScheme.error, width: 1.5),
+      focusedErrorBorder: outline(
+        Theme.of(context).colorScheme.error,
+        width: 1.5,
+      ),
       border: outline(_border),
     );
   }
@@ -225,10 +225,12 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                 iconEnabledColor: _muted,
                 decoration: _decoration('Vehicle Type'),
                 items: VehicleType.values
-                    .map((type) => DropdownMenuItem(
-                          value: type,
-                          child: Text(type.label),
-                        ))
+                    .map(
+                      (type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(type.label),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
                   if (value != null) setState(() => _vehicleType = value);
@@ -242,10 +244,12 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                 iconEnabledColor: _muted,
                 decoration: _decoration('Transmission'),
                 items: TransmissionType.values
-                    .map((type) => DropdownMenuItem(
-                          value: type,
-                          child: Text(type.label),
-                        ))
+                    .map(
+                      (type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(type.label),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
                   if (value != null) setState(() => _transmission = value);

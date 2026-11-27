@@ -102,9 +102,9 @@ class _SavedDocumentPacksScreenState extends State<SavedDocumentPacksScreen> {
                 }
 
                 final visiblePacks = packs.where((savedPack) {
-                  return savedPack.pack.name
-                      .toLowerCase()
-                      .contains(_searchQuery);
+                  return savedPack.pack.name.toLowerCase().contains(
+                    _searchQuery,
+                  );
                 }).toList();
 
                 if (visiblePacks.isEmpty) {
@@ -137,9 +137,8 @@ class _SavedDocumentPacksScreenState extends State<SavedDocumentPacksScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => SavedDocumentPackDetailsScreen(
-                                pack: pack,
-                              ),
+                              builder: (_) =>
+                                  SavedDocumentPackDetailsScreen(pack: pack),
                             ),
                           );
                         },
@@ -147,9 +146,7 @@ class _SavedDocumentPacksScreenState extends State<SavedDocumentPacksScreen> {
                           padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: const Color(0xFFEDE6E9),
-                            ),
+                            border: Border.all(color: const Color(0xFFEDE6E9)),
                             boxShadow: const [
                               BoxShadow(
                                 color: Color(0x0C302B31),
@@ -242,7 +239,9 @@ class _SavedDocumentPacksScreenState extends State<SavedDocumentPacksScreen> {
                                         minHeight: 6,
                                         backgroundColor: softMauve,
                                         valueColor:
-                                            const AlwaysStoppedAnimation<Color>(mauve),
+                                            const AlwaysStoppedAnimation<Color>(
+                                              mauve,
+                                            ),
                                       ),
                                     ),
                                   ),
@@ -284,10 +283,7 @@ class _SavedDocumentPacksScreenState extends State<SavedDocumentPacksScreen> {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: muted,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: muted, fontSize: 12),
             ),
           ],
         ),
@@ -313,10 +309,7 @@ class _SavedDocumentPacksScreenState extends State<SavedDocumentPacksScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -334,17 +327,13 @@ class _SavedDocumentPacksScreenState extends State<SavedDocumentPacksScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Document pack deleted successfully.'),
-        ),
+        const SnackBar(content: Text('Document pack deleted successfully.')),
       );
     } catch (error) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Unable to delete document pack: $error'),
-        ),
+        SnackBar(content: Text('Unable to delete document pack: $error')),
       );
     } finally {
       if (mounted) {

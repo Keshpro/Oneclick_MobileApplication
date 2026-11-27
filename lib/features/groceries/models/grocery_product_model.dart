@@ -7,7 +7,6 @@ class GroceryProduct {
   final double? discountPrice;
   final String imageUrl;
   final int stock;
- 
 
   // Multi-Seller fields
   final String sellerId;
@@ -28,11 +27,9 @@ class GroceryProduct {
     this.sellerName = '',
   });
 
-  bool get hasDiscount =>
-      discountPrice != null && discountPrice! < price;
+  bool get hasDiscount => discountPrice != null && discountPrice! < price;
 
-  double get finalPrice =>
-      hasDiscount ? discountPrice! : price;
+  double get finalPrice => hasDiscount ? discountPrice! : price;
 
   bool get isAvailable => stock > 0;
 }

@@ -45,7 +45,10 @@ class PatientNotificationsScreen extends StatelessWidget {
           if (uid != null)
             IconButton(
               tooltip: 'Clear All',
-              icon: const Icon(Icons.delete_sweep_outlined, color: Colors.redAccent),
+              icon: const Icon(
+                Icons.delete_sweep_outlined,
+                color: Colors.redAccent,
+              ),
               onPressed: () => _clearAllNotifications(uid),
             ),
         ],
@@ -70,8 +73,11 @@ class PatientNotificationsScreen extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.notifications_none_rounded,
-                              size: 50, color: _muted),
+                          Icon(
+                            Icons.notifications_none_rounded,
+                            size: 50,
+                            color: _muted,
+                          ),
                           SizedBox(height: 12),
                           Text(
                             'No notifications yet',
@@ -104,7 +110,10 @@ class PatientNotificationsScreen extends StatelessWidget {
                             color: Colors.redAccent,
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
+                          child: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: Colors.white,
+                          ),
                         ),
                         onDismissed: (direction) {
                           FirebaseFirestore.instance
@@ -141,13 +150,16 @@ class PatientNotificationsScreen extends StatelessWidget {
                                     Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: Colors.teal.withValues(alpha: 0.1),
+                                        color: Colors.teal.withValues(
+                                          alpha: 0.1,
+                                        ),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Icon(
                                         isRead
                                             ? Icons.notifications_outlined
-                                            : Icons.notifications_active_outlined,
+                                            : Icons
+                                                  .notifications_active_outlined,
                                         color: _primary,
                                         size: 22,
                                       ),
@@ -155,10 +167,12 @@ class PatientNotificationsScreen extends StatelessWidget {
                                     const SizedBox(width: 14),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
                                             children: [
                                               Expanded(
                                                 child: Text(
@@ -176,10 +190,11 @@ class PatientNotificationsScreen extends StatelessWidget {
                                                 Container(
                                                   width: 8,
                                                   height: 8,
-                                                  decoration: const BoxDecoration(
-                                                    color: _primary,
-                                                    shape: BoxShape.circle,
-                                                  ),
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                        color: _primary,
+                                                        shape: BoxShape.circle,
+                                                      ),
                                                 ),
                                             ],
                                           ),
@@ -197,8 +212,11 @@ class PatientNotificationsScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(width: 8),
                                     IconButton(
-                                      icon: const Icon(Icons.close_rounded,
-                                          size: 18, color: _muted),
+                                      icon: const Icon(
+                                        Icons.close_rounded,
+                                        size: 18,
+                                        color: _muted,
+                                      ),
                                       tooltip: 'Remove',
                                       onPressed: () {
                                         FirebaseFirestore.instance

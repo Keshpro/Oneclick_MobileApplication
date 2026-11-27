@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'job_booking_screen.dart'; // Corrected import for booking screen
+
 import 'package:oneclick/core/theme/app_theme.dart'; // UI only: Fresh Teal tokens
 
 class WorkerProfileScreen extends StatelessWidget {
@@ -12,7 +14,8 @@ class WorkerProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // Extract dynamic profile details safely from Firestore structure
     final name = worker['name']?.toString() ?? 'Worker';
-    final isAvailable = worker['isAvailable'] == true ||
+    final isAvailable =
+        worker['isAvailable'] == true ||
         worker['status'] == 'active' ||
         worker['status'] == 'approved';
     final category = worker['category']?.toString() ?? 'Technician';
@@ -20,11 +23,13 @@ class WorkerProfileScreen extends StatelessWidget {
     // Safely extract providerDetails sub-map if present
     final providerDetails =
         worker['providerDetails'] as Map<String, dynamic>? ?? {};
-    final hourlyRate = providerDetails['hourlyRate']?.toString() ??
+    final hourlyRate =
+        providerDetails['hourlyRate']?.toString() ??
         worker['hourlyRate']?.toString() ??
         worker['rate']?.toString() ??
         '1500';
-    final experience = providerDetails['experienceYears']?.toString() ??
+    final experience =
+        providerDetails['experienceYears']?.toString() ??
         worker['experience']?.toString() ??
         '3+';
     final rating = worker['rating']?.toString() ?? '5.0';
@@ -61,7 +66,10 @@ class WorkerProfileScreen extends StatelessWidget {
                 children: [
                   const Text(
                     'Hourly Rate',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
                   ),
                   Text(
                     'LKR $hourlyRate/hr',
@@ -120,7 +128,9 @@ class WorkerProfileScreen extends StatelessWidget {
                     radius: 44,
                     backgroundColor: AppColors.primary.withValues(alpha: 0.12),
                     child: Text(
-                      name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'W',
+                      name.isNotEmpty
+                          ? name.substring(0, 1).toUpperCase()
+                          : 'W',
                       style: const TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.w700,
@@ -149,7 +159,9 @@ class WorkerProfileScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: isAvailable
                           ? AppColors.success.withValues(alpha: 0.12)
@@ -172,11 +184,23 @@ class WorkerProfileScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _buildStatItem(
-                          Icons.star_rounded, rating, 'Rating', Colors.amber),
-                      _buildStatItem(Icons.task_alt_rounded, jobsDone,
-                          'Jobs Done', AppColors.primary),
-                      _buildStatItem(Icons.work_history_rounded,
-                          '$experience Yrs', 'Experience', AppColors.success),
+                        Icons.star_rounded,
+                        rating,
+                        'Rating',
+                        Colors.amber,
+                      ),
+                      _buildStatItem(
+                        Icons.task_alt_rounded,
+                        jobsDone,
+                        'Jobs Done',
+                        AppColors.primary,
+                      ),
+                      _buildStatItem(
+                        Icons.work_history_rounded,
+                        '$experience Yrs',
+                        'Experience',
+                        AppColors.success,
+                      ),
                     ],
                   ),
                 ],
@@ -202,7 +226,10 @@ class WorkerProfileScreen extends StatelessWidget {
                   Text(
                     'Verified $category with over $experience years of field experience on OneClick. Specialized in quick response, quality maintenance, and guaranteed work satisfaction for home and business needs.',
                     style: const TextStyle(
-                        color: AppColors.textSecondary, height: 1.5, fontSize: 14),
+                      color: AppColors.textSecondary,
+                      height: 1.5,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
@@ -229,10 +256,10 @@ class WorkerProfileScreen extends StatelessWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                    ),
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                        ),
                     itemCount: 3,
                     itemBuilder: (context, index) {
                       return Container(
@@ -241,9 +268,11 @@ class WorkerProfileScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(AppRadius.button),
                           border: Border.all(color: _lineColor),
                         ),
-                        child: Icon(Icons.handyman_outlined,
-                            color: AppColors.primary.withValues(alpha: 0.5),
-                            size: 32),
+                        child: Icon(
+                          Icons.handyman_outlined,
+                          color: AppColors.primary.withValues(alpha: 0.5),
+                          size: 32,
+                        ),
                       );
                     },
                   ),
@@ -323,19 +352,28 @@ class WorkerProfileScreen extends StatelessWidget {
   }
 
   Widget _buildStatItem(
-      IconData icon, String value, String label, Color iconColor) {
+    IconData icon,
+    String value,
+    String label,
+    Color iconColor,
+  ) {
     return Column(
       children: [
         Icon(icon, color: iconColor, size: 24),
         const SizedBox(height: 8),
-        Text(value,
-            style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textDark)),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textDark,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(label,
-            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        ),
       ],
     );
   }
@@ -352,17 +390,21 @@ class WorkerProfileScreen extends StatelessWidget {
               child: Text(
                 name.isNotEmpty ? name[0] : 'U',
                 style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                    fontSize: 12),
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                  fontSize: 12,
+                ),
               ),
             ),
             const SizedBox(width: 8),
-            Text(name,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                    color: AppColors.textDark)),
+            Text(
+              name,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: AppColors.textDark,
+              ),
+            ),
             const Spacer(),
             Row(
               children: List.generate(
@@ -380,7 +422,10 @@ class WorkerProfileScreen extends StatelessWidget {
         Text(
           comment,
           style: const TextStyle(
-              color: AppColors.textSecondary, fontSize: 12, height: 1.4),
+            color: AppColors.textSecondary,
+            fontSize: 12,
+            height: 1.4,
+          ),
         ),
       ],
     );

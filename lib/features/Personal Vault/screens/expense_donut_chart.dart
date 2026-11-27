@@ -1,59 +1,33 @@
-
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 class ExpenseDonutChart extends StatelessWidget {
-  const ExpenseDonutChart({
-    super.key,
-    required this.totals,
-  });
+  const ExpenseDonutChart({super.key, required this.totals});
 
   final Map<String, double> totals;
 
   static const _categories = [
-    _DonutCategory(
-      'food',
-      'Food',
-      Color(0xFFFFA45C),
-    ),
+    _DonutCategory('food', 'Food', Color(0xFFFFA45C)),
 
-    _DonutCategory(
-      'doctor',
-      'Doctor',
-      Color(0xFFEF7894),
-    ),
+    _DonutCategory('doctor', 'Doctor', Color(0xFFEF7894)),
 
-    _DonutCategory(
-      'groceries',
-      'Groceries',
-      Color(0xFF4CBF9C),
-    ),
+    _DonutCategory('groceries', 'Groceries', Color(0xFF4CBF9C)),
 
-    _DonutCategory(
-      'quickfix',
-      'QuickFix',
-      Color(0xFF6997E8),
-    ),
+    _DonutCategory('quickfix', 'QuickFix', Color(0xFF6997E8)),
 
-    _DonutCategory(
-      'drunk_drive',
-      'Drink & Drive',
-      Color(0xFF9B80DD),
-    ),
+    _DonutCategory('drunk_drive', 'Drink & Drive', Color(0xFF9B80DD)),
   ];
 
   @override
   Widget build(BuildContext context) {
     final values = [
-      for (final category in _categories)
-        _validAmount(totals[category.id]),
+      for (final category in _categories) _validAmount(totals[category.id]),
     ];
 
     final total = values.fold<double>(
       0.0,
-      (runningTotal, value) =>
-          runningTotal + value,
+      (runningTotal, value) => runningTotal + value,
     );
 
     return Container(
@@ -62,9 +36,7 @@ class ExpenseDonutChart extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFFF0F1F7),
-        ),
+        border: Border.all(color: const Color(0xFFF0F1F7)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x080F172A),
@@ -74,8 +46,7 @@ class ExpenseDonutChart extends StatelessWidget {
         ],
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Spending Distribution',
@@ -90,18 +61,14 @@ class ExpenseDonutChart extends StatelessWidget {
 
           const Text(
             'Monthly demo payments by category',
-            style: TextStyle(
-              fontSize: 12,
-              color: Color(0xFF8B90A4),
-            ),
+            style: TextStyle(fontSize: 12, color: Color(0xFF8B90A4)),
           ),
 
           const SizedBox(height: 24),
 
           LayoutBuilder(
             builder: (context, constraints) {
-              final compact =
-                  constraints.maxWidth < 380;
+              final compact = constraints.maxWidth < 380;
 
               final chartSize = math.min(
                 constraints.maxWidth,
@@ -115,25 +82,19 @@ class ExpenseDonutChart extends StatelessWidget {
                   alignment: Alignment.center,
                   children: [
                     CustomPaint(
-                      size: Size(
-                        chartSize,
-                        chartSize,
-                      ),
+                      size: Size(chartSize, chartSize),
                       painter: _ExpenseDonutPainter(
                         values: values,
                         total: total,
                         colors: [
-                          for (final category
-                              in _categories)
-                            category.color,
+                          for (final category in _categories) category.color,
                         ],
                       ),
                     ),
 
                     if (total <= 0)
                       const Column(
-                        mainAxisSize:
-                            MainAxisSize.min,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.pie_chart_outline_rounded,
@@ -158,26 +119,16 @@ class ExpenseDonutChart extends StatelessWidget {
               );
 
               final legend = Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (
-                    var i = 0;
-                    i < _categories.length;
-                    i++
-                  )
+                  for (var i = 0; i < _categories.length; i++)
                     Padding(
                       padding: EdgeInsets.only(
-                        bottom:
-                            i == _categories.length - 1
-                                ? 0
-                                : 18,
+                        bottom: i == _categories.length - 1 ? 0 : 18,
                       ),
                       child: _legendRow(
                         _categories[i],
-                        total > 0
-                            ? (values[i] / total) * 100
-                            : 0.0,
+                        total > 0 ? (values[i] / total) * 100 : 0.0,
                       ),
                     ),
                 ],
@@ -201,9 +152,7 @@ class ExpenseDonutChart extends StatelessWidget {
 
                   const SizedBox(width: 24),
 
-                  Expanded(
-                    child: legend,
-                  ),
+                  Expanded(child: legend),
                 ],
               );
             },
@@ -214,19 +163,14 @@ class ExpenseDonutChart extends StatelessWidget {
   }
 
   double _validAmount(double? amount) {
-    if (amount == null ||
-        !amount.isFinite ||
-        amount <= 0) {
+    if (amount == null || !amount.isFinite || amount <= 0) {
       return 0.0;
     }
 
     return amount;
   }
 
-  Widget _legendRow(
-    _DonutCategory category,
-    double percentage,
-  ) {
+  Widget _legendRow(_DonutCategory category, double percentage) {
     return Row(
       children: [
         Container(
@@ -267,11 +211,7 @@ class ExpenseDonutChart extends StatelessWidget {
 }
 
 class _DonutCategory {
-  const _DonutCategory(
-    this.id,
-    this.label,
-    this.color,
-  );
+  const _DonutCategory(this.id, this.label, this.color);
 
   final String id;
   final String label;
@@ -291,20 +231,13 @@ class _ExpenseDonutPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(
-      size.width / 2,
-      size.height / 2,
-    );
+    final center = Offset(size.width / 2, size.height / 2);
 
-    final radius =
-        math.min(size.width, size.height) / 2 - 18;
+    final radius = math.min(size.width, size.height) / 2 - 18;
 
     if (radius <= 0) return;
 
-    final rect = Rect.fromCircle(
-      center: center,
-      radius: radius,
-    );
+    final rect = Rect.fromCircle(center: center, radius: radius);
 
     const strokeWidth = 25.0;
 
@@ -313,25 +246,16 @@ class _ExpenseDonutPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
 
-    canvas.drawCircle(
-      center,
-      radius,
-      backgroundPaint,
-    );
+    canvas.drawCircle(center, radius, backgroundPaint);
 
     if (total <= 0 || !total.isFinite) return;
 
     var startAngle = -math.pi / 2;
 
-    for (
-      var i = 0;
-      i < values.length;
-      i++
-    ) {
+    for (var i = 0; i < values.length; i++) {
       if (values[i] <= 0) continue;
 
-      final sweepAngle =
-          (values[i] / total) * 2 * math.pi;
+      final sweepAngle = (values[i] / total) * 2 * math.pi;
 
       final paint = Paint()
         ..color = colors[i]
@@ -339,33 +263,21 @@ class _ExpenseDonutPainter extends CustomPainter {
         ..strokeWidth = strokeWidth
         ..strokeCap = StrokeCap.butt;
 
-      canvas.drawArc(
-        rect,
-        startAngle,
-        sweepAngle,
-        false,
-        paint,
-      );
+      canvas.drawArc(rect, startAngle, sweepAngle, false, paint);
 
       startAngle += sweepAngle;
     }
   }
 
   @override
-  bool shouldRepaint(
-    covariant _ExpenseDonutPainter oldDelegate,
-  ) {
+  bool shouldRepaint(covariant _ExpenseDonutPainter oldDelegate) {
     if (total != oldDelegate.total ||
         values.length != oldDelegate.values.length ||
         colors.length != oldDelegate.colors.length) {
       return true;
     }
 
-    for (
-      var i = 0;
-      i < values.length;
-      i++
-    ) {
+    for (var i = 0; i < values.length; i++) {
       if (values[i] != oldDelegate.values[i] ||
           colors[i] != oldDelegate.colors[i]) {
         return true;

@@ -3,26 +3,16 @@ import 'package:flutter/material.dart';
 class ExploreScreen extends StatelessWidget {
   const ExploreScreen({super.key});
 
-  void _loginRequired(
-    BuildContext context,
-    String feature,
-  ) {
+  void _loginRequired(BuildContext context, String feature) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return Container(
-          padding: const EdgeInsets.fromLTRB(
-            24,
-            14,
-            24,
-            30,
-          ),
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(28),
-            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: SafeArea(
             top: false,
@@ -63,10 +53,7 @@ class ExploreScreen extends StatelessWidget {
                 const Text(
                   'Login or create your OneClick account to continue.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF64748B),
-                    height: 1.5,
-                  ),
+                  style: TextStyle(color: Color(0xFF64748B), height: 1.5),
                 ),
 
                 const SizedBox(height: 22),
@@ -76,29 +63,20 @@ class ExploreScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.pop(sheetContext);
-                      Navigator.pushNamed(
-                        context,
-                        '/login',
-                      );
+                      Navigator.pushNamed(context, '/login');
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          const Color(0xFF2563EB),
+                      backgroundColor: const Color(0xFF2563EB),
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 15,
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: const Text(
                       'Login',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -106,14 +84,9 @@ class ExploreScreen extends StatelessWidget {
                 TextButton(
                   onPressed: () {
                     Navigator.pop(sheetContext);
-                    Navigator.pushNamed(
-                      context,
-                      '/register',
-                    );
+                    Navigator.pushNamed(context, '/register');
                   },
-                  child: const Text(
-                    'Create Account',
-                  ),
+                  child: const Text('Create Account'),
                 ),
               ],
             ),
@@ -128,29 +101,25 @@ class ExploreScreen extends StatelessWidget {
     final List<Map<String, dynamic>> items = [
       {
         'title': 'Doctor',
-        'subtitle':
-            'Find doctors and manage appointments',
+        'subtitle': 'Find doctors and manage appointments',
         'icon': Icons.medical_services_rounded,
         'color': const Color(0xFF2563EB),
       },
       {
         'title': 'Safe Ride',
-        'subtitle':
-            'Find a trusted driver when you need one',
+        'subtitle': 'Find a trusted driver when you need one',
         'icon': Icons.directions_car_rounded,
         'color': const Color(0xFF7C3AED),
       },
       {
         'title': 'Nearby Services',
-        'subtitle':
-            'Discover useful services around you',
+        'subtitle': 'Discover useful services around you',
         'icon': Icons.location_on_rounded,
         'color': const Color(0xFF059669),
       },
       {
         'title': 'More Services',
-        'subtitle':
-            'Explore everything available in OneClick',
+        'subtitle': 'Explore everything available in OneClick',
         'icon': Icons.apps_rounded,
         'color': const Color(0xFFEA580C),
       },
@@ -177,10 +146,7 @@ class ExploreScreen extends StatelessWidget {
             ),
             Text(
               'Discover OneClick',
-              style: TextStyle(
-                color: Color(0xFF64748B),
-                fontSize: 11,
-              ),
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
             ),
           ],
         ),
@@ -198,11 +164,7 @@ class ExploreScreen extends StatelessWidget {
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.explore_rounded,
-                  color: Color(0xFF93C5FD),
-                  size: 36,
-                ),
+                Icon(Icons.explore_rounded, color: Color(0xFF93C5FD), size: 36),
                 SizedBox(height: 18),
                 Text(
                   'Discover what\nOneClick can do.',
@@ -241,40 +203,27 @@ class ExploreScreen extends StatelessWidget {
 
           const Text(
             'See what is available through OneClick.',
-            style: TextStyle(
-              color: Color(0xFF64748B),
-              fontSize: 13,
-            ),
+            style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
           ),
 
           const SizedBox(height: 16),
 
           ...items.map(
             (item) => Padding(
-              padding: const EdgeInsets.only(
-                bottom: 12,
-              ),
+              padding: const EdgeInsets.only(bottom: 12),
               child: Material(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
                 child: InkWell(
-                  borderRadius:
-                      BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(18),
                   onTap: () {
-                    _loginRequired(
-                      context,
-                      item['title'],
-                    );
+                    _loginRequired(context, item['title']);
                   },
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      borderRadius:
-                          BorderRadius.circular(18),
-                      border: Border.all(
-                        color:
-                            const Color(0xFFE2E8F0),
-                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: Row(
                       children: [
@@ -282,40 +231,33 @@ class ExploreScreen extends StatelessWidget {
                           width: 52,
                           height: 52,
                           decoration: BoxDecoration(
-                            color: (item['color'] as Color)
-                                .withValues(alpha: 0.10),
-                            borderRadius:
-                                BorderRadius.circular(15),
+                            color: (item['color'] as Color).withValues(
+                              alpha: 0.10,
+                            ),
+                            borderRadius: BorderRadius.circular(15),
                           ),
-                          child: Icon(
-                            item['icon'],
-                            color: item['color'],
-                          ),
+                          child: Icon(item['icon'], color: item['color']),
                         ),
 
                         const SizedBox(width: 14),
 
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 item['title'],
                                 style: const TextStyle(
-                                  color:
-                                      Color(0xFF0F172A),
+                                  color: Color(0xFF0F172A),
                                   fontSize: 15,
-                                  fontWeight:
-                                      FontWeight.w800,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 item['subtitle'],
                                 style: const TextStyle(
-                                  color:
-                                      Color(0xFF64748B),
+                                  color: Color(0xFF64748B),
                                   fontSize: 12,
                                 ),
                               ),
@@ -381,24 +323,15 @@ class ExploreScreen extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/register',
-                      );
+                      Navigator.pushNamed(context, '/register');
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          const Color(0xFF2563EB),
+                      backgroundColor: const Color(0xFF2563EB),
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding:
-                          const EdgeInsets.symmetric(
-                        vertical: 14,
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text(
-                      'Create Account',
-                    ),
+                    child: const Text('Create Account'),
                   ),
                 ),
               ],

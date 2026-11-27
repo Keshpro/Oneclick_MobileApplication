@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -7,11 +6,7 @@ class ProfileScreen extends StatefulWidget {
   final VoidCallback? onBack;
   final VoidCallback? onActivityTap;
 
-  const ProfileScreen({
-    super.key,
-    this.onBack,
-    this.onActivityTap,
-  });
+  const ProfileScreen({super.key, this.onBack, this.onActivityTap});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -37,9 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _message(String text) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(text)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   void _back() {
@@ -89,10 +82,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (user == null || ref == null) return;
 
-    final nameController =
-        TextEditingController(text: _name(data));
-    final phoneController =
-        TextEditingController(text: _phone(data));
+    final nameController = TextEditingController(text: _name(data));
+    final phoneController = TextEditingController(text: _phone(data));
 
     final formKey = GlobalKey<FormState>();
 
@@ -102,9 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isScrollControlled: true,
         backgroundColor: Colors.white,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(28),
-          ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         builder: (sheetContext) {
           bool saving = false;
@@ -125,8 +114,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     key: formKey,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
                           'Edit Profile',
@@ -145,15 +133,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         TextFormField(
                           controller: nameController,
                           maxLength: 80,
-                          textCapitalization:
-                              TextCapitalization.words,
+                          textCapitalization: TextCapitalization.words,
                           decoration: _inputDecoration(
                             'Full Name',
                             Icons.person_outline_rounded,
                           ),
                           validator: (value) {
-                            if (value == null ||
-                                value.trim().isEmpty) {
+                            if (value == null || value.trim().isEmpty) {
                               return 'Please enter your name';
                             }
                             return null;
@@ -182,10 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const Text(
                           'Changing this contact number does not '
                           'change your Firebase Authentication phone number.',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 11,
-                          ),
+                          style: TextStyle(color: Colors.grey, fontSize: 11),
                         ),
                         const SizedBox(height: 22),
                         SizedBox(
@@ -194,20 +177,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             onPressed: saving
                                 ? null
                                 : () async {
-                                    if (!formKey.currentState!
-                                        .validate()) {
+                                    if (!formKey.currentState!.validate()) {
                                       return;
                                     }
 
-                                    updateSheet(
-                                      () => saving = true,
-                                    );
+                                    updateSheet(() => saving = true);
 
                                     try {
-                                      final name =
-                                          nameController.text.trim();
-                                      final phone =
-                                          phoneController.text.trim();
+                                      final name = nameController.text.trim();
+                                      final phone = phoneController.text.trim();
 
                                       await ref.set({
                                         'name': name,
@@ -245,33 +223,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       }
                                     } catch (_) {
                                       if (sheetContext.mounted) {
-                                        ScaffoldMessenger.of(
-                                          sheetContext,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Unable to update profile',
-                                            ),
-                                          ),
-                                        );
+                                        ScaffoldMessenger.of(sheetContext)
+                                            .showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Unable to update profile',
+                                                ),
+                                              ),
+                                            );
                                       }
                                     } finally {
                                       if (sheetContext.mounted) {
-                                        updateSheet(
-                                          () => saving = false,
-                                        );
+                                        updateSheet(() => saving = false);
                                       }
                                     }
                                   },
                             style: FilledButton.styleFrom(
                               backgroundColor: teal,
-                              padding:
-                                  const EdgeInsets.symmetric(
-                                vertical: 17,
-                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 17),
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(15),
+                                borderRadius: BorderRadius.circular(15),
                               ),
                             ),
                             child: saving
@@ -301,10 +272,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  InputDecoration _inputDecoration(
-    String label,
-    IconData icon,
-  ) {
+  InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
       prefixIcon: Icon(icon, color: teal),
@@ -332,9 +300,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _message('Your email is already verified');
       } else {
         await refreshed!.sendEmailVerification();
-        _message(
-          'Verification email sent. Check your inbox.',
-        );
+        _message('Verification email sent. Check your inbox.');
       }
 
       if (mounted) setState(() {});
@@ -370,22 +336,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Log Out?'),
-        content: const Text(
-          'Are you sure you want to sign out of OneClick?',
-        ),
+        content: const Text('Are you sure you want to sign out of OneClick?'),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, true),
-            child: const Text(
-              'Log Out',
-              style: TextStyle(color: Colors.red),
-            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Log Out', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -400,10 +359,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (!mounted) return;
 
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/login',
-        (route) => false,
-      );
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     } catch (_) {
       _message('Unable to log out. Please try again.');
     } finally {
@@ -429,19 +385,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             automaticallyImplyLeading: false,
             leadingWidth: 58,
             leading: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                12, 12, 0, 12,
-              ),
+              padding: const EdgeInsets.fromLTRB(12, 12, 0, 12),
               child: Material(
                 color: Colors.white.withValues(alpha: .16),
                 borderRadius: BorderRadius.circular(14),
                 child: InkWell(
                   onTap: _back,
                   borderRadius: BorderRadius.circular(14),
-                  child: const Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    size: 19,
-                  ),
+                  child: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
                 ),
               ),
             ),
@@ -450,25 +401,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Text(
                   'My Profile',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
                 ),
                 SizedBox(height: 4),
                 Text(
                   'Manage your OneClick account',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 11),
                 ),
               ],
             ),
           ),
-          body: user == null
-              ? _buildGuest()
-              : _buildAuthenticated(user),
+          body: user == null ? _buildGuest() : _buildAuthenticated(user),
         );
       },
     );
@@ -484,11 +427,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const CircleAvatar(
               radius: 48,
               backgroundColor: Color(0xFFE0F2F1),
-              child: Icon(
-                Icons.person_outline_rounded,
-                size: 48,
-                color: teal,
-              ),
+              child: Icon(Icons.person_outline_rounded, size: 48, color: teal),
             ),
             const SizedBox(height: 20),
             const Text(
@@ -509,9 +448,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _back,
-              style: FilledButton.styleFrom(
-                backgroundColor: teal,
-              ),
+              style: FilledButton.styleFrom(backgroundColor: teal),
               child: const Text('Back to Home'),
             ),
           ],
@@ -537,8 +474,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .doc(user.uid)
           .get(const GetOptions(source: Source.server));
 
-      if (!mounted ||
-          _auth.currentUser?.uid != user.uid) {
+      if (!mounted || _auth.currentUser?.uid != user.uid) {
         return;
       }
 
@@ -547,15 +483,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/worker-dashboard',
-        (route) => false,
-      );
-
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil('/worker-dashboard', (route) => false);
     } catch (_) {
-      _message(
-        'Unable to verify worker account. Please try again.',
-      );
+      _message('Unable to verify worker account. Please try again.');
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -567,10 +498,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       key: ValueKey('profile-worker-${user.uid}'),
 
-      stream: _firestore
-          .collection('workers')
-          .doc(user.uid)
-          .snapshots(),
+      stream: _firestore.collection('workers').doc(user.uid).snapshots(),
 
       builder: (context, snapshot) {
         if (snapshot.hasError ||
@@ -607,13 +535,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final ref = _userRef;
 
     if (ref == null) {
-      return const Center(
-        child: CircularProgressIndicator(color: teal),
-      );
+      return const Center(child: CircularProgressIndicator(color: teal));
     }
 
-    return StreamBuilder<
-        DocumentSnapshot<Map<String, dynamic>>>(
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: ref.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
@@ -630,13 +555,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
 
         if (!snapshot.hasData) {
-          return const Center(
-            child: CircularProgressIndicator(color: teal),
-          );
+          return const Center(child: CircularProgressIndicator(color: teal));
         }
 
-        final data = snapshot.data!.data() ??
-            <String, dynamic>{};
+        final data = snapshot.data!.data() ?? <String, dynamic>{};
 
         final name = _name(data);
         final email = user.email ?? '';
@@ -646,9 +568,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             : _value(data['photoUrl']);
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(
-            20, 22, 20, 120,
-          ),
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 120),
           children: [
             _buildProfileCard(
               name: name,
@@ -668,11 +588,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 12),
 
             _sectionCard([
-              _infoTile(
-                Icons.person_outline_rounded,
-                'Full Name',
-                name,
-              ),
+              _infoTile(Icons.person_outline_rounded, 'Full Name', name),
               _infoTile(
                 Icons.email_outlined,
                 'Email Address',
@@ -686,9 +602,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _infoTile(
                 Icons.verified_user_outlined,
                 'Email Status',
-                user.emailVerified
-                    ? 'Verified'
-                    : 'Not Verified',
+                user.emailVerified ? 'Verified' : 'Not Verified',
               ),
             ]),
 
@@ -702,9 +616,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Icons.history_rounded,
                 'My Activity',
                 'View your activity history',
-                onTap: widget.onActivityTap == null
-                    ? null
-                    : widget.onActivityTap!,
+                onTap: widget.onActivityTap,
               ),
             ]),
 
@@ -716,10 +628,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Text(
                   'Activity navigation will be available '
                   'when connected from HomeScreen.',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 11,
-                  ),
+                  style: TextStyle(color: Colors.grey, fontSize: 11),
                 ),
               ),
 
@@ -774,9 +683,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             if (_busy) ...[
               const SizedBox(height: 20),
-              const Center(
-                child: CircularProgressIndicator(color: teal),
-              ),
+              const Center(child: CircularProgressIndicator(color: teal)),
             ],
 
             const SizedBox(height: 28),
@@ -785,10 +692,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Text(
                 'OneClick • Your everyday services, simplified',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 11, color: Colors.grey),
               ),
             ),
           ],
@@ -810,11 +714,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF0D9488),
-            Color(0xFF075B60),
-            Color(0xFF102D38),
-          ],
+          colors: [Color(0xFF0D9488), Color(0xFF075B60), Color(0xFF102D38)],
         ),
         borderRadius: BorderRadius.circular(25),
       ),
@@ -822,8 +722,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           CircleAvatar(
             radius: 47,
-            backgroundColor:
-                Colors.white.withValues(alpha: .18),
+            backgroundColor: Colors.white.withValues(alpha: .18),
             child: CircleAvatar(
               radius: 43,
               backgroundColor: Colors.white,
@@ -831,11 +730,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ? NetworkImage(photoUrl)
                   : null,
               child: photoUrl.isEmpty
-                  ? const Icon(
-                      Icons.person_rounded,
-                      size: 48,
-                      color: teal,
-                    )
+                  ? const Icon(Icons.person_rounded, size: 48, color: teal)
                   : null,
             ),
           ),
@@ -853,18 +748,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Text(
             email,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
           const SizedBox(height: 14),
           if (email.isNotEmpty)
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 7,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: .15),
                 borderRadius: BorderRadius.circular(20),
@@ -881,9 +770,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    verified
-                        ? 'Verified Account'
-                        : 'Email Not Verified',
+                    verified ? 'Verified Account' : 'Email Not Verified',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 11,
@@ -901,10 +788,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.white,
               side: const BorderSide(color: Colors.white54),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 22,
-                vertical: 12,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
             ),
           ),
         ],
@@ -928,31 +812,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFFE9EFF1),
-        ),
+        border: Border.all(color: const Color(0xFFE9EFF1)),
       ),
       child: Column(
         children: [
           for (int i = 0; i < children.length; i++) ...[
             children[i],
             if (i != children.length - 1)
-              const Divider(
-                height: 1,
-                indent: 65,
-                endIndent: 16,
-              ),
+              const Divider(height: 1, indent: 65, endIndent: 16),
           ],
         ],
       ),
     );
   }
 
-  Widget _infoTile(
-    IconData icon,
-    String label,
-    String value,
-  ) {
+  Widget _infoTile(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -965,10 +839,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -995,10 +866,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Color color = teal,
   }) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 5,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       leading: _tileIcon(icon, color: color),
       title: Text(
         title,
@@ -1012,25 +880,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         subtitle,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          fontSize: 11,
-          color: Colors.grey,
-        ),
+        style: const TextStyle(fontSize: 11, color: Colors.grey),
       ),
       trailing: onTap == null
           ? null
-          : const Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.grey,
-            ),
+          : const Icon(Icons.chevron_right_rounded, color: Colors.grey),
       onTap: onTap,
     );
   }
 
-  Widget _tileIcon(
-    IconData icon, {
-    Color color = teal,
-  }) {
+  Widget _tileIcon(IconData icon, {Color color = teal}) {
     return Container(
       width: 42,
       height: 42,

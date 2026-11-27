@@ -1,4 +1,3 @@
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -10,43 +9,30 @@ class ExpenseManagerScreen extends StatefulWidget {
   const ExpenseManagerScreen({super.key});
 
   @override
-  State<ExpenseManagerScreen> createState() =>
-      _ExpenseManagerScreenState();
+  State<ExpenseManagerScreen> createState() => _ExpenseManagerScreenState();
 }
 
-class _ExpenseManagerScreenState
-    extends State<ExpenseManagerScreen> {
-
-  final _authStream =
-      FirebaseAuth.instance.authStateChanges();
+class _ExpenseManagerScreenState extends State<ExpenseManagerScreen> {
+  final _authStream = FirebaseAuth.instance.authStateChanges();
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       stream: _authStream,
       builder: (context, snapshot) {
-        if (snapshot.connectionState ==
-            ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
         if (snapshot.hasError) {
           return const Scaffold(
-            body: Center(
-              child: Text(
-                'Unable to verify your account.',
-              ),
-            ),
+            body: Center(child: Text('Unable to verify your account.')),
           );
         }
 
-        return _ExpenseDashboardView(
-          key: ValueKey(snapshot.data?.uid),
-        );
+        return _ExpenseDashboardView(key: ValueKey(snapshot.data?.uid));
       },
     );
   }
@@ -56,17 +42,13 @@ class _ExpenseDashboardView extends StatefulWidget {
   const _ExpenseDashboardView({super.key});
 
   @override
-  State<_ExpenseDashboardView> createState() =>
-      _ExpenseDashboardViewState();
+  State<_ExpenseDashboardView> createState() => _ExpenseDashboardViewState();
 }
 
-class _ExpenseDashboardViewState
-    extends State<_ExpenseDashboardView> {
-
+class _ExpenseDashboardViewState extends State<_ExpenseDashboardView> {
   final ExpenseService _service = ExpenseService();
 
-  late final Stream<List<ExpenseRecord>>
-      _expensesStream;
+  late final Stream<List<ExpenseRecord>> _expensesStream;
 
   static const _purple = Color(0xFF7464E8);
   static const _ink = Color(0xFF25263A);
@@ -126,10 +108,7 @@ class _ExpenseDashboardViewState
     ),
   ];
 
-  DateTime _month = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-  );
+  DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
 
   @override
   void initState() {
@@ -143,15 +122,13 @@ class _ExpenseDashboardViewState
   // ---------------------------------------------------
 
   String _money(double value) {
-    final parts =
-        value.toStringAsFixed(2).split('.');
+    final parts = value.toStringAsFixed(2).split('.');
 
     final digits = parts.first;
     final buffer = StringBuffer();
 
     for (var i = 0; i < digits.length; i++) {
-      if (i > 0 &&
-          (digits.length - i) % 3 == 0) {
+      if (i > 0 && (digits.length - i) % 3 == 0) {
         buffer.write(',');
       }
 
@@ -168,25 +145,17 @@ class _ExpenseDashboardViewState
   }
 
   String _dateTime(DateTime value) {
-    final hour =
-        value.hour.toString().padLeft(2, '0');
+    final hour = value.hour.toString().padLeft(2, '0');
 
-    final minute =
-        value.minute.toString().padLeft(2, '0');
+    final minute = value.minute.toString().padLeft(2, '0');
 
     return '${_date(value)} · $hour:$minute';
   }
 
   void _moveMonth(int difference) {
-    final next = DateTime(
-      _month.year,
-      _month.month + difference,
-    );
+    final next = DateTime(_month.year, _month.month + difference);
 
-    final today = DateTime(
-      DateTime.now().year,
-      DateTime.now().month,
-    );
+    final today = DateTime(DateTime.now().year, DateTime.now().month);
 
     if (next.isAfter(today)) return;
 
@@ -209,8 +178,7 @@ class _ExpenseDashboardViewState
   }
 
   Color _statusColor(ExpenseRecord expense) {
-    if (expense.isDemoPaid ||
-        expense.status == 'paid') {
+    if (expense.isDemoPaid || expense.status == 'paid') {
       return const Color(0xFF168765);
     }
 
@@ -218,8 +186,7 @@ class _ExpenseDashboardViewState
       return const Color(0xFFB7791F);
     }
 
-    if (expense.status == 'failed' ||
-        expense.status == 'cancelled') {
+    if (expense.status == 'failed' || expense.status == 'cancelled') {
       return Colors.red;
     }
 
@@ -240,9 +207,7 @@ class _ExpenseDashboardViewState
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFFF0F1F7),
-        ),
+        border: Border.all(color: const Color(0xFFF0F1F7)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x080F172A),
@@ -260,10 +225,7 @@ class _ExpenseDashboardViewState
   // ---------------------------------------------------
 
   Widget _header() {
-    final thisMonth = DateTime(
-      DateTime.now().year,
-      DateTime.now().month,
-    );
+    final thisMonth = DateTime(DateTime.now().year, DateTime.now().month);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,27 +244,19 @@ class _ExpenseDashboardViewState
 
         const Text(
           'Your OneClick spending, all in one place.',
-          style: TextStyle(
-            color: _muted,
-            fontSize: 14,
-          ),
+          style: TextStyle(color: _muted, fontSize: 14),
         ),
 
         const SizedBox(height: 24),
 
         _panel(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 7,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           child: Row(
             children: [
               IconButton(
                 tooltip: 'Previous month',
                 onPressed: () => _moveMonth(-1),
-                icon: const Icon(
-                  Icons.chevron_left_rounded,
-                ),
+                icon: const Icon(Icons.chevron_left_rounded),
               ),
 
               Expanded(
@@ -338,9 +292,7 @@ class _ExpenseDashboardViewState
                 onPressed: _month.isBefore(thisMonth)
                     ? () => _moveMonth(1)
                     : null,
-                icon: const Icon(
-                  Icons.chevron_right_rounded,
-                ),
+                icon: const Icon(Icons.chevron_right_rounded),
               ),
             ],
           ),
@@ -361,11 +313,7 @@ class _ExpenseDashboardViewState
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF8778F0),
-            Color(0xFF6657CF),
-            Color(0xFF5144B3),
-          ],
+          colors: [Color(0xFF8778F0), Color(0xFF6657CF), Color(0xFF5144B3)],
         ),
         borderRadius: BorderRadius.circular(27),
         boxShadow: const [
@@ -386,17 +334,13 @@ class _ExpenseDashboardViewState
               height: 190,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0x26FFFFFF),
-                  width: 32,
-                ),
+                border: Border.all(color: const Color(0x26FFFFFF), width: 32),
               ),
             ),
           ),
 
           Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Row(
                 children: [
@@ -446,8 +390,7 @@ class _ExpenseDashboardViewState
                 ),
                 decoration: BoxDecoration(
                   color: const Color(0x2AFFFFFF),
-                  borderRadius:
-                      BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(30),
                 ),
                 child: Text(
                   '$count confirmed '
@@ -465,10 +408,7 @@ class _ExpenseDashboardViewState
               const Text(
                 'Demo transactions only. '
                 'No real money charged.',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 11,
-                ),
+                style: TextStyle(color: Colors.white70, fontSize: 11),
               ),
             ],
           ),
@@ -490,11 +430,7 @@ class _ExpenseDashboardViewState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          color: color,
-          size: 22,
-        ),
+        Icon(icon, color: color, size: 22),
 
         const SizedBox(height: 10),
 
@@ -513,45 +449,23 @@ class _ExpenseDashboardViewState
 
         const SizedBox(height: 5),
 
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 11,
-            color: _muted,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 11, color: _muted)),
       ],
     );
   }
 
-  Widget _statistics(
-    List<ExpenseRecord> records,
-  ) {
-    final monthlyRecords =
-        _service.expensesForMonth(records, _month);
+  Widget _statistics(List<ExpenseRecord> records) {
+    final monthlyRecords = _service.expensesForMonth(records, _month);
 
-    final confirmed =
-        _service.confirmedPaymentCount(
-      records,
-      _month,
-    );
+    final confirmed = _service.confirmedPaymentCount(records, _month);
 
-    final pending =
-        _service.pendingCashCount(
-      records,
-      _month,
-    );
+    final pending = _service.pendingCashCount(records, _month);
 
-    final pendingTotal =
-        _service.pendingCashTotal(
-      records,
-      _month,
-    );
+    final pendingTotal = _service.pendingCashTotal(records, _month);
 
     return _panel(
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Transaction Statistics',
@@ -597,22 +511,15 @@ class _ExpenseDashboardViewState
 
           const SizedBox(height: 18),
 
-          const Divider(
-            color: Color(0xFFF0F1F7),
-          ),
+          const Divider(color: Color(0xFFF0F1F7)),
 
           const SizedBox(height: 10),
 
-          _detailRow(
-            'Pending cash amount',
-            _money(pendingTotal),
-          ),
+          _detailRow('Pending cash amount', _money(pendingTotal)),
 
           _detailRow(
             'All-time demo payments',
-            _money(
-              _service.totalDemoPayments(records),
-            ),
+            _money(_service.totalDemoPayments(records)),
           ),
         ],
       ),
@@ -623,10 +530,7 @@ class _ExpenseDashboardViewState
   // SECTION HEADING
   // ---------------------------------------------------
 
-  Widget _sectionHeading(
-    String title,
-    String subtitle,
-  ) {
+  Widget _sectionHeading(String title, String subtitle) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -642,13 +546,7 @@ class _ExpenseDashboardViewState
 
         const SizedBox(height: 5),
 
-        Text(
-          subtitle,
-          style: const TextStyle(
-            fontSize: 12,
-            color: _muted,
-          ),
-        ),
+        Text(subtitle, style: const TextStyle(fontSize: 12, color: _muted)),
       ],
     );
   }
@@ -657,20 +555,12 @@ class _ExpenseDashboardViewState
   // CATEGORY BREAKDOWN
   // ---------------------------------------------------
 
-  Widget _categoryBreakdown(
-    Map<String, double> totals,
-    double total,
-  ) {
+  Widget _categoryBreakdown(Map<String, double> totals, double total) {
     return _panel(
       child: Column(
         children: [
-          for (
-            var index = 0;
-            index < _categories.length;
-            index++
-          ) ...[
-            if (index > 0)
-              const SizedBox(height: 22),
+          for (var index = 0; index < _categories.length; index++) ...[
+            if (index > 0) const SizedBox(height: 22),
 
             _categoryRow(
               _categories[index],
@@ -683,16 +573,8 @@ class _ExpenseDashboardViewState
     );
   }
 
-  Widget _categoryRow(
-    _ExpenseCategory category,
-    double amount,
-    double total,
-  ) {
-    final ratio = total > 0
-        ? (amount / total)
-            .clamp(0.0, 1.0)
-            .toDouble()
-        : 0.0;
+  Widget _categoryRow(_ExpenseCategory category, double amount, double total) {
+    final ratio = total > 0 ? (amount / total).clamp(0.0, 1.0).toDouble() : 0.0;
 
     return Row(
       children: [
@@ -701,22 +583,16 @@ class _ExpenseDashboardViewState
           height: 46,
           decoration: BoxDecoration(
             color: category.background,
-            borderRadius:
-                BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(15),
           ),
-          child: Icon(
-            category.icon,
-            color: category.color,
-            size: 22,
-          ),
+          child: Icon(category.icon, color: category.color, size: 22),
         ),
 
         const SizedBox(width: 14),
 
         Expanded(
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
@@ -753,14 +629,12 @@ class _ExpenseDashboardViewState
               const SizedBox(height: 10),
 
               ClipRRect(
-                borderRadius:
-                    BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12),
                 child: LinearProgressIndicator(
                   value: ratio,
                   minHeight: 7,
                   color: category.color,
-                  backgroundColor:
-                      category.background,
+                  backgroundColor: category.background,
                 ),
               ),
             ],
@@ -777,9 +651,7 @@ class _ExpenseDashboardViewState
   Widget _emptyHistory() {
     return _panel(
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 30,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 30),
         child: Column(
           children: [
             Container(
@@ -813,11 +685,7 @@ class _ExpenseDashboardViewState
               'Your OneClick payments will '
               'automatically appear here.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                height: 1.55,
-                color: _muted,
-                fontSize: 12,
-              ),
+              style: TextStyle(height: 1.55, color: _muted, fontSize: 12),
             ),
           ],
         ),
@@ -833,10 +701,7 @@ class _ExpenseDashboardViewState
     final color = _statusColor(expense);
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 9,
-        vertical: 5,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: color.withAlpha(20),
         borderRadius: BorderRadius.circular(20),
@@ -856,26 +721,17 @@ class _ExpenseDashboardViewState
   // TRANSACTION DETAILS
   // ---------------------------------------------------
 
-  Widget _detailRow(
-    String label,
-    String value,
-  ) {
+  Widget _detailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 9,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 9),
       child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             flex: 2,
             child: Text(
               label,
-              style: const TextStyle(
-                color: _muted,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: _muted, fontSize: 12),
             ),
           ),
 
@@ -898,14 +754,10 @@ class _ExpenseDashboardViewState
     );
   }
 
-  Future<void> _showPaymentDetails(
-    ExpenseRecord expense,
-  ) async {
-    final category =
-        _getCategory(expense.sourceModule);
+  Future<void> _showPaymentDetails(ExpenseRecord expense) async {
+    final category = _getCategory(expense.sourceModule);
 
-    final ownerUid =
-        FirebaseAuth.instance.currentUser?.uid;
+    final ownerUid = FirebaseAuth.instance.currentUser?.uid;
 
     if (ownerUid == null) return;
 
@@ -915,25 +767,17 @@ class _ExpenseDashboardViewState
       useSafeArea: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(28),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (sheetContext) {
         return StreamBuilder<User?>(
-          stream:
-              FirebaseAuth.instance.authStateChanges(),
+          stream: FirebaseAuth.instance.authStateChanges(),
           builder: (context, authSnapshot) {
             if (authSnapshot.data?.uid != ownerUid ||
-                FirebaseAuth.instance.currentUser?.uid
-                    != ownerUid) {
+                FirebaseAuth.instance.currentUser?.uid != ownerUid) {
               return const SizedBox(
                 height: 160,
-                child: Center(
-                  child: Text(
-                    'Payment details unavailable.',
-                  ),
-                ),
+                child: Center(child: Text('Payment details unavailable.')),
               );
             }
 
@@ -944,9 +788,7 @@ class _ExpenseDashboardViewState
                   return const SizedBox(
                     height: 160,
                     child: Center(
-                      child: Text(
-                        'Unable to load payment details.',
-                      ),
+                      child: Text('Unable to load payment details.'),
                     ),
                   );
                 }
@@ -954,9 +796,7 @@ class _ExpenseDashboardViewState
                 if (!snapshot.hasData) {
                   return const SizedBox(
                     height: 160,
-                    child: Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                    child: Center(child: CircularProgressIndicator()),
                   );
                 }
 
@@ -964,8 +804,7 @@ class _ExpenseDashboardViewState
 
                 for (final item in snapshot.data!) {
                   if (item.id == expense.id ||
-                      item.sourceTransactionId ==
-                          expense.sourceTransactionId) {
+                      item.sourceTransactionId == expense.sourceTransactionId) {
                     currentPayment = item;
                     break;
                   }
@@ -974,23 +813,14 @@ class _ExpenseDashboardViewState
                 if (currentPayment == null) {
                   return const SizedBox(
                     height: 160,
-                    child: Center(
-                      child: Text(
-                        'Payment record unavailable.',
-                      ),
-                    ),
+                    child: Center(child: Text('Payment record unavailable.')),
                   );
                 }
 
                 final payment = currentPayment;
 
                 return SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(
-                    24,
-                    12,
-                    24,
-                    30,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 30),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -999,8 +829,7 @@ class _ExpenseDashboardViewState
                         height: 4,
                         decoration: BoxDecoration(
                           color: const Color(0xFFE2E4EC),
-                          borderRadius:
-                              BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
 
@@ -1011,8 +840,7 @@ class _ExpenseDashboardViewState
                         height: 76,
                         decoration: BoxDecoration(
                           color: category.background,
-                          borderRadius:
-                              BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(24),
                         ),
                         child: Icon(
                           category.icon,
@@ -1056,8 +884,7 @@ class _ExpenseDashboardViewState
                       const SizedBox(height: 24),
 
                       _panel(
-                        padding:
-                            const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(16),
                         child: Column(
                           children: [
                             _detailRow(
@@ -1067,17 +894,11 @@ class _ExpenseDashboardViewState
 
                             const Divider(),
 
-                            _detailRow(
-                              'Booking ID',
-                              payment.bookingId,
-                            ),
+                            _detailRow('Booking ID', payment.bookingId),
 
                             const Divider(),
 
-                            _detailRow(
-                              'Service',
-                              category.label,
-                            ),
+                            _detailRow('Service', category.label),
 
                             const Divider(),
 
@@ -1088,31 +909,19 @@ class _ExpenseDashboardViewState
 
                             const Divider(),
 
-                            _detailRow(
-                              'Payment Method',
-                              payment.methodLabel,
-                            ),
+                            _detailRow('Payment Method', payment.methodLabel),
 
                             const Divider(),
 
-                            _detailRow(
-                              'Status',
-                              payment.statusLabel,
-                            ),
+                            _detailRow('Status', payment.statusLabel),
 
                             const Divider(),
 
-                            _detailRow(
-                              'Currency',
-                              payment.currency,
-                            ),
+                            _detailRow('Currency', payment.currency),
 
                             const Divider(),
 
-                            _detailRow(
-                              'Environment',
-                              payment.environment,
-                            ),
+                            _detailRow('Environment', payment.environment),
                           ],
                         ),
                       ),
@@ -1124,10 +933,7 @@ class _ExpenseDashboardViewState
                           'This is a demo transaction. '
                           'No real money was charged.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: _muted,
-                            fontSize: 12,
-                          ),
+                          style: TextStyle(color: _muted, fontSize: 12),
                         ),
 
                       const SizedBox(height: 20),
@@ -1144,15 +950,12 @@ class _ExpenseDashboardViewState
                             backgroundColor: _purple,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(16),
                             ),
                           ),
                           child: const Text(
                             'Close',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
                       ),
@@ -1171,11 +974,8 @@ class _ExpenseDashboardViewState
   // TRANSACTION ITEM
   // ---------------------------------------------------
 
-  Widget _transactionItem(
-    ExpenseRecord expense,
-  ) {
-    final category =
-        _getCategory(expense.sourceModule);
+  Widget _transactionItem(ExpenseRecord expense) {
+    final category = _getCategory(expense.sourceModule);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -1195,22 +995,16 @@ class _ExpenseDashboardViewState
                   height: 48,
                   decoration: BoxDecoration(
                     color: category.background,
-                    borderRadius:
-                        BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(15),
                   ),
-                  child: Icon(
-                    category.icon,
-                    color: category.color,
-                    size: 22,
-                  ),
+                  child: Icon(category.icon, color: category.color, size: 22),
                 ),
 
                 const SizedBox(width: 13),
 
                 Expanded(
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         expense.description.trim().isEmpty
@@ -1230,10 +1024,7 @@ class _ExpenseDashboardViewState
                       Text(
                         '${category.label} · '
                         '${_date(expense.paidAt)}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: _muted,
-                        ),
+                        style: const TextStyle(fontSize: 11, color: _muted),
                       ),
 
                       const SizedBox(height: 5),
@@ -1268,8 +1059,7 @@ class _ExpenseDashboardViewState
                 const SizedBox(width: 8),
 
                 Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
                       _money(expense.amount),
@@ -1305,30 +1095,17 @@ class _ExpenseDashboardViewState
   // EXPENSE DASHBOARD
   // ---------------------------------------------------
 
-  Widget _expenseDashboard(
-    List<ExpenseRecord> records,
-  ) {
-    final monthRecords =
-        _service.expensesForMonth(
-      records,
-      _month,
-    );
+  Widget _expenseDashboard(List<ExpenseRecord> records) {
+    final monthRecords = _service.expensesForMonth(records, _month);
 
-    final total =
-        _service.monthlyTotal(records, _month);
+    final total = _service.monthlyTotal(records, _month);
 
-    final breakdown =
-        _service.totalsByModule(records, _month);
+    final breakdown = _service.totalsByModule(records, _month);
 
-    final confirmed =
-        _service.confirmedPaymentCount(
-      records,
-      _month,
-    );
+    final confirmed = _service.confirmedPaymentCount(records, _month);
 
     return Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _totalCard(total, confirmed),
 
@@ -1338,9 +1115,7 @@ class _ExpenseDashboardViewState
 
         const SizedBox(height: 28),
 
-        ExpenseDonutChart(
-          totals: breakdown,
-        ),
+        ExpenseDonutChart(totals: breakdown),
 
         const SizedBox(height: 34),
 
@@ -1351,10 +1126,7 @@ class _ExpenseDashboardViewState
 
         const SizedBox(height: 17),
 
-        _categoryBreakdown(
-          breakdown,
-          total,
-        ),
+        _categoryBreakdown(breakdown, total),
 
         const SizedBox(height: 34),
 
@@ -1368,8 +1140,7 @@ class _ExpenseDashboardViewState
         if (monthRecords.isEmpty)
           _emptyHistory()
         else
-          for (final expense in monthRecords)
-            _transactionItem(expense),
+          for (final expense in monthRecords) _transactionItem(expense),
       ],
     );
   }
@@ -1390,36 +1161,24 @@ class _ExpenseDashboardViewState
         surfaceTintColor: Colors.transparent,
         title: const Text(
           'Expense Manager',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 17,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
         ),
       ),
 
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            18,
-            20,
-            18,
-            45,
-          ),
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 45),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 760,
-              ),
+              constraints: const BoxConstraints(maxWidth: 760),
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _header(),
 
                   const SizedBox(height: 24),
 
-                  if (FirebaseAuth.instance.currentUser ==
-                      null)
+                  if (FirebaseAuth.instance.currentUser == null)
                     _panel(
                       child: const Text(
                         'Please sign in to view '
@@ -1447,8 +1206,7 @@ class _ExpenseDashboardViewState
                                   'Unable to load payments.',
                                   style: TextStyle(
                                     color: _ink,
-                                    fontWeight:
-                                        FontWeight.w700,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
 
@@ -1459,10 +1217,7 @@ class _ExpenseDashboardViewState
                                   'connection and Firestore '
                                   'permissions.',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: _muted,
-                                    fontSize: 12,
-                                  ),
+                                  style: TextStyle(color: _muted, fontSize: 12),
                                 ),
                               ],
                             ),
@@ -1473,17 +1228,12 @@ class _ExpenseDashboardViewState
                           return const Padding(
                             padding: EdgeInsets.all(40),
                             child: Center(
-                              child:
-                                  CircularProgressIndicator(
-                                color: _purple,
-                              ),
+                              child: CircularProgressIndicator(color: _purple),
                             ),
                           );
                         }
 
-                        return _expenseDashboard(
-                          snapshot.data!,
-                        );
+                        return _expenseDashboard(snapshot.data!);
                       },
                     ),
                 ],

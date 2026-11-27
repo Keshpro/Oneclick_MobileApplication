@@ -17,10 +17,7 @@ class DriverRatingModel {
     required this.createdAt,
   });
 
-  DriverRatingModel copyWith({
-    int? rating,
-    String? review,
-  }) {
+  DriverRatingModel copyWith({int? rating, String? review}) {
     return DriverRatingModel(
       id: id,
       bookingId: bookingId,

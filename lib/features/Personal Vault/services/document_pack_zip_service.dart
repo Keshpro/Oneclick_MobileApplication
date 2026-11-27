@@ -1,4 +1,3 @@
-
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -11,8 +10,7 @@ import 'vault_service.dart';
 
 class DocumentPackZipService {
   final VaultService _vaultService = VaultService();
-  final SupabaseStorageService _storageService =
-      SupabaseStorageService();
+  final SupabaseStorageService _storageService = SupabaseStorageService();
 
   Future<void> exportPack(DocumentPack pack) async {
     if (pack.requirements.isEmpty) {
@@ -20,9 +18,7 @@ class DocumentPackZipService {
     }
 
     if (pack.missingRequirements > 0) {
-      throw StateError(
-        'Match all document requirements before exporting.',
-      );
+      throw StateError('Match all document requirements before exporting.');
     }
 
     final records = await _vaultService.getRecords().first;
@@ -46,35 +42,23 @@ class DocumentPackZipService {
       final path = record.filePath;
 
       if (path == null || path.trim().isEmpty) {
-        throw StateError(
-          'No storage path found for: ${requirement.name}',
-        );
+        throw StateError('No storage path found for: ${requirement.name}');
       }
 
-      final bytes = await _storageService.downloadFile(
-        path: path,
-      );
+      final bytes = await _storageService.downloadFile(path: path);
 
       if (bytes.isEmpty) {
-        throw StateError(
-          'The selected file is empty: ${requirement.name}',
-        );
+        throw StateError('The selected file is empty: ${requirement.name}');
       }
 
-      final originalName =
-          record.fileName?.trim().isNotEmpty == true
-              ? record.fileName!.trim()
-              : '${requirement.name}.pdf';
+      final originalName = record.fileName?.trim().isNotEmpty == true
+          ? record.fileName!.trim()
+          : '${requirement.name}.pdf';
 
       final safeName = _safeFileName(originalName);
       final uniqueName = '${index + 1}_$safeName';
 
-      archive.add(
-        ArchiveFile.bytes(
-          uniqueName,
-          bytes,
-        ),
-      );
+      archive.add(ArchiveFile.bytes(uniqueName, bytes));
     }
 
     final zipBytes = ZipEncoder().encodeBytes(archive);

@@ -1,24 +1,20 @@
 import 'package:flutter/material.dart';
+
 import 'document_pack_export_screen.dart';
 import 'document_pack_home_screen.dart';
 import '../services/document_pack_service.dart';
 import '../models/document_pack.dart';
 
 class DocumentPackGapsScreen extends StatefulWidget {
-  const DocumentPackGapsScreen({
-    super.key,
-    required this.pack,
-  });
+  const DocumentPackGapsScreen({super.key, required this.pack});
 
   final DocumentPack pack;
 
   @override
-  State<DocumentPackGapsScreen> createState() =>
-      _DocumentPackGapsScreenState();
+  State<DocumentPackGapsScreen> createState() => _DocumentPackGapsScreenState();
 }
 
-class _DocumentPackGapsScreenState
-    extends State<DocumentPackGapsScreen> {
+class _DocumentPackGapsScreenState extends State<DocumentPackGapsScreen> {
   static const background = Color(0xFFF5F3F2);
   static const card = Color(0xFFFFFDFC);
   static const purple = Color(0xFF725763);
@@ -30,11 +26,10 @@ class _DocumentPackGapsScreenState
 
   bool _savingDraft = false;
   bool accommodationResolved = false;
-bool bankResolved = false;
+  bool bankResolved = false;
 
-bool get allResolved =>
-    widget.pack.totalRequirements > 0 &&
-    widget.pack.missingRequirements == 0;
+  bool get allResolved =>
+      widget.pack.totalRequirements > 0 && widget.pack.missingRequirements == 0;
 
   @override
   Widget build(BuildContext context) {
@@ -67,11 +62,7 @@ bool get allResolved =>
 
                   const Text(
                     'Review uncertain matches and provide any missing documents before creating the pack.',
-                    style: TextStyle(
-                      color: muted,
-                      fontSize: 12,
-                      height: 1.5,
-                    ),
+                    style: TextStyle(color: muted, fontSize: 12, height: 1.5),
                   ),
 
                   const SizedBox(height: 24),
@@ -123,9 +114,8 @@ bool get allResolved =>
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to save pack: $error')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Unable to save pack: $error')));
     } finally {
       if (mounted) setState(() => _savingDraft = false);
     }
@@ -134,10 +124,7 @@ bool get allResolved =>
   Widget _header() {
     return Row(
       children: [
-        _circle(
-          Icons.arrow_back_ios_new_rounded,
-          () => Navigator.pop(context),
-        ),
+        _circle(Icons.arrow_back_ios_new_rounded, () => Navigator.pop(context)),
         const SizedBox(width: 16),
         const Expanded(
           child: Text(
@@ -161,18 +148,12 @@ bool get allResolved =>
             children: [
               Text(
                 'Step 3 of 4',
-                style: TextStyle(
-                  color: purple,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: purple, fontWeight: FontWeight.w600),
               ),
               Spacer(),
               Text(
                 'Resolve Gaps',
-                style: TextStyle(
-                  color: ink,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(color: ink, fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -196,117 +177,102 @@ bool get allResolved =>
   }
 
   Widget _allMatchedCard() {
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(24),
-    decoration: BoxDecoration(
-      color: card,
-      borderRadius: BorderRadius.circular(30),
-      border: const Border(
-        left: BorderSide(color: green, width: 6),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(30),
+        border: const Border(left: BorderSide(color: green, width: 6)),
+        boxShadow: _shadow(),
       ),
-      boxShadow: _shadow(),
-    ),
-    child: const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(Icons.check_circle_outline, color: green, size: 32),
-        SizedBox(height: 14),
-        Text(
-          'All Requirements Matched',
-          style: TextStyle(
-            color: ink,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.check_circle_outline, color: green, size: 32),
+          SizedBox(height: 14),
+          Text(
+            'All Requirements Matched',
+            style: TextStyle(
+              color: ink,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        SizedBox(height: 8),
-        Text(
-          'Every checklist requirement has a confirmed Vault record. '
-          'You can continue to review your document pack.',
-          style: TextStyle(
-            color: muted,
-            fontSize: 12,
-            height: 1.5,
+          SizedBox(height: 8),
+          Text(
+            'Every checklist requirement has a confirmed Vault record. '
+            'You can continue to review your document pack.',
+            style: TextStyle(color: muted, fontSize: 12, height: 1.5),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
-Widget _actualGapCard(String requirementName) {
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(22),
-    decoration: BoxDecoration(
-      color: card,
-      borderRadius: BorderRadius.circular(30),
-      border: const Border(
-        left: BorderSide(color: orange, width: 6),
+  Widget _actualGapCard(String requirementName) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(30),
+        border: const Border(left: BorderSide(color: orange, width: 6)),
+        boxShadow: _shadow(),
       ),
-      boxShadow: _shadow(),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.description_outlined, color: ink),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                requirementName,
-                style: const TextStyle(
-                  color: ink,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.description_outlined, color: ink),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  requirementName,
+                  style: const TextStyle(
+                    color: ink,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-            _gapStatus(),
-          ],
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'No Vault document has been confirmed for this requirement.',
-          style: TextStyle(
-            color: muted,
-            fontSize: 12,
-            height: 1.5,
+              _gapStatus(),
+            ],
           ),
-        ),
-        const SizedBox(height: 14),
-        TextButton.icon(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded),
-          label: const Text('Return to Matches'),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _gapStatus() {
-  return Container(
-    padding: const EdgeInsets.symmetric(
-      horizontal: 10,
-      vertical: 7,
-    ),
-    decoration: BoxDecoration(
-      color: const Color(0xFFF7F3F4),
-      borderRadius: BorderRadius.circular(18),
-    ),
-    child: const Text(
-      'Not Matched',
-      style: TextStyle(
-        color: orange,
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
+          const SizedBox(height: 16),
+          const Text(
+            'No Vault document has been confirmed for this requirement.',
+            style: TextStyle(color: muted, fontSize: 12, height: 1.5),
+          ),
+          const SizedBox(height: 14),
+          TextButton.icon(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_rounded),
+            label: const Text('Return to Matches'),
+          ),
+        ],
       ),
-    ),
-  );
-}
+    );
+  }
+
+  Widget _gapStatus() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F3F4),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: const Text(
+        'Not Matched',
+        style: TextStyle(
+          color: orange,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
 
   Widget _accommodationGap() {
     final resolved = accommodationResolved;
@@ -317,10 +283,7 @@ Widget _gapStatus() {
         color: card,
         borderRadius: BorderRadius.circular(30),
         border: Border(
-          left: BorderSide(
-            color: resolved ? green : orange,
-            width: 6,
-          ),
+          left: BorderSide(color: resolved ? green : orange, width: 6),
         ),
         boxShadow: _shadow(),
       ),
@@ -329,10 +292,7 @@ Widget _gapStatus() {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.apartment_outlined,
-                color: ink,
-              ),
+              const Icon(Icons.apartment_outlined, color: ink),
               const SizedBox(width: 12),
               const Expanded(
                 child: Text(
@@ -370,19 +330,12 @@ Widget _gapStatus() {
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: orange,
-                  ),
+                  Icon(Icons.warning_amber_rounded, color: orange),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'The lease renewal date may not cover the requested visa return date.',
-                      style: TextStyle(
-                        color: muted,
-                        fontSize: 13,
-                        height: 1.5,
-                      ),
+                      style: TextStyle(color: muted, fontSize: 13, height: 1.5),
                     ),
                   ),
                 ],
@@ -395,28 +348,17 @@ Widget _gapStatus() {
             Row(
               children: [
                 Expanded(
-                  child: _button(
-                    Icons.swap_horiz,
-                    'Choose Different',
-                    () {
-                      _message(
-                        'This will display existing Vault records.',
-                      );
-                    },
-                  ),
+                  child: _button(Icons.swap_horiz, 'Choose Different', () {
+                    _message('This will display existing Vault records.');
+                  }),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _button(
-                    Icons.check_circle_outline,
-                    'Confirm',
-                    () {
-                      setState(() {
-                        accommodationResolved = true;
-                      });
-                    },
-                    color: purple,
-                  ),
+                  child: _button(Icons.check_circle_outline, 'Confirm', () {
+                    setState(() {
+                      accommodationResolved = true;
+                    });
+                  }, color: purple),
                 ),
               ],
             ),
@@ -434,10 +376,7 @@ Widget _gapStatus() {
         color: card,
         borderRadius: BorderRadius.circular(30),
         border: Border(
-          left: BorderSide(
-            color: resolved ? green : red,
-            width: 6,
-          ),
+          left: BorderSide(color: resolved ? green : red, width: 6),
         ),
         boxShadow: _shadow(),
       ),
@@ -446,10 +385,7 @@ Widget _gapStatus() {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.account_balance_outlined,
-                color: ink,
-              ),
+              const Icon(Icons.account_balance_outlined, color: ink),
               const SizedBox(width: 12),
               const Expanded(
                 child: Text(
@@ -480,19 +416,12 @@ Widget _gapStatus() {
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.error_outline,
-                    color: red,
-                  ),
+                  Icon(Icons.error_outline, color: red),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'No Vault document currently satisfies the required 90-day statement period.',
-                      style: TextStyle(
-                        color: muted,
-                        fontSize: 13,
-                        height: 1.5,
-                      ),
+                      style: TextStyle(color: muted, fontSize: 13, height: 1.5),
                     ),
                   ),
                 ],
@@ -500,46 +429,32 @@ Widget _gapStatus() {
             ),
 
           if (resolved)
-            _document(
-              'Bank_Statement_Jan_2025.pdf',
-              'Added to Vault',
-            ),
+            _document('Bank_Statement_Jan_2025.pdf', 'Added to Vault'),
 
           const SizedBox(height: 18),
 
           if (!resolved) ...[
-            _wideButton(
-              Icons.search,
-              'Search Vault Again',
-              () {
-                _message(
-                  'This will search the user\'s current Vault records.',
-                );
-              },
-            ),
+            _wideButton(Icons.search, 'Search Vault Again', () {
+              _message('This will search the user\'s current Vault records.');
+            }),
 
             const SizedBox(height: 12),
 
-            _wideButton(
-              Icons.add_rounded,
-              'Add Missing Document',
-              () {
-                // Demo behaviour.
-                //
-                // Later this button will open AddRecordScreen.
-                // When that record is saved, return here and
-                // refresh the shared Vault data source.
+            _wideButton(Icons.add_rounded, 'Add Missing Document', () {
+              // Demo behaviour.
+              //
+              // Later this button will open AddRecordScreen.
+              // When that record is saved, return here and
+              // refresh the shared Vault data source.
 
-                setState(() {
-                  bankResolved = true;
-                });
+              setState(() {
+                bankResolved = true;
+              });
 
-                _message(
-                  'Demo bank statement added. Later this will use Add Record.',
-                );
-              },
-              color: purple,
-            ),
+              _message(
+                'Demo bank statement added. Later this will use Add Record.',
+              );
+            }, color: purple),
           ],
         ],
       ),
@@ -547,67 +462,64 @@ Widget _gapStatus() {
   }
 
   Widget _readiness() {
-  final total = widget.pack.totalRequirements;
-  final matched = widget.pack.matchedRequirements;
-  final remaining = widget.pack.missingRequirements;
+    final total = widget.pack.totalRequirements;
+    final matched = widget.pack.matchedRequirements;
+    final remaining = widget.pack.missingRequirements;
 
-  return _surface(
-    child: Row(
-      children: [
-        SizedBox(
-          width: 72,
-          height: 72,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              CircularProgressIndicator(
-                value: total == 0 ? 0 : matched / total,
-                strokeWidth: 6,
-                color: allResolved ? green : purple,
-                backgroundColor: const Color(0xFFE5DADF),
-              ),
-              Text(
-                '$matched/$total',
-                style: const TextStyle(
-                  color: ink,
-                  fontWeight: FontWeight.w600,
+    return _surface(
+      child: Row(
+        children: [
+          SizedBox(
+            width: 72,
+            height: 72,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: total == 0 ? 0 : matched / total,
+                  strokeWidth: 6,
+                  color: allResolved ? green : purple,
+                  backgroundColor: const Color(0xFFE5DADF),
                 ),
-              ),
-            ],
+                Text(
+                  '$matched/$total',
+                  style: const TextStyle(
+                    color: ink,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 18),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                allResolved
-                    ? 'All Requirements Matched'
-                    : '$matched of $total Requirements Matched',
-                style: const TextStyle(
-                  color: ink,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  allResolved
+                      ? 'All Requirements Matched'
+                      : '$matched of $total Requirements Matched',
+                  style: const TextStyle(
+                    color: ink,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                allResolved
-                    ? 'All requirements have confirmed Vault records.'
-                    : '$remaining requirement(s) still need a confirmed document.',
-                style: const TextStyle(
-                  color: muted,
-                  fontSize: 12,
+                const SizedBox(height: 5),
+                Text(
+                  allResolved
+                      ? 'All requirements have confirmed Vault records.'
+                      : '$remaining requirement(s) still need a confirmed document.',
+                  style: const TextStyle(color: muted, fontSize: 12),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
   Widget _continue() {
     return Opacity(
@@ -618,9 +530,7 @@ Widget _gapStatus() {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => DocumentPackExportScreen(
-                      pack: widget.pack,
-                    ),
+                    builder: (_) => DocumentPackExportScreen(pack: widget.pack),
                   ),
                 );
               }
@@ -646,10 +556,7 @@ Widget _gapStatus() {
                 ),
               ),
               SizedBox(width: 9),
-              Icon(
-                Icons.arrow_forward_rounded,
-                color: purple,
-              ),
+              Icon(Icons.arrow_forward_rounded, color: purple),
             ],
           ),
         ),
@@ -657,10 +564,7 @@ Widget _gapStatus() {
     );
   }
 
-  Widget _document(
-    String title,
-    String subtitle,
-  ) {
+  Widget _document(String title, String subtitle) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -670,10 +574,7 @@ Widget _gapStatus() {
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.description_outlined,
-            color: purple,
-          ),
+          const Icon(Icons.description_outlined, color: purple),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -689,10 +590,7 @@ Widget _gapStatus() {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    color: muted,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: muted, fontSize: 12),
                 ),
               ],
             ),
@@ -712,10 +610,7 @@ Widget _gapStatus() {
       onTap: onTap,
       borderRadius: BorderRadius.circular(25),
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          vertical: 13,
-          horizontal: 12,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 12),
         decoration: BoxDecoration(
           color: const Color(0xFFF7F3F4),
           borderRadius: BorderRadius.circular(25),
@@ -727,13 +622,7 @@ Widget _gapStatus() {
             Icon(icon, color: color, size: 18),
             const SizedBox(width: 7),
             Flexible(
-              child: Text(
-                text,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                ),
-              ),
+              child: Text(text, style: TextStyle(color: color, fontSize: 12)),
             ),
           ],
         ),
@@ -765,10 +654,7 @@ Widget _gapStatus() {
             const SizedBox(width: 8),
             Text(
               text,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(color: color, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -778,21 +664,12 @@ Widget _gapStatus() {
 
   Widget _status(String text, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 11,
-        vertical: 7,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
         color: const Color(0xFFECE3E8),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-        ),
-      ),
+      child: Text(text, style: TextStyle(color: color, fontSize: 11)),
     );
   }
 
@@ -809,10 +686,7 @@ Widget _gapStatus() {
     );
   }
 
-  Widget _circle(
-    IconData icon,
-    VoidCallback onTap,
-  ) {
+  Widget _circle(IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(50),
@@ -829,39 +703,19 @@ Widget _gapStatus() {
     );
   }
 
-  Widget _completedStep(
-    String number,
-    String label,
-  ) {
-    return Expanded(
-      child: _step(number, label, true, false),
-    );
+  Widget _completedStep(String number, String label) {
+    return Expanded(child: _step(number, label, true, false));
   }
 
-  Widget _activeStep(
-    String number,
-    String label,
-  ) {
-    return Expanded(
-      child: _step(number, label, true, true),
-    );
+  Widget _activeStep(String number, String label) {
+    return Expanded(child: _step(number, label, true, true));
   }
 
-  Widget _inactiveStep(
-    String number,
-    String label,
-  ) {
-    return Expanded(
-      child: _step(number, label, false, false),
-    );
+  Widget _inactiveStep(String number, String label) {
+    return Expanded(child: _step(number, label, false, false));
   }
 
-  Widget _step(
-    String number,
-    String label,
-    bool completed,
-    bool active,
-  ) {
+  Widget _step(String number, String label, bool completed, bool active) {
     return Column(
       children: [
         Container(
@@ -870,9 +724,7 @@ Widget _gapStatus() {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: active
-                ? purple
-                : const Color(0xFFECE3E8),
+            color: active ? purple : const Color(0xFFECE3E8),
             boxShadow: _shadow(),
           ),
           child: Text(
@@ -881,8 +733,8 @@ Widget _gapStatus() {
               color: active
                   ? Colors.white
                   : completed
-                      ? purple
-                      : muted,
+                  ? purple
+                  : muted,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -909,17 +761,11 @@ Widget _gapStatus() {
 
   List<BoxShadow> _shadow() {
     return const [
-      BoxShadow(
-        color: Color(0x16000000),
-        offset: Offset(0, 4),
-        blurRadius: 14,
-      ),
+      BoxShadow(color: Color(0x16000000), offset: Offset(0, 4), blurRadius: 14),
     ];
   }
 
   void _message(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(text)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 }

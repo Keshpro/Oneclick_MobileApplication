@@ -1,4 +1,3 @@
-
 class DocumentRequirement {
   final String id;
   final String name;
@@ -10,8 +9,7 @@ class DocumentRequirement {
     this.vaultRecordId,
   });
 
-  bool get isMatched =>
-      vaultRecordId != null && vaultRecordId!.isNotEmpty;
+  bool get isMatched => vaultRecordId != null && vaultRecordId!.isNotEmpty;
 
   DocumentRequirement copyWith({
     String? name,
@@ -21,23 +19,15 @@ class DocumentRequirement {
     return DocumentRequirement(
       id: id,
       name: name ?? this.name,
-      vaultRecordId: clearMatch
-          ? null
-          : vaultRecordId ?? this.vaultRecordId,
+      vaultRecordId: clearMatch ? null : vaultRecordId ?? this.vaultRecordId,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'vaultRecordId': vaultRecordId,
-    };
+    return {'id': id, 'name': name, 'vaultRecordId': vaultRecordId};
   }
 
-  factory DocumentRequirement.fromMap(
-    Map<String, dynamic> map,
-  ) {
+  factory DocumentRequirement.fromMap(Map<String, dynamic> map) {
     return DocumentRequirement(
       id: map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? '',
@@ -63,8 +53,7 @@ class DocumentPack {
   int get matchedRequirements =>
       requirements.where((item) => item.isMatched).length;
 
-  int get missingRequirements =>
-      totalRequirements - matchedRequirements;
+  int get missingRequirements => totalRequirements - matchedRequirements;
 
   double get completionPercentage {
     if (requirements.isEmpty) return 0;
@@ -100,13 +89,13 @@ class DocumentPack {
       name: map['name']?.toString() ?? '',
       requirements: rawRequirements is List
           ? rawRequirements
-              .whereType<Map>()
-              .map(
-                (item) => DocumentRequirement.fromMap(
-                  Map<String, dynamic>.from(item),
-                ),
-              )
-              .toList()
+                .whereType<Map>()
+                .map(
+                  (item) => DocumentRequirement.fromMap(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList()
           : [],
     );
   }

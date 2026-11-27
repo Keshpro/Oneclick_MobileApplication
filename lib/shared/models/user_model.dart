@@ -1,5 +1,5 @@
-
 enum UserRole { admin, doctor, patient, driver, passenger, customer, user }
+
 enum AccountStatus { pending, approved, rejected }
 
 class UserModel {
@@ -17,5 +17,3 @@ class UserModel {
     required this.status,
   });
 }
-
-

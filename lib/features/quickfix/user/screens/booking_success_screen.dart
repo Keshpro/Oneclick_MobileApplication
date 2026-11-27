@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import 'my_bookings_screen.dart';
@@ -33,18 +32,12 @@ class CheckoutScreen extends StatelessWidget {
   final PaymentRequest paymentRequest;
   final Future<void> Function(PaymentRequest request)? onPay;
 
-  const CheckoutScreen({
-    super.key,
-    required this.paymentRequest,
-    this.onPay,
-  });
+  const CheckoutScreen({super.key, required this.paymentRequest, this.onPay});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Checkout'),
-      ),
+      appBar: AppBar(title: const Text('Checkout')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -53,10 +46,7 @@ class CheckoutScreen extends StatelessWidget {
             children: [
               const Text(
                 'Payment',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 16),
               Text('Order ID: ${paymentRequest.orderId}'),
@@ -128,10 +118,8 @@ class BookingSuccessScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => CheckoutScreen(
-          paymentRequest: paymentRequest!,
-          onPay: onPay,
-        ),
+        builder: (_) =>
+            CheckoutScreen(paymentRequest: paymentRequest!, onPay: onPay),
       ),
     );
   }
@@ -139,17 +127,13 @@ class BookingSuccessScreen extends StatelessWidget {
   void _openMyBookings(BuildContext context) {
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(
-        builder: (_) => const MyBookingsScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const MyBookingsScreen()),
       (route) => route.isFirst,
     );
   }
 
   void _backToHome(BuildContext context) {
-    Navigator.of(context).popUntil(
-      (route) => route.isFirst,
-    );
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   @override
@@ -176,10 +160,7 @@ class BookingSuccessScreen extends StatelessWidget {
           IconButton(
             tooltip: 'Home',
             onPressed: () => _backToHome(context),
-            icon: const Icon(
-              Icons.close_rounded,
-              color: _textDark,
-            ),
+            icon: const Icon(Icons.close_rounded, color: _textDark),
           ),
         ],
       ),
@@ -216,10 +197,10 @@ class BookingSuccessScreen extends StatelessWidget {
                       Text(
                         isAccepted
                             ? '$_workerName has accepted your '
-                                'service request.'
+                                  'service request.'
                             : 'Your service request has been sent '
-                                'to $_workerName. You will be '
-                                'notified once they accept your job.',
+                                  'to $_workerName. You will be '
+                                  'notified once they accept your job.',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 14,
@@ -256,9 +237,7 @@ class BookingSuccessScreen extends StatelessWidget {
   }
 
   Widget _buildStatusIcon(bool accepted) {
-    final iconColor = accepted
-        ? const Color(0xFF16A34A)
-        : _primary;
+    final iconColor = accepted ? const Color(0xFF16A34A) : _primary;
 
     final circleColor = accepted
         ? const Color(0xFFDCFCE7)
@@ -269,15 +248,10 @@ class BookingSuccessScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: circleColor,
         shape: BoxShape.circle,
-        border: Border.all(
-          color: iconColor.withValues(alpha: .22),
-          width: 2,
-        ),
+        border: Border.all(color: iconColor.withValues(alpha: .22), width: 2),
       ),
       child: Icon(
-        accepted
-            ? Icons.check_circle_rounded
-            : Icons.mark_email_read_rounded,
+        accepted ? Icons.check_circle_rounded : Icons.mark_email_read_rounded,
         color: iconColor,
         size: 76,
       ),
@@ -291,9 +265,7 @@ class BookingSuccessScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFFE2E8F0),
-        ),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         children: [
@@ -315,15 +287,11 @@ class BookingSuccessScreen extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Quick Fix Service',
-                      style: TextStyle(
-                        color: _textMuted,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: _textMuted, fontSize: 12),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -351,10 +319,7 @@ class BookingSuccessScreen extends StatelessWidget {
               const Expanded(
                 child: Text(
                   'Booking Status',
-                  style: TextStyle(
-                    color: _textMuted,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: _textMuted, fontSize: 13),
                 ),
               ),
               Container(
@@ -385,16 +350,12 @@ class BookingSuccessScreen extends StatelessWidget {
           if (paymentRequest != null) ...[
             const SizedBox(height: 16),
             Row(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Expanded(
                   child: Text(
                     'Booking Reference',
-                    style: TextStyle(
-                      color: _textMuted,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: _textMuted, fontSize: 13),
                   ),
                 ),
                 Expanded(
@@ -423,9 +384,7 @@ class BookingSuccessScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: _primary.withValues(alpha: .07),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _primary.withValues(alpha: .14),
-        ),
+        border: Border.all(color: _primary.withValues(alpha: .14)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,10 +401,10 @@ class BookingSuccessScreen extends StatelessWidget {
             child: Text(
               accepted
                   ? 'Your service request has been accepted. '
-                      'Check the payment section below if payment '
-                      'is required.'
+                        'Check the payment section below if payment '
+                        'is required.'
                   : 'You can track your booking from My Bookings. '
-                      'Payment is not confirmed at this stage.',
+                        'Payment is not confirmed at this stage.',
               style: const TextStyle(
                 color: _primaryDark,
                 fontSize: 12,
@@ -467,19 +426,14 @@ class BookingSuccessScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFFE2E8F0),
-        ),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Row(
             children: [
-              Icon(
-                Icons.account_balance_wallet_outlined,
-                color: _primary,
-              ),
+              Icon(Icons.account_balance_wallet_outlined, color: _primary),
               SizedBox(width: 10),
               Text(
                 'Payment Summary',
@@ -499,10 +453,7 @@ class BookingSuccessScreen extends StatelessWidget {
               const Expanded(
                 child: Text(
                   'Quoted Amount',
-                  style: TextStyle(
-                    color: _textMuted,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: _textMuted, fontSize: 13),
                 ),
               ),
               Text(
@@ -522,7 +473,7 @@ class BookingSuccessScreen extends StatelessWidget {
             bookingAccepted
                 ? 'You can continue to the OneClick checkout.'
                 : 'Payment becomes available after the '
-                    'booking is accepted.',
+                      'booking is accepted.',
             style: const TextStyle(
               color: _textMuted,
               fontSize: 12,
@@ -547,10 +498,7 @@ class BookingSuccessScreen extends StatelessWidget {
               icon: const Icon(Icons.payment_rounded),
               label: const Text(
                 'Continue to Payment',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _primary,
@@ -570,16 +518,10 @@ class BookingSuccessScreen extends StatelessWidget {
           height: 52,
           child: ElevatedButton.icon(
             onPressed: () => _openMyBookings(context),
-            icon: const Icon(
-              Icons.calendar_month_rounded,
-              size: 20,
-            ),
+            icon: const Icon(Icons.calendar_month_rounded, size: 20),
             label: const Text(
               'View My Bookings',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: _textDark,
@@ -601,19 +543,14 @@ class BookingSuccessScreen extends StatelessWidget {
             onPressed: () => _backToHome(context),
             style: OutlinedButton.styleFrom(
               foregroundColor: _textDark,
-              side: const BorderSide(
-                color: Color(0xFFE2E8F0),
-              ),
+              side: const BorderSide(color: Color(0xFFE2E8F0)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
             child: const Text(
               'Back to Home',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
           ),
         ),

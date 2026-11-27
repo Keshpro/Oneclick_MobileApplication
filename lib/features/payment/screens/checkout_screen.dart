@@ -7,10 +7,7 @@ import '../services/payment_service.dart';
 class CheckoutScreen extends StatefulWidget {
   final PaymentRequest request;
 
-  const CheckoutScreen({
-    super.key,
-    required this.request,
-  });
+  const CheckoutScreen({super.key, required this.request});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -109,7 +106,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               error is StateError
                   ? error.message
                   : "Payment didn't go through. Check your connection and "
-                      'try again.',
+                        'try again.',
             ),
           ),
         );
@@ -359,7 +356,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Color.fromARGB(255, 50, 88, 141), fontSize: 13)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color.fromARGB(255, 50, 88, 141),
+              fontSize: 13,
+            ),
+          ),
           const SizedBox(width: 16),
           Flexible(child: value),
         ],
@@ -422,7 +425,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     isCard
                         ? 'Your booking is confirmed.'
                         : 'Your booking is saved. Pay in person to complete '
-                            'it.',
+                              'it.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: muted,
@@ -498,17 +501,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // ---------------------------------------------------------------------------
 
   ButtonStyle _primaryStyle() => ElevatedButton.styleFrom(
-        elevation: 0,
-        minimumSize: const Size.fromHeight(54),
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
-        disabledBackgroundColor: const Color(0xFFB3CECA),
-        disabledForegroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-      );
+    elevation: 0,
+    minimumSize: const Size.fromHeight(54),
+    backgroundColor: primary,
+    foregroundColor: Colors.white,
+    disabledBackgroundColor: const Color(0xFFB3CECA),
+    disabledForegroundColor: Colors.white,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+  );
 
   Widget _summaryCard() {
     return Container(

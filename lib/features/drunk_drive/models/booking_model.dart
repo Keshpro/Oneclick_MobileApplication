@@ -132,7 +132,8 @@ class BookingModel {
       'durationMinutes': durationMinutes,
       'status': status.name,
       'createdAt': Timestamp.fromDate(createdAt),
-      if (searchStartedAt != null) 'searchStartedAt': Timestamp.fromDate(searchStartedAt!),
+      if (searchStartedAt != null)
+        'searchStartedAt': Timestamp.fromDate(searchStartedAt!),
       if (cancellationReason != null) 'cancellationReason': cancellationReason,
       'driverId': driverId,
       'tripPin': tripPin,

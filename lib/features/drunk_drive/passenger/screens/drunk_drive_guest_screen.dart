@@ -41,11 +41,20 @@ class DrunkDriveGuestScreen extends StatelessWidget {
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.shield_rounded, color: Color(0xFFB8F5E7)),
+                            Icon(
+                              Icons.shield_rounded,
+                              color: Color(0xFFB8F5E7),
+                            ),
                             SizedBox(width: 8),
-                            Text('ONECLICK  •  DRUNK & DRIVE',
-                                style: TextStyle(color: Colors.white, fontSize: 12,
-                                    letterSpacing: 1.2, fontWeight: FontWeight.w700)),
+                            Text(
+                              'ONECLICK  •  DRUNK & DRIVE',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                letterSpacing: 1.2,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 30),
@@ -57,25 +66,44 @@ class DrunkDriveGuestScreen extends StatelessWidget {
                               color: Colors.white.withValues(alpha: 0.14),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.directions_car_filled_rounded,
-                                color: Colors.white, size: 65),
+                            child: const Icon(
+                              Icons.directions_car_filled_rounded,
+                              color: Colors.white,
+                              size: 65,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 26),
-                        const Text('Your way home,\nmade safer.',
-                            style: TextStyle(color: Colors.white,
-                                fontSize: 30, fontWeight: FontWeight.w900, height: 1.13)),
+                        const Text(
+                          'Your way home,\nmade safer.',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w900,
+                            height: 1.13,
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         const Text(
                           'Need someone to drive your car? Book an approved driver and travel home in your own vehicle.',
-                          style: TextStyle(color: Color(0xFFE1F7F5), fontSize: 15, height: 1.5),
+                          style: TextStyle(
+                            color: Color(0xFFE1F7F5),
+                            fontSize: 15,
+                            height: 1.5,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 26),
-                  const Text('How it works',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: _ink)),
+                  const Text(
+                    'How it works',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: _ink,
+                    ),
+                  ),
                   const SizedBox(height: 15),
                   const _GuestFeature(
                     icon: Icons.location_on_outlined,
@@ -92,43 +120,68 @@ class DrunkDriveGuestScreen extends StatelessWidget {
                   const _GuestFeature(
                     icon: Icons.route_outlined,
                     title: 'Manage your trip',
-                    description: 'View trip progress and recorded payment details.',
+                    description:
+                        'View trip progress and recorded payment details.',
                   ),
                   const SizedBox(height: 28),
-                  const Text('Ready to get started?',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: _ink)),
+                  const Text(
+                    'Ready to get started?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                      color: _ink,
+                    ),
+                  ),
                   const SizedBox(height: 7),
-                  const Text('Log in to request a driver, or create an account to join OneClick.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: Color(0xFF607880))),
+                  const Text(
+                    'Log in to request a driver, or create an account to join OneClick.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Color(0xFF607880)),
+                  ),
                   const SizedBox(height: 20),
                   SizedBox(
                     height: 52,
                     child: FilledButton.icon(
-                      onPressed: () => Navigator.of(context).pushNamed('/login'),
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed('/login'),
                       style: FilledButton.styleFrom(
                         backgroundColor: _teal,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                       icon: const Icon(Icons.login_rounded),
-                      label: const Text('Log In',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                      label: const Text(
+                        'Log In',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
                   SizedBox(
                     height: 52,
                     child: OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).pushNamed('/register'),
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed('/register'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: _teal,
                         side: const BorderSide(color: _teal),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                       icon: const Icon(Icons.person_add_alt_1_rounded),
-                      label: const Text('Create Account',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                      label: const Text(
+                        'Create Account',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 25),
@@ -144,7 +197,11 @@ class DrunkDriveGuestScreen extends StatelessWidget {
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.local_taxi_rounded, color: _teal, size: 29),
+                            Icon(
+                              Icons.local_taxi_rounded,
+                              color: _teal,
+                              size: 29,
+                            ),
                             SizedBox(width: 10),
                             Expanded(
                               child: Text(
@@ -173,7 +230,8 @@ class DrunkDriveGuestScreen extends StatelessWidget {
                         SizedBox(
                           height: 48,
                           child: OutlinedButton.icon(
-                            onPressed: () => Navigator.of(context).pushNamed('/login'),
+                            onPressed: () =>
+                                Navigator.of(context).pushNamed('/login'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: _teal,
                               side: const BorderSide(color: _teal, width: 1.4),
@@ -191,15 +249,20 @@ class DrunkDriveGuestScreen extends StatelessWidget {
                         const SizedBox(height: 10),
                         const Text(
                           'After login: Drunk & Drive → Drunk & Drive Driver Registration',
-                          style: TextStyle(fontSize: 12, color: Color(0xFF456A72)),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF456A72),
+                          ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 15),
-                  const Text('Drive responsibly. Never drive while impaired.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, color: Color(0xFF607880))),
+                  const Text(
+                    'Drive responsibly. Never drive while impaired.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: Color(0xFF607880)),
+                  ),
                 ],
               ),
             ),
@@ -246,13 +309,23 @@ class _GuestFeature extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800,
-                        color: DrunkDriveGuestScreen._ink)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: DrunkDriveGuestScreen._ink,
+                  ),
+                ),
                 const SizedBox(height: 3),
-                Text(description,
-                    style: const TextStyle(fontSize: 12.5,
-                        height: 1.4, color: Color(0xFF607880))),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    height: 1.4,
+                    color: Color(0xFF607880),
+                  ),
+                ),
               ],
             ),
           ),

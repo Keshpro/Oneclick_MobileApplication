@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 class DocumentRequirementsEditor extends StatefulWidget {
@@ -18,12 +17,11 @@ class DocumentRequirementsEditor extends StatefulWidget {
 
 class _DocumentRequirementsEditorState
     extends State<DocumentRequirementsEditor> {
-  final TextEditingController _inputController =
-      TextEditingController();
+  final TextEditingController _inputController = TextEditingController();
 
   static const Color purple = Color(0xFF725763);
-static const Color ink = Color(0xFF302B31);
-static const Color muted = Color(0xFF776F77);
+  static const Color ink = Color(0xFF302B31);
+  static const Color muted = Color(0xFF776F77);
 
   @override
   void dispose() {
@@ -38,9 +36,7 @@ static const Color muted = Color(0xFF776F77);
         .where((name) => name.isNotEmpty);
 
     final updated = List<String>.from(widget.requirements);
-    final existing = updated
-        .map((name) => name.toLowerCase())
-        .toSet();
+    final existing = updated.map((name) => name.toLowerCase()).toSet();
 
     for (final name in lines) {
       if (existing.add(name.toLowerCase())) {
@@ -50,9 +46,7 @@ static const Color muted = Color(0xFF776F77);
 
     if (updated.length == widget.requirements.length) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Enter at least one new requirement.'),
-        ),
+        const SnackBar(content: Text('Enter at least one new requirement.')),
       );
       return;
     }
@@ -64,14 +58,8 @@ static const Color muted = Color(0xFF776F77);
   String _cleanName(String value) {
     return value
         .trim()
-        .replaceFirst(
-          RegExp(r'^[-*\u2022]\s*'),
-          '',
-        )
-        .replaceFirst(
-          RegExp(r'^\d+[\.)]\s*'),
-          '',
-        )
+        .replaceFirst(RegExp(r'^[-*\u2022]\s*'), '')
+        .replaceFirst(RegExp(r'^\d+[\.)]\s*'), '')
         .trim();
   }
 
@@ -82,9 +70,7 @@ static const Color muted = Color(0xFF776F77);
   }
 
   Future<void> _editRequirement(int index) async {
-    final controller = TextEditingController(
-      text: widget.requirements[index],
-    );
+    final controller = TextEditingController(text: widget.requirements[index]);
 
     final result = await showDialog<String>(
       context: context,
@@ -106,10 +92,7 @@ static const Color muted = Color(0xFF776F77);
           ),
           FilledButton(
             onPressed: () {
-              Navigator.pop(
-                dialogContext,
-                _cleanName(controller.text),
-              );
+              Navigator.pop(dialogContext, _cleanName(controller.text));
             },
             child: const Text('Save'),
           ),
@@ -121,20 +104,15 @@ static const Color muted = Color(0xFF776F77);
 
     if (!mounted || result == null || result.isEmpty) return;
 
-    final duplicate = widget.requirements
-        .asMap()
-        .entries
-        .any(
-          (entry) =>
-              entry.key != index &&
-              entry.value.toLowerCase() == result.toLowerCase(),
-        );
+    final duplicate = widget.requirements.asMap().entries.any(
+      (entry) =>
+          entry.key != index &&
+          entry.value.toLowerCase() == result.toLowerCase(),
+    );
 
     if (duplicate) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('This requirement already exists.'),
-        ),
+        const SnackBar(content: Text('This requirement already exists.')),
       );
       return;
     }
@@ -159,21 +137,14 @@ static const Color muted = Color(0xFF776F77);
             minLines: 4,
             maxLines: 8,
             maxLength: 4000,
-            style: const TextStyle(
-              fontSize: 13,
-              color: ink,
-              height: 1.6,
-            ),
+            style: const TextStyle(fontSize: 13, color: ink, height: 1.6),
             decoration: const InputDecoration(
               hintText:
                   'Enter one document per line:\n'
                   'Valid Passport\n'
                   'Bank Statement\n'
                   'Employment Letter',
-              hintStyle: TextStyle(
-                color: muted,
-                height: 1.6,
-              ),
+              hintStyle: TextStyle(color: muted, height: 1.6),
               border: InputBorder.none,
               contentPadding: EdgeInsets.all(18),
             ),
@@ -237,17 +208,11 @@ static const Color muted = Color(0xFF776F77);
               'No requirements added yet.\n'
               'Enter document names above to build your checklist.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: muted,
-                fontSize: 12,
-                height: 1.6,
-              ),
+              style: TextStyle(color: muted, fontSize: 12, height: 1.6),
             ),
           )
         else
-          for (var index = 0;
-              index < widget.requirements.length;
-              index++)
+          for (var index = 0; index < widget.requirements.length; index++)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Container(
@@ -258,9 +223,7 @@ static const Color muted = Color(0xFF776F77);
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(17),
-                  border: Border.all(
-                    color: const Color(0xFFECE3E8),
-                  ),
+                  border: Border.all(color: const Color(0xFFECE3E8)),
                 ),
                 child: Row(
                   children: [

@@ -42,7 +42,8 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
   StreamSubscription<DriverApplicationModel?>? _driverSubscription;
   bool _hasDriverApplication = false;
   bool _isApprovedDriver = false;
-  bool get _canSelectDriverMode => _hasDriverApplication || widget.preferDriverMode;
+  bool get _canSelectDriverMode =>
+      _hasDriverApplication || widget.preferDriverMode;
   bool _tripsLoaded = false;
   bool _isCheckingDriverRole = true;
   bool _driverRoleCheckFailed = false;
@@ -71,9 +72,11 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
       },
       onError: (Object error) {
         if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Unable to load trips. Please reopen this screen.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to load trips. Please reopen this screen.'),
+          ),
+        );
       },
     );
     _listenToDriverApplication();
@@ -88,8 +91,10 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
     _driverSubscription = DriverFirestoreService().watchMyApplication().listen(
       (application) {
         if (!mounted) return;
-        debugPrint('[DD_ROUTE_V3] module application=${application?.status.name} '
-            'passengerSelected=$_passengerModeSelected');
+        debugPrint(
+          '[DD_ROUTE_V3] module application=${application?.status.name} '
+          'passengerSelected=$_passengerModeSelected',
+        );
         setState(() {
           _hasDriverApplication = application != null;
           _isApprovedDriver =
@@ -120,9 +125,7 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
 
   Future<void> _openDriverRegistration() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const DriverApplicationScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const DriverApplicationScreen()),
     );
   }
 
@@ -157,7 +160,8 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
               ? IconButton(
                   tooltip: 'OneClick Home',
                   icon: const Icon(Icons.home_outlined),
-                  onPressed: () => Navigator.of(context).pushReplacementNamed('/home'),
+                  onPressed: () =>
+                      Navigator.of(context).pushReplacementNamed('/home'),
                 )
               : null,
           title: const Text('Drunk & Drive'),
@@ -220,7 +224,8 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
             ? IconButton(
                 tooltip: 'OneClick Home',
                 icon: const Icon(Icons.home_outlined),
-                onPressed: () => Navigator.of(context).pushReplacementNamed('/home'),
+                onPressed: () =>
+                    Navigator.of(context).pushReplacementNamed('/home'),
               )
             : null,
         title: const Text(
@@ -282,9 +287,13 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
                   ),
                   const SizedBox(height: 20),
                   FilledButton.icon(
-                    onPressed: !_tripsLoaded ? null : () => _open(_activeBooking == null
-                        ? const BookDriverScreen()
-                        : ActiveTripScreen(booking: _activeBooking!)),
+                    onPressed: !_tripsLoaded
+                        ? null
+                        : () => _open(
+                            _activeBooking == null
+                                ? const BookDriverScreen()
+                                : ActiveTripScreen(booking: _activeBooking!),
+                          ),
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: const Color(0xFF05636D),
@@ -295,7 +304,9 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
                     ),
                     icon: const Icon(Icons.add_road_rounded),
                     label: Text(
-                      _activeBooking == null ? 'Book a Driver' : 'View Current Trip',
+                      _activeBooking == null
+                          ? 'Book a Driver'
+                          : 'View Current Trip',
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
@@ -324,7 +335,9 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
                         Icon(Icons.route_rounded, color: colors.accent),
                         const SizedBox(width: 12),
                         Text(
-                          _tripsLoaded ? 'No active trips' : 'Checking your trips...',
+                          _tripsLoaded
+                              ? 'No active trips'
+                              : 'Checking your trips...',
                           style: TextStyle(color: colors.textMuted),
                         ),
                       ],
@@ -358,7 +371,8 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
                           style: TextStyle(color: colors.textMuted),
                         ),
                         if (_activeBooking!.tripPin != null &&
-                            _activeBooking!.status == BookingStatus.verification) ...[
+                            _activeBooking!.status ==
+                                BookingStatus.verification) ...[
                           const SizedBox(height: 12),
                           Text(
                             'Trip PIN: ${_activeBooking!.tripPin}',
@@ -434,7 +448,6 @@ class _DrunkDriveHomeScreenState extends State<DrunkDriveHomeScreen> {
               colors: colors,
               onTap: () => _open(const ProviderRoleSelectionScreen()),
             ),
-
           ],
         ),
       ),

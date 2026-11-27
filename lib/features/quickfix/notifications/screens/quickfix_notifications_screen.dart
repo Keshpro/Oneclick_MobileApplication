@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,8 +7,7 @@ import '../services/quickfix_notification_service.dart';
 class QuickFixNotificationsScreen extends StatelessWidget {
   QuickFixNotificationsScreen({super.key});
 
-  final QuickFixNotificationService _service =
-      QuickFixNotificationService();
+  final QuickFixNotificationService _service = QuickFixNotificationService();
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +21,7 @@ class QuickFixNotificationsScreen extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
       body: uid == null
-          ? const Center(
-              child: Text('Please login to view notifications'),
-            )
+          ? const Center(child: Text('Please login to view notifications'))
           : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: _service.getNotifications(uid),
               builder: (context, snapshot) {
@@ -36,21 +32,16 @@ class QuickFixNotificationsScreen extends StatelessWidget {
                 }
 
                 if (!snapshot.hasData) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 final notifications = snapshot.data!.docs.toList();
 
                 notifications.sort((a, b) {
-                  final aTime =
-                      a.data()['createdAt'] as Timestamp?;
-                  final bTime =
-                      b.data()['createdAt'] as Timestamp?;
+                  final aTime = a.data()['createdAt'] as Timestamp?;
+                  final bTime = b.data()['createdAt'] as Timestamp?;
 
-                  return (bTime?.millisecondsSinceEpoch ?? 0)
-                      .compareTo(
+                  return (bTime?.millisecondsSinceEpoch ?? 0).compareTo(
                     aTime?.millisecondsSinceEpoch ?? 0,
                   );
                 });
@@ -83,9 +74,7 @@ class QuickFixNotificationsScreen extends StatelessWidget {
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
-                      color: isRead
-                          ? Colors.white
-                          : const Color(0xFFEFF6FF),
+                      color: isRead ? Colors.white : const Color(0xFFEFF6FF),
                       child: ListTile(
                         leading: Icon(
                           isRead
@@ -94,17 +83,14 @@ class QuickFixNotificationsScreen extends StatelessWidget {
                           color: const Color(0xFF1E293B),
                         ),
                         title: Text(
-                          (data['title'] ?? 'Notification')
-                              .toString(),
+                          (data['title'] ?? 'Notification').toString(),
                           style: TextStyle(
                             fontWeight: isRead
                                 ? FontWeight.normal
                                 : FontWeight.bold,
                           ),
                         ),
-                        subtitle: Text(
-                          (data['message'] ?? '').toString(),
-                        ),
+                        subtitle: Text((data['message'] ?? '').toString()),
                         trailing: isRead
                             ? null
                             : const Icon(
@@ -118,12 +104,9 @@ class QuickFixNotificationsScreen extends StatelessWidget {
                               await _service.markAsRead(doc.id);
                             } catch (e) {
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context)
-                                  .showSnackBar(
+                              ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(
-                                    'Could not mark as read: $e',
-                                  ),
+                                  content: Text('Could not mark as read: $e'),
                                 ),
                               );
                             }

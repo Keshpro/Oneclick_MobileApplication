@@ -107,7 +107,8 @@ class _WritePrescriptionScreenState extends State<WritePrescriptionScreen> {
     }
 
     final doctorUid = _currentDoctor?.uid ?? '';
-    final patientUid = widget.appointmentData?['patientId'] ??
+    final patientUid =
+        widget.appointmentData?['patientId'] ??
         widget.appointmentData?['userId'] ??
         '';
     final appointmentId = widget.appointmentData?['id'] ?? '';
@@ -150,10 +151,7 @@ class _WritePrescriptionScreenState extends State<WritePrescriptionScreen> {
         await FirebaseFirestore.instance
             .collection('appointments')
             .doc(appointmentId)
-            .update({
-          'status': 'Completed',
-          'hasPrescription': true,
-        });
+            .update({'status': 'Completed', 'hasPrescription': true});
       }
 
       // 3. Send Notification to Patient
@@ -161,7 +159,8 @@ class _WritePrescriptionScreenState extends State<WritePrescriptionScreen> {
         await FirebaseFirestore.instance.collection('notifications').add({
           'userId': patientUid,
           'title': 'New E-Prescription Issued 💊',
-          'message': '$doctorName has issued a new prescription for your consultation.',
+          'message':
+              '$doctorName has issued a new prescription for your consultation.',
           'isRead': false,
           'timestamp': FieldValue.serverTimestamp(),
         });
@@ -193,7 +192,10 @@ class _WritePrescriptionScreenState extends State<WritePrescriptionScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: _ink,
-        title: const Text('Write E-Prescription', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+        title: const Text(
+          'Write E-Prescription',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -212,13 +214,19 @@ class _WritePrescriptionScreenState extends State<WritePrescriptionScreen> {
                         controller: _patientNameController,
                         readOnly: widget.appointmentData != null,
                         decoration: _inputDecoration('Patient Full Name'),
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+                        validator: (v) =>
+                            v == null || v.trim().isEmpty ? 'Required' : null,
                       ),
                       const SizedBox(height: 14),
                       TextFormField(
                         controller: _diagnosisController,
-                        decoration: _inputDecoration('Diagnosis / Health Issue', hint: 'e.g. Fever & Viral Infection'),
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Please enter diagnosis' : null,
+                        decoration: _inputDecoration(
+                          'Diagnosis / Health Issue',
+                          hint: 'e.g. Fever & Viral Infection',
+                        ),
+                        validator: (v) => v == null || v.trim().isEmpty
+                            ? 'Please enter diagnosis'
+                            : null,
                       ),
                     ],
                   ),
@@ -235,27 +243,42 @@ class _WritePrescriptionScreenState extends State<WritePrescriptionScreen> {
                             flex: 2,
                             child: TextFormField(
                               controller: _medNameController,
-                              decoration: _inputDecoration('Medicine Name', hint: 'Paracetamol'),
+                              decoration: _inputDecoration(
+                                'Medicine Name',
+                                hint: 'Paracetamol',
+                              ),
                             ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: TextFormField(
                               controller: _medDosageController,
-                              decoration: _inputDecoration('Dosage', hint: '500mg'),
+                              decoration: _inputDecoration(
+                                'Dosage',
+                                hint: '500mg',
+                              ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: _selectedFrequency,
+                        initialValue: _selectedFrequency,
                         decoration: _inputDecoration('Frequency'),
                         items: _frequencyOptions
-                            .map((f) => DropdownMenuItem(value: f, child: Text(f, style: const TextStyle(fontSize: 13))))
+                            .map(
+                              (f) => DropdownMenuItem(
+                                value: f,
+                                child: Text(
+                                  f,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            )
                             .toList(),
                         onChanged: (val) {
-                          if (val != null) setState(() => _selectedFrequency = val);
+                          if (val != null)
+                            setState(() => _selectedFrequency = val);
                         },
                       ),
                       const SizedBox(height: 12),
@@ -264,7 +287,10 @@ class _WritePrescriptionScreenState extends State<WritePrescriptionScreen> {
                           Expanded(
                             child: TextFormField(
                               controller: _medDurationController,
-                              decoration: _inputDecoration('Duration', hint: '5 Days'),
+                              decoration: _inputDecoration(
+                                'Duration',
+                                hint: '5 Days',
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -275,8 +301,13 @@ class _WritePrescriptionScreenState extends State<WritePrescriptionScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _primary,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
                             ),
                           ),
                         ],
@@ -286,33 +317,68 @@ class _WritePrescriptionScreenState extends State<WritePrescriptionScreen> {
                 ),
                 const SizedBox(height: 20),
                 if (_medicines.isNotEmpty) ...[
-                  const Text('PRESCRIBED ITEMS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _muted, letterSpacing: 1.2)),
+                  const Text(
+                    'PRESCRIBED ITEMS',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: _muted,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   ...List.generate(_medicines.length, (index) {
                     final med = _medicines[index];
                     return Container(
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(color: _surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: _border)),
+                      decoration: BoxDecoration(
+                        color: _surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: _border),
+                      ),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(10)),
-                            child: const Icon(Icons.medication_outlined, color: _primary, size: 20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEEF2FF),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.medication_outlined,
+                              color: _primary,
+                              size: 20,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('${med['name']} (${med['dosage']})', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: _ink)),
-                                Text('${med['frequency']} • ${med['duration']}', style: const TextStyle(fontSize: 11, color: _muted)),
+                                Text(
+                                  '${med['name']} (${med['dosage']})',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: _ink,
+                                  ),
+                                ),
+                                Text(
+                                  '${med['frequency']} • ${med['duration']}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: _muted,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                            icon: const Icon(
+                              Icons.delete_outline_rounded,
+                              color: Colors.redAccent,
+                            ),
                             onPressed: () => _removeMedicine(index),
                           ),
                         ],
@@ -327,7 +393,10 @@ class _WritePrescriptionScreenState extends State<WritePrescriptionScreen> {
                   child: TextFormField(
                     controller: _instructionsController,
                     maxLines: 3,
-                    decoration: _inputDecoration('Instructions for patient', hint: 'e.g. Rest well and take medications after meals.'),
+                    decoration: _inputDecoration(
+                      'Instructions for patient',
+                      hint: 'e.g. Rest well and take medications after meals.',
+                    ),
                   ),
                 ),
                 const SizedBox(height: 30),
@@ -336,14 +405,29 @@ class _WritePrescriptionScreenState extends State<WritePrescriptionScreen> {
                   child: ElevatedButton.icon(
                     onPressed: _isSaving ? null : _savePrescription,
                     icon: _isSaving
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
                         : const Icon(Icons.send_rounded),
-                    label: Text(_isSaving ? 'Sending...' : 'Send E-Prescription', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    label: Text(
+                      _isSaving ? 'Sending...' : 'Send E-Prescription',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       elevation: 0,
                     ),
                   ),
@@ -356,10 +440,18 @@ class _WritePrescriptionScreenState extends State<WritePrescriptionScreen> {
     );
   }
 
-  Widget _buildSectionCard({required String title, required IconData icon, required Widget child}) {
+  Widget _buildSectionCard({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: _surface, borderRadius: BorderRadius.circular(22), border: Border.all(color: _border)),
+      decoration: BoxDecoration(
+        color: _surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -367,7 +459,15 @@ class _WritePrescriptionScreenState extends State<WritePrescriptionScreen> {
             children: [
               Icon(icon, size: 18, color: _primary),
               const SizedBox(width: 8),
-              Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _muted, letterSpacing: 1.2)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: _muted,
+                  letterSpacing: 1.2,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -386,9 +486,18 @@ class _WritePrescriptionScreenState extends State<WritePrescriptionScreen> {
       filled: true,
       fillColor: const Color(0xFFF8FAFC),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _border)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _border)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _primary, width: 1.5)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _primary, width: 1.5),
+      ),
     );
   }
 }

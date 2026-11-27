@@ -1,8 +1,10 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import 'subscription_details_screen.dart';
 import 'add_subscription_screen.dart';
 import 'dashboard.dart';
@@ -70,7 +72,10 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       setState(() {
         subscriptions = records.map((record) {
           final double parsedAmount =
-              double.tryParse(record.price.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
+              double.tryParse(
+                record.price.replaceAll(RegExp(r'[^0-9.]'), ''),
+              ) ??
+              0.0;
           return SubscriptionItem(
             id: record.id,
             name: record.name,
@@ -106,77 +111,71 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   int _countFor(String filter) =>
       subscriptions.where((item) => _matchesStatus(item, filter)).length;
 
-double _monthlyAmountForItem(
-  SubscriptionItem item,
-  String targetCurrency,
-) {
-  if (_statusKey(item.status) != 'active') {
-    return 0;
-  }
+  double _monthlyAmountForItem(SubscriptionItem item, String targetCurrency) {
+    if (_statusKey(item.status) != 'active') {
+      return 0;
+    }
 
-  double amount =
-      item.amount ??
-      double.tryParse(
-            item.price.replaceAll(RegExp(r'[^0-9.]'), ''),
-          ) ??
-      0;
+    double amount =
+        item.amount ??
+        double.tryParse(item.price.replaceAll(RegExp(r'[^0-9.]'), '')) ??
+        0;
 
-  if (item.billingCycle.toLowerCase() == 'annual') {
-    amount = amount / 12;
-  }
+    if (item.billingCycle.toLowerCase() == 'annual') {
+      amount = amount / 12;
+    }
 
-  final rate = _usdToLkrRate ?? 300.0;
+    final rate = _usdToLkrRate ?? 300.0;
 
-  if (item.currency == targetCurrency) {
+    if (item.currency == targetCurrency) {
+      return amount;
+    }
+
+    if (item.currency == 'USD' && targetCurrency == 'LKR') {
+      return amount * rate;
+    }
+
+    if (item.currency == 'LKR' && targetCurrency == 'USD') {
+      return amount / rate;
+    }
+
     return amount;
   }
 
-  if (item.currency == 'USD' && targetCurrency == 'LKR') {
-    return amount * rate;
+  double _monthlyCostInCurrency(
+    Iterable<SubscriptionItem> items,
+    String currency,
+  ) {
+    return items.fold<double>(
+      0,
+      (sum, item) => sum + _monthlyAmountForItem(item, currency),
+    );
   }
 
-  if (item.currency == 'LKR' && targetCurrency == 'USD') {
-    return amount / rate;
+  String _formatNumber(double value) {
+    final parts = value.toStringAsFixed(2).split('.');
+    final whole = parts[0];
+    final decimal = parts[1];
+
+    final formattedWhole = whole.replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (match) => ',',
+    );
+
+    return '$formattedWhole.$decimal';
   }
 
-  return amount;
-}
+  String _formattedMoney(double amount) {
+    if (selectedCurrency == 'LKR') {
+      return 'LKR ${_formatNumber(amount)}';
+    }
 
-double _monthlyCostInCurrency(
-  Iterable<SubscriptionItem> items,
-  String currency,
-) {
-  return items.fold<double>(
-    0,
-    (sum, item) =>
-        sum + _monthlyAmountForItem(item, currency),
-  );
-}
-
-String _formatNumber(double value) {
-  final parts = value.toStringAsFixed(2).split('.');
-  final whole = parts[0];
-  final decimal = parts[1];
-
-  final formattedWhole = whole.replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (match) => ',',
-  );
-
-  return '$formattedWhole.$decimal';
-}
-
-String _formattedMoney(double amount) {
-  if (selectedCurrency == 'LKR') {
-    return 'LKR ${_formatNumber(amount)}';
+    return '\$${_formatNumber(amount)}';
   }
 
-  return '\$${_formatNumber(amount)}';
-}
-
-double? _monthlyChangePercent() {
-  return null;
-}
+  double? _monthlyChangePercent() {
+    return null;
+  }
 
   List<SubscriptionItem> get filteredSubscriptions {
     final query = searchQuery.trim().toLowerCase();
@@ -189,66 +188,66 @@ double? _monthlyChangePercent() {
   }
 
   Future<void> _keepRenewal(SubscriptionItem item) async {
-  final renewalDate = item.renewalDate;
+    final renewalDate = item.renewalDate;
 
-  if (renewalDate == null) {
-    _message('No renewal date found for ${item.name}.');
-    return;
+    if (renewalDate == null) {
+      _message('No renewal date found for ${item.name}.');
+      return;
+    }
+
+    try {
+      await _subscriptionService.keepSubscriptionRenewal(
+        subscriptionId: item.id,
+        renewalDate: renewalDate,
+      );
+
+      if (!mounted) return;
+
+      _message('${item.name} kept for this renewal.');
+    } catch (error) {
+      if (!mounted) return;
+
+      _message('Could not save your decision: $error');
+    }
   }
-
-  try {
-    await _subscriptionService.keepSubscriptionRenewal(
-      subscriptionId: item.id,
-      renewalDate: renewalDate,
-    );
-
-    if (!mounted) return;
-
-    _message('${item.name} kept for this renewal.');
-  } catch (error) {
-    if (!mounted) return;
-
-    _message('Could not save your decision: $error');
-  }
-}
 
   Future<void> _cancelRenewal(SubscriptionItem item) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('Cancel Subscription'),
-      content: Text(
-        'Mark ${item.name} as cancelled in Personal Vault?\n\n'
-        'This will NOT cancel your actual subscription '
-        'with the provider.',
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cancel Subscription'),
+        content: Text(
+          'Mark ${item.name} as cancelled in Personal Vault?\n\n'
+          'This will NOT cancel your actual subscription '
+          'with the provider.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Go Back'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Mark Cancelled'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext, false),
-          child: const Text('Go Back'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext, true),
-          child: const Text('Mark Cancelled'),
-        ),
-      ],
-    ),
-  );
+    );
 
-  if (confirmed != true || !mounted) return;
+    if (confirmed != true || !mounted) return;
 
-  try {
-    await _subscriptionService.cancelSubscription(item.id);
+    try {
+      await _subscriptionService.cancelSubscription(item.id);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    _message('${item.name} marked as cancelled in Personal Vault.');
-  } catch (error) {
-    if (!mounted) return;
+      _message('${item.name} marked as cancelled in Personal Vault.');
+    } catch (error) {
+      if (!mounted) return;
 
-    _message('Could not update subscription: $error');
+      _message('Could not update subscription: $error');
+    }
   }
-}
 
   Future<void> _deleteSubscription(SubscriptionItem item) async {
     final confirmed = await showDialog<bool>(
@@ -342,9 +341,18 @@ double? _monthlyChangePercent() {
                       initialValue: status,
                       decoration: const InputDecoration(labelText: 'Status'),
                       items: const [
-                        DropdownMenuItem(value: 'Active', child: Text('Active')),
-                        DropdownMenuItem(value: 'Free Trial', child: Text('Free Trial')),
-                        DropdownMenuItem(value: 'Cancelled', child: Text('Cancelled')),
+                        DropdownMenuItem(
+                          value: 'Active',
+                          child: Text('Active'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Free Trial',
+                          child: Text('Free Trial'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Cancelled',
+                          child: Text('Cancelled'),
+                        ),
                       ],
                       onChanged: (value) {
                         if (value != null) {
@@ -356,7 +364,8 @@ double? _monthlyChangePercent() {
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Price Hiked'),
                       value: priceHiked,
-                      onChanged: (value) => setDialogState(() => priceHiked = value),
+                      onChanged: (value) =>
+                          setDialogState(() => priceHiked = value),
                     ),
                   ],
                 ),
@@ -418,131 +427,132 @@ double? _monthlyChangePercent() {
     }
   }
 
-  
-void _showSearch() {
-  final searchController = TextEditingController(text: searchQuery);
-  String currentQuery = searchQuery;
+  void _showSearch() {
+    final searchController = TextEditingController(text: searchQuery);
+    String currentQuery = searchQuery;
 
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (sheetContext) {
-      return StatefulBuilder(
-        builder: (sheetContext, setSheetState) {
-          final query = currentQuery.trim().toLowerCase();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            final query = currentQuery.trim().toLowerCase();
 
-          final suggestions = query.isEmpty
-            ? <SubscriptionItem>[]
-            : subscriptions.where((item) {
-                return item.name.toLowerCase().contains(query);
-              }).take(6).toList();
+            final suggestions = query.isEmpty
+                ? <SubscriptionItem>[]
+                : subscriptions
+                      .where((item) {
+                        return item.name.toLowerCase().contains(query);
+                      })
+                      .take(6)
+                      .toList();
 
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(22),
-              decoration: const BoxDecoration(
-                color: bg,
-                borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(30)),
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    autofocus: true,
-                    controller: searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search subscriptions...',
-                      prefixIcon: const _VaultReferenceIcon(
-                        Icons.search,
-                        color: purple,
+              child: Container(
+                padding: const EdgeInsets.all(22),
+                decoration: const BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      autofocus: true,
+                      controller: searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search subscriptions...',
+                        prefixIcon: const _VaultReferenceIcon(
+                          Icons.search,
+                          color: purple,
+                        ),
+                        suffixIcon: currentQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: () {
+                                  setState(() => searchQuery = '');
+                                  Navigator.pop(sheetContext);
+                                },
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: surface,
                       ),
-                      suffixIcon: currentQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.close),
-                              onPressed: () {
-                                setState(() => searchQuery = '');
-                                Navigator.pop(sheetContext);
-                              },
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: surface,
+                      onChanged: (value) {
+                        setSheetState(() => currentQuery = value);
+                        setState(() => searchQuery = value);
+                      },
+                      onSubmitted: (_) => Navigator.pop(sheetContext),
                     ),
-                    onChanged: (value) {
-                      setSheetState(() => currentQuery = value);
-                      setState(() => searchQuery = value);
-                    },
-                    onSubmitted: (_) => Navigator.pop(sheetContext),
-                  ),
-                  if (query.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Suggestions',
-                      style: TextStyle(
-                        color: muted,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (suggestions.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Text('No matching subscriptions found.'),
-                      )
-                    else
-                      ...suggestions.map(
-                        (item) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(
-                            Icons.subscriptions_outlined,
-                            color: purple,
-                          ),
-                          title: Text(item.name),
-                          subtitle: Text(item.subtitle),
-                          onTap: () {
-                            Navigator.pop(sheetContext);
-
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => SubscriptionDetailsScreen(
-                                  subscriptionId: item.id,
-                                  name: item.name,
-                                  subtitle: item.subtitle,
-                                  price: item.price,
-                                  status: item.status,
-                                  billingCycle: item.billingCycle,
-                                  renewalDate: item.renewalDate,
-                                  onEdit: () => _editSubscription(item),
-                                ),
-                              ),
-                            );
-                          },
+                    if (query.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Suggestions',
+                        style: TextStyle(
+                          color: muted,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                  ],
-                ],
-              ),
-            ),
-          );
-        },
-      );
-    },
-  ).whenComplete(() {
-    searchController.dispose();
-  });
-}
+                      const SizedBox(height: 8),
+                      if (suggestions.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text('No matching subscriptions found.'),
+                        )
+                      else
+                        ...suggestions.map(
+                          (item) => ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(
+                              Icons.subscriptions_outlined,
+                              color: purple,
+                            ),
+                            title: Text(item.name),
+                            subtitle: Text(item.subtitle),
+                            onTap: () {
+                              Navigator.pop(sheetContext);
 
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      SubscriptionDetailsScreen(
+                                        subscriptionId: item.id,
+                                        name: item.name,
+                                        subtitle: item.subtitle,
+                                        price: item.price,
+                                        status: item.status,
+                                        billingCycle: item.billingCycle,
+                                        renewalDate: item.renewalDate,
+                                        onEdit: () => _editSubscription(item),
+                                      ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).whenComplete(() {
+      searchController.dispose();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -806,13 +816,11 @@ void _showSearch() {
           ],
         ),
       ),
-            floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton.extended(
         backgroundColor: purple,
         foregroundColor: Colors.white,
         elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         onPressed: () {
           Navigator.push(
             context,
@@ -877,11 +885,8 @@ void _showSearch() {
                 _loadingExchangeRate
                     ? 'Loading...'
                     : _formattedMoney(
-                      _monthlyCostInCurrency(
-                        subscriptions,
-                        selectedCurrency,
+                        _monthlyCostInCurrency(subscriptions, selectedCurrency),
                       ),
-                    ),
                 style: const TextStyle(
                   color: ink,
                   fontSize: 32,
@@ -912,14 +917,14 @@ void _showSearch() {
                   final Color changeColor = increased
                       ? danger
                       : decreased
-                          ? const Color(0xFF16A34A)
-                          : muted;
+                      ? const Color(0xFF16A34A)
+                      : muted;
 
                   final IconData changeIcon = increased
                       ? Icons.trending_up
                       : decreased
-                          ? Icons.trending_down
-                          : Icons.trending_flat;
+                      ? Icons.trending_down
+                      : Icons.trending_flat;
 
                   return Container(
                     padding: const EdgeInsets.symmetric(
@@ -962,11 +967,7 @@ void _showSearch() {
               ),
               Text(
                 _formattedMoney(
-                  _monthlyCostInCurrency(
-                        subscriptions,
-                        selectedCurrency,
-                      ) *
-                      12,
+                  _monthlyCostInCurrency(subscriptions, selectedCurrency) * 12,
                 ),
                 style: const TextStyle(
                   color: ink,
@@ -1091,7 +1092,11 @@ void _showSearch() {
   int _daysUntilRenewal(DateTime renewalDate) {
     final today = DateTime.now();
     final todayOnly = DateTime(today.year, today.month, today.day);
-    final renewalOnly = DateTime(renewalDate.year, renewalDate.month, renewalDate.day);
+    final renewalOnly = DateTime(
+      renewalDate.year,
+      renewalDate.month,
+      renewalDate.day,
+    );
     return renewalOnly.difference(todayOnly).inDays;
   }
 
@@ -1107,7 +1112,8 @@ void _showSearch() {
       if (days < 0 || days > 7) return false;
 
       final handledFor = item.renewalActionHandledFor;
-      if (handledFor != null && _sameDate(handledFor, renewalDate)) return false;
+      if (handledFor != null && _sameDate(handledFor, renewalDate))
+        return false;
 
       return true;
     }).toList();
@@ -1173,8 +1179,8 @@ void _showSearch() {
   }
 
   Widget _renewalCardItem({
-  required SubscriptionItem item,
-  required String title,
+    required SubscriptionItem item,
+    required String title,
     required String subtitle,
     required String badge,
     required String description,
@@ -1325,14 +1331,15 @@ void _showSearch() {
     required List<SubscriptionItem> items,
   }) {
     if (items.isEmpty) return const SizedBox.shrink();
-    final categoryCurrency =
-        title == 'PRODUCTIVITY & AI' ? 'LKR' : selectedCurrency;
+    final categoryCurrency = title == 'PRODUCTIVITY & AI'
+        ? 'LKR'
+        : selectedCurrency;
 
     final categoryAmount = _monthlyCostInCurrency(items, categoryCurrency);
 
-final categoryLabel = _statusKey(selectedFilter) == 'cancelled'
-    ? 'No renewals'
-    : _statusKey(selectedFilter) == 'free trial'
+    final categoryLabel = _statusKey(selectedFilter) == 'cancelled'
+        ? 'No renewals'
+        : _statusKey(selectedFilter) == 'free trial'
         ? '${items.length} trials'
         : 'LKR ${_formatNumber(categoryAmount)}/mo';
 
@@ -1399,8 +1406,8 @@ final categoryLabel = _statusKey(selectedFilter) == 'cancelled'
         accent: _statusKey(item.status) == 'free trial'
             ? const Color(0xFF9333EA)
             : _statusKey(item.status) == 'cancelled'
-                ? const Color(0xFF94A3B8)
-                : purple,
+            ? const Color(0xFF94A3B8)
+            : purple,
         padding: const EdgeInsets.all(19),
         child: Builder(
           builder: (context) => Column(
@@ -1516,7 +1523,8 @@ final categoryLabel = _statusKey(selectedFilter) == 'cancelled'
                         _VaultReferenceIcon(
                           Icons.circle,
                           size: 7,
-                          color: item.usage.contains('Rarely') ||
+                          color:
+                              item.usage.contains('Rarely') ||
                                   item.usage.contains('Unused')
                               ? muted
                               : purple,
@@ -1556,8 +1564,8 @@ final categoryLabel = _statusKey(selectedFilter) == 'cancelled'
     final color = trial
         ? const Color(0xFF9333EA)
         : cancelled
-            ? const Color(0xFF64748B)
-            : const Color(0xFF059669);
+        ? const Color(0xFF64748B)
+        : const Color(0xFF059669);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -1732,10 +1740,10 @@ final categoryLabel = _statusKey(selectedFilter) == 'cancelled'
     final accent = icon == Icons.music_note || icon == Icons.cloud_done_outlined
         ? const Color(0xFF059669)
         : icon == Icons.tv_outlined || icon == Icons.movie_outlined
-            ? const Color(0xFFF43F5E)
-            : icon == Icons.psychology_outlined || icon == Icons.memory_outlined
-                ? purple2
-                : color;
+        ? const Color(0xFFF43F5E)
+        : icon == Icons.psychology_outlined || icon == Icons.memory_outlined
+        ? purple2
+        : color;
     return Builder(
       builder: (context) {
         final hovered = _VaultGlassScope.hoveredOf(context);
@@ -1978,31 +1986,19 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) => SizedBox(
-          width: widget.size,
-          height: widget.size,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              if (widget.ping)
-                Transform.scale(
-                  scale: 1 + _controller.value,
-                  child: Opacity(
-                    opacity: (1 - _controller.value) * 0.75,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: widget.color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                ),
-              Opacity(
-                opacity: widget.ping || !widget.animate
-                    ? 1
-                    : 1 - _controller.value * 0.5,
+    animation: _controller,
+    builder: (context, child) => SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          if (widget.ping)
+            Transform.scale(
+              scale: 1 + _controller.value,
+              child: Opacity(
+                opacity: (1 - _controller.value) * 0.75,
                 child: Container(
                   decoration: BoxDecoration(
                     color: widget.color,
@@ -2010,18 +2006,30 @@ class _VaultPulseDotState extends State<_VaultPulseDot>
                   ),
                 ),
               ),
-            ],
+            ),
+          Opacity(
+            opacity: widget.ping || !widget.animate
+                ? 1
+                : 1 - _controller.value * 0.5,
+            child: Container(
+              decoration: BoxDecoration(
+                color: widget.color,
+                shape: BoxShape.circle,
+              ),
+            ),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 class _VaultNavGlyph extends StatefulWidget {
   const _VaultNavGlyph(
-  this.icon, {
-  // ignore: unused_element_parameter
-  this.color,
-});
+    this.icon, {
+    // ignore: unused_element_parameter
+    this.color,
+  });
   final IconData icon;
   final Color? color;
 
@@ -2034,30 +2042,31 @@ class _VaultNavGlyphState extends State<_VaultNavGlyph> {
   bool _pressed = false;
   @override
   Widget build(BuildContext context) => MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() {
-          _hovered = false;
-          _pressed = false;
-        }),
-        child: Listener(
-          onPointerDown: (_) => setState(() => _pressed = true),
-          onPointerUp: (_) => setState(() => _pressed = false),
-          onPointerCancel: (_) => setState(() => _pressed = false),
-          child: AnimatedScale(
-            scale: _pressed ? 0.95 : 1,
-            duration: const Duration(milliseconds: 200),
-            child: _VaultReferenceIcon(
-              widget.icon,
-              size: 20,
-              color: widget.color ??
-                  (_hovered
-                      ? const Color(0xFF1E293B)
-                      : IconTheme.of(context).color ?? const Color(0xFF94A3B8)),
-            ),
-          ),
+    cursor: SystemMouseCursors.click,
+    onEnter: (_) => setState(() => _hovered = true),
+    onExit: (_) => setState(() {
+      _hovered = false;
+      _pressed = false;
+    }),
+    child: Listener(
+      onPointerDown: (_) => setState(() => _pressed = true),
+      onPointerUp: (_) => setState(() => _pressed = false),
+      onPointerCancel: (_) => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.95 : 1,
+        duration: const Duration(milliseconds: 200),
+        child: _VaultReferenceIcon(
+          widget.icon,
+          size: 20,
+          color:
+              widget.color ??
+              (_hovered
+                  ? const Color(0xFF1E293B)
+                  : IconTheme.of(context).color ?? const Color(0xFF94A3B8)),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _VaultReferenceIcon extends StatelessWidget {
@@ -2162,7 +2171,8 @@ class _VaultReferenceIcon extends StatelessWidget {
     final theme = IconTheme.of(context);
     final resolvedColor = color ?? theme.color ?? const Color(0xFF64748B);
     final resolvedSize = size ?? theme.size ?? 24;
-    if (svg == null) return Icon(icon, size: resolvedSize, color: resolvedColor);
+    if (svg == null)
+      return Icon(icon, size: resolvedSize, color: resolvedColor);
     return SvgPicture.string(
       svg,
       width: resolvedSize,
@@ -2183,16 +2193,16 @@ class _VaultPressFeedbackState extends State<_VaultPressFeedback> {
   bool _pressed = false;
   @override
   Widget build(BuildContext context) => MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Listener(
-          onPointerDown: (_) => setState(() => _pressed = true),
-          onPointerUp: (_) => setState(() => _pressed = false),
-          onPointerCancel: (_) => setState(() => _pressed = false),
-          child: AnimatedScale(
-            scale: _pressed ? .95 : 1,
-            duration: const Duration(milliseconds: 150),
-            child: widget.child,
-          ),
-        ),
-      );
+    cursor: SystemMouseCursors.click,
+    child: Listener(
+      onPointerDown: (_) => setState(() => _pressed = true),
+      onPointerUp: (_) => setState(() => _pressed = false),
+      onPointerCancel: (_) => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? .95 : 1,
+        duration: const Duration(milliseconds: 150),
+        child: widget.child,
+      ),
+    ),
+  );
 }

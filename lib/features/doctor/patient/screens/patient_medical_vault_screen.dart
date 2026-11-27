@@ -79,7 +79,7 @@ class _PatientMedicalVaultScreenState extends State<PatientMedicalVaultScreen> {
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
-                  value: category,
+                  initialValue: category,
                   decoration: InputDecoration(
                     labelText: 'Category',
                     border: OutlineInputBorder(
@@ -88,13 +88,21 @@ class _PatientMedicalVaultScreenState extends State<PatientMedicalVaultScreen> {
                   ),
                   items: const [
                     DropdownMenuItem(
-                        value: 'Lab Reports', child: Text('Lab Reports')),
+                      value: 'Lab Reports',
+                      child: Text('Lab Reports'),
+                    ),
                     DropdownMenuItem(
-                        value: 'Scans & X-Rays', child: Text('Scans & X-Rays')),
+                      value: 'Scans & X-Rays',
+                      child: Text('Scans & X-Rays'),
+                    ),
                     DropdownMenuItem(
-                        value: 'Prescriptions', child: Text('Prescriptions')),
+                      value: 'Prescriptions',
+                      child: Text('Prescriptions'),
+                    ),
                     DropdownMenuItem(
-                        value: 'Vaccinations', child: Text('Vaccinations')),
+                      value: 'Vaccinations',
+                      child: Text('Vaccinations'),
+                    ),
                   ],
                   onChanged: (val) {
                     if (val != null) category = val;
@@ -111,13 +119,13 @@ class _PatientMedicalVaultScreenState extends State<PatientMedicalVaultScreen> {
                       await FirebaseFirestore.instance
                           .collection('medical_vault')
                           .add({
-                        'patientId': uid,
-                        'title': title,
-                        'category': category,
-                        'date': DateTime.now().toString().split(' ')[0],
-                        'fileSize': '1.2 MB',
-                        'createdAt': FieldValue.serverTimestamp(),
-                      });
+                            'patientId': uid,
+                            'title': title,
+                            'category': category,
+                            'date': DateTime.now().toString().split(' ')[0],
+                            'fileSize': '1.2 MB',
+                            'createdAt': FieldValue.serverTimestamp(),
+                          });
 
                       if (!context.mounted) return;
                       Navigator.pop(context);
@@ -201,7 +209,8 @@ class _PatientMedicalVaultScreenState extends State<PatientMedicalVaultScreen> {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
                           return const Center(
-                              child: CircularProgressIndicator());
+                            child: CircularProgressIndicator(),
+                          );
                         }
 
                         final docs = snapshot.data?.docs ?? [];
@@ -214,8 +223,10 @@ class _PatientMedicalVaultScreenState extends State<PatientMedicalVaultScreen> {
 
                         if (filteredDocs.isEmpty) {
                           return const Center(
-                            child: Text('No documents in this category.',
-                                style: TextStyle(color: muted)),
+                            child: Text(
+                              'No documents in this category.',
+                              style: TextStyle(color: muted),
+                            ),
                           );
                         }
 
@@ -295,7 +306,7 @@ class _PatientMedicalVaultScreenState extends State<PatientMedicalVaultScreen> {
       'Lab Reports',
       'Scans & X-Rays',
       'Prescriptions',
-      'Vaccinations'
+      'Vaccinations',
     ];
 
     return SingleChildScrollView(

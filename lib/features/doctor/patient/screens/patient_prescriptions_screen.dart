@@ -61,7 +61,8 @@ class _PatientPrescriptionsScreenState
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
                           return const Center(
-                              child: CircularProgressIndicator());
+                            child: CircularProgressIndicator(),
+                          );
                         }
 
                         final docs = snapshot.data?.docs ?? [];
@@ -193,8 +194,10 @@ class _PatientPrescriptionsScreenState
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: isActive
                         ? const Color(0xFFDCFCE7)
@@ -220,8 +223,11 @@ class _PatientPrescriptionsScreenState
             ),
             Row(
               children: [
-                const Icon(Icons.medical_services_outlined,
-                    size: 16, color: purple2),
+                const Icon(
+                  Icons.medical_services_outlined,
+                  size: 16,
+                  color: purple2,
+                ),
                 const SizedBox(width: 6),
                 const Text(
                   'Diagnosis: ',
@@ -254,42 +260,46 @@ class _PatientPrescriptionsScreenState
               ),
             ),
             const SizedBox(height: 8),
-            ...medicines.map((med) => Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFEFF2F7)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.medication_outlined,
-                          size: 20, color: purple),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${med['name'] ?? ''} (${med['dosage'] ?? ''})',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                                color: ink,
-                              ),
+            ...medicines.map(
+              (med) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFEFF2F7)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.medication_outlined,
+                      size: 20,
+                      color: purple,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${med['name'] ?? ''} (${med['dosage'] ?? ''})',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: ink,
                             ),
-                            Text(
-                              '${med['frequency'] ?? ''} • ${med['duration'] ?? ''}',
-                              style:
-                                  const TextStyle(fontSize: 11, color: muted),
-                            ),
-                          ],
-                        ),
+                          ),
+                          Text(
+                            '${med['frequency'] ?? ''} • ${med['duration'] ?? ''}',
+                            style: const TextStyle(fontSize: 11, color: muted),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                )),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

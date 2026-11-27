@@ -63,7 +63,10 @@ class DriverFirestoreService {
           snapshot.data()?['status'] != DriverApplicationStatus.approved.name) {
         throw StateError('Only approved drivers can change availability.');
       }
-      if (isOnline && !BookingPolicy.licenceValid(snapshot.data()?['licenceExpiry']?.toString() ?? '')) {
+      if (isOnline &&
+          !BookingPolicy.licenceValid(
+            snapshot.data()?['licenceExpiry']?.toString() ?? '',
+          )) {
         throw StateError('An unexpired driving licence is required.');
       }
       transaction.update(reference, {
@@ -103,8 +106,11 @@ class DriverFirestoreService {
       throw StateError('You can only submit your own application.');
     }
 
-    if (!BookingPolicy.licenceValid(application.licenceExpiry) || (!application.canDriveManual && !application.canDriveAutomatic)) {
-      throw StateError('A valid licence and at least one transmission type are required.');
+    if (!BookingPolicy.licenceValid(application.licenceExpiry) ||
+        (!application.canDriveManual && !application.canDriveAutomatic)) {
+      throw StateError(
+        'A valid licence and at least one transmission type are required.',
+      );
     }
     await _applications.doc(currentUserId).set({
       'userId': currentUserId,

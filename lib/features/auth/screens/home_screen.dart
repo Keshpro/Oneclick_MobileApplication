@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,7 +15,6 @@ import '../../doctor/doctor/screens/doctor_dashboard.dart';
 import '../../../admin/screens/admin_dashboard.dart';
 import '../../drunk_drive/passenger/screens/drunk_drive_home_screen.dart';
 import '../../Personal Vault/screens/dashboard.dart' as personal_vault;
-import '../../food/screens/food_home_screen.dart';
 import '../../quickfix/user/screens/home_services_screen.dart';
 
 import 'package:oneclick/core/theme/app_theme.dart';
@@ -44,6 +44,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  StreamSubscription<User?>? _authSubscription;
+  int _loadGeneration = 0;
 
   int _selectedIndex = 0;
   String _searchQuery = '';
@@ -99,7 +101,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCurrentUser();
+    _authSubscription = _auth.authStateChanges().listen((_) {
+      if (mounted) _loadCurrentUser();
+    });
   }
 
   List<Map<String, dynamic>> get _filteredServices {
@@ -114,62 +118,56 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Auto-fetch User Details & Determine Role
   Future<void> _loadCurrentUser() async {
+    final generation = ++_loadGeneration;
     final user = _auth.currentUser;
-    if (user == null) {
-      if (mounted) setState(() => _isLoadingUser = false);
-      return;
-    }
+    if (!mounted) return;
+    setState(() {
+      _userName = user?.displayName?.trim() ?? '';
+      _userEmail = user?.email ?? '';
+      _userRole = 'user';
+      _isLoadingUser = user != null;
+    });
+    if (user == null) return;
 
+    Map<String, dynamic>? profile;
+    Map<String, dynamic>? doctor;
     try {
-      // 1. Check if user is a Doctor
-      final docSnapshot = await _firestore
-          .collection('doctors')
-          .doc(user.uid)
-          .get();
-      if (docSnapshot.exists) {
-        final data = docSnapshot.data();
-        if (mounted) {
-          setState(() {
-            _userName =
-                data?['name']?.toString() ?? user.displayName ?? 'Doctor';
-            _userEmail = data?['email']?.toString() ?? user.email ?? '';
-            _userRole = 'doctor';
-            _isLoadingUser = false;
-          });
-        }
-        return;
-      }
-
-      // 2. Check if user is in 'users' collection
-      final userDoc = await _firestore.collection('users').doc(user.uid).get();
-      final data = userDoc.data();
-      if (!mounted) return;
-
-      setState(() {
-        _userName = data?['name']?.toString().trim().isNotEmpty == true
-            ? data!['name'].toString()
-            : (user.displayName?.trim().isNotEmpty == true
-                  ? user.displayName!
-                  : 'User');
-        _userEmail = data?['email']?.toString() ?? user.email ?? '';
-        _userRole = data?['role']?.toString().toLowerCase() ?? 'user';
-        _isLoadingUser = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _userName = user.displayName?.trim().isNotEmpty == true
-            ? user.displayName!
-            : 'User';
-        _userEmail = user.email ?? '';
-        _userRole = 'user';
-        _isLoadingUser = false;
-      });
+      profile = (await _firestore.collection('users').doc(user.uid).get())
+          .data();
+    } catch (e) {
+      debugPrint('User profile lookup failed: $e');
     }
+    try {
+      doctor = (await _firestore.collection('doctors').doc(user.uid).get())
+          .data();
+    } catch (e) {
+      debugPrint('Doctor profile lookup failed: $e');
+    }
+    if (!mounted ||
+        generation != _loadGeneration ||
+        _auth.currentUser?.uid != user.uid)
+      return;
+
+    final data = doctor ?? profile;
+    final name = data?['name']?.toString().trim();
+    final fallbackName = user.displayName?.trim();
+    setState(() {
+      _userName = name != null && name.isNotEmpty
+          ? name
+          : (fallbackName != null && fallbackName.isNotEmpty
+                ? fallbackName
+                : (doctor != null ? 'Doctor' : 'User'));
+      _userEmail = data?['email']?.toString() ?? user.email ?? '';
+      _userRole = doctor != null
+          ? 'doctor'
+          : (profile?['role']?.toString().trim().toLowerCase() ?? 'user');
+      _isLoadingUser = false;
+    });
   }
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -493,6 +491,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openService(String serviceTitle) {
+    if (!_isLoggedIn) {
+      _showLoginRequired(serviceTitle);
+      return;
+    }
+
     Widget? screen;
 
     switch (serviceTitle) {
@@ -534,7 +537,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    if (index == 3 && !_isLoggedIn) {
+    if ((index == 2 || index == 3) && !_isLoggedIn) {
       Navigator.pushNamed(context, '/login');
       return;
     }
@@ -558,78 +561,81 @@ class _HomeScreenState extends State<HomeScreen> {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (sheetContext) => _GlassSheet(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _bottomSheetHandle(),
-            const SizedBox(height: 24),
-            Container(
-              width: 64,
-              height: 64,
-              decoration: const BoxDecoration(
-                color: _Palette.primary,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.lock_outline_rounded,
-                color: Colors.white,
-                size: 30,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Access $serviceName',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: _Palette.ink,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Login or create an account to continue using this service.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: _Palette.inkSoft,
-                fontSize: 14,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.pushNamed(context, '/login');
-                },
-                style: _primaryButtonStyle(),
-                child: const Text(
-                  'Login',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _bottomSheetHandle(),
+              const SizedBox(height: 24),
+              Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(
+                  color: _Palette.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_outline_rounded,
+                  color: Colors.white,
+                  size: 30,
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.pushNamed(context, '/register');
-                },
-                child: const Text(
-                  'Create a new account',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: _Palette.primary,
+              const SizedBox(height: 16),
+              Text(
+                'Access $serviceName',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: _Palette.ink,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Login or create an account to continue using this service.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _Palette.inkSoft,
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.pushNamed(context, '/login');
+                  },
+                  style: _primaryButtonStyle(),
+                  child: const Text(
+                    'Login',
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.pushNamed(context, '/register');
+                  },
+                  child: const Text(
+                    'Create a new account',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: _Palette.primary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     ).whenComplete(() {
@@ -651,10 +657,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       key: ValueKey('worker-mode-${user.uid}'),
 
-      stream: _firestore
-          .collection('workers')
-          .doc(user.uid)
-          .snapshots(),
+      stream: _firestore.collection('workers').doc(user.uid).snapshots(),
 
       builder: (context, snapshot) {
         if (snapshot.hasError ||
@@ -670,12 +673,9 @@ class _HomeScreenState extends State<HomeScreen> {
           decoration: BoxDecoration(
             color: _Palette.primary.withValues(alpha: 0.10),
 
-            borderRadius:
-                BorderRadius.circular(AppRadius.card),
+            borderRadius: BorderRadius.circular(AppRadius.card),
 
-            border: Border.all(
-              color: _Palette.primary.withValues(alpha: 0.30),
-            ),
+            border: Border.all(color: _Palette.primary.withValues(alpha: 0.30)),
           ),
 
           child: ListTile(
@@ -692,9 +692,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            subtitle: const Text(
-              'Manage your QuickFix services',
-            ),
+            subtitle: const Text('Manage your QuickFix services'),
 
             trailing: const Icon(
               Icons.arrow_forward_ios_rounded,
@@ -706,17 +704,14 @@ class _HomeScreenState extends State<HomeScreen> {
               try {
                 final current = _auth.currentUser;
 
-                if (current == null ||
-                    current.uid != user.uid) {
+                if (current == null || current.uid != user.uid) {
                   return;
                 }
 
                 final worker = await _firestore
                     .collection('workers')
                     .doc(current.uid)
-                    .get(const GetOptions(
-                      source: Source.server,
-                    ));
+                    .get(const GetOptions(source: Source.server));
 
                 if (!mounted ||
                     !sheetContext.mounted ||
@@ -727,9 +722,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (!worker.exists) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text(
-                        'Worker account is unavailable.',
-                      ),
+                      content: Text('Worker account is unavailable.'),
                     ),
                   );
 
@@ -742,15 +735,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   '/worker-dashboard',
                   (route) => false,
                 );
-
               } catch (_) {
                 if (!mounted) return;
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text(
-                      'Unable to verify worker account.',
-                    ),
+                    content: Text('Unable to verify worker account.'),
                   ),
                 );
               }
@@ -772,6 +762,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // Check whether the current user is an approved Food Seller
+    final accountUid = _auth.currentUser?.uid;
     bool isActiveFoodSeller = false;
 
     try {
@@ -795,7 +786,8 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('Food seller mode check failed: $e');
     }
 
-    if (!mounted) return;
+    if (!mounted || accountUid == null || _auth.currentUser?.uid != accountUid)
+      return;
 
     showModalBottomSheet<void>(
       context: context,
@@ -804,238 +796,251 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (sheetContext) => _GlassSheet(
         child: SingleChildScrollView(
           child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _bottomSheetHandle(),
-            const SizedBox(height: 24),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _bottomSheetHandle(),
+              const SizedBox(height: 24),
 
-            CircleAvatar(
-              radius: 34,
-              backgroundColor: _Palette.primary,
-              child: Text(
-                _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+              CircleAvatar(
+                radius: 34,
+                backgroundColor: _Palette.primary,
+                child: Text(
+                  _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              Text(
+                _userName.isEmpty ? 'OneClick User' : _userName,
                 style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
+                  color: _Palette.ink,
+                  fontSize: 20,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-            ),
 
-            const SizedBox(height: 12),
+              const SizedBox(height: 4),
 
-            Text(
-              _userName.isEmpty ? 'OneClick User' : _userName,
-              style: const TextStyle(
-                color: _Palette.ink,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
+              Text(
+                _userEmail,
+                style: const TextStyle(color: _Palette.inkSoft, fontSize: 13),
               ),
-            ),
 
-            const SizedBox(height: 4),
+              const SizedBox(height: 16),
 
-            Text(
-              _userEmail,
-              style: const TextStyle(color: _Palette.inkSoft, fontSize: 13),
-            ),
-
-            const SizedBox(height: 16),
-
-            // FOOD SELLER MODE
-            if (isActiveFoodSeller)
-              Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(AppRadius.card),
-                  border: Border.all(
-                    color: Colors.orange.withValues(alpha: 0.3),
+              // FOOD SELLER MODE
+              if (isActiveFoodSeller)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(AppRadius.card),
+                    border: Border.all(
+                      color: Colors.orange.withValues(alpha: 0.3),
+                    ),
                   ),
-                ),
-                child: ListTile(
-                  leading: const Icon(
-                    Icons.storefront_rounded,
-                    color: Colors.orange,
-                  ),
-                  title: const Text(
-                    'Switch to Seller Mode',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.storefront_rounded,
                       color: Colors.orange,
                     ),
-                  ),
-                  trailing: const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 16,
-                    color: Colors.orange,
-                  ),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const FoodSellerDashboardScreen(),
+                    title: const Text(
+                      'Switch to Seller Mode',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
                       ),
-                      (route) => false,
-                    );
-                  },
-                ),
-              ),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 16,
+                      color: Colors.orange,
+                    ),
+                    onTap: () {
+                      if (_auth.currentUser?.uid != accountUid) return;
+                      Navigator.pop(sheetContext);
 
-            // DOCTOR MODE
-            if (_userRole == 'doctor')
-            // QuickFix worker account switcher
-            _workerModeOption(sheetContext),
-
-            // DYNAMIC ROLE SWITCHER (Shows ONLY for Providers/Admins)
-            if (_userRole == 'doctor') ...[
-              Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.card),
-                  border: Border.all(
-                    color: AppColors.success.withValues(alpha: 0.3),
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FoodSellerDashboardScreen(),
+                        ),
+                        (route) => false,
+                      );
+                    },
                   ),
                 ),
-                child: ListTile(
-                  leading: const Icon(
-                    Icons.medical_services_rounded,
-                    color: AppColors.success,
+
+              // QuickFix worker account switcher (independent of doctor role)
+              _workerModeOption(sheetContext),
+
+              // DOCTOR MODE
+
+              // DYNAMIC ROLE SWITCHER (Shows ONLY for Providers/Admins)
+              if (_userRole == 'doctor')
+                Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.card),
+                    border: Border.all(
+                      color: AppColors.success.withValues(alpha: 0.3),
+                    ),
                   ),
-                  title: const Text(
-                    'Switch to Doctor Mode',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.medical_services_rounded,
                       color: AppColors.success,
                     ),
-                  ),
-                  trailing: const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 16,
-                    color: AppColors.success,
-                  ),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const DoctorDashboardScreen(),
+                    title: const Text(
+                      'Switch to Doctor Mode',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.success,
                       ),
-                      (route) => false,
-                    );
-                  },
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 16,
+                      color: AppColors.success,
+                    ),
+                    onTap: () {
+                      if (_auth.currentUser?.uid != accountUid) return;
+                      Navigator.pop(sheetContext);
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const DoctorDashboardScreen(),
+                        ),
+                        (route) => false,
+                      );
+                    },
+                  ),
                 ),
-              ),
 
-            // ADMIN MODE
-            if (_userRole == 'admin')
-              Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: _Palette.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.card),
-                  border: Border.all(
-                    color: _Palette.primary.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: ListTile(
-                  leading: const Icon(
-                    Icons.admin_panel_settings_rounded,
-                    color: _Palette.primary,
-                  ),
-                  title: const Text(
-                    'Switch to Admin Portal',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: _Palette.primary,
+              // ADMIN MODE
+              if (_userRole == 'admin')
+                Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: _Palette.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.card),
+                    border: Border.all(
+                      color: _Palette.primary.withValues(alpha: 0.3),
                     ),
                   ),
-                  trailing: const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 16,
-                    color: _Palette.primary,
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.admin_panel_settings_rounded,
+                      color: _Palette.primary,
+                    ),
+                    title: const Text(
+                      'Switch to Admin Portal',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: _Palette.primary,
+                      ),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 16,
+                      color: _Palette.primary,
+                    ),
+                    onTap: () {
+                      if (_auth.currentUser?.uid != accountUid) return;
+                      Navigator.pop(sheetContext);
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AdminDashboard(),
+                        ),
+                        (route) => false,
+                      );
+                    },
                   ),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminDashboard()),
-                      (route) => false,
-                    );
-                  },
                 ),
-              ),
 
-            // PROFILE
-            ListTile(
-              leading: const Icon(
-                Icons.person_outline_rounded,
-                color: _Palette.primary,
-              ),
-              title: const Text('My Profile'),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _onNavigationSelected(3);
-              },
-            ),
-
-            // ACTIVITY
-            ListTile(
-              leading: const Icon(
-                Icons.history_rounded,
-                color: _Palette.primary,
-              ),
-              title: const Text('My Activity'),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _onNavigationSelected(2);
-              },
-            ),
-
-            const Divider(),
-
-            // LOGOUT
-            ListTile(
-              leading: const Icon(Icons.logout_rounded, color: Colors.red),
-              title: const Text(
-                'Logout',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.w700,
+              // PROFILE
+              ListTile(
+                leading: const Icon(
+                  Icons.person_outline_rounded,
+                  color: _Palette.primary,
                 ),
+                title: const Text('My Profile'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _onNavigationSelected(3);
+                },
               ),
-              onTap: () async {
-                Navigator.pop(sheetContext);
 
-                await _auth.signOut();
+              // ACTIVITY
+              ListTile(
+                leading: const Icon(
+                  Icons.history_rounded,
+                  color: _Palette.primary,
+                ),
+                title: const Text('My Activity'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _onNavigationSelected(2);
+                },
+              ),
 
-                if (!mounted) return;
+              const Divider(),
 
-                setState(() {
-                  _userName = '';
-                  _userEmail = '';
-                  _userRole = 'user';
-                  _isLoadingUser = false;
-                  _selectedIndex = 0;
-                });
+              // LOGOUT
+              ListTile(
+                leading: const Icon(Icons.logout_rounded, color: Colors.red),
+                title: const Text(
+                  'Logout',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                onTap: () async {
+                  Navigator.pop(sheetContext);
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Logged out successfully')),
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  '/login',
-                  (route) => false,
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-      ),
+                  try {
+                    await _auth.signOut();
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Logout failed: $e')),
+                      );
+                    }
+                    return;
+                  }
+
+                  if (!mounted) return;
+
+                  setState(() {
+                    _userName = '';
+                    _userEmail = '';
+                    _userRole = 'user';
+                    _isLoadingUser = false;
+                    _selectedIndex = 0;
+                  });
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Logged out successfully')),
+                  );
+                  Navigator.of(context)
+                      .pushNamedAndRemoveUntil('/login', (route) => false);
+                },
+              ),
+            ], // children
+          ), // Column
+        ), // SingleChildScrollView
+      ), // _GlassSheet
     ).whenComplete(() {
       if (mounted) setState(() => _selectedIndex = 0);
     });

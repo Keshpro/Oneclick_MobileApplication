@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -6,10 +5,7 @@ import 'package:flutter/material.dart';
 class DoctorPatientDetailScreen extends StatelessWidget {
   final Map<String, dynamic> appointmentData;
 
-  const DoctorPatientDetailScreen({
-    super.key,
-    required this.appointmentData,
-  });
+  const DoctorPatientDetailScreen({super.key, required this.appointmentData});
 
   String _value(dynamic value) {
     if (value == null) return 'Not provided';
@@ -20,10 +16,7 @@ class DoctorPatientDetailScreen extends StatelessWidget {
   Widget _field(String label, dynamic value) {
     return ListTile(
       dense: true,
-      title: Text(
-        label,
-        style: const TextStyle(color: Colors.grey),
-      ),
+      title: Text(label, style: const TextStyle(color: Colors.grey)),
       subtitle: Text(
         _value(value),
         style: const TextStyle(
@@ -36,24 +29,17 @@ class DoctorPatientDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final patientId = (appointmentData['patientId'] ??
-            appointmentData['userId'] ??
-            '')
-        .toString();
+    final patientId =
+        (appointmentData['patientId'] ?? appointmentData['userId'] ?? '')
+            .toString();
 
-    final doctorId =
-        FirebaseAuth.instance.currentUser?.uid ?? '';
+    final doctorId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-    final appointmentId =
-        (appointmentData['docId'] ?? '').toString();
+    final appointmentId = (appointmentData['docId'] ?? '').toString();
 
-    if (patientId.isEmpty ||
-        doctorId.isEmpty ||
-        appointmentId.isEmpty) {
+    if (patientId.isEmpty || doctorId.isEmpty || appointmentId.isEmpty) {
       return const Scaffold(
-        body: Center(
-          child: Text('Invalid patient or appointment reference'),
-        ),
+        body: Center(child: Text('Invalid patient or appointment reference')),
       );
     }
 
@@ -75,9 +61,7 @@ class DoctorPatientDetailScreen extends StatelessWidget {
           }
 
           if (!appointmentSnapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           final appointment = appointmentSnapshot.data!.data();
@@ -85,13 +69,10 @@ class DoctorPatientDetailScreen extends StatelessWidget {
           if (appointment == null ||
               appointment['doctorId'] != doctorId ||
               appointment['userId'] != patientId) {
-            return const Center(
-              child: Text('Access denied'),
-            );
+            return const Center(child: Text('Access denied'));
           }
 
-          return StreamBuilder<
-              DocumentSnapshot<Map<String, dynamic>>>(
+          return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance
                 .collection('users')
                 .doc(patientId)
@@ -107,13 +88,10 @@ class DoctorPatientDetailScreen extends StatelessWidget {
               }
 
               if (!profileSnapshot.hasData) {
-                return const Center(
-                  child: CircularProgressIndicator(),
-                );
+                return const Center(child: CircularProgressIndicator());
               }
 
-              final profile =
-                  profileSnapshot.data!.data() ?? {};
+              final profile = profileSnapshot.data!.data() ?? {};
 
               return ListView(
                 padding: const EdgeInsets.all(16),
@@ -159,14 +137,10 @@ class DoctorPatientDetailScreen extends StatelessWidget {
                         ),
                         _field(
                           'Email',
-                          profile['email'] ??
-                              appointment['userEmail'],
+                          profile['email'] ?? appointment['userEmail'],
                         ),
                         _field('Phone', profile['phone']),
-                        _field(
-                          'Date of Birth',
-                          profile['dateOfBirth'],
-                        ),
+                        _field('Date of Birth', profile['dateOfBirth']),
                         _field('Gender', profile['gender']),
                       ],
                     ),
@@ -178,9 +152,7 @@ class DoctorPatientDetailScreen extends StatelessWidget {
                         const ListTile(
                           title: Text(
                             'Current Appointment',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                         _field('Date', appointment['date']),
@@ -202,8 +174,7 @@ class DoctorPatientDetailScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  StreamBuilder<
-                      QuerySnapshot<Map<String, dynamic>>>(
+                  StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: FirebaseFirestore.instance
                         .collection('appointments')
                         .where('doctorId', isEqualTo: doctorId)
@@ -224,9 +195,7 @@ class DoctorPatientDetailScreen extends StatelessWidget {
                       final docs = historySnapshot.data!.docs;
 
                       if (docs.isEmpty) {
-                        return const Text(
-                          'No previous appointments found.',
-                        );
+                        return const Text('No previous appointments found.');
                       }
 
                       return Column(
@@ -239,9 +208,7 @@ class DoctorPatientDetailScreen extends StatelessWidget {
                                 Icons.history,
                                 color: Color(0xFF059669),
                               ),
-                              title: Text(
-                                _value(data['date']),
-                              ),
+                              title: Text(_value(data['date'])),
                               subtitle: Text(
                                 '${_value(data['time'])} • '
                                 '${_value(data['status'])}',

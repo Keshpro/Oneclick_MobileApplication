@@ -6,6 +6,7 @@ import '../models/booking_model.dart';
 import '../models/booking_status.dart';
 import 'booking_policy.dart';
 import 'gps_policy.dart';
+
 import 'package:geolocator/geolocator.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -90,43 +91,52 @@ class BookingFirestoreService {
     }
 
     final uid = currentUserId;
-    if (!_creatingBookings.add(uid)) throw StateError('A booking is already being created.');
+    if (!_creatingBookings.add(uid))
+      throw StateError('A booking is already being created.');
     try {
-    // Recover an existing trip instead of creating another from a stale screen.
-    final previous = await getMyBookingModels(fromServer: true);
-    for (final existing in previous) {
-      if (BookingPolicy.blocksNewBooking(existing)) {
-        if (BookingPolicy.searchExpired(existing)) {
-          final expired = await markDriverNotFound(existing.id);
-          if (expired == null) return existing.id;
-          continue;
+      // Recover an existing trip instead of creating another from a stale screen.
+      final previous = await getMyBookingModels(fromServer: true);
+      for (final existing in previous) {
+        if (BookingPolicy.blocksNewBooking(existing)) {
+          if (BookingPolicy.searchExpired(existing)) {
+            final expired = await markDriverNotFound(existing.id);
+            if (expired == null) return existing.id;
+            continue;
+          }
+          return existing.id;
         }
-        return existing.id;
       }
+      final document = _bookings.doc();
+
+      await document.set({
+        ...booking.toMap(),
+        'searchStartedAt': FieldValue.serverTimestamp(),
+        'passengerId': currentUserId,
+        'driverId': null,
+        'tripPin': null,
+        'status': 'searchingDriver',
+        'paymentStatus': 'unpaid',
+        'paymentMethod': null,
+        'paidAt': null,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      return document.id;
+    } finally {
+      _creatingBookings.remove(uid);
     }
-    final document = _bookings.doc();
-
-    await document.set({
-      ...booking.toMap(),
-      'searchStartedAt': FieldValue.serverTimestamp(),
-      'passengerId': currentUserId,
-      'driverId': null,
-      'tripPin': null,
-      'status': 'searchingDriver',
-      'paymentStatus': 'unpaid',
-      'paymentMethod': null,
-      'paidAt': null,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-
-    return document.id;
-    } finally { _creatingBookings.remove(uid); }
   }
 
-  Future<List<BookingModel>> getMyBookingModels({bool fromServer = false}) async {
+  Future<List<BookingModel>> getMyBookingModels({
+    bool fromServer = false,
+  }) async {
     final snapshot = await _bookings
         .where('passengerId', isEqualTo: currentUserId)
-        .get(fromServer ? const GetOptions(source: Source.server) : const GetOptions());
+        .get(
+          fromServer
+              ? const GetOptions(source: Source.server)
+              : const GetOptions(),
+        );
 
     final bookings = snapshot.docs.map((doc) {
       return BookingModel.fromMap(doc.id, doc.data());
@@ -180,7 +190,10 @@ class BookingFirestoreService {
     }
   }
 
-  Future<BookingModel?> cancelBookingByPassenger(String bookingId, {String reason = 'Passenger cancelled'}) async {
+  Future<BookingModel?> cancelBookingByPassenger(
+    String bookingId, {
+    String reason = 'Passenger cancelled',
+  }) async {
     final bookingRef = _bookings.doc(bookingId);
 
     return FirebaseFirestore.instance.runTransaction((transaction) async {
@@ -230,7 +243,10 @@ class BookingFirestoreService {
 
   Future<BookingModel?> retryDriverSearch(String bookingId) async {
     final existing = await getMyBookingModels(fromServer: true);
-    if (existing.any((b) => b.id != bookingId && BookingPolicy.blocksNewBooking(b))) return null;
+    if (existing.any(
+      (b) => b.id != bookingId && BookingPolicy.blocksNewBooking(b),
+    ))
+      return null;
     final bookingRef = _bookings.doc(bookingId);
 
     return FirebaseFirestore.instance.runTransaction((transaction) async {
@@ -321,7 +337,10 @@ class BookingFirestoreService {
         });
   }
 
-  Future<BookingModel?> acceptBookingByDriver(String bookingId, {required Position driverPosition}) async {
+  Future<BookingModel?> acceptBookingByDriver(
+    String bookingId, {
+    required Position driverPosition,
+  }) async {
     if (!GpsPolicy.usable(driverPosition)) return null;
     final driverId = currentUserId;
     final bookingRef = _bookings.doc(bookingId);
@@ -332,11 +351,13 @@ class BookingFirestoreService {
     final existing = await _bookings
         .where('driverId', isEqualTo: driverId)
         .get();
-    if (existing.docs.any((doc) =>
-        doc.id != bookingId &&
-        _activeDriverStatuses.contains(
-          BookingModel.fromMap(doc.id, doc.data()).status,
-        ))) {
+    if (existing.docs.any(
+      (doc) =>
+          doc.id != bookingId &&
+          _activeDriverStatuses.contains(
+            BookingModel.fromMap(doc.id, doc.data()).status,
+          ),
+    )) {
       return null;
     }
 
@@ -366,8 +387,14 @@ class BookingFirestoreService {
       if (!BookingPolicy.isSearching(booking.status) ||
           BookingPolicy.searchExpired(booking) ||
           !GpsPolicy.withinPickupRadius(driverPosition, booking.pickup) ||
-          !BookingPolicy.licenceValid(driverData['licenceExpiry']?.toString() ?? '') ||
-          !BookingPolicy.compatible(booking, manual: driverData['canDriveManual'] == true, automatic: driverData['canDriveAutomatic'] == true)) {
+          !BookingPolicy.licenceValid(
+            driverData['licenceExpiry']?.toString() ?? '',
+          ) ||
+          !BookingPolicy.compatible(
+            booking,
+            manual: driverData['canDriveManual'] == true,
+            automatic: driverData['canDriveAutomatic'] == true,
+          )) {
         return null;
       }
 
@@ -560,7 +587,10 @@ class BookingFirestoreService {
     });
   }
 
-  Future<BookingModel?> cancelBookingByDriver(String bookingId, {String reason = 'Driver cancelled'}) async {
+  Future<BookingModel?> cancelBookingByDriver(
+    String bookingId, {
+    String reason = 'Driver cancelled',
+  }) async {
     final driverId = currentUserId;
     final bookingRef = _bookings.doc(bookingId);
 
@@ -569,7 +599,9 @@ class BookingFirestoreService {
 
       if (!snapshot.exists) return null;
 
-      final driverSnapshot = await transaction.get(_driverApplications.doc(driverId));
+      final driverSnapshot = await transaction.get(
+        _driverApplications.doc(driverId),
+      );
       final data = snapshot.data();
 
       if (data == null || data['driverId'] != driverId) {
@@ -613,7 +645,9 @@ class BookingFirestoreService {
 
       if (!snapshot.exists) return null;
 
-      final driverSnapshot = await transaction.get(_driverApplications.doc(driverId));
+      final driverSnapshot = await transaction.get(
+        _driverApplications.doc(driverId),
+      );
       final data = snapshot.data();
 
       if (data == null || data['driverId'] != driverId) {
@@ -745,7 +779,13 @@ class BookingFirestoreService {
 
     final completedTrips = snapshot.docs
         .map((doc) => BookingModel.fromMap(doc.id, doc.data()))
-        .where((booking) => {BookingStatus.completed, BookingStatus.cancelledByUser, BookingStatus.cancelledByDriver}.contains(booking.status))
+        .where(
+          (booking) => {
+            BookingStatus.completed,
+            BookingStatus.cancelledByUser,
+            BookingStatus.cancelledByDriver,
+          }.contains(booking.status),
+        )
         .toList();
 
     completedTrips.sort((a, b) {

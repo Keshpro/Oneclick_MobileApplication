@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'dart:ui' show FontFeature;
-
 import '../models/food_product.dart';
 import '../services/food_cart_service.dart';
 import 'food_cart_screen.dart';

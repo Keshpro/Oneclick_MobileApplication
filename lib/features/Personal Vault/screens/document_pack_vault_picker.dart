@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../models/vault_record.dart';
@@ -47,9 +46,7 @@ class DocumentPackVaultPicker extends StatelessWidget {
 
           if (!snapshot.hasData) {
             return const Center(
-              child: CircularProgressIndicator(
-                color: _purple,
-              ),
+              child: CircularProgressIndicator(color: _purple),
             );
           }
 
@@ -72,8 +69,7 @@ class DocumentPackVaultPicker extends StatelessWidget {
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
             itemCount: records.length,
-            separatorBuilder: (_, _) =>
-                const SizedBox(height: 12),
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final record = records[index];
 
@@ -93,9 +89,7 @@ class DocumentPackVaultPicker extends StatelessWidget {
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(22),
-                          border: Border.all(
-                            color: const Color(0xFFEDE6E9),
-                          ),
+                          border: Border.all(color: const Color(0xFFEDE6E9)),
                           boxShadow: const [
                             BoxShadow(
                               color: Color(0x0D302B31),
@@ -122,8 +116,7 @@ class DocumentPackVaultPicker extends StatelessWidget {
                             const SizedBox(width: 14),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     record.title,
@@ -199,21 +192,13 @@ class DocumentPackVaultPicker extends StatelessWidget {
                 color: _softMauve,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Icon(
-                icon,
-                color: _purple,
-                size: 30,
-              ),
+              child: Icon(icon, color: _purple, size: 30),
             ),
             const SizedBox(height: 16),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: _muted,
-                fontSize: 12,
-                height: 1.5,
-              ),
+              style: const TextStyle(color: _muted, fontSize: 12, height: 1.5),
             ),
           ],
         ),

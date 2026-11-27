@@ -59,10 +59,7 @@ class _FoodDeliveryAuditState extends State<FoodDeliveryAudit> {
                 children: [
                   Row(
                     children: [
-                      const Icon(
-                        Icons.fastfood,
-                        color: Colors.green,
-                      ),
+                      const Icon(Icons.fastfood, color: Colors.green),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -116,10 +113,7 @@ class _FoodDeliveryAuditState extends State<FoodDeliveryAudit> {
     final bool approved = status == 'Approved';
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 5,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: approved
             ? Colors.green.withValues(alpha: 0.15)
@@ -141,11 +135,8 @@ class _FoodDeliveryAuditState extends State<FoodDeliveryAudit> {
       orders[index]['status'] = 'Approved';
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Food delivery approved'),
-      ),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Food delivery approved')));
   }
 
   void _reject(int index) {
@@ -153,10 +144,7 @@ class _FoodDeliveryAuditState extends State<FoodDeliveryAudit> {
       orders[index]['status'] = 'Rejected';
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Food delivery rejected'),
-      ),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Food delivery rejected')));
   }
 }

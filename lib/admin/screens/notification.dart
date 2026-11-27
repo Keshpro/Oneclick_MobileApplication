@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -69,30 +68,21 @@ class NotificationScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _markRead(
-    String uid,
-    String notificationId,
-  ) async {
-    await _collection(uid).doc(notificationId).update({
-      'isRead': true,
-    });
+  Future<void> _markRead(String uid, String notificationId) async {
+    await _collection(uid).doc(notificationId).update({'isRead': true});
   }
 
   Future<void> _markAllRead(
     String uid,
     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) async {
-    final unread = docs.where(
-      (doc) => doc.data()['isRead'] != true,
-    ).toList();
+    final unread = docs.where((doc) => doc.data()['isRead'] != true).toList();
 
     if (unread.isEmpty) return;
 
     // Firestore batches have a write limit.
     for (var start = 0; start < unread.length; start += 400) {
-      final end = start + 400 < unread.length
-          ? start + 400
-          : unread.length;
+      final end = start + 400 < unread.length ? start + 400 : unread.length;
 
       final batch = FirebaseFirestore.instance.batch();
 
@@ -115,9 +105,7 @@ class NotificationScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(26),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
       builder: (sheetContext) {
         return SafeArea(
@@ -143,32 +131,20 @@ class NotificationScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Text(
-                  body,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.6,
-                  ),
-                ),
+                Text(body, style: const TextStyle(fontSize: 14, height: 1.6)),
                 const SizedBox(height: 18),
                 Text(
                   date,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
                 const SizedBox(height: 22),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: () =>
-                        Navigator.pop(sheetContext),
+                    onPressed: () => Navigator.pop(sheetContext),
                     style: FilledButton.styleFrom(
                       backgroundColor: teal,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 16,
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: const Text('Close'),
                   ),
@@ -197,26 +173,18 @@ class NotificationScreen extends StatelessWidget {
           children: [
             Text(
               'Notifications',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
             ),
             SizedBox(height: 4),
             Text(
               'Stay updated with OneClick',
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.white70,
-              ),
+              style: TextStyle(fontSize: 11, color: Colors.white70),
             ),
           ],
         ),
       ),
       body: user == null
-          ? const Center(
-              child: Text('Please sign in to view notifications.'),
-            )
+          ? const Center(child: Text('Please sign in to view notifications.'))
           : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: _collection(user.uid)
                   .orderBy('createdAt', descending: true)
@@ -253,9 +221,7 @@ class NotificationScreen extends StatelessWidget {
                 return Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        20, 20, 20, 12,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
                       child: Row(
                         children: [
                           Expanded(
@@ -277,8 +243,7 @@ class NotificationScreen extends StatelessWidget {
                                   await _markAllRead(user.uid, docs);
                                 } catch (_) {
                                   if (context.mounted) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(
+                                    ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                         content: Text(
                                           'Unable to mark all as read',
@@ -298,12 +263,9 @@ class NotificationScreen extends StatelessWidget {
                     ),
                     Expanded(
                       child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(
-                          20, 4, 20, 30,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 30),
                         itemCount: docs.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 11),
+                        separatorBuilder: (_, _) => const SizedBox(height: 11),
                         itemBuilder: (context, index) {
                           final doc = docs[index];
                           final data = doc.data();
@@ -318,16 +280,11 @@ class NotificationScreen extends StatelessWidget {
                             'You have a new update.',
                           );
 
-                          final type = _text(
-                            data['type'],
-                            'general',
-                          );
+                          final type = _text(data['type'], 'general');
 
                           final isRead = data['isRead'] == true;
 
-                          final date = _formatDate(
-                            data['createdAt'],
-                          );
+                          final date = _formatDate(data['createdAt']);
 
                           return Material(
                             color: isRead
@@ -339,38 +296,29 @@ class NotificationScreen extends StatelessWidget {
                               onTap: () async {
                                 if (!isRead) {
                                   try {
-                                    await _markRead(
-                                      user.uid,
-                                      doc.id,
-                                    );
+                                    await _markRead(user.uid, doc.id);
                                   } catch (_) {
                                     if (context.mounted) {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Unable to mark as read',
-                                          ),
-                                        ),
-                                      );
+                                            const SnackBar(
+                                              content: Text(
+                                                'Unable to mark as read',
+                                              ),
+                                            ),
+                                          );
                                     }
                                   }
                                 }
 
                                 if (!context.mounted) return;
 
-                                _showDetails(
-                                  context,
-                                  title,
-                                  body,
-                                  date,
-                                );
+                                _showDetails(context, title, body, date);
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  borderRadius:
-                                      BorderRadius.circular(19),
+                                  borderRadius: BorderRadius.circular(19),
                                   border: Border.all(
                                     color: isRead
                                         ? const Color(0xFFE7EDEF)
@@ -378,18 +326,13 @@ class NotificationScreen extends StatelessWidget {
                                   ),
                                 ),
                                 child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Container(
-                                      padding:
-                                          const EdgeInsets.all(12),
+                                      padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color: teal.withValues(
-                                          alpha: .10,
-                                        ),
-                                        borderRadius:
-                                            BorderRadius.circular(14),
+                                        color: teal.withValues(alpha: .10),
+                                        borderRadius: BorderRadius.circular(14),
                                       ),
                                       child: Icon(
                                         _notificationIcon(type),
@@ -417,8 +360,7 @@ class NotificationScreen extends StatelessWidget {
                                           Text(
                                             body,
                                             maxLines: 3,
-                                            overflow:
-                                                TextOverflow.ellipsis,
+                                            overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
                                               color: Colors.black54,
                                               fontSize: 12,
@@ -460,11 +402,7 @@ class NotificationScreen extends StatelessWidget {
     );
   }
 
-  Widget _emptyState(
-    IconData icon,
-    String title,
-    String description,
-  ) {
+  Widget _emptyState(IconData icon, String title, String description) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(30),
@@ -486,10 +424,7 @@ class NotificationScreen extends StatelessWidget {
             Text(
               description,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 13,
-              ),
+              style: const TextStyle(color: Colors.grey, fontSize: 13),
             ),
           ],
         ),

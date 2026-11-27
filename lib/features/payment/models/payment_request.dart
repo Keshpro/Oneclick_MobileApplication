@@ -1,4 +1,3 @@
-
 class PaymentRequest {
   final String bookingId;
   final String module;

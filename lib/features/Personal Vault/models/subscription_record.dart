@@ -64,61 +64,43 @@ class SubscriptionRecord {
       'amount': amount,
       'currency': currency,
       'billingCycle': billingCycle,
-      'renewalDate':
-          renewalDate == null
-              ? null
-              : Timestamp.fromDate(renewalDate!),
-      'cancelledAt':
-          cancelledAt == null
-              ? null
-              : Timestamp.fromDate(cancelledAt!),
-      'renewalActionHandledFor':
-          renewalActionHandledFor == null
-              ? null
-              : Timestamp.fromDate(
-                  renewalActionHandledFor!,),
+      'renewalDate': renewalDate == null
+          ? null
+          : Timestamp.fromDate(renewalDate!),
+      'cancelledAt': cancelledAt == null
+          ? null
+          : Timestamp.fromDate(cancelledAt!),
+      'renewalActionHandledFor': renewalActionHandledFor == null
+          ? null
+          : Timestamp.fromDate(renewalActionHandledFor!),
     };
   }
 
-  factory SubscriptionRecord.fromMap(
-    String id,
-    Map<String, dynamic> map,
-  ) {
-    final String oldPrice =
-        map['price']?.toString() ?? '';
+  factory SubscriptionRecord.fromMap(String id, Map<String, dynamic> map) {
+    final String oldPrice = map['price']?.toString() ?? '';
 
-    final double? storedAmount =
-        map['amount'] is num
-            ? (map['amount'] as num).toDouble()
-            : null;
+    final double? storedAmount = map['amount'] is num
+        ? (map['amount'] as num).toDouble()
+        : null;
 
-    final double? fallbackAmount =
-        double.tryParse(
-          oldPrice.replaceAll(
-            RegExp(r'[^0-9.]'),
-            '',
-          ),
-        );
+    final double? fallbackAmount = double.tryParse(
+      oldPrice.replaceAll(RegExp(r'[^0-9.]'), ''),
+    );
 
-    final String storedCurrency =
-        map['currency']?.toString() ?? '';
+    final String storedCurrency = map['currency']?.toString() ?? '';
 
     final String fallbackCurrency =
         oldPrice.trim().toUpperCase().startsWith('USD') ||
-                oldPrice.trim().startsWith(r'$')
-            ? 'USD'
-            : 'LKR';
+            oldPrice.trim().startsWith(r'$')
+        ? 'USD'
+        : 'LKR';
 
-    final String subtitle =
-        map['subtitle']?.toString() ?? '';
+    final String subtitle = map['subtitle']?.toString() ?? '';
 
-    final String storedBillingCycle =
-        map['billingCycle']?.toString() ?? '';
+    final String storedBillingCycle = map['billingCycle']?.toString() ?? '';
 
     final String fallbackBillingCycle =
-        subtitle.toLowerCase().contains('annual')
-            ? 'Annual'
-            : 'Monthly';
+        subtitle.toLowerCase().contains('annual') ? 'Annual' : 'Monthly';
 
     return SubscriptionRecord(
       id: id,
@@ -131,31 +113,18 @@ class SubscriptionRecord {
       category: map['category'] ?? '',
       status: map['status'] ?? 'Active',
       priceHiked: map['priceHiked'] ?? false,
-      createdAt:
-          (map['createdAt'] as Timestamp?)
-                  ?.toDate() ??
-              DateTime.now(),
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
 
       // New fields with fallbacks for old Firestore records.
       amount: storedAmount ?? fallbackAmount,
-      currency:
-          storedCurrency.isEmpty
-              ? fallbackCurrency
-              : storedCurrency,
-      billingCycle:
-          storedBillingCycle.isEmpty
-              ? fallbackBillingCycle
-              : storedBillingCycle,
-      renewalDate:
-          (map['renewalDate'] as Timestamp?)
-              ?.toDate(),
-      cancelledAt:
-          (map['cancelledAt'] as Timestamp?)
-              ?.toDate(),
-      renewalActionHandledFor:
-          (map['renewalActionHandledFor']
-                  as Timestamp?)
-              ?.toDate(),
+      currency: storedCurrency.isEmpty ? fallbackCurrency : storedCurrency,
+      billingCycle: storedBillingCycle.isEmpty
+          ? fallbackBillingCycle
+          : storedBillingCycle,
+      renewalDate: (map['renewalDate'] as Timestamp?)?.toDate(),
+      cancelledAt: (map['cancelledAt'] as Timestamp?)?.toDate(),
+      renewalActionHandledFor: (map['renewalActionHandledFor'] as Timestamp?)
+          ?.toDate(),
       renewalReminders: map['renewalReminders'] is bool
           ? map['renewalReminders'] as bool
           : true,

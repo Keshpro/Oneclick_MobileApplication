@@ -64,7 +64,9 @@ class DoctorAudit extends StatelessWidget {
               final name = data['name'] ?? 'Unknown Doctor';
               final email = data['email'] ?? 'No email';
               final phone = data['phone'] ?? 'No phone';
-              final status = (data['status'] ?? 'pending').toString().toLowerCase();
+              final status = (data['status'] ?? 'pending')
+                  .toString()
+                  .toLowerCase();
 
               final providerDetails =
                   data['providerDetails'] as Map<String, dynamic>? ?? {};
@@ -102,8 +104,8 @@ class DoctorAudit extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 24,
-                        backgroundColor:
-                            const Color(0xff032744).withValues(alpha: 0.1),
+                        backgroundColor: const Color(0xff032744)
+                            .withValues(alpha: 0.1),
                         child: const Icon(
                           Icons.medical_services,
                           color: Color(0xff032744),
