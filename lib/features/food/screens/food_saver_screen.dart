@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../auth/screens/provider_rules_screen.dart';
+
 import 'dart:ui' show FontFeature;
 
 import '../models/food_product.dart';
@@ -89,6 +91,22 @@ class FoodSaverScreen extends StatefulWidget {
 
 class _FoodSaverScreenState extends State<FoodSaverScreen> {
   final TextEditingController _searchController = TextEditingController();
+
+  bool _showSellerBanner = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFirestoreOffers();
+
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          _showSellerBanner = false;
+        });
+      }
+    });
+  }
 
   String selectedCategory = 'All';
   List<SaveBiteOffer> firestoreOffers = [];
@@ -306,12 +324,6 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _loadFirestoreOffers();
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -428,121 +440,264 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
         ],
       ),
 
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
 
-            const SizedBox(height: 18),
+                const SizedBox(height: 18),
 
-            _buildSearchBar(),
+                _buildSearchBar(),
 
-            const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-            _buildCategories(),
+                _buildCategories(),
 
-            const SizedBox(height: 22),
+                const SizedBox(height: 22),
 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Fresh Deals 🍊',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF292421),
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF0E3),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      '${filtered.length} offers',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFFFF5722),
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            if (isLoadingFirestoreOffers)
-              const Padding(
-                padding: EdgeInsets.all(30),
-                child: Center(
-                  child: CircularProgressIndicator(color: Color(0xFFFF5722)),
-                ),
-              )
-            else if (firestoreOffersError != null)
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Center(
-                  child: Column(
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(firestoreOffersError!, textAlign: TextAlign.center),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            isLoadingFirestoreOffers = true;
-                            firestoreOffersError = null;
-                          });
-                          _loadFirestoreOffers();
-                        },
-                        child: const Text('Retry'),
+                      const Expanded(
+                        child: Text(
+                          'Fresh Deals 🍊',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF292421),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF0E3),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          '${filtered.length} offers',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFFFF5722),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-              )
-            else if (filtered.isEmpty)
-              _buildEmptyState()
-            else
-              ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: filtered.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 16),
-                itemBuilder: (context, index) {
-                  return _SaveBiteCard(
-                    offer: filtered[index],
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              SaveBiteDetailsScreen(offer: filtered[index]),
-                        ),
+
+                const SizedBox(height: 14),
+
+                if (isLoadingFirestoreOffers)
+                  const Padding(
+                    padding: EdgeInsets.all(30),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFFF5722),
+                      ),
+                    ),
+                  )
+                else if (firestoreOffersError != null)
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Text(
+                            firestoreOffersError!,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 10),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                isLoadingFirestoreOffers = true;
+                                firestoreOffersError = null;
+                              });
+                              _loadFirestoreOffers();
+                            },
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (filtered.isEmpty)
+                  _buildEmptyState()
+                else
+                  ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 16),
+                    itemBuilder: (context, index) {
+                      return _SaveBiteCard(
+                        offer: filtered[index],
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  SaveBiteDetailsScreen(offer: filtered[index]),
+                            ),
+                          );
+                        },
                       );
                     },
-                  );
-                },
-              ),
+                  ),
 
-            _buildImpactCard(),
+                _buildImpactCard(),
 
-            const SizedBox(height: 20),
-          ],
-        ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+
+          // Animated Become a Food Seller banner
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOutCubic,
+            top: _showSellerBanner ? 12 : -220,
+            left: 16,
+            right: 16,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 400),
+              opacity: _showSellerBanner ? 1 : 0,
+              child: _showSellerBanner
+                  ? Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF1B5E20), Color(0xFF43A047)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.green.withValues(alpha: 0.30),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 55,
+                            height: 55,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(
+                              Icons.storefront_rounded,
+                              color: Colors.white,
+                              size: 30,
+                            ),
+                          ),
+
+                          const SizedBox(width: 14),
+
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Own a Food Business? 🍽️',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 5),
+
+                                const Text(
+                                  'Join OneClick and turn surplus food into sales!',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                    height: 1.4,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 10),
+
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const ProviderRulesScreen(),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 9,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'Become a Seller',
+                                          style: TextStyle(
+                                            color: Color(0xFF1B5E20),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                        SizedBox(width: 6),
+                                        Icon(
+                                          Icons.arrow_forward_rounded,
+                                          color: Color(0xFF1B5E20),
+                                          size: 16,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _showSellerBanner = false;
+                              });
+                            },
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ),
+        ],
       ),
     );
   }
