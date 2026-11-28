@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'food_cart_service.dart';
 
 enum FoodFulfillmentType { delivery, pickup }
@@ -22,6 +24,8 @@ class FoodOrderItem {
   final String restaurantLogo;
   final double price;
   final int quantity;
+  final String? sellerUid;
+  final String? firestoreOfferPath;
 
   FoodOrderItem({
     required this.foodName,
@@ -30,9 +34,24 @@ class FoodOrderItem {
     required this.restaurantLogo,
     required this.price,
     required this.quantity,
+    this.sellerUid,
+    this.firestoreOfferPath,
   });
 
   double get total => price * quantity;
+
+  Map<String, dynamic> toMap() {
+    return {
+      'foodName': foodName,
+      'restaurantName': restaurantName,
+      'foodImage': foodImage,
+      'restaurantLogo': restaurantLogo,
+      'price': price,
+      'quantity': quantity,
+      'sellerUid': sellerUid,
+      'firestoreOfferPath': firestoreOfferPath,
+    };
+  }
 }
 
 class FoodOrder {
@@ -80,6 +99,33 @@ class FoodOrder {
   bool get isDelivery => fulfillmentType == FoodFulfillmentType.delivery;
 
   bool get isPickup => fulfillmentType == FoodFulfillmentType.pickup;
+
+  Map<String, dynamic> toMap() {
+    return {
+      'orderId': orderId,
+      'sellerUids': items
+          .map((item) => item.sellerUid)
+          .where((uid) => uid != null)
+          .toSet()
+          .toList(),
+      'items': items.map((item) => item.toMap()).toList(),
+      'subtotal': subtotal,
+      'deliveryFee': deliveryFee,
+      'total': total,
+      'fulfillmentType': fulfillmentType.name,
+      'customerName': customerName,
+      'phone': phone,
+      'address': address,
+      'deliveryNote': deliveryNote,
+      'pickupTime': pickupTime,
+      'paymentMethod': paymentMethod,
+      'placedAt': Timestamp.fromDate(placedAt),
+      'status': status.name,
+      'reviewRating': reviewRating,
+      'reviewText': reviewText,
+      'reviewSubmitted': reviewSubmitted,
+    };
+  }
 }
 
 class FoodOrderService {
@@ -87,11 +133,27 @@ class FoodOrderService {
 
   static final FoodOrderService instance = FoodOrderService._();
 
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   final List<FoodOrder> orders = [];
 
   FoodOrder? currentOrder;
 
-  FoodOrder placeOrder({
+  // Extract the seller UID from a Firestore offer path.
+  // Example: food_sellers/SELLER_UID/offers/OFFER_ID
+  String? _extractSellerUid(String? path) {
+    if (path == null || path.trim().isEmpty) return null;
+
+    final segments = path.split('/');
+
+    if (segments.length >= 2 && segments[0] == 'food_sellers') {
+      return segments[1];
+    }
+
+    return null;
+  }
+
+  Future<FoodOrder> placeOrder({
     required FoodFulfillmentType fulfillmentType,
     required String customerName,
     required String phone,
@@ -100,19 +162,28 @@ class FoodOrderService {
     required String pickupTime,
     required String paymentMethod,
     List<FoodCartItem>? checkoutItems,
-  }) {
+  }) async {
     final cart = FoodCartService.instance;
 
     final selectedItems = checkoutItems ?? cart.items;
 
+    if (selectedItems.isEmpty) {
+      throw Exception('Your cart is empty.');
+    }
+
     final orderItems = selectedItems.map((item) {
+      final product = item.product;
+      final offerPath = product.firestoreOfferPath;
+
       return FoodOrderItem(
-        foodName: item.product.name,
-        restaurantName: item.product.sellerName,
-        foodImage: item.product.foodImage,
-        restaurantLogo: item.product.sellerLogo,
-        price: item.product.price,
+        foodName: product.name,
+        restaurantName: product.sellerName,
+        foodImage: product.foodImage,
+        restaurantLogo: product.sellerLogo,
+        price: product.price,
         quantity: item.quantity,
+        firestoreOfferPath: offerPath,
+        sellerUid: _extractSellerUid(offerPath),
       );
     }).toList();
 
@@ -129,8 +200,11 @@ class FoodOrderService {
 
     final now = DateTime.now();
 
+    // Generate a Firestore document reference first.
+    final orderRef = _firestore.collection('food_orders').doc();
+
     final orderId =
-        'OC-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${orders.length + 1}';
+        'OC-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${orderRef.id.substring(0, 6).toUpperCase()}';
 
     final order = FoodOrder(
       orderId: orderId,
@@ -148,31 +222,60 @@ class FoodOrderService {
       placedAt: now,
     );
 
+    // Save the order permanently to Firestore.
+    await orderRef.set({...order.toMap(), 'documentId': orderRef.id});
+
     orders.add(order);
     currentOrder = order;
 
     return order;
   }
 
-  void updateStatus(FoodOrderStatus status) {
-    if (currentOrder != null) {
-      currentOrder!.status = status;
-    }
+  Future<void> updateStatus(FoodOrderStatus status) async {
+    if (currentOrder == null) return;
+
+    currentOrder!.status = status;
+
+    await _updateOrderInFirestore(currentOrder!);
   }
 
-  void submitReview({required int rating, required String review}) {
+  Future<void> submitReview({
+    required int rating,
+    required String review,
+  }) async {
     if (currentOrder == null) return;
 
     currentOrder!.reviewRating = rating;
     currentOrder!.reviewText = review;
     currentOrder!.reviewSubmitted = true;
+
+    await _updateOrderInFirestore(currentOrder!);
   }
 
   void clearCurrentOrder() {
     currentOrder = null;
   }
 
-  void updateSpecificOrderStatus(FoodOrder order, FoodOrderStatus status) {
+  Future<void> updateSpecificOrderStatus(
+    FoodOrder order,
+    FoodOrderStatus status,
+  ) async {
     order.status = status;
+
+    await _updateOrderInFirestore(order);
+  }
+
+  Future<void> _updateOrderInFirestore(FoodOrder order) async {
+    final query = await _firestore
+        .collection('food_orders')
+        .where('orderId', isEqualTo: order.orderId)
+        .limit(1)
+        .get();
+
+    if (query.docs.isEmpty) {
+      throw Exception('Order not found in Firestore.');
+    }
+
+    await query.docs.first.reference.update(order.toMap());
   }
 }

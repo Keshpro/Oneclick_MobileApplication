@@ -52,15 +52,12 @@ class _FoodSellerDashboardScreenState extends State<FoodSellerDashboardScreen> {
     return isApproved;
   }
 
-  // ------------------------------------------------------------
-  // REFRESH DASHBOARD
-  // ------------------------------------------------------------
+  Future<bool>? _approvalCheck;
 
   void refreshDashboard() {
     setState(() {});
   }
 
-  @override
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
@@ -120,327 +117,389 @@ class _FoodSellerDashboardScreenState extends State<FoodSellerDashboardScreen> {
     );
   }
 
-  Future<bool>? _approvalCheck;
+  // ------------------------------------------------------------
+  // REAL FIRESTORE DASHBOARD STATISTICS
+  // ------------------------------------------------------------
 
   Widget _buildSellerDashboard() {
-    // Count active offers
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid == null) {
+      return const Scaffold(body: Center(child: Text('Please log in again.')));
+    }
+
     final activeOffers = sellerData.offers
         .where((offer) => offer.status == 'ACTIVE')
         .length;
 
-    // Count all orders
-    final totalOrders = sellerData.orders.length;
-
-    // Calculate completed earnings
-    final totalEarnings = sellerData.totalEarnings;
-
-    // Calculate completed food quantity
-    final foodSaved = sellerData.foodSold;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Food Seller Dashboard'),
-        actions: [
-          TextButton.icon(
-            onPressed: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const HomeScreen()),
-                (route) => false,
-              );
-            },
-            icon: const Icon(Icons.person_outline, color: Colors.white),
-            label: const Text(
-              'Customer Mode',
-              style: TextStyle(color: Colors.white),
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('food_orders')
+          .where('sellerUids', arrayContains: uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Food Seller Dashboard')),
+            body: Center(
+              child: Text(
+                'Failed to load dashboard statistics: ${snapshot.error}',
+              ),
             ),
+          );
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final orderDocs = snapshot.data?.docs ?? [];
+
+        // Count real orders belonging to this seller.
+        final totalOrders = orderDocs.length;
+
+        double totalEarnings = 0;
+        int foodSold = 0;
+
+        // Calculate completed sales belonging to this seller.
+        for (final doc in orderDocs) {
+          final data = doc.data();
+
+          final rawItems = data['items'] as List<dynamic>? ?? [];
+
+          final sellerItems = rawItems.where((rawItem) {
+            final item = Map<String, dynamic>.from(rawItem as Map);
+            return item['sellerUid'] == uid;
+          });
+
+          final sellerStatuses = Map<String, dynamic>.from(
+            data['sellerStatuses'] ?? {},
+          );
+
+          final sellerStatus =
+              sellerStatuses[uid]?.toString() ??
+              data['status']?.toString() ??
+              'orderPlaced';
+
+          // Only count completed sales as earnings and food sold.
+          final isCompleted =
+              sellerStatus == 'delivered' || sellerStatus == 'completed';
+
+          if (!isCompleted) continue;
+
+          for (final rawItem in sellerItems) {
+            final item = Map<String, dynamic>.from(rawItem as Map);
+
+            final price = (item['price'] as num?)?.toDouble() ?? 0;
+            final quantity = (item['quantity'] as num?)?.toInt() ?? 0;
+
+            totalEarnings += price * quantity;
+            foodSold += quantity;
+          }
+        }
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Food Seller Dashboard'),
+            actions: [
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    (route) => false,
+                  );
+                },
+                icon: const Icon(Icons.person_outline, color: Colors.white),
+                label: const Text(
+                  'Customer Mode',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
 
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
 
-          children: [
-            // ------------------------------------------------------------
-            // WELCOME SECTION
-            // ------------------------------------------------------------
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-
-              decoration: BoxDecoration(
-                color: Colors.green.shade700,
-                borderRadius: BorderRadius.circular(20),
-              ),
-
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-
-                children: [
-                  const Text(
-                    'Welcome back 👋',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  // DYNAMIC STORE NAME
-                  Text(
-                    sellerData.storeName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  const Text(
-                    'Your Food Seller account is ready.',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // ------------------------------------------------------------
-            // OVERVIEW
-            // ------------------------------------------------------------
-            const Text(
-              'Overview',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-
-            const SizedBox(height: 14),
-
-            // ------------------------------------------------------------
-            // STATISTICS - ROW 1
-            // ------------------------------------------------------------
-            Row(
               children: [
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.restaurant_menu_rounded,
-                    title: 'Active Offers',
-                    value: activeOffers.toString(),
-                    color: Colors.orange,
+                // ------------------------------------------------------------
+                // WELCOME SECTION
+                // ------------------------------------------------------------
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade700,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+
+                    children: [
+                      const Text(
+                        'Welcome back 👋',
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      Text(
+                        sellerData.storeName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      const Text(
+                        'Your Food Seller account is ready.',
+                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                    ],
                   ),
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(height: 24),
 
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.shopping_bag_rounded,
-                    title: 'Orders',
-                    value: totalOrders.toString(),
-                    color: Colors.blue,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // ------------------------------------------------------------
-            // STATISTICS - ROW 2
-            // ------------------------------------------------------------
-            Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.attach_money_rounded,
-                    title: 'Earnings',
-                    value: 'Rs. ${totalEarnings.toStringAsFixed(0)}',
-                    color: Colors.green,
-                  ),
+                // ------------------------------------------------------------
+                // OVERVIEW
+                // ------------------------------------------------------------
+                const Text(
+                  'Overview',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(height: 14),
 
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.eco_rounded,
-                    title: 'Food Saved',
-                    value: foodSaved.toString(),
-                    color: Colors.teal,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 28),
-
-            // ------------------------------------------------------------
-            // ADD SURPLUS FOOD
-            // ------------------------------------------------------------
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.orange.shade100),
-              ),
-
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-
-                children: [
-                  Icon(
-                    Icons.add_circle_outline_rounded,
-                    color: Colors.orange.shade700,
-                    size: 32,
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  const Text(
-                    'Have surplus food?',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  Text(
-                    'Create a discounted Food Saver offer and help reduce food waste.',
-                    style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 46,
-
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const FoodAddSurplusScreen(),
-                          ),
-                        );
-
-                        refreshDashboard();
-                      },
-
-                      icon: const Icon(Icons.add),
-
-                      label: const Text(
-                        'Add Surplus Food',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                // ------------------------------------------------------------
+                // STATISTICS - ROW 1
+                // ------------------------------------------------------------
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.restaurant_menu_rounded,
+                        title: 'Active Offers',
+                        value: activeOffers.toString(),
+                        color: Colors.orange,
                       ),
                     ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.shopping_bag_rounded,
+                        title: 'Orders',
+                        value: totalOrders.toString(),
+                        color: Colors.blue,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // ------------------------------------------------------------
+                // STATISTICS - ROW 2
+                // ------------------------------------------------------------
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.attach_money_rounded,
+                        title: 'Earnings',
+                        value: 'Rs. ${totalEarnings.toStringAsFixed(0)}',
+                        color: Colors.green,
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.eco_rounded,
+                        title: 'Food Saved',
+                        value: foodSold.toString(),
+                        color: Colors.teal,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 28),
+
+                // ------------------------------------------------------------
+                // ADD SURPLUS FOOD
+                // ------------------------------------------------------------
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.orange.shade100),
                   ),
-                ],
-              ),
-            ),
 
-            const SizedBox(height: 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
 
-            // ------------------------------------------------------------
-            // MANAGE YOUR STORE
-            // ------------------------------------------------------------
-            const Text(
-              'Manage Your Store',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+                    children: [
+                      Icon(
+                        Icons.add_circle_outline_rounded,
+                        color: Colors.orange.shade700,
+                        size: 32,
+                      ),
 
-            const SizedBox(height: 14),
+                      const SizedBox(height: 10),
 
-            // ------------------------------------------------------------
-            // MY OFFERS
-            // ------------------------------------------------------------
-            _DashboardOption(
-              icon: Icons.restaurant_menu_rounded,
-              title: 'My Offers',
-              subtitle: 'View and manage your Food Saver offers',
+                      const Text(
+                        'Have surplus food?',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
 
-              onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FoodMyOffersScreen()),
-                );
+                      const SizedBox(height: 6),
 
-                refreshDashboard();
-              },
-            ),
+                      Text(
+                        'Create a discounted Food Saver offer and help reduce food waste.',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 13,
+                        ),
+                      ),
 
-            // ------------------------------------------------------------
-            // ORDERS
-            // ------------------------------------------------------------
-            _DashboardOption(
-              icon: Icons.shopping_bag_outlined,
-              title: 'Orders',
-              subtitle: 'View and manage customer orders',
+                      const SizedBox(height: 16),
 
-              onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const FoodSellerOrdersScreen(),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const FoodAddSurplusScreen(),
+                              ),
+                            );
+
+                            refreshDashboard();
+                          },
+
+                          icon: const Icon(Icons.add),
+
+                          label: const Text(
+                            'Add Surplus Food',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                );
+                ),
 
-                refreshDashboard();
-              },
+                const SizedBox(height: 28),
+
+                // ------------------------------------------------------------
+                // MANAGE YOUR STORE
+                // ------------------------------------------------------------
+                const Text(
+                  'Manage Your Store',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 14),
+
+                // MY OFFERS
+                _DashboardOption(
+                  icon: Icons.restaurant_menu_rounded,
+                  title: 'My Offers',
+                  subtitle: 'View and manage your Food Saver offers',
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FoodMyOffersScreen(),
+                      ),
+                    );
+
+                    refreshDashboard();
+                  },
+                ),
+
+                // ORDERS
+                _DashboardOption(
+                  icon: Icons.shopping_bag_outlined,
+                  title: 'Orders',
+                  subtitle: 'View and manage customer orders',
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FoodSellerOrdersScreen(),
+                      ),
+                    );
+
+                    refreshDashboard();
+                  },
+                ),
+
+                // STORE PROFILE
+                _DashboardOption(
+                  icon: Icons.storefront_outlined,
+                  title: 'Store Profile',
+                  subtitle: 'Manage your business information',
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FoodStoreProfileScreen(),
+                      ),
+                    );
+
+                    refreshDashboard();
+                  },
+                ),
+
+                // EARNINGS
+                _DashboardOption(
+                  icon: Icons.account_balance_wallet_outlined,
+                  title: 'Earnings',
+                  subtitle: 'View your sales and earnings',
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FoodSellerEarningsScreen(),
+                      ),
+                    );
+
+                    refreshDashboard();
+                  },
+                ),
+
+                const SizedBox(height: 20),
+              ],
             ),
-
-            // ------------------------------------------------------------
-            // STORE PROFILE
-            // ------------------------------------------------------------
-            _DashboardOption(
-              icon: Icons.storefront_outlined,
-              title: 'Store Profile',
-              subtitle: 'Manage your business information',
-
-              onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const FoodStoreProfileScreen(),
-                  ),
-                );
-
-                // Refresh dashboard after returning
-                refreshDashboard();
-              },
-            ),
-
-            // ------------------------------------------------------------
-            // EARNINGS
-            // ------------------------------------------------------------
-            _DashboardOption(
-              icon: Icons.account_balance_wallet_outlined,
-              title: 'Earnings',
-              subtitle: 'View your sales and earnings',
-
-              onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const FoodSellerEarningsScreen(),
-                  ),
-                );
-
-                refreshDashboard();
-              },
-            ),
-
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
