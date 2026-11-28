@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_ai/firebase_ai.dart'; // Required for Gemini AI connection
 
 class AiAssistantScreen extends StatefulWidget {
@@ -36,8 +37,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   // ============================================================
   // FIREBASE AI: Variables to hold the Gemini model and chat session
   // ============================================================
-  late final GenerativeModel _model;
-  late final ChatSession _chat;
+  GenerativeModel? _model;
+  ChatSession? _chat;
+  static const _modelName = 'gemini-3.8-flash';
 
   // Preset questions for the user to tap quickly
   final List<String> _quickQuestions = [
@@ -55,7 +57,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     super.initState();
 
     // Setup the AI connection
-    _initializeAI();
+    // Initialize lazily inside the request error handler.
 
     // Add the first welcome message from the AI to the screen
     _messages.add(
@@ -72,9 +74,10 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   }
 
   // Setup Firebase AI and set strict rules for medical safety
-  void _initializeAI() {
+  ChatSession _initializeAI() {
+    if (_chat != null) return _chat!;
     _model = FirebaseAI.googleAI().generativeModel(
-      model: 'gemini-3.8-flash', // FIXED: Changed to the correct Gemini model version
+      model: _modelName,
       systemInstruction: Content.system('''
 You are OneClick Health AI.
 
@@ -117,7 +120,7 @@ COMMUNICATION STYLE:
     );
 
     // Start a continuous chat session to remember previous messages
-    _chat = _model.startChat();
+    return _chat = _model!.startChat();
   }
 
   // ============================================================
@@ -135,7 +138,7 @@ COMMUNICATION STYLE:
   // ============================================================
   Future<void> _sendMessage([String? quickMessage]) async {
     // Get text from quick button or input field
-    final String message = quickMessage ?? _messageController.text.trim();
+    final String message = (quickMessage ?? _messageController.text).trim();
 
     // Do nothing if empty or AI is already typing
     if (message.isEmpty || _isTyping) return;
@@ -184,7 +187,9 @@ COMMUNICATION STYLE:
 
     // 3. SEND TO GEMINI AI
     try {
-      final response = await _chat.sendMessage(Content.text(message));
+      final chat = _initializeAI();
+      final response = await chat.sendMessage(Content.text(message))
+          .timeout(const Duration(seconds: 45));
       if (!mounted) return;
 
       final String responseText = response.text?.trim() ?? '';
@@ -193,7 +198,7 @@ COMMUNICATION STYLE:
           : 'Sorry, I could not generate a response. Please try again.';
 
       // Check if AI or user mentioned a doctor specialty
-      final recommendation = _detectRecommendation(message, aiText);
+      final recommendation = _detectRecommendation(aiText);
 
       // Add AI response to the screen
       setState(() {
@@ -208,23 +213,49 @@ COMMUNICATION STYLE:
       });
       _scrollToBottom();
     } catch (error) {
-      // Handle Network or API errors
-      debugPrint('OneClick Health AI Error: $error');
+      // Discard failed session, including any request still running after timeout.
+      _chat = null;
+      _model = null;
+      final message = _friendlyError(error);
+      if (kDebugMode) {
+        debugPrint('OneClick Health AI: ${error.runtimeType}; $message');
+      }
       if (!mounted) return;
-
       setState(() {
-        _messages.add(
-          const _ChatMessage(
-            text:
-                'I’m having trouble connecting to the AI service right now.\n\n'
-                'Please check your internet connection and try again.',
-            isUser: false,
-          ),
-        );
+        _messages.add(_ChatMessage(text: message, isUser: false));
         _isTyping = false;
       });
       _scrollToBottom();
     }
+  }
+
+  String _friendlyError(Object error) {
+    final detail = error.toString().toLowerCase();
+    if (error is TimeoutException) {
+      return 'The AI request timed out. Please try again.';
+    }
+    if (detail.contains('app check') || detail.contains('appcheck') ||
+        detail.contains('app_check')) {
+      return 'AI access verification failed. Please contact app support (App Check).';
+    }
+    if (detail.contains('429') || detail.contains('quota') ||
+        detail.contains('resource_exhausted')) {
+      return 'The AI usage limit has been reached. Please try again later.';
+    }
+    if (detail.contains('404') || detail.contains('not_found') ||
+        detail.contains('not found')) {
+      return 'The AI model or service is unavailable (404). Please contact app support.';
+    }
+    if (detail.contains('403') || detail.contains('permission') ||
+        detail.contains('blocked') || detail.contains('api key') ||
+        detail.contains('401') || detail.contains('unauthenticated')) {
+      return 'AI access is not authorized. Please contact app support to check Firebase AI configuration.';
+    }
+    if (detail.contains('network') || detail.contains('socket') ||
+        detail.contains('connection') || detail.contains('failed to fetch')) {
+      return 'Unable to connect to the AI service. Check your connection and try again.';
+    }
+    return 'The AI service could not complete your request. Please try again or contact app support.';
   }
 
   // ============================================================
@@ -261,10 +292,14 @@ COMMUNICATION STYLE:
   // DOCTOR RECOMMENDATION DETECTION: Matches text to specialties
   // ============================================================
   _DoctorRecommendation? _detectRecommendation(
-    String userMessage,
     String aiResponse,
   ) {
-    final text = '${userMessage.toLowerCase()} ${aiResponse.toLowerCase()}';
+    final text = aiResponse.toLowerCase();
+    // Do not offer routine booking when the response flags urgent care.
+    if (_detectEmergency(aiResponse) || text.contains('emergency department') ||
+        text.contains('urgent medical attention')) {
+      return null;
+    }
 
     if (_containsAny(text, [
       'cardiologist',
@@ -352,7 +387,7 @@ COMMUNICATION STYLE:
   // ============================================================
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
+      if (!mounted || !_scrollController.hasClients) return;
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 350),
@@ -674,7 +709,7 @@ COMMUNICATION STYLE:
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'General guidance only — not a medical diagnosis.',
+                    'General guidance only. Messages are sent to AI; avoid sharing personal or medical identifiers.',
                     style: TextStyle(
                       color: Color(0xFF92400E),
                       fontSize: 11.5,
