@@ -19,7 +19,6 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
   @override
   void initState() {
     super.initState();
-
     order = widget.order;
   }
 
@@ -47,39 +46,28 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
     ];
   }
 
-  int get currentIndex {
-    return statuses.indexOf(order.status);
-  }
+  int get currentIndex => statuses.indexOf(order.status);
 
   String statusTitle(FoodOrderStatus status) {
     switch (status) {
       case FoodOrderStatus.orderPlaced:
         return 'Order Placed';
-
       case FoodOrderStatus.sellerConfirmed:
         return 'Seller Confirmed';
-
       case FoodOrderStatus.preparing:
         return 'Preparing Your Food';
-
       case FoodOrderStatus.ready:
         return 'Ready for Pickup';
-
       case FoodOrderStatus.driverAssigned:
         return 'Driver Assigned';
-
       case FoodOrderStatus.pickedUp:
         return order.isDelivery ? 'Picked Up by Driver' : 'Order Picked Up';
-
       case FoodOrderStatus.onTheWay:
         return 'On the Way';
-
       case FoodOrderStatus.delivered:
         return 'Delivered';
-
       case FoodOrderStatus.readyForPickup:
         return 'Ready for Pickup';
-
       case FoodOrderStatus.completed:
         return 'Completed';
     }
@@ -89,44 +77,23 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
     switch (status) {
       case FoodOrderStatus.orderPlaced:
         return Icons.receipt_long;
-
       case FoodOrderStatus.sellerConfirmed:
         return Icons.storefront;
-
       case FoodOrderStatus.preparing:
         return Icons.restaurant;
-
       case FoodOrderStatus.ready:
       case FoodOrderStatus.readyForPickup:
         return Icons.inventory_2;
-
       case FoodOrderStatus.driverAssigned:
         return Icons.person_pin_circle;
-
       case FoodOrderStatus.pickedUp:
         return Icons.local_shipping;
-
       case FoodOrderStatus.onTheWay:
         return Icons.delivery_dining;
-
       case FoodOrderStatus.delivered:
       case FoodOrderStatus.completed:
         return Icons.check_circle;
     }
-  }
-
-  void moveToNextStatus() {
-    final index = currentIndex;
-
-    if (index == -1 || index >= statuses.length - 1) {
-      return;
-    }
-
-    final nextStatus = statuses[index + 1];
-
-    setState(() {
-      order.status = nextStatus;
-    });
   }
 
   @override
@@ -138,6 +105,12 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F7),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () async {
+            await Navigator.of(context, rootNavigator: true).maybePop();
+          },
+        ),
         title: const Text(
           'Track Order',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -166,9 +139,7 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
                     letterSpacing: 1,
                   ),
                 ),
-
                 const SizedBox(height: 6),
-
                 Text(
                   order.orderId,
                   style: const TextStyle(
@@ -177,9 +148,7 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 18),
-
                 Row(
                   children: [
                     Icon(
@@ -220,9 +189,7 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
             child: Column(
               children: List.generate(statuses.length, (index) {
                 final status = statuses[index];
-
                 final isCompleted = index <= currentIndex;
-
                 final isCurrent = index == currentIndex;
 
                 return Row(
@@ -245,7 +212,6 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
                             size: 20,
                           ),
                         ),
-
                         if (index < statuses.length - 1)
                           Container(
                             width: 2,
@@ -256,9 +222,7 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
                           ),
                       ],
                     ),
-
                     const SizedBox(width: 15),
-
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(top: 8),
@@ -274,7 +238,6 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
                                 fontSize: isCurrent ? 16 : 14,
                               ),
                             ),
-
                             if (isCurrent)
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
@@ -286,7 +249,6 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
                                   ),
                                 ),
                               ),
-
                             const SizedBox(height: 35),
                           ],
                         ),
@@ -304,46 +266,24 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.amber.shade50,
+                color: Colors.blue.shade50,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline),
+                  Icon(Icons.info_outline, color: Colors.blue),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Demo mode: use the button below to simulate the next order update.',
+                      'Your order status will be updated by the food seller.',
                     ),
                   ),
                 ],
               ),
             ),
 
-          const SizedBox(height: 15),
-
-          if (!completed)
-            SizedBox(
-              height: 54,
-              child: ElevatedButton(
-                onPressed: moveToNextStatus,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: const Text(
-                  'Simulate Next Update',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-
           if (completed) ...[
             const SizedBox(height: 10),
-
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -352,7 +292,7 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.check_circle, size: 32),
+                  Icon(Icons.check_circle, size: 32, color: Colors.green),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -363,9 +303,7 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
                 ],
               ),
             ),
-
             const SizedBox(height: 15),
-
             if (!order.reviewSubmitted)
               SizedBox(
                 height: 54,
@@ -376,7 +314,9 @@ class _FoodOrderTrackingScreenState extends State<FoodOrderTrackingScreen> {
                       MaterialPageRoute(
                         builder: (_) => FoodReviewScreen(order: order),
                       ),
-                    );
+                    ).then((_) {
+                      if (mounted) setState(() {});
+                    });
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,

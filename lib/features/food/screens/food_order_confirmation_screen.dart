@@ -130,8 +130,7 @@ class FoodOrderConfirmationScreen extends StatelessWidget {
                 height: 55,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.push(
-                      context,
+                    Navigator.of(context, rootNavigator: true).push(
                       MaterialPageRoute(
                         builder: (_) => FoodOrderTrackingScreen(order: order),
                       ),

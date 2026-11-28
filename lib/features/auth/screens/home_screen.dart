@@ -637,130 +637,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // ======================================================
-  // QUICKFIX WORKER MODE
-  // ======================================================
-
-  Widget _workerModeOption(BuildContext sheetContext) {
-    final user = _auth.currentUser;
-
-    if (user == null) {
-      return const SizedBox.shrink();
-    }
-
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      key: ValueKey('worker-mode-${user.uid}'),
-
-      stream: _firestore
-          .collection('workers')
-          .doc(user.uid)
-          .snapshots(),
-
-      builder: (context, snapshot) {
-        if (snapshot.hasError ||
-            !snapshot.hasData ||
-            !snapshot.data!.exists ||
-            _auth.currentUser?.uid != user.uid) {
-          return const SizedBox.shrink();
-        }
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-
-          decoration: BoxDecoration(
-            color: _Palette.primary.withValues(alpha: 0.10),
-
-            borderRadius:
-                BorderRadius.circular(AppRadius.card),
-
-            border: Border.all(
-              color: _Palette.primary.withValues(alpha: 0.30),
-            ),
-          ),
-
-          child: ListTile(
-            leading: const Icon(
-              Icons.handyman_outlined,
-              color: _Palette.primary,
-            ),
-
-            title: const Text(
-              'Switch to Worker Mode',
-              style: TextStyle(
-                color: _Palette.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            subtitle: const Text(
-              'Manage your QuickFix services',
-            ),
-
-            trailing: const Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 16,
-              color: _Palette.primary,
-            ),
-
-            onTap: () async {
-              try {
-                final current = _auth.currentUser;
-
-                if (current == null ||
-                    current.uid != user.uid) {
-                  return;
-                }
-
-                final worker = await _firestore
-                    .collection('workers')
-                    .doc(current.uid)
-                    .get(const GetOptions(
-                      source: Source.server,
-                    ));
-
-                if (!mounted ||
-                    !sheetContext.mounted ||
-                    _auth.currentUser?.uid != current.uid) {
-                  return;
-                }
-
-                if (!worker.exists) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Worker account is unavailable.',
-                      ),
-                    ),
-                  );
-
-                  return;
-                }
-
-                Navigator.pop(sheetContext);
-
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  '/worker-dashboard',
-                  (route) => false,
-                );
-
-              } catch (_) {
-                if (!mounted) return;
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Unable to verify worker account.',
-                    ),
-                  ),
-                );
-              }
-            },
-          ),
-        );
-      },
-    );
-  }
-
   // Account Options with Dynamic Role Switcher
 
   // Account Options with Food Seller Mode Switching
@@ -802,8 +678,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (sheetContext) => _GlassSheet(
-        child: SingleChildScrollView(
-          child: Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             _bottomSheetHandle(),
@@ -886,11 +761,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // DOCTOR MODE
             if (_userRole == 'doctor')
-            // QuickFix worker account switcher
-            _workerModeOption(sheetContext),
-
-            // DYNAMIC ROLE SWITCHER (Shows ONLY for Providers/Admins)
-            if (_userRole == 'doctor') ...[
               Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
@@ -977,10 +847,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               title: const Text('My Profile'),
               trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _onNavigationSelected(3);
-              },
+              onTap: () => Navigator.pop(sheetContext),
             ),
 
             // ACTIVITY
@@ -991,10 +858,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               title: const Text('My Activity'),
               trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _onNavigationSelected(2);
-              },
+              onTap: () => Navigator.pop(sheetContext),
             ),
 
             const Divider(),
@@ -1026,15 +890,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Logged out successfully')),
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  '/login',
-                  (route) => false,
                 );
               },
             ),
           ],
         ),
-      ),
       ),
     ).whenComplete(() {
       if (mounted) setState(() => _selectedIndex = 0);
