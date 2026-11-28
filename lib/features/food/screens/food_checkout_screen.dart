@@ -366,7 +366,7 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
         cart.clearCart();
       }
 
-      Navigator.pushReplacement(
+      Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => FoodOrderConfirmationScreen(order: order),

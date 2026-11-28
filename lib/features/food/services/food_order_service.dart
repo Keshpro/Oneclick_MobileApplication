@@ -171,4 +171,8 @@ class FoodOrderService {
   void clearCurrentOrder() {
     currentOrder = null;
   }
+
+  void updateSpecificOrderStatus(FoodOrder order, FoodOrderStatus status) {
+    order.status = status;
+  }
 }

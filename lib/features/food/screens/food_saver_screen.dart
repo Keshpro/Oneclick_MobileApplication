@@ -6,6 +6,8 @@ import '../models/food_product.dart';
 import '../services/food_cart_service.dart';
 import 'food_cart_screen.dart';
 import 'food_checkout_screen.dart';
+import 'food_home_screen.dart';
+import '../../auth/screens/home_screen.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -350,7 +352,12 @@ class _FoodSaverScreenState extends State<FoodSaverScreen> {
 
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF292421)),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
+            );
+          },
         ),
 
         title: const Text(
@@ -1372,7 +1379,11 @@ class _SaveBiteDetailsScreenState extends State<SaveBiteDetailsScreen> {
         scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: darkText),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            Navigator.of(context).popUntil(
+              (route) => route.isFirst || route.settings.name == '/foodSaver',
+            );
+          },
         ),
         title: const Text(
           'SaveBite Details',
