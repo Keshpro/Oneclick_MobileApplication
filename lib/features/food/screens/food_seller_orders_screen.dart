@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../services/food_order_service.dart';
 
@@ -10,16 +12,117 @@ class FoodSellerOrdersScreen extends StatefulWidget {
 }
 
 class _FoodSellerOrdersScreenState extends State<FoodSellerOrdersScreen> {
-  final orderService = FoodOrderService.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-  void updateStatus(FoodOrder order, FoodOrderStatus status) {
-    setState(() {
-      orderService.updateSpecificOrderStatus(order, status);
-    });
+  String? get sellerUid => FirebaseAuth.instance.currentUser?.uid;
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Order ${order.orderId} updated.')));
+  FoodOrderStatus parseStatus(String? value) {
+    return FoodOrderStatus.values.firstWhere(
+      (status) => status.name == value,
+      orElse: () => FoodOrderStatus.orderPlaced,
+    );
+  }
+
+  FoodOrder? convertOrder(
+    QueryDocumentSnapshot<Map<String, dynamic>> document,
+    String uid,
+  ) {
+    final data = document.data();
+
+    final rawItems = data['items'] as List<dynamic>? ?? [];
+
+    // Only show the items belonging to this seller.
+    final sellerItems = rawItems
+        .where((rawItem) {
+          final item = Map<String, dynamic>.from(rawItem as Map);
+          return item['sellerUid'] == uid;
+        })
+        .map((rawItem) {
+          final item = Map<String, dynamic>.from(rawItem as Map);
+
+          return FoodOrderItem(
+            foodName: item['foodName']?.toString() ?? '',
+            restaurantName: item['restaurantName']?.toString() ?? '',
+            foodImage: item['foodImage']?.toString() ?? '',
+            restaurantLogo: item['restaurantLogo']?.toString() ?? '',
+            price: (item['price'] as num?)?.toDouble() ?? 0,
+            quantity: (item['quantity'] as num?)?.toInt() ?? 0,
+            sellerUid: item['sellerUid']?.toString(),
+            firestoreOfferPath: item['firestoreOfferPath']?.toString(),
+          );
+        })
+        .toList();
+
+    if (sellerItems.isEmpty) return null;
+
+    final sellerSubtotal = sellerItems.fold<double>(
+      0,
+      (sum, item) => sum + item.total,
+    );
+
+    final sellerStatuses = Map<String, dynamic>.from(
+      data['sellerStatuses'] ?? {},
+    );
+
+    final sellerStatus = sellerStatuses[uid]?.toString();
+
+    final overallStatus = data['status']?.toString();
+
+    final rawFulfillment = data['fulfillmentType']?.toString();
+
+    final fulfillmentType = rawFulfillment == FoodFulfillmentType.pickup.name
+        ? FoodFulfillmentType.pickup
+        : FoodFulfillmentType.delivery;
+
+    DateTime placedAt = DateTime.now();
+
+    if (data['placedAt'] is Timestamp) {
+      placedAt = (data['placedAt'] as Timestamp).toDate();
+    }
+
+    return FoodOrder(
+      orderId: data['orderId']?.toString() ?? document.id,
+      items: sellerItems,
+      subtotal: sellerSubtotal,
+      deliveryFee: 0,
+      total: sellerSubtotal,
+      fulfillmentType: fulfillmentType,
+      customerName: data['customerName']?.toString() ?? '',
+      phone: data['phone']?.toString() ?? '',
+      address: data['address']?.toString() ?? '',
+      deliveryNote: data['deliveryNote']?.toString() ?? '',
+      pickupTime: data['pickupTime']?.toString() ?? '',
+      paymentMethod: data['paymentMethod']?.toString() ?? '',
+      placedAt: placedAt,
+      status: parseStatus(sellerStatus ?? overallStatus),
+    );
+  }
+
+  Future<void> updateStatus(
+    String documentId,
+    FoodOrder order,
+    FoodOrderStatus status,
+  ) async {
+    final uid = sellerUid;
+
+    if (uid == null) return;
+
+    try {
+      await firestore.collection('food_orders').doc(documentId).update({
+        'sellerStatuses.$uid': status.name,
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Order ${order.orderId} updated.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Failed to update order: $e')));
+    }
   }
 
   FoodOrderStatus? nextStatus(FoodOrder order) {
@@ -113,9 +216,36 @@ class _FoodSellerOrdersScreenState extends State<FoodSellerOrdersScreen> {
         .join('\n');
   }
 
+  String _nextActionLabel(FoodOrder order) {
+    switch (order.status) {
+      case FoodOrderStatus.orderPlaced:
+        return 'Accept Order';
+      case FoodOrderStatus.sellerConfirmed:
+        return 'Start Preparing';
+      case FoodOrderStatus.preparing:
+        return 'Mark as Ready';
+      case FoodOrderStatus.ready:
+        return 'Assign Driver';
+      case FoodOrderStatus.readyForPickup:
+        return 'Confirm Pickup';
+      case FoodOrderStatus.driverAssigned:
+        return 'Confirm Driver Pickup';
+      case FoodOrderStatus.pickedUp:
+        return order.isDelivery ? 'Mark On the Way' : 'Complete Order';
+      case FoodOrderStatus.onTheWay:
+        return 'Mark as Delivered';
+      default:
+        return 'Update Order';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final orders = orderService.orders.reversed.toList();
+    final uid = sellerUid;
+
+    if (uid == null) {
+      return const Scaffold(body: Center(child: Text('Please log in again.')));
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8F7),
@@ -125,30 +255,65 @@ class _FoodSellerOrdersScreenState extends State<FoodSellerOrdersScreen> {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: orders.isEmpty
-          ? const Center(
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: firestore
+            .collection('food_orders')
+            .where('sellerUids', arrayContains: uid)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('Error loading orders: ${snapshot.error}'),
+            );
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final documents = snapshot.data?.docs ?? [];
+
+          final orders = documents
+              .map((doc) => convertOrder(doc, uid))
+              .whereType<FoodOrder>()
+              .toList();
+
+          orders.sort((a, b) => b.placedAt.compareTo(a.placedAt));
+
+          if (orders.isEmpty) {
+            return const Center(
               child: Text('No orders yet.', style: TextStyle(fontSize: 16)),
-            )
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                const Text(
-                  'Customer Orders',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Manage orders received from your customers.',
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                ),
-                const SizedBox(height: 20),
-                ...orders.map(_orderCard),
-              ],
-            ),
+            );
+          }
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              const Text(
+                'Customer Orders',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Manage orders received from your customers.',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+              ),
+              const SizedBox(height: 20),
+              ...documents.map((doc) {
+                final order = convertOrder(doc, uid);
+
+                if (order == null) return const SizedBox.shrink();
+
+                return _orderCard(doc.id, order);
+              }),
+            ],
+          );
+        },
+      ),
     );
   }
 
-  Widget _orderCard(FoodOrder order) {
+  Widget _orderCard(String documentId, FoodOrder order) {
     final next = nextStatus(order);
     final color = statusColor(order.status);
 
@@ -204,18 +369,14 @@ class _FoodSellerOrdersScreenState extends State<FoodSellerOrdersScreen> {
             ],
           ),
           const SizedBox(height: 14),
-
           Text(
             orderItemsText(order),
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-
           const SizedBox(height: 10),
-
           Text('Customer: ${order.customerName}'),
           const SizedBox(height: 4),
           Text('Phone: ${order.phone}'),
-
           if (order.isDelivery) ...[
             const SizedBox(height: 4),
             Text('Address: ${order.address}'),
@@ -227,15 +388,13 @@ class _FoodSellerOrdersScreenState extends State<FoodSellerOrdersScreen> {
             const SizedBox(height: 4),
             Text('Pickup time: ${order.pickupTime}'),
           ],
-
           const SizedBox(height: 12),
           const Divider(),
           const SizedBox(height: 8),
-
           Row(
             children: [
               const Text(
-                'Total',
+                'Seller Subtotal',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const Spacer(),
@@ -249,14 +408,12 @@ class _FoodSellerOrdersScreenState extends State<FoodSellerOrdersScreen> {
               ),
             ],
           ),
-
           const SizedBox(height: 14),
-
           if (next != null)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => updateStatus(order, next),
+                onPressed: () => updateStatus(documentId, order, next),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2E7D32),
                   foregroundColor: Colors.white,
@@ -288,28 +445,5 @@ class _FoodSellerOrdersScreenState extends State<FoodSellerOrdersScreen> {
         ],
       ),
     );
-  }
-
-  String _nextActionLabel(FoodOrder order) {
-    switch (order.status) {
-      case FoodOrderStatus.orderPlaced:
-        return 'Accept Order';
-      case FoodOrderStatus.sellerConfirmed:
-        return 'Start Preparing';
-      case FoodOrderStatus.preparing:
-        return 'Mark as Ready';
-      case FoodOrderStatus.ready:
-        return 'Assign Driver';
-      case FoodOrderStatus.readyForPickup:
-        return 'Confirm Pickup';
-      case FoodOrderStatus.driverAssigned:
-        return 'Confirm Driver Pickup';
-      case FoodOrderStatus.pickedUp:
-        return order.isDelivery ? 'Mark On the Way' : 'Complete Order';
-      case FoodOrderStatus.onTheWay:
-        return 'Mark as Delivered';
-      default:
-        return 'Update Order';
-    }
   }
 }

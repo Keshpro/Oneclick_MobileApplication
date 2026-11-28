@@ -351,7 +351,7 @@ class _FoodCheckoutScreenState extends State<FoodCheckoutScreen> {
 
       if (!mounted) return;
 
-      final order = FoodOrderService.instance.placeOrder(
+      final order = await FoodOrderService.instance.placeOrder(
         fulfillmentType: fulfillmentType,
         customerName: nameController.text.trim(),
         phone: phoneController.text.trim(),
